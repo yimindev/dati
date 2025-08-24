@@ -36,7 +36,6 @@
     "unplugin-vue-components": "^28.8.0",
     "unplugin-vue-router": "^0.15.0",
     "vite": "^7.0.4",
-    "vite-ssg": "^28.1.0",
     "vue-tsc": "^2.2.12"
   }
 }
