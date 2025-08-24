@@ -17,10 +17,11 @@
     "vue-router": "^4.5.1"
   },
   "devDependencies": {
+    "@tailwindcss/typography": "^0.5.16",
+    "@tailwindcss/vite": "^4.1.12",
     "@types/node": "^24.2.0",
     "@typescript-eslint/eslint-plugin": "^8.39.0",
     "@typescript-eslint/parser": "^8.39.0",
-    "@unocss/eslint-plugin": "^66.4.2",
     "@vitejs/plugin-vue": "^6.0.0",
     "@vue/eslint-config-prettier": "^10.2.0",
     "@vue/eslint-config-typescript": "^14.6.0",
@@ -29,8 +30,8 @@
     "eslint-plugin-vue": "^10.4.0",
     "prettier": "^3.6.2",
     "sass": "^1.90.0",
+    "tailwindcss": "^4.1.12",
     "typescript": "~5.8.3",
-    "unocss": "^66.4.2",
     "unplugin-auto-import": "^20.0.0",
     "unplugin-element-plus": "^0.10.0",
     "unplugin-vue-components": "^28.8.0",

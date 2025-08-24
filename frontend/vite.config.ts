@@ -1,17 +1,17 @@
-import path from 'node:path'
-import {defineConfig} from 'vite'
-import UnoCSS from 'unocss/vite'
-import vue from '@vitejs/plugin-vue'
-import AutoImport from 'unplugin-auto-import/vite'
-import Components from 'unplugin-vue-components/vite'
-import VueRouter from 'unplugin-vue-router/vite'
-import {ElementPlusResolver} from 'unplugin-vue-components/resolvers'
+import path from "node:path";
+import { defineConfig } from "vite";
+import vue from "@vitejs/plugin-vue";
+import AutoImport from "unplugin-auto-import/vite";
+import Components from "unplugin-vue-components/vite";
+import VueRouter from "unplugin-vue-router/vite";
+import tailwindcss from "@tailwindcss/vite";
+import { ElementPlusResolver } from "unplugin-vue-components/resolvers";
 
 // https://vite.dev/config/
 export default defineConfig({
   resolve: {
     alias: {
-      '~/': `${path.resolve(__dirname, 'src')}/`,
+      "~/": `${path.resolve(__dirname, "src")}/`,
     },
   },
 
@@ -28,19 +28,19 @@ export default defineConfig({
 
     // https://github.com/posva/unplugin-vue-router
     VueRouter({
-      extensions: ['.vue', '.md'],
-      dts: 'src/typed-router.d.ts',
+      extensions: [".vue", ".md"],
+      dts: "src/typed-router.d.ts",
     }),
 
     AutoImport({
       // 自动导入这些库的 API（按需）
-      imports: ['vue', 'vue-router'],
+      imports: ["vue", "vue-router"],
       // 也可按需添加：'pinia', '@vueuse/core', 等
-      dts: 'src/auto-imports.d.ts',
+      dts: "src/auto-imports.d.ts",
       // 让 ESLint 识别到这些全局 API（可选）
       eslintrc: {
         enabled: true,
-        filepath: './.eslintrc-auto-import.json',
+        filepath: "./.eslintrc-auto-import.json",
         globalsPropValue: true,
       },
       resolvers: [
@@ -51,21 +51,21 @@ export default defineConfig({
 
     Components({
       // 自动按需注册本地组件 + UI 库组件
-      dts: 'src/components.d.ts',
-      dirs: ['src/components'],
-      extensions: ['vue', 'tsx', 'md'],
+      dts: "src/components.d.ts",
+      dirs: ["src/components"],
+      extensions: ["vue", "tsx", "md"],
       // allow auto import and register components used in markdown
       include: [/\.vue$/, /\.vue\?vue/, /\.md$/],
       deep: true,
       resolvers: [
         // 按需引入 Element Plus 组件与样式
         ElementPlusResolver({
-          importStyle: 'sass',
+          importStyle: "sass",
           directives: true,
         }),
       ],
     }),
 
-    UnoCSS(),
+    tailwindcss()
   ],
-})
+});

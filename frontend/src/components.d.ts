@@ -10,6 +10,7 @@ declare module 'vue' {
   export interface GlobalComponents {
     BaseHeader: typeof import('./components/layouts/BaseHeader.vue')['default']
     BaseSide: typeof import('./components/layouts/BaseSide.vue')['default']
+    ElAvatar: typeof import('element-plus/es')['ElAvatar']
     ElConfigProvider: typeof import('element-plus/es')['ElConfigProvider']
     ElIcon: typeof import('element-plus/es')['ElIcon']
     ElMenu: typeof import('element-plus/es')['ElMenu']

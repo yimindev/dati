@@ -8,7 +8,7 @@ import BaseSide from "~/components/layouts/BaseSide.vue";
     <BaseHeader />
     <div class="main-container flex">
       <BaseSide />
-      <div w="full" py="4">
+      <div class="w-full py-4">
         <RouterView />
       </div>
     </div>
