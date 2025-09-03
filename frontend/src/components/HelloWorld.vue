@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref } from "vue";
+import { UserFilled } from "@element-plus/icons-vue";
 
-defineProps<{ msg: string }>()
+defineProps<{ msg: string }>();
 
-const count = ref(0)
+const count = ref(0);
 </script>
 
 <template>
@@ -15,6 +16,12 @@ const count = ref(0)
       Edit
       <code>components/HelloWorld.vue</code> to test HMR
     </p>
+
+
+        <div class="size-full flex items-center justify-center">
+          <el-avatar :size="24" :icon="UserFilled" />
+        </div>
+
   </div>
 
   <p>

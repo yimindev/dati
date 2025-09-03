@@ -1,5 +1,6 @@
 /* src/assets/styles/tailwind.css */
 @import "tailwindcss";
+@plugin "@iconify/tailwind4";
 /* 需要自定义组件类时再加：
 @layer components {
   .btn { @apply px-4 py-2 rounded bg-teal-600 text-white; }
