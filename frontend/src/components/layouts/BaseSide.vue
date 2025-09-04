@@ -6,6 +6,8 @@ import { useI18n } from "vue-i18n";
 
 const { t } = useI18n();
 
+const props = defineProps<{ collapsed: boolean }>();
+
 // const isCollapse = ref(true)
 function handleOpen(key: string, keyPath: string[]) {
   // eslint-disable-next-line no-console
@@ -22,17 +24,18 @@ function handleClose(key: string, keyPath: string[]) {
     router
     default-active="1"
     class="el-menu-vertical-demo"
+    :collapse="props.collapsed"
+    :collapse-transition="false"
+    :style="{ width: props.collapsed ? '64px' : '200px' }"
     @open="handleOpen"
     @close="handleClose"
   >
-    <el-sub-menu index="1">
-      <template #title>
+    <el-menu-item index="1">
         <el-icon>
           <span class="icon-[codicon--mcp]"></span>
         </el-icon>
-        <span> {{ t('side.mcpBuilder') }} </span>
-      </template>
-    </el-sub-menu>
+      <template #title> {{ t('side.mcpBuilder') }} </template>
+    </el-menu-item>
     <el-menu-item index="/nav/2">
       <el-icon>
         <IconMenu />

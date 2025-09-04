@@ -1,13 +1,18 @@
 <script setup lang="ts">
 import BaseHeader from "~/components/layouts/BaseHeader.vue";
 import BaseSide from "~/components/layouts/BaseSide.vue";
+
+const isCollapse = ref(false)
 </script>
 
 <template>
   <el-config-provider namespace="ep">
-    <BaseHeader />
+    <BaseHeader
+      :collapsed="isCollapse"
+      @toggle-collapse="isCollapse = !isCollapse"
+    />
     <div class="main-container flex">
-      <BaseSide />
+      <BaseSide :collapsed="isCollapse" />
       <div class="w-full py-4">
         <RouterView />
       </div>
