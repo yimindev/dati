@@ -13,8 +13,10 @@ const isCollapse = ref(false)
     />
     <div class="main-container flex">
       <BaseSide :collapsed="isCollapse" />
-      <div class="w-full py-4">
-        <RouterView />
+      <div class="w-full bg-[var(--ep-bg-color-page)]">
+        <el-card shadow="never" class="m-4">
+          <RouterView />
+        </el-card>
       </div>
     </div>
   </el-config-provider>
