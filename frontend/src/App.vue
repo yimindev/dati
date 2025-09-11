@@ -12,8 +12,8 @@ const isCollapse = ref(false)
       @toggle-collapse="isCollapse = !isCollapse"
     />
     <div class="main-container flex">
-      <BaseSide :collapsed="isCollapse" />
-      <div class="w-full bg-[var(--ep-bg-color-page)]">
+      <BaseSide/>
+      <div class="w-full bg-[var(--ep-fill-color-light)]">
         <el-card shadow="never" class="m-4">
           <RouterView />
         </el-card>

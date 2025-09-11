@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { isDark, toggleDark } from "~/composables";
-import { Expand, Fold, Moon, Sunny } from "@element-plus/icons-vue";
+import { Moon, Sunny } from "@element-plus/icons-vue";
 import { computed } from "vue";
 import { useI18n } from "vue-i18n";
 import { setI18nLanguage, type AppLang } from "~/plugins/i18n";
@@ -13,25 +13,10 @@ async function changeLocale(lang: AppLang) {
   await setI18nLanguage(lang);
 }
 
-const props = defineProps<{ collapsed: boolean }>();
-const emit = defineEmits(["toggle-collapse"]);
-const collapseIcon = computed(() => (props.collapsed ? Expand : Fold));
 </script>
 
 <template>
   <el-menu class="el-menu-demo" mode="horizontal" :ellipsis="false" router>
-    <el-menu-item class="h-full" @click="emit('toggle-collapse')">
-      <button
-        class="w-full cursor-pointer border-0 bg-transparent"
-        style="height: var(--ep-menu-item-height)"
-        :title="props.collapsed ? t('header.expandSide') : t('header.collapseSide')"
-      >
-        <el-icon class="inline-flex">
-          <component :is="collapseIcon" />
-        </el-icon>
-      </button>
-    </el-menu-item>
-
     <el-menu-item index="/">
       <div class="flex items-center justify-center gap-2">
         <el-icon class="text-xl">
@@ -86,7 +71,7 @@ const collapseIcon = computed(() => (props.collapsed ? Expand : Fold));
 
 <style lang="scss">
 .el-menu-demo {
-  &.ep-menu--horizontal > .ep-menu-item:nth-child(2) {
+  &.ep-menu--horizontal > .ep-menu-item:nth-child(1) {
     margin-right: auto;
   }
 }
