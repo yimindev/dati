@@ -14,9 +14,9 @@ const isCollapse = ref(false)
     <div class="main-container flex">
       <BaseSide/>
       <div class="w-full bg-[var(--ep-fill-color-light)]">
-        <el-card shadow="never" class="m-4">
+        <div class="m-4 p-2 bg-[var(--ep-bg-color)]">
           <RouterView />
-        </el-card>
+        </div>
       </div>
     </div>
   </el-config-provider>
