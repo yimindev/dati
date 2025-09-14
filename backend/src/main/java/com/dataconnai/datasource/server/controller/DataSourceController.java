@@ -2,7 +2,7 @@ package com.dataconnai.datasource.server.controller;
 
 import com.dataconnai.base.exception.DciException;
 import com.dataconnai.base.pojo.IdResponse;
-import com.dataconnai.base.pojo.ListResponse;
+import com.dataconnai.base.pojo.PageResponse;
 import com.dataconnai.datasource.domain.model.DataSource;
 import com.dataconnai.datasource.domain.service.DataSourceService;
 import com.dataconnai.datasource.server.assembler.DSAssembler;
@@ -55,10 +55,11 @@ public class DataSourceController {
     }
 
     @GetMapping("")
-    public ListResponse<DatasourceVO> listDataSources() {
-        ListResponse<DatasourceVO> dataSourceListResponse = new ListResponse<>();
-        dataSourceListResponse.setData(dsAssembler.toDatasourceVOList(dataSourceService.listDataSources()));
-        return dataSourceListResponse;
+    public PageResponse<DatasourceVO> listDataSources(@RequestParam(name = "page", defaultValue = "1")int page,  @RequestParam(name = "size", defaultValue = "10") int size) {
+        PageResponse<DatasourceVO> dataSourcePageResponse = new PageResponse<>();
+        dataSourcePageResponse.setData(dsAssembler.toDatasourceVOList(dataSourceService.listDataSources()));
+        dataSourcePageResponse.setTotal(dataSourceService.listDataSources().size());
+        return dataSourcePageResponse;
     }
 
     @GetMapping("/{id}/catalogs")

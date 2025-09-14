@@ -6,3 +6,7 @@ spring:
     name: DataConnAI
   profiles:
     active: dev
+  data:
+    web:
+      pageable:
+        one-indexed-parameters: true

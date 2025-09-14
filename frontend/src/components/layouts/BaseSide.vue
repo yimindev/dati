@@ -9,32 +9,23 @@ import { useI18n } from "vue-i18n";
 const { t } = useI18n();
 const collapsed = ref(false)
 
-
-// ... existing code ...
-function handleOpen(key: string, keyPath: string[]) {
-  // eslint-disable-next-line no-console
-  console.log(key, keyPath);
-}
-function handleClose(key: string, keyPath: string[]) {
-  // eslint-disable-next-line no-console
-  console.log(key, keyPath);
-}
-
+const route = useRoute()
+const activeMenu = computed(() => {
+  return (route.meta?.activeMenu as string) || route.path
+})
 </script>
 
 <template>
   <div class="relative">
     <el-menu
       router
-      default-active="1"
+      :default-active="activeMenu"
       class="el-menu-vertical-demo h-full !border-r-0"
       :collapse="collapsed"
       :collapse-transition="false"
       :class="collapsed ? 'w-16' : 'w-50'"
-      @open="handleOpen"
-      @close="handleClose"
     >
-      <el-menu-item index="1">
+      <el-menu-item index="/nav/1/item-1">
           <el-icon>
             <span class="icon-[codicon--mcp]"></span>
           </el-icon>
@@ -46,7 +37,7 @@ function handleClose(key: string, keyPath: string[]) {
         </el-icon>
         <template #title> {{ t('side.sematicModels') }} </template>
       </el-menu-item>
-      <el-menu-item index="/nav/4">
+      <el-menu-item index="/datasource">
         <el-icon>
           <span class="icon-[codicon--database]"></span>
         </el-icon>
@@ -57,7 +48,7 @@ function handleClose(key: string, keyPath: string[]) {
     <!-- 展开/收起按钮 -->
     <button
       @click="collapsed = !collapsed"
-      class="absolute top-1/2 left-full -translate-y-full w-4 h-12 rounded-r-xl bg-[var(--ep-bg-color)] cursor-pointer hover:bg-[var(--ep-menu-hover-bg-color)] transition-colors duration-300 ease-in-out)]"
+      class="absolute top-1/2 left-full -translate-y-full w-3.5 h-12 rounded-r-xl bg-[var(--ep-bg-color)] cursor-pointer hover:bg-[var(--ep-menu-hover-bg-color)] transition-colors duration-300 ease-in-out)]"
       :title="collapsed ? t('side.expand') : t('side.collapse')"
     >
       <el-icon class="w-2 h-3 ">

@@ -2,7 +2,7 @@ package com.dataconnai.base.pojo;
 
 import lombok.Data;
 
-import java.time.OffsetDateTime;
+import java.time.Instant;
 
 @Data
 public class BaseResource {
@@ -15,10 +15,10 @@ public class BaseResource {
 
     private String createdBy;
 
-    private OffsetDateTime createdAt;
+    private Instant createdAt;
 
     private String updatedBy;
 
-    private OffsetDateTime updatedAt;
+    private Instant updatedAt;
 
 }

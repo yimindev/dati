@@ -1,0 +1,103 @@
+import axios, { AxiosError, type AxiosInstance } from 'axios'
+
+// 可从 import.meta.env 加载
+const BASE_URL = import.meta.env.VITE_API_BASE_URL as string | undefined
+
+export interface ApiError {
+  status: number
+  code?: string
+  message: string
+  details?: unknown
+  raw?: unknown
+}
+
+function normalizeError(err: unknown): ApiError {
+  if (axios.isAxiosError(err)) {
+    const e = err as AxiosError<any>
+    return {
+      status: e.response?.status ?? 0,
+      code: e.response?.data?.code,
+      message: e.response?.data?.message || e.message || 'Network Error',
+      details: e.response?.data?.details,
+      raw: e.toJSON?.() ?? e,
+    }
+  }
+  return { status: 0, message: (err as Error)?.message ?? 'Unknown error', raw: err }
+}
+
+export const http: AxiosInstance = axios.create({
+  baseURL: BASE_URL ?? '/api',
+  timeout: 15000,
+  withCredentials: true,
+})
+
+// 读取/写入 token 的辅助，你可以替换为你项目的实际存储方式
+function getAccessToken(): string | null {
+  return localStorage.getItem('access_token')
+}
+
+let isRefreshing = false
+let pendingQueue: Array<(token: string | null) => void> = []
+
+http.interceptors.request.use((config) => {
+  const token = getAccessToken()
+  if (token && config.headers) {
+    config.headers.Authorization = `Bearer ${token}`
+  }
+  // 支持 AbortController 取消
+  // 调用端传入 { signal } 即可
+  return config
+})
+
+http.interceptors.response.use(
+  (resp) => {
+    // 统一“数据解包”：后端若统一返回 { code, data, message }
+    // 可在这里直接返回 resp.data.data；示例保守返回 resp.data
+    return resp.data
+  },
+  async (error) => {
+    // 刷新令牌的伪代码（按需启用）
+    const err = normalizeError(error)
+    const original = error.config
+    if (err.status === 401 && !original._retry) {
+      original._retry = true
+      if (!isRefreshing) {
+        isRefreshing = true
+        try {
+          // const newToken = await refreshToken()
+          const newToken = null
+          pendingQueue.forEach((cb) => cb(newToken))
+        } finally {
+          pendingQueue = []
+          isRefreshing = false
+        }
+      }
+      return new Promise((resolve) => {
+        pendingQueue.push((/* newToken */) => {
+          // if (newToken && original.headers) original.headers.Authorization = `Bearer ${newToken}`
+          resolve(http(original))
+        })
+      })
+    }
+    return Promise.reject(err)
+  }
+)
+
+// 统一导出带类型的方法
+export async function get<T>(url: string, params?: Record<string, any>, signal?: AbortSignal): Promise<T> {
+  return http.get(url, { params, signal })
+}
+
+export async function post<T, B = any>(url: string, body?: B, signal?: AbortSignal): Promise<T> {
+  return http.post(url, body, { signal })
+}
+
+export async function put<T, B = any>(url: string, body?: B, signal?: AbortSignal): Promise<T> {
+  return http.put(url, body, { signal })
+}
+
+export async function del<T>(url: string, params?: Record<string, any>, signal?: AbortSignal): Promise<T> {
+  return http.delete(url, { params, signal })
+}
+
+export { normalizeError }

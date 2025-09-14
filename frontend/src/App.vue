@@ -13,7 +13,7 @@ const isCollapse = ref(false)
     />
     <div class="main-container flex">
       <BaseSide/>
-      <div class="w-full bg-[var(--ep-fill-color-light)]">
+      <div class="flex-1 min-w-0 bg-[var(--ep-fill-color-light)]">
         <div class="m-4 p-2 bg-[var(--ep-bg-color)]">
           <RouterView />
         </div>
@@ -23,11 +23,6 @@ const isCollapse = ref(false)
 </template>
 
 <style>
-#app {
-  text-align: center;
-  color: var(--ep-text-color-primary);
-}
-
 .main-container {
   height: calc(100vh - var(--ep-menu-item-height) - 4px);
 }
