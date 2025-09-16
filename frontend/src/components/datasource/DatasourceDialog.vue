@@ -142,7 +142,7 @@ const handleCancel = () => {
   <el-dialog
     v-model="visible"
     :title="isEdit ? $t('datasource.dialog.editTitle') : $t('datasource.dialog.createTitle')"
-    width="600px"
+    width="35%"
     :close-on-click-modal="false"
   >
     <DatasourceForm

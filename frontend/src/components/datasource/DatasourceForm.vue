@@ -65,7 +65,7 @@ defineExpose({
     ref="formRef"
     :model="modelValue"
     :rules="rules"
-    label-width="100px"
+    label-width="auto"
     @submit.prevent
   >
     <el-form-item :label="$t('datasource.form.fields.name')" prop="name">
