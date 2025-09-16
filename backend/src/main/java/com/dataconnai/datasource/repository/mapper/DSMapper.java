@@ -9,12 +9,16 @@ public class DSMapper {
     
     public static DataSourcePO toDataSourcePO(DataSource dataSource) {
         DataSourcePO dataSourcePO = new DataSourcePO();
-        MapperUtils.copyBaseInfo(dataSource, dataSourcePO);
-        dataSourcePO.setType(dataSource.getType());
-        dataSourcePO.setJdbcUrl(dataSource.getJdbcUrl());
-        dataSourcePO.setUserName(dataSource.getUsername());
-        dataSourcePO.setEncryptedPassword(EncryptionUtils.encrypt(dataSource.getPassword()));
+        copyProperties(dataSource, dataSourcePO);
         return dataSourcePO;
+    }
+
+    public static void copyProperties(DataSource source, DataSourcePO target) {
+        MapperUtils.copyBaseInfo(source, target);
+        target.setType(source.getType());
+        target.setJdbcUrl(source.getJdbcUrl());
+        target.setUserName(source.getUsername());
+        target.setEncryptedPassword(EncryptionUtils.encrypt(source.getPassword()));
     }
 
     public static DataSource toDataSource(DataSourcePO dataSourcePO) {

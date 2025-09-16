@@ -39,8 +39,8 @@ public class DataSourceService {
     }
 
     public void updateDataSource(String id, DataSource dataSource) {
-        DataSourcePO dataSourcePO = DSMapper.toDataSourcePO(dataSource);
-        dataSourcePO.setId(id);
+        DataSourcePO dataSourcePO = dataSourceDAO.findById(id).orElseThrow();
+        DSMapper.copyProperties(dataSource, dataSourcePO);
         dataSourceDAO.save(dataSourcePO);
     }
 

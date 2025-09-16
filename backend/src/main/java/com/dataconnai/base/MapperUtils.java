@@ -5,17 +5,27 @@ import com.dataconnai.base.pojo.BaseResourcePO;
 
 public class MapperUtils {
     
-    public static void copyBaseInfo(BaseResource source, BaseResourcePO target) {
-        target.setId(source.getId());
-        target.setName(source.getName());
-        target.setDescription(source.getDescription());
-        target.setCreatedBy(source.getCreatedBy());
-        if (source.getCreatedAt() != null) {
-            target.setCreatedAt(source.getCreatedAt());
+    public static void copyBaseInfo(BaseResource resource, BaseResourcePO resourcePO) {
+        if (resource.getId() != null) {
+            resourcePO.setId(resource.getId());
         }
-        target.setUpdatedBy(source.getUpdatedBy());
-        if (source.getUpdatedAt() != null) {
-            target.setUpdatedAt(source.getUpdatedAt());
+        if (resource.getName() != null) {
+            resourcePO.setName(resource.getName());
+        }
+        if (resource.getDescription() != null) {
+            resourcePO.setDescription(resource.getDescription());
+        }
+        if (resource.getCreatedBy() != null) {
+            resourcePO.setCreatedBy(resource.getCreatedBy());
+        }
+        if (resource.getCreatedAt() != null) {
+            resourcePO.setCreatedAt(resource.getCreatedAt());
+        }
+        if (resource.getUpdatedBy() != null) {
+            resourcePO.setUpdatedBy(resource.getUpdatedBy());
+        }
+        if (resource.getUpdatedAt() != null) {
+            resourcePO.setUpdatedAt(resource.getUpdatedAt());
         }
     }
     

@@ -32,11 +32,7 @@ const formatDate = (dateStr: string) => {
     >
       <el-table-column prop="id" label="ID" min-width="150" />
       <el-table-column prop="name" label="连接名称" min-width="100" />
-      <el-table-column prop="type" label="类型" min-width="120">
-        <template #default="{ row }">
-          <DatasourceTypeTag :type="row.type" />
-        </template>
-      </el-table-column>
+      <el-table-column prop="type" label="类型" min-width="120" />
       <el-table-column prop="created_by" label="创建人" width="120" />
       <el-table-column prop="description" label="描述" min-width="150" show-overflow-tooltip />
       <el-table-column prop="updated_at" label="更新时间" width="180">
