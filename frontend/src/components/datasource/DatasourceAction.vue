@@ -1,8 +1,12 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { ElMessage } from 'element-plus'
+import { useI18n } from 'vue-i18n'
 import type { DatasourceVO, DataSourcePayload } from '~/api/datasource'
 import { addDataSource, updateDataSource, testConnection } from '~/api/datasource'
+
+// i18n
+const { t } = useI18n()
 
 // Props & Emits
 interface Props {
@@ -79,13 +83,13 @@ const handleTestConnection = async () => {
     const result = await testConnection(formData.value)
 
     if (result) {
-      ElMessage.success('连接测试成功')
+      ElMessage.success(t('datasource.messages.testSuccess'))
     } else {
-      ElMessage.error('连接测试失败')
+      ElMessage.error(t('datasource.messages.testFailed'))
     }
   } catch (error) {
     console.error('测试连接失败:', error)
-    ElMessage.error('连接测试失败')
+    ElMessage.error(t('datasource.messages.testFailed'))
   } finally {
     testing.value = false
   }
@@ -100,16 +104,16 @@ const handleSubmit = async () => {
 
     if (isEdit.value) {
       await updateDataSource(props.datasource!.id, formData.value)
-      ElMessage.success('更新成功')
+      ElMessage.success(t('datasource.messages.updateSuccess'))
     } else {
       await addDataSource(formData.value)
-      ElMessage.success('创建成功')
+      ElMessage.success(t('datasource.messages.createSuccess'))
     }
 
     emit('success')
   } catch (error) {
     console.error('提交失败:', error)
-    ElMessage.error('操作失败')
+    ElMessage.error(t('datasource.messages.operateFailed'))
   } finally {
     submitting.value = false
   }
@@ -124,7 +128,7 @@ const handleCancel = () => {
 <template>
   <el-dialog
     v-model="visible"
-    :title="isEdit ? '编辑数据源' : '创建数据源'"
+    :title="isEdit ? $t('datasource.dialog.editTitle') : $t('datasource.dialog.createTitle')"
     width="600px"
     :close-on-click-modal="false"
   >
@@ -137,12 +141,12 @@ const handleCancel = () => {
 
     <template #footer>
       <div class="dialog-footer">
-        <el-button @click="handleCancel">取消</el-button>
+        <el-button @click="handleCancel">{{ $t('datasource.common.cancel') }}</el-button>
         <el-button type="primary" :loading="testing" @click="handleTestConnection">
-          测试连接
+          {{ $t('datasource.common.testConnection') }}
         </el-button>
         <el-button type="primary" :loading="submitting" @click="handleSubmit">
-          {{ isEdit ? '更新' : '创建' }}
+          {{ isEdit ? $t('datasource.common.update') : $t('datasource.common.create') }}
         </el-button>
       </div>
     </template>

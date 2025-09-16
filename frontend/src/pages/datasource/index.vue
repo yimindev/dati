@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
+import { useI18n } from "vue-i18n";
 import type { DatasourceVO } from "~/api/datasource";
 import {
   deleteDataSource,
@@ -8,6 +9,8 @@ import {
   testConnection,
 } from "~/api/datasource";
 import { Plus } from "@element-plus/icons-vue";
+
+const { t } = useI18n();
 
 // 响应式数据
 const loading = ref(false);
@@ -30,7 +33,7 @@ const loadDatasources = async () => {
     total.value = response.total ?? 0;
   } catch (error) {
     console.error("加载数据源失败:", error);
-    ElMessage.error("加载数据源失败");
+    ElMessage.error(t('datasource.messages.loadFailed'));
   } finally {
     loading.value = false;
   }
@@ -73,13 +76,13 @@ const handleTestConnection = async (datasource: DatasourceVO) => {
     const result = await testConnection(payload);
 
     if (result) {
-      ElMessage.success("连接测试成功");
+      ElMessage.success(t('datasource.messages.testSuccess'));
     } else {
-      ElMessage.error("连接测试失败");
+      ElMessage.error(t('datasource.messages.testFailed'));
     }
   } catch (error) {
     console.error("测试连接失败:", error);
-    ElMessage.error("连接测试失败");
+    ElMessage.error(t('datasource.messages.testFailed'));
   } finally {
     loading.value = false;
   }
@@ -89,22 +92,22 @@ const handleTestConnection = async (datasource: DatasourceVO) => {
 const handleDelete = async (datasource: DatasourceVO) => {
   try {
     await ElMessageBox.confirm(
-      `确定要删除数据源 "${datasource.name}" 吗？`,
-      "确认删除",
+      t('datasource.page.deleteConfirmMessage', { name: datasource.name }),
+      t('datasource.page.deleteConfirmTitle'),
       {
-        confirmButtonText: "确定",
-        cancelButtonText: "取消",
+        confirmButtonText: t('datasource.common.confirm'),
+        cancelButtonText: t('datasource.common.cancel'),
         type: "warning",
       },
     );
 
     await deleteDataSource(datasource.id);
-    ElMessage.success("删除成功");
+    ElMessage.success(t('datasource.messages.deleteSuccess'));
     await loadDatasources();
   } catch (error) {
     if (error !== "cancel") {
       console.error("删除失败:", error);
-      ElMessage.error("删除失败");
+      ElMessage.error(t('datasource.messages.deleteFailed'));
     }
   }
 };
@@ -125,7 +128,7 @@ onMounted(() => {
   <div class="p-5 md:p-6">
     <!-- 头部操作区 -->
     <div class="flex justify-end mb-6">
-      <el-button type="primary" :icon="Plus" @click="handleCreate"> 创建数据源 </el-button>
+      <el-button type="primary" :icon="Plus" @click="handleCreate"> {{ $t('datasource.page.createButton') }} </el-button>
     </div>
 
     <!-- 数据表格（只做展示与事件触发） -->

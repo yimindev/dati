@@ -14,5 +14,74 @@ export default {
     mcpBuilder: "构建MCP",
     sematicModels: "语义模型",
     dataSources: "数据源",
-  }
+  },
+
+  datasource: {
+    common: {
+      cancel: "取消",
+      confirm: "确定",
+      testConnection: "测试连接",
+      update: "更新",
+      create: "创建",
+    },
+    dialog: {
+      createTitle: "创建数据源",
+      editTitle: "编辑数据源",
+    },
+    form: {
+      fields: {
+        name: "连接名称",
+        type: "数据库类型",
+        username: "用户名",
+        password: "密码",
+        description: "描述",
+      },
+      placeholders: {
+        name: "请输入连接名称",
+        type: "请选择数据库类型",
+        jdbc: "请输入JDBC连接字符串",
+        username: "请输入数据库用户名",
+        password: "请输入数据库密码",
+        description: "请输入描述（可选）",
+      },
+      rules: {
+        nameRequired: "请输入连接名称",
+        nameLength: "长度在 1 到 100 个字符",
+        typeRequired: "请选择数据库类型",
+        jdbcRequired: "请输入JDBC连接字符串",
+        usernameRequired: "请输入用户名",
+        passwordRequired: "请输入密码",
+      },
+    },
+    table: {
+      columns: {
+        id: "ID",
+        name: "连接名称",
+        type: "类型",
+        createdBy: "创建人",
+        description: "描述",
+        updatedAt: "更新时间",
+        actions: "操作",
+      },
+      actions: {
+        edit: "编辑",
+        delete: "删除",
+      },
+    },
+    page: {
+      createButton: "创建数据源",
+      deleteConfirmTitle: "确认删除",
+      deleteConfirmMessage: '确定要删除数据源 "{name}" 吗？',
+    },
+    messages: {
+      loadFailed: "加载数据源失败",
+      testSuccess: "连接测试成功",
+      testFailed: "连接测试失败",
+      updateSuccess: "更新成功",
+      createSuccess: "创建成功",
+      operateFailed: "操作失败",
+      deleteSuccess: "删除成功",
+      deleteFailed: "删除失败",
+    },
+  },
 }

@@ -1,7 +1,11 @@
 <script setup lang="ts">
 import { ref } from "vue";
+import { useI18n } from "vue-i18n";
 import type { FormInstance, FormRules } from "element-plus";
 import type { DataSourcePayload } from "~/api/datasource";
+
+// i18n
+const { t } = useI18n();
 
 // Props & Emits
 interface Props {
@@ -23,15 +27,15 @@ const formRef = ref<FormInstance>();
 // 表单验证规则
 const rules: FormRules = {
   name: [
-    { required: true, message: "请输入连接名称", trigger: "blur" },
-    { min: 1, max: 100, message: "长度在 1 到 100 个字符", trigger: "blur" },
+    { required: true, message: t("datasource.form.rules.nameRequired"), trigger: "blur" },
+    { min: 1, max: 100, message: t("datasource.form.rules.nameLength"), trigger: "blur" },
   ],
-  type: [{ required: true, message: "请选择数据库类型", trigger: "change" }],
+  type: [{ required: true, message: t("datasource.form.rules.typeRequired"), trigger: "change" }],
   jdbc_url: [
-    { required: true, message: "请输入JDBC连接字符串", trigger: "blur" },
+    { required: true, message: t("datasource.form.rules.jdbcRequired"), trigger: "blur" },
   ],
-  username: [{ required: true, message: "请输入用户名", trigger: "blur" }],
-  password: [{ required: true, message: "请输入密码", trigger: "blur" }],
+  username: [{ required: true, message: t("datasource.form.rules.usernameRequired"), trigger: "blur" }],
+  password: [{ required: true, message: t("datasource.form.rules.passwordRequired"), trigger: "blur" }],
 };
 
 // 暴露验证方法
@@ -64,18 +68,18 @@ defineExpose({
     label-width="100px"
     @submit.prevent
   >
-    <el-form-item label="连接名称" prop="name">
+    <el-form-item :label="$t('datasource.form.fields.name')" prop="name">
       <el-input
         v-model="modelValue.name"
-        placeholder="请输入连接名称"
+        :placeholder="$t('datasource.form.placeholders.name')"
         maxlength="100"
       />
     </el-form-item>
 
-    <el-form-item label="数据库类型" prop="type">
+    <el-form-item :label="$t('datasource.form.fields.type')" prop="type">
       <el-select
         v-model="modelValue.type"
-        placeholder="请选择数据库类型"
+        :placeholder="$t('datasource.form.placeholders.type')"
         style="width: 100%"
       >
         <el-option label="MySQL" value="MYSQL" />
@@ -94,32 +98,32 @@ defineExpose({
     <el-form-item label="JDBC URL" prop="jdbc_url">
       <el-input
         v-model="modelValue.jdbc_url"
-        placeholder="请输入JDBC连接字符串"
+        :placeholder="$t('datasource.form.placeholders.jdbc')"
         :rows="2"
         type="textarea"
       />
     </el-form-item>
 
-    <el-form-item label="用户名" prop="username">
+    <el-form-item :label="$t('datasource.form.fields.username')" prop="username">
       <el-input
         v-model="modelValue.username"
-        placeholder="请输入数据库用户名"
+        :placeholder="$t('datasource.form.placeholders.username')"
       />
     </el-form-item>
 
-    <el-form-item label="密码" prop="password">
+    <el-form-item :label="$t('datasource.form.fields.password')" prop="password">
       <el-input
         v-model="modelValue.password"
         type="password"
-        placeholder="请输入数据库密码"
+        :placeholder="$t('datasource.form.placeholders.password')"
         show-password
       />
     </el-form-item>
 
-    <el-form-item label="描述">
+    <el-form-item :label="$t('datasource.form.fields.description')">
       <el-input
         v-model="modelValue.description"
-        placeholder="请输入描述（可选）"
+        :placeholder="$t('datasource.form.placeholders.description')"
         :rows="3"
         type="textarea"
         maxlength="500"
