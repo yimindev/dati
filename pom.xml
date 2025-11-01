@@ -8,8 +8,8 @@
         <version>3.5.4</version>
         <relativePath/>
     </parent>
-    <groupId>com.dataconnai</groupId>
-    <artifactId>dca-parent</artifactId>
+    <groupId>com.dati</groupId>
+    <artifactId>dati-parent</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <name>data-conn-ai</name>
     <packaging>pom</packaging>

@@ -14,5 +14,9 @@ spring:
     console:
       path: /h2-console/semantic
       enabled: true
-  jackson:
-    property-naming-strategy: SNAKE_CASE
+  elasticsearch:
+    uris: http://localhost:9200
+    username: elastic  # 如果有认证
+    password: yimin123
+    connection-timeout: 5s
+    socket-timeout: 30s
