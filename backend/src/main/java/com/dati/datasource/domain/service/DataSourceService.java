@@ -11,6 +11,8 @@ import com.dati.db.JdbcUtils;
 import com.dati.db.client.DbClient;
 import com.dati.db.client.DbClientFactory;
 import jakarta.annotation.Nullable;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
@@ -54,8 +56,8 @@ public class DataSourceService {
         dataSourceDAO.deleteById(id);
     }
 
-    public List<DataSource> listDataSources() {
-        return dataSourceDAO.findAll().stream().map(DSMapper::toDataSource).toList();
+    public Page<DataSource> listDataSources(Pageable pageable) {
+        return dataSourceDAO.findAll(pageable).map(DSMapper::toDataSource);
     }
 
     public List<String> getCatalogs(String dataSourceId) throws SQLException {

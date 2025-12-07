@@ -2,21 +2,24 @@
 import { onMounted, ref } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
 import { useI18n } from "vue-i18n";
+import { useRouter } from "vue-router";
 import type { DatasourceVO } from "~/api/datasource";
 import {
   deleteDataSource,
   listDataSources,
   testConnection,
 } from "~/api/datasource";
-import { Plus } from "@element-plus/icons-vue";
+import { Plus, Search } from "@element-plus/icons-vue";
 
 const { t } = useI18n();
+const router = useRouter();
 
 // 响应式数据
 const loading = ref(false);
 const datasourceList = ref<DatasourceVO[]>([]);
 const dialogVisible = ref(false);
 const currentDatasource = ref<DatasourceVO | null>(null);
+const searchKeyword = ref("");
 
 // 分页状态（由父组件统一管理）
 const page = ref(1);
@@ -27,16 +30,33 @@ const total = ref(0);
 const loadDatasources = async () => {
   try {
     loading.value = true;
-    const response = await listDataSources(page.value, pageSize.value);
+    const response = await listDataSources(
+      page.value,
+      pageSize.value,
+      // searchKeyword.value,
+    );
     // 假设后端返回 { data: DatasourceVO[], total: number }
     datasourceList.value = response.data || [];
     total.value = response.total ?? 0;
   } catch (error) {
     console.error("加载数据源失败:", error);
-    ElMessage.error(t('datasource.messages.loadFailed'));
+    ElMessage.error(t("datasource.messages.loadFailed"));
   } finally {
     loading.value = false;
   }
+};
+
+// 搜索处理
+const handleSearch = () => {
+  page.value = 1; // 搜索时回到第一页
+  loadDatasources();
+};
+
+// 清空搜索
+const handleClearSearch = () => {
+  searchKeyword.value = "";
+  page.value = 1;
+  loadDatasources();
 };
 
 // 分页事件
@@ -44,6 +64,7 @@ const handlePageChange = (p: number) => {
   page.value = p;
   loadDatasources();
 };
+
 const handlePageSizeChange = (ps: number) => {
   pageSize.value = ps;
   page.value = 1; // 切换每页数量时通常回到第1页
@@ -62,6 +83,12 @@ const handleEdit = (datasource: DatasourceVO) => {
   dialogVisible.value = true;
 };
 
+const handleTableManage = (datasource: DatasourceVO) => {
+  router.push({
+    path: `/datasource/${datasource.id}/table-info`,
+  });
+};
+
 // 测试连接
 const handleTestConnection = async (datasource: DatasourceVO) => {
   try {
@@ -76,13 +103,13 @@ const handleTestConnection = async (datasource: DatasourceVO) => {
     const result = await testConnection(payload);
 
     if (result) {
-      ElMessage.success(t('datasource.messages.testSuccess'));
+      ElMessage.success(t("datasource.messages.testSuccess"));
     } else {
-      ElMessage.error(t('datasource.messages.testFailed'));
+      ElMessage.error(t("datasource.messages.testFailed"));
     }
   } catch (error) {
     console.error("测试连接失败:", error);
-    ElMessage.error(t('datasource.messages.testFailed'));
+    ElMessage.error(t("datasource.messages.testFailed"));
   } finally {
     loading.value = false;
   }
@@ -92,22 +119,22 @@ const handleTestConnection = async (datasource: DatasourceVO) => {
 const handleDelete = async (datasource: DatasourceVO) => {
   try {
     await ElMessageBox.confirm(
-      t('datasource.page.deleteConfirmMessage', { name: datasource.name }),
-      t('datasource.page.deleteConfirmTitle'),
+      t("datasource.page.deleteConfirmMessage", { name: datasource.name }),
+      t("datasource.page.deleteConfirmTitle"),
       {
-        confirmButtonText: t('datasource.common.confirm'),
-        cancelButtonText: t('datasource.common.cancel'),
+        confirmButtonText: t("datasource.common.confirm"),
+        cancelButtonText: t("datasource.common.cancel"),
         type: "warning",
       },
     );
 
     await deleteDataSource(datasource.id);
-    ElMessage.success(t('datasource.messages.deleteSuccess'));
+    ElMessage.success(t("datasource.messages.deleteSuccess"));
     await loadDatasources();
   } catch (error) {
     if (error !== "cancel") {
       console.error("删除失败:", error);
-      ElMessage.error(t('datasource.messages.deleteFailed'));
+      ElMessage.error(t("datasource.messages.deleteFailed"));
     }
   }
 };
@@ -127,8 +154,29 @@ onMounted(() => {
 <template>
   <div class="p-5 md:p-6">
     <!-- 头部操作区 -->
-    <div class="flex justify-end mb-6">
-      <el-button type="primary" :icon="Plus" @click="handleCreate"> {{ $t('datasource.page.createButton') }} </el-button>
+    <div class="flex gap-4 mb-6">
+      <!-- 搜索框 -->
+      <div class="flex-1">
+        <el-input
+          v-model="searchKeyword"
+          :placeholder="$t('datasource.page.searchPlaceholder')"
+          clearable
+          class="max-w-sm"
+          @keyup.enter="handleSearch"
+          @clear="handleClearSearch"
+        >
+        </el-input>
+        <el-button :icon="Search" @click="handleSearch">
+          {{ $t("common.search") }}
+        </el-button>
+      </div>
+
+      <!-- 创建按钮 -->
+      <div class="flex justify-end">
+        <el-button type="primary" :icon="Plus" @click="handleCreate">
+          {{ $t("datasource.page.createButton") }}
+        </el-button>
+      </div>
     </div>
 
     <!-- 数据表格（只做展示与事件触发） -->
@@ -138,6 +186,7 @@ onMounted(() => {
       @edit="handleEdit"
       @delete="handleDelete"
       @test-connection="handleTestConnection"
+      @table-manage="handleTableManage"
     />
 
     <!-- 分页（父级集中管理） -->

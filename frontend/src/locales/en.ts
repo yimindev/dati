@@ -1,6 +1,16 @@
 export default {
+  common: {
+    back: 'Back',
+    refresh: 'Refresh',
+    yes: 'Yes',
+    no: 'No',
+    save: 'Save',
+    cancel: 'Cancel',
+    search: 'Search'
+  },
+
   header: {
-    brand: "DataConnAI",
+    brand: "DatI",
     workspace: "Workspace",
     itemOne: "item one",
     itemTwo: "item two",
@@ -66,12 +76,34 @@ export default {
       actions: {
         edit: "Edit",
         delete: "Delete",
+        tableManage: "Table Manage",
       },
     },
     page: {
+      searchPlaceholder: "Name or ID",
       createButton: "Create Data Source",
       deleteConfirmTitle: "Delete Confirmation",
       deleteConfirmMessage: 'Are you sure to delete data source "{name}"?',
+    },
+    tableInfo: {
+      title: 'Table Information Management',
+      subtitle: 'View and manage table information in this datasource',
+      tableName: 'Table Name',
+      displayName: 'Display Name',
+      comment: 'Comment',
+      schema: 'Schema',
+      type: 'Type',
+      actions: 'Actions',
+      configButton: 'Configure',
+      configTitle: 'Table Information Configuration',
+      displayNamePlaceholder: 'Enter display name',
+      description: 'Description',
+      descriptionPlaceholder: 'Enter table description',
+      category: 'Category',
+      categoryPlaceholder: 'e.g., User Domain, Order Domain',
+      loadFailed: 'Failed to load table list',
+      saveSuccess: 'Saved successfully',
+      saveFailed: 'Failed to save'
     },
     messages: {
       loadFailed: "Failed to load data sources",

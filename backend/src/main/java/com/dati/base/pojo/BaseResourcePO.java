@@ -3,10 +3,12 @@ package com.dati.base.pojo;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+import lombok.experimental.FieldNameConstants;
 
 @Getter
 @Setter
 @MappedSuperclass
+@FieldNameConstants
 public class BaseResourcePO extends BasePO {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)

@@ -12,6 +12,7 @@ interface Emits {
   (e: 'edit', datasource: DatasourceVO): void
   (e: 'delete', datasource: DatasourceVO): void
   (e: 'test-connection', datasource: DatasourceVO): void
+  (e: 'table-manage', datasource: DatasourceVO): void
 }
 
 defineProps<Props>()
@@ -50,6 +51,7 @@ const formatDate = (dateStr: string) => {
       <el-table-column :label="$t('datasource.table.columns.actions')" width="220" fixed="right">
         <template #default="{ row }">
           <div class="flex items-center gap-2">
+            <el-button type="primary" link @click="$emit('table-manage', row)">{{ $t('datasource.table.actions.tableManage') }}</el-button>
             <el-button type="primary" link @click="$emit('edit', row)">{{ $t('datasource.table.actions.edit') }}</el-button>
             <el-button type="danger" link @click="$emit('delete', row)">{{ $t('datasource.table.actions.delete') }}</el-button>
           </div>

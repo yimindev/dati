@@ -1,15 +1,21 @@
 package com.dati.datasource.server.controller;
 
 import com.dati.base.exception.DciException;
+import com.dati.base.pojo.BasePO;
 import com.dati.base.pojo.IdResponse;
+import com.dati.base.pojo.PageReq;
 import com.dati.base.pojo.PageResponse;
 import com.dati.datasource.domain.model.DataSource;
 import com.dati.datasource.domain.service.DataSourceService;
+import com.dati.datasource.repository.po.DataSourcePO;
 import com.dati.datasource.server.assembler.DSAssembler;
 import com.dati.datasource.server.pojo.DatasourceVO;
 import com.dati.datasource.server.pojo.SqlExecuteRequest;
 import com.dati.db.Column;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.web.bind.annotation.*;
 
 import java.sql.SQLException;
@@ -35,7 +41,7 @@ public class DataSourceController {
         return dataSourceService.testConnection(DSAssembler.toJdbcConnector(dataSource));
     }
 
-    @PostMapping("")
+    @PostMapping
     public IdResponse addDataSource(@RequestBody DataSource dataSource) {
         dsAssembler.fillUsersFromRequest(dataSource);
         return new IdResponse(dataSourceService.addDataSource(dataSource));
@@ -54,14 +60,15 @@ public class DataSourceController {
         return new IdResponse(id);
     }
 
-    @GetMapping("")
-    public PageResponse<DatasourceVO> listDataSources(@RequestParam(name = "page", defaultValue = "1")int page,  @RequestParam(name = "size", defaultValue = "10") int size) {
-        PageResponse<DatasourceVO> dataSourcePageResponse = new PageResponse<>();
-        dataSourcePageResponse.setData(dsAssembler.toDatasourceVOList(dataSourceService.listDataSources()));
-        dataSourcePageResponse.setTotal(dataSourceService.listDataSources().size());
-        return dataSourcePageResponse;
+    @GetMapping
+    public PageResponse<DatasourceVO> listDataSources(PageReq pageReq) {
+        Sort sortBy = Sort.by(Sort.Direction.DESC, BasePO.Fields.createdAt);
+        Page<DatasourceVO> datasourceVOPage = dataSourceService.listDataSources(pageReq.toPageRequest().withSort(sortBy))
+                .map(dsAssembler::toDatasourceVO);
+        return PageResponse.of(datasourceVOPage);
     }
 
+    // todo: 是不是没啥用？
     @GetMapping("/{id}/catalogs")
     public List<String> getCatalogs(@PathVariable("id") String id) {
         try {

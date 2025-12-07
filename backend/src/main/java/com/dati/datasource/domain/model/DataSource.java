@@ -2,6 +2,7 @@ package com.dati.datasource.domain.model;
 
 import com.dati.base.pojo.BaseResource;
 import com.dati.db.DbType;
+import jakarta.persistence.Table;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 

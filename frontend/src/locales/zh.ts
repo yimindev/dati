@@ -1,6 +1,16 @@
 export default {
+  common: {
+    back: '返回',
+    refresh: '刷新',
+    yes: '是',
+    no: '否',
+    save: '保存',
+    cancel: '取消',
+    search: '搜索',
+  },
+
   header: {
-    brand: "DataConnAI",
+    brand: "DatI",
     workspace: "工作台",
     itemOne: "项目一",
     itemTwo: "项目二",
@@ -66,12 +76,34 @@ export default {
       actions: {
         edit: "编辑",
         delete: "删除",
+        tableManage: "表管理",
       },
     },
     page: {
+      searchPlaceholder: '名称或ID',
       createButton: "创建数据源",
       deleteConfirmTitle: "确认删除",
       deleteConfirmMessage: '确定要删除数据源 "{name}" 吗？',
+    },
+    tableInfo: {
+      title: '表信息管理',
+      subtitle: '查看和管理数据源中的表信息',
+      tableName: '表名',
+      displayName: '显示名称',
+      comment: '表注释',
+      schema: 'Schema',
+      type: '类型',
+      actions: '操作',
+      configButton: '配置信息',
+      configTitle: '表信息配置',
+      displayNamePlaceholder: '请输入显示名称',
+      description: '描述信息',
+      descriptionPlaceholder: '请输入详细的表描述',
+      category: '业务分类',
+      categoryPlaceholder: '如：用户域、订单域等',
+      loadFailed: '加载表列表失败',
+      saveSuccess: '保存成功',
+      saveFailed: '保存失败'
     },
     messages: {
       loadFailed: "加载数据源失败",

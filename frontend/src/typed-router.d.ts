@@ -20,6 +20,7 @@ declare module 'vue-router/auto-routes' {
   export interface RouteNamedMap {
     '/': RouteRecordInfo<'/', '/', Record<never, never>, Record<never, never>>,
     '/datasource/': RouteRecordInfo<'/datasource/', '/datasource', Record<never, never>, Record<never, never>>,
+    '/datasource/[id]/table-info': RouteRecordInfo<'/datasource/[id]/table-info', '/datasource/:id/table-info', { id: ParamValue<true> }, { id: ParamValue<false> }>,
     '/nav/1/item-1': RouteRecordInfo<'/nav/1/item-1', '/nav/1/item-1', Record<never, never>, Record<never, never>>,
     '/nav/2': RouteRecordInfo<'/nav/2', '/nav/2', Record<never, never>, Record<never, never>>,
     '/nav/4': RouteRecordInfo<'/nav/4', '/nav/4', Record<never, never>, Record<never, never>>,
@@ -42,6 +43,10 @@ declare module 'vue-router/auto-routes' {
     }
     'src/pages/datasource/index.vue': {
       routes: '/datasource/'
+      views: never
+    }
+    'src/pages/datasource/[id]/table-info.vue': {
+      routes: '/datasource/[id]/table-info'
       views: never
     }
     'src/pages/nav/1/item-1.vue': {
