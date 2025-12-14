@@ -7,4 +7,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface TableInfoDAO extends JpaRepository<TableInfoPO, String> {
     Page<TableInfoPO> findByDataSourceId(String dataSourceId, Pageable pageable);
+    Page<TableInfoPO> findByDataSourceIdAndNameContaining(String dataSourceId, String name, Pageable pageable);
 }

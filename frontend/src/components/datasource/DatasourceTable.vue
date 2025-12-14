@@ -1,8 +1,7 @@
 <script setup lang="ts">
-import { useI18n } from 'vue-i18n'
 import type { DatasourceVO } from '~/api/datasource'
+import { formatDateTime } from "~/composables";
 
-// Props & Emits
 interface Props {
   data: DatasourceVO[]
   loading?: boolean
@@ -17,18 +16,6 @@ interface Emits {
 
 defineProps<Props>()
 defineEmits<Emits>()
-
-const { locale } = useI18n()
-
-// 格式化日期
-const formatDate = (dateStr: string) => {
-  if (!dateStr) return '-'
-  try {
-    return new Intl.DateTimeFormat(locale.value).format(new Date(dateStr))
-  } catch {
-    return new Date(dateStr).toLocaleString()
-  }
-}
 </script>
 
 <template>
@@ -40,12 +27,12 @@ const formatDate = (dateStr: string) => {
     >
       <el-table-column prop="id" :label="$t('datasource.table.columns.id')" min-width="150" />
       <el-table-column prop="name" :label="$t('datasource.table.columns.name')" min-width="100" />
-      <el-table-column prop="type" :label="$t('datasource.table.columns.type')" min-width="120" />
-      <el-table-column prop="created_by" :label="$t('datasource.table.columns.createdBy')" width="120" />
-      <el-table-column prop="description" :label="$t('datasource.table.columns.description')" min-width="150" show-overflow-tooltip />
-      <el-table-column prop="updated_at" :label="$t('datasource.table.columns.updatedAt')" width="180">
+      <el-table-column prop="type" :label="$t('datasource.table.columns.type')" min-width="100" />
+      <el-table-column prop="created_by" :label="$t('datasource.table.columns.createdBy')" min-width="100" />
+      <el-table-column prop="description" :label="$t('datasource.table.columns.description')" min-width="120" show-overflow-tooltip />
+      <el-table-column prop="updated_at" :label="$t('datasource.table.columns.updatedAt')" min-width="100">
         <template #default="{ row }">
-          {{ formatDate(row.updated_at) }}
+          {{ formatDateTime(row.updated_at) }}
         </template>
       </el-table-column>
       <el-table-column :label="$t('datasource.table.columns.actions')" width="220" fixed="right">

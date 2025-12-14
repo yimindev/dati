@@ -7,92 +7,66 @@ meta:
 import { onMounted, ref } from "vue";
 import { useRoute } from "vue-router";
 import { ElMessage } from "element-plus";
-import { Setting } from "@element-plus/icons-vue";
+import { Plus, Search, Setting } from "@element-plus/icons-vue";
 import { useI18n } from "vue-i18n";
+import { listTableInfos, type TableInfoVO } from "~/api/tableinfo.ts";
+import { formatDateTime } from "~/composables";
 
 const { t } = useI18n();
-const route = useRoute();
+const route = useRoute("/datasource/[id]/table-info");
 
 // 数据源ID
 const datasourceId = ref(route.params.id);
-const datasourceName = ref(""); // 数据源名称
+const searchKeyword = ref("");
 
 // 表格数据
 const loading = ref(false);
-const tableList = ref<TableMetadata[]>([]);
+const tableList = ref<TableInfoVO[]>([]);
 const page = ref(1);
 const pageSize = ref(10);
 const total = ref(0);
 
 // 弹窗状态
 const metadataDialogVisible = ref(false);
-const currentTable = ref<TableMetadata | null>(null);
-
-// 表元数据类型定义
-interface TableMetadata {
-  id?: string;
-  tableName: string;
-  tableComment?: string;
-  schemaName?: string;
-  tableType?: string;
-  rowCount?: number;
-  createTime?: string;
-  updateTime?: string;
-  // 元数据配置字段
-  displayName?: string;
-  description?: string;
-  tags?: string[];
-  category?: string;
-  isVisible?: boolean;
-}
+const currentTable = ref<TableInfoVO | null>(null);
 
 // 加载表列表（待实现接口）
 const loadTables = async () => {
   try {
     loading.value = true;
-    // TODO: 调用后端接口
-    // const response = await listTables(datasourceId.value, page.value, pageSize.value);
-    // tableList.value = response.data || [];
-    // total.value = response.total ?? 0;
-    // datasourceName.value = response.datasourceName || "";
-
-    // 模拟数据
-    tableList.value = [
-      {
-        tableName: "user",
-        tableComment: "用户表",
-        schemaName: "public",
-        tableType: "TABLE",
-        rowCount: 1500,
-        displayName: "用户信息表",
-        isVisible: true,
-      },
-      {
-        tableName: "order",
-        tableComment: "订单表",
-        schemaName: "public",
-        tableType: "TABLE",
-        rowCount: 5000,
-        isVisible: true,
-      },
-    ];
-    total.value = 2;
-    datasourceName.value = "示例数据源";
+    const response = await listTableInfos(
+      datasourceId.value,
+      page.value,
+      pageSize.value,
+      searchKeyword.value,
+    );
+    tableList.value = response.data || [];
+    total.value = response.total ?? 0;
   } catch (error) {
     console.error("加载表列表失败:", error);
-    ElMessage.error(t('datasource.table.loadFailed'));
+    ElMessage.error(t("datasource.table.loadFailed"));
   } finally {
     loading.value = false;
   }
 };
 
-// 刷新表列表
-const handleRefresh = () => {
-  // loadDatasources();
+// 搜索处理
+const handleSearch = () => {
+  page.value = 1; // 搜索时回到第一页
+  loadTables();
 };
 
+// 清空搜索
+const handleClearSearch = () => {
+  searchKeyword.value = "";
+  page.value = 1;
+  loadTables();
+};
+
+const handleCreate = () => {};
+
 // 配置元数据
-const handleConfigMetadata = (table: TableMetadata) => {
+const handleConfigMetadata = (table: TableInfoVO) => {
   currentTable.value = { ...table };
   metadataDialogVisible.value = true;
 };
@@ -102,12 +76,12 @@ const handleSaveMetadata = async () => {
   try {
     // TODO: 调用后端接口保存
     // await saveTableMetadata(datasourceId.value, currentTable.value);
-    ElMessage.success(t('datasource.table.saveSuccess'));
+    ElMessage.success(t("datasource.table.saveSuccess"));
     metadataDialogVisible.value = false;
     await loadTables();
   } catch (error) {
     console.error("保存元数据失败:", error);
-    ElMessage.error(t('datasource.table.saveFailed'));
+    ElMessage.error(t("datasource.table.saveFailed"));
   }
 };
 
@@ -132,34 +106,71 @@ onMounted(() => {
   <div class="p-5 md:p-6">
     <el-breadcrumb separator="/" class="mb-6">
       <el-breadcrumb-item :to="{ path: '/datasource' }">
-        {{ $t('side.dataSources') }}
+        {{ $t("side.dataSources") }}
       </el-breadcrumb-item>
-      <el-breadcrumb-item>{{ $t('datasource.tableInfo.title') }}</el-breadcrumb-item>
+      <el-breadcrumb-item>{{
+        $t("datasource.tableInfo.title")
+      }}</el-breadcrumb-item>
     </el-breadcrumb>
 
     <!-- 页面头部 -->
-    <div class="mb-6">
-      <div class="flex items-center justify-between">
-        <div>
-          <h2 class="text-2xl font-bold">{{ datasourceName }} </h2>
-          <p class="text-sm text-gray-500 mt-1">
-            {{ $t('datasource.tableInfo.subtitle') }}
-          </p>
-        </div>
-        <el-button type="primary" @click="handleRefresh">
-          {{ $t('common.refresh') }}
+    <div class="flex mb-6">
+      <!-- 搜索框 -->
+      <div class="flex-1">
+        <el-input
+          v-model="searchKeyword"
+          :placeholder="$t('datasource.page.searchPlaceholder')"
+          clearable
+          class="max-w-sm"
+          @keyup.enter="handleSearch"
+          @clear="handleClearSearch"
+        >
+        </el-input>
+        <el-button :icon="Search" @click="handleSearch">
+          {{ $t("common.search") }}
+        </el-button>
+      </div>
+
+      <!-- 创建按钮 -->
+      <div class="flex justify-end">
+        <el-button type="primary" :icon="Plus" @click="handleCreate">
+          {{ $t("datasource.tableInfo.addTable") }}
         </el-button>
       </div>
     </div>
 
     <!-- 表格 -->
     <el-table :data="tableList" v-loading="loading" stripe>
-      <el-table-column prop="tableName" :label="$t('datasource.tableInfo.tableName')" min-width="150" />
-      <el-table-column prop="displayName" :label="$t('datasource.tableInfo.displayName')" min-width="150" />
-      <el-table-column prop="tableComment" :label="$t('datasource.tableInfo.comment')" min-width="200" />
-      <el-table-column prop="schemaName" :label="$t('datasource.tableInfo.schema')" width="120" />
-      <el-table-column prop="tableType" :label="$t('datasource.tableInfo.type')" width="100" />
-      <el-table-column :label="$t('datasource.tableInfo.actions')" width="150" fixed="right">
+      <el-table-column
+        prop="name"
+        :label="$t('datasource.tableInfo.tableName')"
+        min-width="150"
+      />
+      <el-table-column
+        prop="display_name"
+        :label="$t('datasource.tableInfo.displayName')"
+        min-width="150"
+      />
+      <el-table-column
+        prop="description"
+        :label="$t('datasource.tableInfo.comment')"
+        min-width="200"
+      />
+      <el-table-column
+        prop="schema"
+        :label="$t('datasource.tableInfo.schema')"
+        min-width="120"
+      />
+      <el-table-column
+        prop="updated_at"
+        :label="$t('common.updatedAt')"
+        min-width="120"
+      >
+        <template #default="{ row }">
+          {{ formatDateTime(row.updated_at) }}
+        </template>
+      </el-table-column>
+      <el-table-column :label="$t('common.actions')" width="150" fixed="right">
         <template #default="{ row }">
           <el-button
             size="small"
@@ -167,7 +178,7 @@ onMounted(() => {
             type="primary"
             @click="handleConfigMetadata(row)"
           >
-            {{ $t('datasource.tableInfo.configButton') }}
+            {{ $t("datasource.tableInfo.configButton") }}
           </el-button>
         </template>
       </el-table-column>
@@ -192,16 +203,15 @@ onMounted(() => {
       :title="$t('datasource.tableInfo.configTitle')"
       width="600px"
     >
-      <el-form
-        v-if="currentTable"
-        :model="currentTable"
-        label-width="120px"
-      >
+      <el-form v-if="currentTable" :model="currentTable" label-width="120px">
         <el-form-item :label="$t('datasource.tableInfo.tableName')">
-          <el-input v-model="currentTable.tableName" disabled />
+          <el-input v-model="currentTable.name" disabled />
         </el-form-item>
         <el-form-item :label="$t('datasource.tableInfo.displayName')">
-          <el-input v-model="currentTable.displayName" :placeholder="$t('datasource.tableInfo.displayNamePlaceholder')" />
+          <el-input
+            v-model="currentTable.display_name"
+            :placeholder="$t('datasource.tableInfo.displayNamePlaceholder')"
+          />
         </el-form-item>
         <el-form-item :label="$t('datasource.tableInfo.description')">
           <el-input
@@ -211,19 +221,13 @@ onMounted(() => {
             :placeholder="$t('datasource.tableInfo.descriptionPlaceholder')"
           />
         </el-form-item>
-        <el-form-item :label="$t('datasource.tableInfo.category')">
-          <el-input v-model="currentTable.category" :placeholder="$t('datasource.tableInfo.categoryPlaceholder')" />
-        </el-form-item>
-        <el-form-item :label="$t('datasource.tableInfo.visible')">
-          <el-switch v-model="currentTable.isVisible" />
-        </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="metadataDialogVisible = false">
-          {{ $t('common.cancel') }}
+          {{ $t("common.cancel") }}
         </el-button>
         <el-button type="primary" @click="handleSaveMetadata">
-          {{ $t('common.save') }}
+          {{ $t("common.save") }}
         </el-button>
       </template>
     </el-dialog>

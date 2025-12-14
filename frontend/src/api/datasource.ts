@@ -1,4 +1,5 @@
 import type { BaseResourceVO, IdResponse, PageResponse } from "~/api/types.ts";
+import { get, post, put, del } from "./http";
 
 
 // 兼容 DataSource：创建/编辑时我们直接发 JSON
@@ -44,8 +45,6 @@ export interface CatalogParam {
   catalog?: string;
 }
 
-import { get, post, put, del } from './http'
-
 // 数据源：测试连接（POST /v1/data-sources/test-connection）
 // 注意：请求体字段用蛇形（如 jdbc_url、username、password、type）
 export function testConnection(body: DataSourcePayload, signal?: AbortSignal): Promise<boolean> {
@@ -74,11 +73,6 @@ export function listDataSources(page: number, size: number, keyword?: string, si
     { page, size, keyword },
     signal,
   );
-}
-
-// Catalog 列表（GET /v1/data-sources/{id}/catalogs）
-export function getCatalogs(id: string, signal?: AbortSignal): Promise<string[]> {
-  return get<string[]>(`/v1/data-sources/${encodeURIComponent(id)}/catalogs`, undefined, signal)
 }
 
 // Schema 列表（GET /v1/data-sources/{id}/schemas?catalog=...）

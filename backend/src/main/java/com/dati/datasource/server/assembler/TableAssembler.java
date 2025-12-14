@@ -1,0 +1,20 @@
+package com.dati.datasource.server.assembler;
+
+import com.dati.base.BaseAssembler;
+import com.dati.datasource.domain.model.TableInfo;
+import com.dati.datasource.server.pojo.TableInfoVO;
+import org.springframework.stereotype.Component;
+
+@Component
+public class TableAssembler extends BaseAssembler {
+
+    public TableInfoVO toTableInfoVO(TableInfo tableInfo) {
+        TableInfoVO tableInfoVO = new TableInfoVO();
+        super.copyBaseInfo(tableInfo, tableInfoVO);
+        tableInfoVO.setDatasourceId(tableInfo.getDatasourceId());
+        tableInfoVO.setSchema(tableInfo.getSchema());
+        tableInfoVO.setDisplayName(tableInfo.getDisplayName());
+        return tableInfoVO;
+    }
+
+}
