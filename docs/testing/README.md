@@ -8,11 +8,11 @@ cd backend && mvn test
 ```
 - 运行指定测试类：
 ```bash
-mvn -Dtest=com.dati.BackendApplicationTests test
+mvn -Dtest=com.dati.DatiApplicationTests test
 ```
 - 运行指定测试方法：
 ```bash
-mvn -Dtest=com.dati.BackendApplicationTests#contextLoads test
+mvn -Dtest=com.dati.DatiApplicationTests#contextLoads test
 ```
 
 ### 新增单元测试（示例）

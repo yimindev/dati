@@ -17,8 +17,8 @@ java -jar target/backend-*.jar
 - 运行测试：
 ```bash
 mvn test
-mvn -Dtest=com.dati.BackendApplicationTests test
-mvn -Dtest=com.dati.BackendApplicationTests#contextLoads test
+mvn -Dtest=com.dati.DatiApplicationTests test
+mvn -Dtest=com.dati.DatiApplicationTests#contextLoads test
 ```
 
 ## 运行配置

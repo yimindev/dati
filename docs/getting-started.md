@@ -48,9 +48,9 @@ npm run preview
 ```bash
 cd backend && mvn test
 # 指定测试类
-mvn -Dtest=com.dati.BackendApplicationTests test
+mvn -Dtest=com.dati.DatiApplicationTests test
 # 指定测试方法
-mvn -Dtest=com.dati.BackendApplicationTests#contextLoads test
+mvn -Dtest=com.dati.DatiApplicationTests#contextLoads test
 ```
 
 - 前端：尚未配置测试框架。如需单元测试，建议引入 Vitest；参考 [docs/testing/README.md](testing/README.md)。

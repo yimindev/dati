@@ -1,5 +1,6 @@
 package com.dati.datasource.domain.service;
 
+import com.dati.common.StringUtils;
 import com.dati.db.Column;
 import com.dati.db.HikariPoolManager;
 import com.dati.db.JdbcConnector;
@@ -56,8 +57,11 @@ public class DataSourceService {
         dataSourceDAO.deleteById(id);
     }
 
-    public Page<DataSource> listDataSources(Pageable pageable) {
-        return dataSourceDAO.findAll(pageable).map(DSMapper::toDataSource);
+    public Page<DataSource> listDataSources(String keyword, Pageable pageable) {
+        if (StringUtils.isBlank(keyword)) {
+            return dataSourceDAO.findAll(pageable).map(DSMapper::toDataSource);
+        }
+        return dataSourceDAO.findAllByNameContainingOrId(keyword, keyword, pageable).map(DSMapper::toDataSource);
     }
 
     public List<String> getCatalogs(String dataSourceId) throws SQLException {

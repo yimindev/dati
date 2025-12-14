@@ -7,16 +7,22 @@ import com.dati.base.pojo.PageReq;
 import com.dati.base.pojo.PageResponse;
 import com.dati.datasource.domain.model.DataSource;
 import com.dati.datasource.domain.service.DataSourceService;
-import com.dati.datasource.repository.po.DataSourcePO;
 import com.dati.datasource.server.assembler.DSAssembler;
 import com.dati.datasource.server.pojo.DatasourceVO;
 import com.dati.datasource.server.pojo.SqlExecuteRequest;
 import com.dati.db.Column;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.sql.SQLException;
 import java.util.List;
@@ -48,39 +54,29 @@ public class DataSourceController {
     }
 
     @PutMapping("/{id}")
-    public IdResponse updateDataSource(@PathVariable("id") String id, @RequestBody DataSource dataSource) {
+    public IdResponse updateDataSource(@PathVariable String id, @RequestBody DataSource dataSource) {
         dsAssembler.fillUpdateUserFromRequest(dataSource);
         dataSourceService.updateDataSource(id, dataSource);
         return new IdResponse(dataSource.getId());
     }
 
     @DeleteMapping("/{id}")
-    public IdResponse deleteDataSource(@PathVariable("id") String id) {
+    public IdResponse deleteDataSource(@PathVariable String id) {
         dataSourceService.deleteDataSource(id);
         return new IdResponse(id);
     }
 
     @GetMapping
-    public PageResponse<DatasourceVO> listDataSources(PageReq pageReq) {
+    public PageResponse<DatasourceVO> listDataSources(PageReq pageReq, @RequestParam(name = "keyword", required = false) String keyword) {
         Sort sortBy = Sort.by(Sort.Direction.DESC, BasePO.Fields.createdAt);
-        Page<DatasourceVO> datasourceVOPage = dataSourceService.listDataSources(pageReq.toPageRequest().withSort(sortBy))
+        Page<DatasourceVO> datasourceVOPage = dataSourceService.listDataSources(keyword, pageReq.toPageRequest().withSort(sortBy))
                 .map(dsAssembler::toDatasourceVO);
         return PageResponse.of(datasourceVOPage);
     }
 
-    // todo: 是不是没啥用？
-    @GetMapping("/{id}/catalogs")
-    public List<String> getCatalogs(@PathVariable("id") String id) {
-        try {
-            return dataSourceService.getCatalogs(id);
-        } catch (SQLException e) {
-            log.error("Failed to get catalogs for datasource {}", id, e);
-            throw new DciException("SQL Error: " + e.getMessage());
-        }
-    }
 
     @GetMapping("/{id}/schemas")
-    public List<String> getSchemas(@PathVariable("id") String id, @RequestParam(name = "catalog", required = false) String catalog) {
+    public List<String> getSchemas(@PathVariable String id, @RequestParam(name = "catalog", required = false) String catalog) {
         try {
             return dataSourceService.getSchemas(id, catalog);
         } catch (SQLException e) {
@@ -90,7 +86,7 @@ public class DataSourceController {
     }
 
     @GetMapping("/{id}/schemas/{schema}/tables")
-    public List<String> getTables(@PathVariable("id") String id, @PathVariable("schema") String schema, @RequestParam(name = "catalog", required = false) String catalog) {
+    public List<String> getTables(@PathVariable String id, @PathVariable String schema, @RequestParam(name = "catalog", required = false) String catalog) {
         try {
             return dataSourceService.getTables(id, catalog, schema);
         } catch (SQLException e) {
@@ -100,7 +96,7 @@ public class DataSourceController {
     }
 
     @GetMapping("/{id}/schemas/{schema}/tables/{table}/columns")
-    public List<Column> getColumns(@PathVariable("id") String id, @PathVariable("schema") String schema, @PathVariable("table") String table, @RequestParam(name = "catalog", required = false) String catalog) {
+    public List<Column> getColumns(@PathVariable String id, @PathVariable String schema, @PathVariable String table, @RequestParam(name = "catalog", required = false) String catalog) {
         try {
             return dataSourceService.getColumns(id, catalog, schema, table);
         } catch (SQLException e) {
@@ -110,7 +106,7 @@ public class DataSourceController {
     }
 
     @PostMapping("/{id}/execute-sql")
-    public List<Map<String, Object>> executeSql(@PathVariable("id") String id, @RequestBody SqlExecuteRequest sqlExecuteRequest) {
+    public List<Map<String, Object>> executeSql(@PathVariable String id, @RequestBody SqlExecuteRequest sqlExecuteRequest) {
         try {
             return dataSourceService.executeSql(id, sqlExecuteRequest.sql());
         } catch (SQLException e) {

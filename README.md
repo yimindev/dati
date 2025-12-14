@@ -52,9 +52,9 @@ DatI 是一个为 AI 大模型提供**统一数据接入能力**的基础设施�
   ```bash
   cd backend && mvn test
   # 只跑一个类
-  mvn -Dtest=com.dati.BackendApplicationTests test
+  mvn -Dtest=com.dati.DatiApplicationTests test
   # 只跑一个方法
-  mvn -Dtest=com.dati.BackendApplicationTests#contextLoads test
+  mvn -Dtest=com.dati.DatiApplicationTests#contextLoads test
   ```
 - 前端构建与预览：
   ```bash

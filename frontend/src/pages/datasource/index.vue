@@ -33,7 +33,7 @@ const loadDatasources = async () => {
     const response = await listDataSources(
       page.value,
       pageSize.value,
-      // searchKeyword.value,
+      searchKeyword.value,
     );
     // 假设后端返回 { data: DatasourceVO[], total: number }
     datasourceList.value = response.data || [];

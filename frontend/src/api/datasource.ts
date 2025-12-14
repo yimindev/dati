@@ -68,10 +68,10 @@ export function deleteDataSource(id: string, signal?: AbortSignal): Promise<IdRe
 }
 
 // 数据源：列表（GET /v1/data-sources）
-export function listDataSources(page: number, size: number, signal?: AbortSignal): Promise<PageResponse<DatasourceVO>> {
+export function listDataSources(page: number, size: number, keyword?: string, signal?: AbortSignal): Promise<PageResponse<DatasourceVO>> {
   return get<PageResponse<DatasourceVO>>(
     "/v1/data-sources",
-    { page, size },
+    { page, size, keyword },
     signal,
   );
 }
