@@ -1,19 +1,21 @@
 <route lang="yaml">
 meta:
-  activeMenu: /datasource
+  activeMenu: /datasources
 </route>
 
 <script setup lang="ts">
 import { onMounted, ref } from "vue";
 import { useRoute } from "vue-router";
 import { ElMessage } from "element-plus";
-import { Plus, Search, Setting } from "@element-plus/icons-vue";
+import { Plus, Search } from "@element-plus/icons-vue";
 import { useI18n } from "vue-i18n";
 import { listTableInfos, type TableInfoVO } from "~/api/tableinfo.ts";
 import { formatDateTime } from "~/composables";
 
 const { t } = useI18n();
-const route = useRoute("/datasource/[id]/table-info");
+
+const router = useRouter();
+const route = useRoute("/datasources/[id]/tables/");
 
 // 数据源ID
 const datasourceId = ref(route.params.id);
@@ -71,6 +73,12 @@ const handleConfigMetadata = (table: TableInfoVO) => {
   metadataDialogVisible.value = true;
 };
 
+const handleColumnManage = (table: TableInfoVO) => {
+  router.push({
+    path: `/datasources/${table.datasource_id}/tables/${table.id}/columns`,
+  });
+};
+
 // 保存元数据配置
 const handleSaveMetadata = async () => {
   try {
@@ -105,7 +113,7 @@ onMounted(() => {
 <template>
   <div class="p-5 md:p-6">
     <el-breadcrumb separator="/" class="mb-6">
-      <el-breadcrumb-item :to="{ path: '/datasource' }">
+      <el-breadcrumb-item :to="{ path: '/datasources' }">
         {{ $t("side.dataSources") }}
       </el-breadcrumb-item>
       <el-breadcrumb-item>{{
@@ -170,14 +178,17 @@ onMounted(() => {
           {{ formatDateTime(row.updated_at) }}
         </template>
       </el-table-column>
-      <el-table-column :label="$t('common.actions')" width="150" fixed="right">
+      <el-table-column
+        :label="$t('common.actions')"
+        min-width="150"
+        fixed="right"
+      >
         <template #default="{ row }">
-          <el-button
-            size="small"
-            :icon="Setting"
-            type="primary"
-            @click="handleConfigMetadata(row)"
-          >
+          <el-button type="primary" link @click="handleColumnManage(row)">
+            {{ $t("datasource.tableInfo.columnSettings") }}
+          </el-button>
+
+          <el-button link type="primary" @click="handleConfigMetadata(row)">
             {{ $t("datasource.tableInfo.configButton") }}
           </el-button>
         </template>

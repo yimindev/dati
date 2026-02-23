@@ -110,6 +110,7 @@ export default {
       categoryPlaceholder: "e.g., User Domain, Order Domain",
       loadFailed: "Failed to load table list",
       addTable: "Add Tables",
+      columnSettings: "Column Settings",
       saveSuccess: "Saved successfully",
       saveFailed: "Failed to save",
     },

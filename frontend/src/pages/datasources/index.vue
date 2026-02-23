@@ -85,7 +85,7 @@ const handleEdit = (datasource: DatasourceVO) => {
 
 const handleTableManage = (datasource: DatasourceVO) => {
   router.push({
-    path: `/datasource/${datasource.id}/table-info`,
+    path: `/datasources/${datasource.id}/tables`,
   });
 };
 

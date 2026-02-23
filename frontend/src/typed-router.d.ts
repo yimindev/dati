@@ -19,8 +19,9 @@ declare module 'vue-router/auto-routes' {
    */
   export interface RouteNamedMap {
     '/': RouteRecordInfo<'/', '/', Record<never, never>, Record<never, never>>,
-    '/datasource/': RouteRecordInfo<'/datasource/', '/datasource', Record<never, never>, Record<never, never>>,
-    '/datasource/[id]/table-info': RouteRecordInfo<'/datasource/[id]/table-info', '/datasource/:id/table-info', { id: ParamValue<true> }, { id: ParamValue<false> }>,
+    '/datasources/': RouteRecordInfo<'/datasources/', '/datasources', Record<never, never>, Record<never, never>>,
+    '/datasources/[id]/tables/': RouteRecordInfo<'/datasources/[id]/tables/', '/datasources/:id/tables', { id: ParamValue<true> }, { id: ParamValue<false> }>,
+    '/datasources/[id]/tables/[tableId]/columns': RouteRecordInfo<'/datasources/[id]/tables/[tableId]/columns', '/datasources/:id/tables/:tableId/columns', { id: ParamValue<true>, tableId: ParamValue<true> }, { id: ParamValue<false>, tableId: ParamValue<false> }>,
     '/nav/1/item-1': RouteRecordInfo<'/nav/1/item-1', '/nav/1/item-1', Record<never, never>, Record<never, never>>,
     '/nav/2': RouteRecordInfo<'/nav/2', '/nav/2', Record<never, never>, Record<never, never>>,
     '/nav/4': RouteRecordInfo<'/nav/4', '/nav/4', Record<never, never>, Record<never, never>>,
@@ -41,12 +42,16 @@ declare module 'vue-router/auto-routes' {
       routes: '/'
       views: never
     }
-    'src/pages/datasource/index.vue': {
-      routes: '/datasource/'
+    'src/pages/datasources/index.vue': {
+      routes: '/datasources/'
       views: never
     }
-    'src/pages/datasource/[id]/table-info.vue': {
-      routes: '/datasource/[id]/table-info'
+    'src/pages/datasources/[id]/tables/index.vue': {
+      routes: '/datasources/[id]/tables/'
+      views: never
+    }
+    'src/pages/datasources/[id]/tables/[tableId]/columns.vue': {
+      routes: '/datasources/[id]/tables/[tableId]/columns'
       views: never
     }
     'src/pages/nav/1/item-1.vue': {

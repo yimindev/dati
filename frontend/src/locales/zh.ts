@@ -109,6 +109,7 @@ export default {
       categoryPlaceholder: "如：用户域、订单域等",
       loadFailed: "加载表列表失败",
       addTable: "添加表",
+      columnSettings: "列配置",
       saveSuccess: "保存成功",
       saveFailed: "保存失败",
     },
