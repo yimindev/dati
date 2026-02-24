@@ -159,7 +159,7 @@ onMounted(() => {
       <div class="flex-1">
         <el-input
           v-model="searchKeyword"
-          :placeholder="$t('datasource.page.searchPlaceholder')"
+          :placeholder="t('datasource.page.searchPlaceholder')"
           clearable
           class="max-w-sm"
           @keyup.enter="handleSearch"
@@ -167,14 +167,14 @@ onMounted(() => {
         >
         </el-input>
         <el-button :icon="Search" @click="handleSearch">
-          {{ $t("common.search") }}
+          {{ t("common.search") }}
         </el-button>
       </div>
 
       <!-- 创建按钮 -->
       <div class="flex justify-end">
         <el-button type="primary" :icon="Plus" @click="handleCreate">
-          {{ $t("datasource.page.createButton") }}
+          {{ t("datasource.page.createButton") }}
         </el-button>
       </div>
     </div>

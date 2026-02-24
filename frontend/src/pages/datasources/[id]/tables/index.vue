@@ -114,10 +114,10 @@ onMounted(() => {
   <div class="p-5 md:p-6">
     <el-breadcrumb separator="/" class="mb-6">
       <el-breadcrumb-item :to="{ path: '/datasources' }">
-        {{ $t("side.dataSources") }}
+        {{ t("side.dataSources") }}
       </el-breadcrumb-item>
       <el-breadcrumb-item>{{
-        $t("datasource.tableInfo.title")
+        t("datasource.tableInfo.title")
       }}</el-breadcrumb-item>
     </el-breadcrumb>
 
@@ -127,7 +127,7 @@ onMounted(() => {
       <div class="flex-1">
         <el-input
           v-model="searchKeyword"
-          :placeholder="$t('datasource.page.searchPlaceholder')"
+          :placeholder="t('datasource.page.searchPlaceholder')"
           clearable
           class="max-w-sm"
           @keyup.enter="handleSearch"
@@ -135,14 +135,14 @@ onMounted(() => {
         >
         </el-input>
         <el-button :icon="Search" @click="handleSearch">
-          {{ $t("common.search") }}
+          {{ t("common.search") }}
         </el-button>
       </div>
 
       <!-- 创建按钮 -->
       <div class="flex justify-end">
         <el-button type="primary" :icon="Plus" @click="handleCreate">
-          {{ $t("datasource.tableInfo.addTable") }}
+          {{ t("datasource.tableInfo.addTable") }}
         </el-button>
       </div>
     </div>
@@ -151,27 +151,27 @@ onMounted(() => {
     <el-table :data="tableList" v-loading="loading" stripe>
       <el-table-column
         prop="name"
-        :label="$t('datasource.tableInfo.tableName')"
+        :label="t('datasource.tableInfo.tableName')"
         min-width="150"
       />
       <el-table-column
         prop="display_name"
-        :label="$t('datasource.tableInfo.displayName')"
+        :label="t('datasource.tableInfo.displayName')"
         min-width="150"
       />
       <el-table-column
         prop="description"
-        :label="$t('datasource.tableInfo.comment')"
+        :label="t('datasource.tableInfo.comment')"
         min-width="200"
       />
       <el-table-column
         prop="schema"
-        :label="$t('datasource.tableInfo.schema')"
+        :label="t('datasource.tableInfo.schema')"
         min-width="120"
       />
       <el-table-column
         prop="updated_at"
-        :label="$t('common.updatedAt')"
+        :label="t('common.updatedAt')"
         min-width="120"
       >
         <template #default="{ row }">
@@ -179,17 +179,17 @@ onMounted(() => {
         </template>
       </el-table-column>
       <el-table-column
-        :label="$t('common.actions')"
+        :label="t('common.actions')"
         min-width="150"
         fixed="right"
       >
         <template #default="{ row }">
           <el-button type="primary" link @click="handleColumnManage(row)">
-            {{ $t("datasource.tableInfo.columnSettings") }}
+            {{ t("datasource.tableInfo.columnSettings") }}
           </el-button>
 
           <el-button link type="primary" @click="handleConfigMetadata(row)">
-            {{ $t("datasource.tableInfo.configButton") }}
+            {{ t("datasource.tableInfo.configButton") }}
           </el-button>
         </template>
       </el-table-column>
@@ -211,34 +211,34 @@ onMounted(() => {
     <!-- 元数据配置弹窗 -->
     <el-dialog
       v-model="metadataDialogVisible"
-      :title="$t('datasource.tableInfo.configTitle')"
+      :title="t('datasource.tableInfo.configTitle')"
       width="600px"
     >
       <el-form v-if="currentTable" :model="currentTable" label-width="120px">
-        <el-form-item :label="$t('datasource.tableInfo.tableName')">
+        <el-form-item :label="t('datasource.tableInfo.tableName')">
           <el-input v-model="currentTable.name" disabled />
         </el-form-item>
-        <el-form-item :label="$t('datasource.tableInfo.displayName')">
+        <el-form-item :label="t('datasource.tableInfo.displayName')">
           <el-input
             v-model="currentTable.display_name"
-            :placeholder="$t('datasource.tableInfo.displayNamePlaceholder')"
+            :placeholder="t('datasource.tableInfo.displayNamePlaceholder')"
           />
         </el-form-item>
-        <el-form-item :label="$t('datasource.tableInfo.description')">
+        <el-form-item :label="t('datasource.tableInfo.description')">
           <el-input
             v-model="currentTable.description"
             type="textarea"
             :rows="3"
-            :placeholder="$t('datasource.tableInfo.descriptionPlaceholder')"
+            :placeholder="t('datasource.tableInfo.descriptionPlaceholder')"
           />
         </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="metadataDialogVisible = false">
-          {{ $t("common.cancel") }}
+          {{ t("common.cancel") }}
         </el-button>
         <el-button type="primary" @click="handleSaveMetadata">
-          {{ $t("common.save") }}
+          {{ t("common.save") }}
         </el-button>
       </template>
     </el-dialog>

@@ -115,13 +115,13 @@ onMounted(() => {
   <div class="p-5 md:p-6">
     <el-breadcrumb separator="/" class="mb-6">
       <el-breadcrumb-item :to="{ path: '/datasources' }">
-        {{ $t("side.dataSources") }}
+        {{ t("side.dataSources") }}
       </el-breadcrumb-item>
       <el-breadcrumb-item :to="{ path: `/datasources/${datasourceId}/tables` }">
-        {{ $t("datasource.tableInfo.title") }}
+        {{ t("datasource.tableInfo.title") }}
       </el-breadcrumb-item>
       <el-breadcrumb-item>
-        {{ $t("datasource.tableInfo.columnSettings") }}
+        {{ t("datasource.tableInfo.columnSettings") }}
       </el-breadcrumb-item>
     </el-breadcrumb>
 
@@ -138,7 +138,7 @@ onMounted(() => {
             @clear="handleClearSearch"
         />
         <el-button :icon="Search" @click="handleSearch">
-          {{ $t("common.search") }}
+          {{ t("common.search") }}
         </el-button>
       </div>
     </div>
@@ -166,13 +166,13 @@ onMounted(() => {
       <el-table-column prop="default_value" label="默认值" min-width="150" />
       <el-table-column prop="description" label="注释" min-width="240" />
 
-      <el-table-column prop="updated_at" :label="$t('common.updatedAt')" min-width="140">
+      <el-table-column prop="updated_at" :label="t('common.updatedAt')" min-width="140">
         <template #default="{ row }">
           {{ row.updated_at ? formatDateTime(row.updated_at) : "-" }}
         </template>
       </el-table-column>
 
-      <el-table-column :label="$t('common.actions')" width="150" fixed="right">
+      <el-table-column :label="t('common.actions')" width="150" fixed="right">
         <template #default="{ row }">
           <el-button
               size="small"
@@ -222,10 +222,10 @@ onMounted(() => {
 
       <template #footer>
         <el-button @click="metadataDialogVisible = false">
-          {{ $t("common.cancel") }}
+          {{ t("common.cancel") }}
         </el-button>
         <el-button type="primary" @click="handleSaveMetadata">
-          {{ $t("common.save") }}
+          {{ t("common.save") }}
         </el-button>
       </template>
     </el-dialog>

@@ -68,18 +68,18 @@ defineExpose({
     label-width="auto"
     @submit.prevent
   >
-    <el-form-item :label="$t('datasource.form.fields.name')" prop="name">
+    <el-form-item :label="t('datasource.form.fields.name')" prop="name">
       <el-input
         v-model="modelValue.name"
-        :placeholder="$t('datasource.form.placeholders.name')"
+        :placeholder="t('datasource.form.placeholders.name')"
         maxlength="100"
       />
     </el-form-item>
 
-    <el-form-item :label="$t('datasource.form.fields.type')" prop="type">
+    <el-form-item :label="t('datasource.form.fields.type')" prop="type">
       <el-select
         v-model="modelValue.type"
-        :placeholder="$t('datasource.form.placeholders.type')"
+        :placeholder="t('datasource.form.placeholders.type')"
         style="width: 100%"
       >
         <el-option label="MySQL" value="MYSQL" />
@@ -98,32 +98,32 @@ defineExpose({
     <el-form-item label="JDBC URL" prop="jdbc_url">
       <el-input
         v-model="modelValue.jdbc_url"
-        :placeholder="$t('datasource.form.placeholders.jdbc')"
+        :placeholder="t('datasource.form.placeholders.jdbc')"
         :rows="2"
         type="textarea"
       />
     </el-form-item>
 
-    <el-form-item :label="$t('datasource.form.fields.username')" prop="username">
+    <el-form-item :label="t('datasource.form.fields.username')" prop="username">
       <el-input
         v-model="modelValue.username"
-        :placeholder="$t('datasource.form.placeholders.username')"
+        :placeholder="t('datasource.form.placeholders.username')"
       />
     </el-form-item>
 
-    <el-form-item :label="$t('datasource.form.fields.password')" prop="password">
+    <el-form-item :label="t('datasource.form.fields.password')" prop="password">
       <el-input
         v-model="modelValue.password"
         type="password"
-        :placeholder="$t('datasource.form.placeholders.password')"
+        :placeholder="t('datasource.form.placeholders.password')"
         show-password
       />
     </el-form-item>
 
-    <el-form-item :label="$t('datasource.form.fields.description')">
+    <el-form-item :label="t('datasource.form.fields.description')">
       <el-input
         v-model="modelValue.description"
-        :placeholder="$t('datasource.form.placeholders.description')"
+        :placeholder="t('datasource.form.placeholders.description')"
         :rows="3"
         type="textarea"
         maxlength="500"

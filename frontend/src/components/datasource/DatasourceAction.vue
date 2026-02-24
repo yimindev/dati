@@ -128,7 +128,7 @@ const handleCancel = () => {
 <template>
   <el-dialog
     v-model="visible"
-    :title="isEdit ? $t('datasource.dialog.editTitle') : $t('datasource.dialog.createTitle')"
+    :title="isEdit ? t('datasource.dialog.editTitle') : t('datasource.dialog.createTitle')"
     width="600px"
     :close-on-click-modal="false"
   >
@@ -141,12 +141,12 @@ const handleCancel = () => {
 
     <template #footer>
       <div class="dialog-footer">
-        <el-button @click="handleCancel">{{ $t('datasource.common.cancel') }}</el-button>
+        <el-button @click="handleCancel">{{ t('datasource.common.cancel') }}</el-button>
         <el-button type="primary" :loading="testing" @click="handleTestConnection">
-          {{ $t('datasource.common.testConnection') }}
+          {{ t('datasource.common.testConnection') }}
         </el-button>
         <el-button type="primary" :loading="submitting" @click="handleSubmit">
-          {{ isEdit ? $t('datasource.common.update') : $t('datasource.common.create') }}
+          {{ isEdit ? t('datasource.common.update') : t('datasource.common.create') }}
         </el-button>
       </div>
     </template>
