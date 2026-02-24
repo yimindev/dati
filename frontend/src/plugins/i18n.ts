@@ -1,6 +1,15 @@
 import { createI18n } from "vue-i18n"
+import zh from "../locales/zh"
+import en from "../locales/en"
 
 export type AppLang = "en" | "zh"
+
+// 组合所有语言的类型，确保任何一个语言包中定义的键都能在类型提示中找到
+type MessageSchema = typeof zh & typeof en
+
+declare module "vue-i18n" {
+  export interface DefineLocaleMessage extends MessageSchema {}
+}
 
 const defaultLang: AppLang = (localStorage.getItem("locale") as AppLang) || "en"
 

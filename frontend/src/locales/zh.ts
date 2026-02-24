@@ -100,6 +100,7 @@ export default {
       comment: "表注释",
       schema: "Schema",
       type: "类型",
+      actions: "操作",
       configButton: "配置信息",
       configTitle: "表信息配置",
       displayNamePlaceholder: "请输入显示名称",
