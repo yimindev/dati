@@ -28,6 +28,8 @@ export default {
   },
 
   side: {
+    expand: "Expand",
+    collapse: "Collapse",
     mcpBuilder: "MCP Builder",
     sematicModels: "Sematic Models",
     dataSources: "Data Sources",

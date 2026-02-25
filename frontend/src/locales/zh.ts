@@ -28,6 +28,8 @@ export default {
   },
 
   side: {
+    expand: "展开",
+    collapse: "收起",
     mcpBuilder: "构建MCP",
     sematicModels: "语义模型",
     dataSources: "数据源",
