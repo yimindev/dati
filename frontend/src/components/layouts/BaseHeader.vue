@@ -12,17 +12,16 @@ const localeLabel = computed(() => (locale.value === "zh" ? "中文" : "EN"));
 async function changeLocale(lang: AppLang) {
   await setI18nLanguage(lang);
 }
-
 </script>
 
 <template>
   <el-menu class="el-menu-demo" mode="horizontal" :ellipsis="false" router>
     <el-menu-item index="/">
       <div class="flex items-center justify-center gap-2">
-        <el-icon class="text-xl">
-          <img src="/dcai.svg" alt="dcai" class="w-[1em] h-[1em]" />
-        </el-icon>
-        <span>{{ t("header.brand") }}</span>
+        <img src="/dati.svg" alt="dati" class="size-7 object-contain" />
+        <span class="text-base font-semibold leading-none">
+          {{ t("header.brand") }}
+        </span>
       </div>
     </el-menu-item>
 
