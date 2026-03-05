@@ -12,7 +12,6 @@ public class TableMapper {
         tableInfo.setDatasourceId(tableInfoPO.getDataSourceId());
         tableInfo.setSchema(tableInfoPO.getSchema());
         tableInfo.setDisplayName(tableInfoPO.getDisplayName());
-        tableInfo.setColumns(tableInfoPO.getColumns());
         return tableInfo;
     }
 
@@ -21,7 +20,6 @@ public class TableMapper {
         MapperUtils.copyBaseInfo(tableInfo, tableInfoPO);
         tableInfoPO.setDataSourceId(tableInfo.getDatasourceId());
         tableInfoPO.setSchema(tableInfo.getSchema());
-        tableInfoPO.setColumns(tableInfo.getColumns());
         return tableInfoPO;
     }
 

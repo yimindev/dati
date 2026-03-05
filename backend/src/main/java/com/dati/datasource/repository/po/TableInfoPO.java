@@ -1,14 +1,13 @@
 package com.dati.datasource.repository.po;
 
 import com.dati.base.pojo.BaseResourcePO;
-import com.dati.datasource.domain.model.ColumnDef;
-import com.dati.datasource.repository.converter.ColumnListConverter;
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
 
 import java.io.Serial;
-import java.util.List;
 
 @Getter
 @Setter
@@ -27,9 +26,5 @@ public class TableInfoPO extends BaseResourcePO {
 
     @Column(length = 64)
     private String displayName;
-
-    @Lob
-    @Convert(converter = ColumnListConverter.class)
-    private List<ColumnDef> columns;
 
 }
