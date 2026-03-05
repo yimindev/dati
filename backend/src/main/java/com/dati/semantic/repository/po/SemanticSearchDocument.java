@@ -7,7 +7,14 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.springframework.data.annotation.Id;
-import org.springframework.data.elasticsearch.annotations.*;
+import org.springframework.data.elasticsearch.annotations.DateFormat;
+import org.springframework.data.elasticsearch.annotations.Document;
+import org.springframework.data.elasticsearch.annotations.Field;
+import org.springframework.data.elasticsearch.annotations.FieldType;
+import org.springframework.data.elasticsearch.annotations.InnerField;
+import org.springframework.data.elasticsearch.annotations.MultiField;
+import org.springframework.data.elasticsearch.annotations.Setting;
+
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -16,7 +23,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Document(indexName = "semantic_search")
-@Setting(shards = 3, replicas = 1)
+@Setting(shards = 3)
 public class SemanticSearchDocument {
     
     @Id

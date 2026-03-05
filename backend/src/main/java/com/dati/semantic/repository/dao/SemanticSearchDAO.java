@@ -8,7 +8,7 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 
 @Repository
-public interface SemanticSearchRepository extends ElasticsearchRepository<SemanticSearchDocument, String> {
+public interface SemanticSearchDAO extends ElasticsearchRepository<SemanticSearchDocument, String> {
     
     // 根据类型查询
     List<SemanticSearchDocument> findByType(SemanticEntityType type);
