@@ -145,25 +145,9 @@ onMounted(() => {
 
     <!-- 列表 -->
     <el-table :data="columnList" v-loading="loading" stripe>
-      <el-table-column prop="ordinal_position" label="#" width="70" />
-
       <el-table-column prop="name" label="列名" min-width="180" />
       <el-table-column prop="display_name" label="显示名" min-width="160" />
-      <el-table-column prop="data_type" label="类型" min-width="150" />
-
-      <el-table-column label="约束" width="180">
-        <template #default="{ row }">
-          <div class="flex gap-2">
-            <el-tag v-if="row.primary_key" type="warning" effect="light">PK</el-tag>
-            <el-tag v-if="row.nullable === false" type="danger" effect="light">
-              NOT NULL
-            </el-tag>
-            <el-tag v-else type="info" effect="light">NULL</el-tag>
-          </div>
-        </template>
-      </el-table-column>
-
-      <el-table-column prop="default_value" label="默认值" min-width="150" />
+      <el-table-column prop="data_type" label="类型" min-width="120" />
       <el-table-column prop="description" label="注释" min-width="240" />
 
       <el-table-column prop="updated_at" :label="t('common.updatedAt')" min-width="140">
