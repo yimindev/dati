@@ -9,7 +9,7 @@ public interface ColumnInfoDAO extends JpaRepository<ColumnInfoPO, String> {
 
     Page<ColumnInfoPO> findByTableId(String tableId, Pageable pageable);
 
-    Page<ColumnInfoPO> findByTableIdAndColumnNameContaining(String tableId, String columnName, Pageable pageable);
+    Page<ColumnInfoPO> findByTableIdAndNameContaining(String tableId, String columnName, Pageable pageable);
 
     void deleteByTableId(String tableId);
 

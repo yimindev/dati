@@ -9,7 +9,6 @@ import com.dati.datasource.domain.service.ColumnService;
 import com.dati.datasource.server.assembler.ColumnAssembler;
 import com.dati.datasource.server.pojo.ColumnInfoVO;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -37,15 +36,14 @@ public class ColumnController {
 
     @GetMapping
     public PageResponse<ColumnInfoVO> getColumns(
-            @PathVariable String datasourceId,
             @PathVariable String tableId,
             PageReq pageReq,
             @RequestParam(name = "keyword", required = false) String keyword) {
-        return PageResponse.of(columnService.getColumns(pageReq, datasourceId, tableId, keyword).map(columnAssembler::toColumnInfoVO));
+        return PageResponse.of(columnService.getColumns(pageReq, tableId, keyword).map(columnAssembler::toColumnInfoVO));
     }
 
     @PutMapping("/{id}")
-    public IdResponse updateColumn(@PathVariable String datasourceId, @PathVariable String tableId, @PathVariable String id, @RequestBody ColumnInfoVO columnInfoVO) {
+    public IdResponse updateColumn(@PathVariable String id, @RequestBody ColumnInfoVO columnInfoVO) {
         ColumnInfo columnInfo = columnAssembler.toColumnInfo(columnInfoVO);
         columnService.updateColumn(id, columnInfo);
         return new IdResponse(id);

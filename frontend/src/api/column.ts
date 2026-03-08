@@ -3,7 +3,7 @@ import {get} from "~/api/http.ts";
 export type TableColumnVO = {
   name: string;
   display_name?: string;
-  data_type?: string;
+  column_type?: string;
   nullable?: boolean;
   primary_key?: boolean;
   default_value?: string | null;

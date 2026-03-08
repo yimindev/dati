@@ -21,7 +21,7 @@ public class BaseAssembler {
         this.userService = userService;
     }
     
-    public void copyBaseInfo(BaseResource source, BaseResourceVO target) {
+    public void copyBaseInfo(BaseResource source, BaseResource target) {
         target.setId(source.getId());
         target.setName(source.getName());
         target.setDescription(source.getDescription());

@@ -20,9 +20,6 @@ public class ColumnInfoPO extends BaseResourcePO {
     private String tableId;
 
     @Column(length = 64)
-    private String columnName;
-
-    @Column(length = 64)
     private String columnType;
 
     @Column(columnDefinition = "TEXT")

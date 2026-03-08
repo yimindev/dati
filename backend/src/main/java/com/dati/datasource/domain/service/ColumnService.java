@@ -1,5 +1,7 @@
 package com.dati.datasource.domain.service;
 
+import com.dati.auth.authentication.User;
+import com.dati.base.RequestContext;
 import com.dati.base.pojo.BasePO;
 import com.dati.base.pojo.PageReq;
 import com.dati.common.StringUtils;
@@ -14,6 +16,7 @@ import com.dati.datasource.repository.po.ColumnInfoPO;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.sql.SQLException;
 import java.util.List;
@@ -33,36 +36,41 @@ public class ColumnService {
         this.dataSourceService = dataSourceService;
     }
 
-    public Page<ColumnInfo> getColumns(PageReq pageReq, String datasourceId, String tableId, String keyword) {
+    public Page<ColumnInfo> getColumns(PageReq pageReq, String tableId, String keyword) {
         Sort sortBy = Sort.by(Sort.Direction.ASC, BasePO.Fields.createdAt);
         if (StringUtils.isBlank(keyword)) {
             return columnInfoDAO.findByTableId(tableId, pageReq.toPageRequest().withSort(sortBy)).map(ColumnMapper::toColumnInfo);
         }
-        return columnInfoDAO.findByTableIdAndColumnNameContaining(tableId, keyword, pageReq.toPageRequest().withSort(sortBy)).map(ColumnMapper::toColumnInfo);
+        return columnInfoDAO.findByTableIdAndNameContaining(tableId, keyword, pageReq.toPageRequest().withSort(sortBy)).map(ColumnMapper::toColumnInfo);
     }
 
     public void updateColumn(String id, ColumnInfo columnInfo) {
         ColumnInfoPO columnInfoPO = columnInfoDAO.findById(id).orElseThrow();
-        columnInfoPO.setColumnName(columnInfo.getColumnName());
+        columnInfoPO.setName(columnInfo.getName());
         columnInfoPO.setColumnType(columnInfo.getColumnType());
         columnInfoPO.setComment(columnInfo.getComment());
-        columnInfoPO.setName(columnInfo.getName());
         columnInfoPO.setDescription(columnInfo.getDescription());
         columnInfoDAO.save(columnInfoPO);
     }
 
+    @Transactional
     public void syncColumns(String datasourceId, String tableId) throws SQLException {
         TableInfo tableInfo = TableMapper.toTableInfo(tableInfoDAO.findById(tableId).orElseThrow());
         List<Column> columns = dataSourceService.getColumns(datasourceId, null, tableInfo.getSchema(), tableInfo.getName());
         
         columnInfoDAO.deleteByTableId(tableId);
         
+        User user = RequestContext.getUser();
+        String userId = user != null ? user.getId() : null;
+        
         List<ColumnInfoPO> columnInfoPOList = columns.stream().map(column -> {
             ColumnInfoPO columnInfoPO = new ColumnInfoPO();
             columnInfoPO.setTableId(tableId);
-            columnInfoPO.setColumnName(column.name());
+            columnInfoPO.setName(column.name());
             columnInfoPO.setColumnType(column.type());
             columnInfoPO.setComment(column.comment());
+            columnInfoPO.setCreatedBy(userId);
+            columnInfoPO.setUpdatedBy(userId);
             return columnInfoPO;
         }).toList();
         

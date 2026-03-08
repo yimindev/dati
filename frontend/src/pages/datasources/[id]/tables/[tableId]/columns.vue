@@ -147,7 +147,7 @@ onMounted(() => {
     <el-table :data="columnList" v-loading="loading" stripe>
       <el-table-column prop="name" label="列名" min-width="180" />
       <el-table-column prop="display_name" label="显示名" min-width="160" />
-      <el-table-column prop="data_type" label="类型" min-width="120" />
+      <el-table-column prop="column_type" label="类型" min-width="120" />
       <el-table-column prop="description" label="注释" min-width="240" />
 
       <el-table-column prop="updated_at" :label="t('common.updatedAt')" min-width="140">

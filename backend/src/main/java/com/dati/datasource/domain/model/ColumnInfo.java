@@ -10,8 +10,6 @@ public class ColumnInfo extends BaseResource {
 
     private String tableId;
 
-    private String columnName;
-
     private String columnType;
 
     private String comment;
