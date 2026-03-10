@@ -42,4 +42,9 @@ public class TableController {
         return new IdResponse(String.valueOf(ids.size()));
     }
 
+    @DeleteMapping("/tables/{tableId}")
+    public void deleteTable(@PathVariable String datasourceId, @PathVariable String tableId) {
+        tableService.deleteTable(tableId);
+    }
+
 }

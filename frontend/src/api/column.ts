@@ -1,8 +1,8 @@
+import type { PageResponse } from "~/api/types.ts";
 import {get} from "~/api/http.ts";
 
 export type TableColumnVO = {
   name: string;
-  display_name?: string;
   column_type?: string;
   nullable?: boolean;
   primary_key?: boolean;
@@ -18,10 +18,7 @@ export async function listTableColumns(
   size: number,
   keyword?: string,
 ) {
-  // 说明：
-  // 1) URL 需要按你们实际后端路由调整
-  // 2) schema 如果后端需要，可用 query 传递；不需要就删掉 params
-  return get<{ data: TableColumnVO[] }>(
+  return get<PageResponse<TableColumnVO>>(
     `/v1/data-sources/${datasourceId}/tables/${tableId}/columns`,
     { page, size, keyword },
   );

@@ -8,6 +8,5 @@ import lombok.EqualsAndHashCode;
 @Data
 public class TableInfoVO extends BaseResourceVO {
     private String schema;
-    private String displayName;
     private String datasourceId;
 }

@@ -11,7 +11,6 @@ public class ColumnMapper {
         MapperUtils.copyBaseInfo(columnInfoPO, columnInfo);
         columnInfo.setTableId(columnInfoPO.getTableId());
         columnInfo.setColumnType(columnInfoPO.getColumnType());
-        columnInfo.setComment(columnInfoPO.getComment());
         return columnInfo;
     }
 
@@ -20,7 +19,6 @@ public class ColumnMapper {
         MapperUtils.copyBaseInfo(columnInfo, columnInfoPO);
         columnInfoPO.setTableId(columnInfo.getTableId());
         columnInfoPO.setColumnType(columnInfo.getColumnType());
-        columnInfoPO.setComment(columnInfo.getComment());
         return columnInfoPO;
     }
 

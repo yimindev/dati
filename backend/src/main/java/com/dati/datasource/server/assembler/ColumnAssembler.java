@@ -13,7 +13,6 @@ public class ColumnAssembler extends BaseAssembler {
         super.copyBaseInfo(columnInfo, columnInfoVO);
         columnInfoVO.setTableId(columnInfo.getTableId());
         columnInfoVO.setColumnType(columnInfo.getColumnType());
-        columnInfoVO.setComment(columnInfo.getComment());
         return columnInfoVO;
     }
 
@@ -22,7 +21,6 @@ public class ColumnAssembler extends BaseAssembler {
         super.copyBaseInfo(columnInfoVO, columnInfo);
         columnInfo.setTableId(columnInfoVO.getTableId());
         columnInfo.setColumnType(columnInfoVO.getColumnType());
-        columnInfo.setComment(columnInfoVO.getComment());
         return columnInfo;
     }
 

@@ -14,6 +14,4 @@ public class ColumnInfoVO extends BaseResourceVO {
 
     private String columnType;
 
-    private String comment;
-
 }

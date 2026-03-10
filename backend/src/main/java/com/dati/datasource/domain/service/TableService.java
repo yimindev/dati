@@ -60,7 +60,6 @@ public class TableService {
             tableInfo.setDatasourceId(datasourceId);
             tableInfo.setName(request.getName());
             tableInfo.setSchema(request.getSchema());
-            tableInfo.setDisplayName(request.getName());
             tableAssembler.fillUsersFromRequest(tableInfo);
 
             TableInfoPO savedPO = tableInfoDAO.save(TableMapper.toTableInfoPO(tableInfo));
@@ -74,7 +73,8 @@ public class TableService {
                     columnInfo.setTableId(tableId);
                     columnInfo.setName(column.name());
                     columnInfo.setColumnType(column.type());
-                    columnInfo.setComment(column.comment());
+                    String columnComment = column.comment();
+                    columnInfo.setDescription(StringUtils.isNotBlank(columnComment) ? columnComment : column.name());
                     tableAssembler.fillUsersFromRequest(columnInfo);
                     columnInfoDAO.save(ColumnMapper.toColumnInfoPO(columnInfo));
                 }
@@ -85,4 +85,9 @@ public class TableService {
         return tableIds;
     }
 
+    @Transactional
+    public void deleteTable(String tableId) {
+        columnInfoDAO.deleteByTableId(tableId);
+        tableInfoDAO.deleteById(tableId);
+    }
 }

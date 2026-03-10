@@ -6,10 +6,10 @@ meta:
 <script setup lang="ts">
 import { onMounted, ref } from "vue";
 import { useRoute } from "vue-router";
-import { ElMessage } from "element-plus";
+import { ElMessage, ElMessageBox } from "element-plus";
 import { Plus, Search } from "@element-plus/icons-vue";
 import { useI18n } from "vue-i18n";
-import { listTableInfos, getAddedTableNames, batchAddTables, syncColumns, type TableInfoVO } from "~/api/tableinfo.ts";
+import { listTableInfos, getAddedTableNames, batchAddTables, syncColumns, deleteTable, type TableInfoVO } from "~/api/tableinfo.ts";
 import { getSchemas, getTables } from "~/api/datasource.ts";
 import { formatDateTime } from "~/composables";
 
@@ -54,7 +54,7 @@ const loadTables = async () => {
     total.value = response.total ?? 0;
   } catch (error) {
     console.error("加载表列表失败:", error);
-    ElMessage.error(t("datasource.table.loadFailed"));
+    ElMessage.error(t("datasource.tableInfo.loadFailed"));
   } finally {
     loading.value = false;
   }
@@ -83,7 +83,7 @@ const handleOpenAddTableDialog = async () => {
     addedTableNames.value = await getAddedTableNames(datasourceId.value);
   } catch (error) {
     console.error("加载 schema 列表失败:", error);
-    ElMessage.error(t("datasource.table.loadSchemasFailed"));
+    ElMessage.error(t("datasource.tableInfo.loadSchemasFailed"));
   } finally {
     schemaLoading.value = false;
   }
@@ -101,7 +101,7 @@ const handleSchemaChange = async (schema: string) => {
     selectedTables.value = [];
   } catch (error) {
     console.error("加载表列表失败:", error);
-    ElMessage.error(t("datasource.table.loadTablesFailed"));
+    ElMessage.error(t("datasource.tableInfo.loadTablesFailed"));
   } finally {
     tablesLoading.value = false;
   }
@@ -118,7 +118,7 @@ const handleDeselectAll = () => {
 
 const handleBatchAdd = async () => {
   if (selectedTables.value.length === 0) {
-    ElMessage.warning(t("datasource.table.selectAtLeastOne"));
+    ElMessage.warning(t("datasource.tableInfo.selectAtLeastOne"));
     return;
   }
   
@@ -126,12 +126,12 @@ const handleBatchAdd = async () => {
     addTableLoading.value = true;
     const tables = selectedTables.value.map(name => ({ name, schema: selectedSchema.value }));
     await batchAddTables(datasourceId.value, tables);
-    ElMessage.success(t("datasource.table.addSuccess"));
+    ElMessage.success(t("datasource.tableInfo.addSuccess"));
     addTableDialogVisible.value = false;
     await loadTables();
   } catch (error) {
     console.error("批量添加表失败:", error);
-    ElMessage.error(t("datasource.table.addFailed"));
+    ElMessage.error(t("datasource.tableInfo.addFailed"));
   } finally {
     addTableLoading.value = false;
   }
@@ -140,10 +140,32 @@ const handleBatchAdd = async () => {
 const handleSyncColumns = async (table: TableInfoVO) => {
   try {
     await syncColumns(datasourceId.value, table.id);
-    ElMessage.success(t("datasource.table.syncSuccess"));
+    ElMessage.success(t("datasource.tableInfo.syncSuccess"));
   } catch (error) {
     console.error("同步列信息失败:", error);
-    ElMessage.error(t("datasource.table.syncFailed"));
+    ElMessage.error(t("datasource.tableInfo.syncFailed"));
+  }
+};
+
+const handleRemoveTable = async (table: TableInfoVO) => {
+  try {
+    await ElMessageBox.confirm(
+      t("datasource.tableInfo.removeConfirm", { name: table.name }),
+      t("common.warning"),
+      {
+        confirmButtonText: t("common.confirm"),
+        cancelButtonText: t("common.cancel"),
+        type: "warning",
+      }
+    );
+    await deleteTable(datasourceId.value, table.id);
+    ElMessage.success(t("datasource.tableInfo.removeSuccess"));
+    await loadTables();
+  } catch (error) {
+    if (error !== "cancel") {
+      console.error("删除表失败:", error);
+      ElMessage.error(t("datasource.tableInfo.removeFailed"));
+    }
   }
 };
 
@@ -164,12 +186,12 @@ const handleSaveMetadata = async () => {
   try {
     // TODO: 调用后端接口保存
     // await saveTableMetadata(datasourceId.value, currentTable.value);
-    ElMessage.success(t("datasource.table.saveSuccess"));
+    ElMessage.success(t("datasource.tableInfo.saveSuccess"));
     metadataDialogVisible.value = false;
     await loadTables();
   } catch (error) {
     console.error("保存元数据失败:", error);
-    ElMessage.error(t("datasource.table.saveFailed"));
+    ElMessage.error(t("datasource.tableInfo.saveFailed"));
   }
 };
 
@@ -235,14 +257,9 @@ onMounted(() => {
         min-width="150"
       />
       <el-table-column
-        prop="display_name"
-        :label="t('datasource.tableInfo.displayName')"
-        min-width="150"
-      />
-      <el-table-column
         prop="description"
-        :label="t('datasource.tableInfo.comment')"
-        min-width="200"
+        :label="t('datasource.tableInfo.description')"
+        min-width="150"
       />
       <el-table-column
         prop="schema"
@@ -275,6 +292,10 @@ onMounted(() => {
           <el-button link type="primary" @click="handleSyncColumns(row)">
             {{ t("datasource.tableInfo.syncColumns") }}
           </el-button>
+
+          <el-button link type="danger" @click="handleRemoveTable(row)">
+            {{ t("common.remove") }}
+          </el-button>
         </template>
       </el-table-column>
     </el-table>
@@ -302,17 +323,9 @@ onMounted(() => {
         <el-form-item :label="t('datasource.tableInfo.tableName')">
           <el-input v-model="currentTable.name" disabled />
         </el-form-item>
-        <el-form-item :label="t('datasource.tableInfo.displayName')">
-          <el-input
-            v-model="currentTable.display_name"
-            :placeholder="t('datasource.tableInfo.displayNamePlaceholder')"
-          />
-        </el-form-item>
         <el-form-item :label="t('datasource.tableInfo.description')">
           <el-input
             v-model="currentTable.description"
-            type="textarea"
-            :rows="3"
             :placeholder="t('datasource.tableInfo.descriptionPlaceholder')"
           />
         </el-form-item>

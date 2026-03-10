@@ -18,7 +18,7 @@ public class BaseResourcePO extends BasePO {
     @Column(length = 64)
     private String name;
 
-    @Column(length = 256)
+    @Column(length = 1024)
     private String description;
 
     @Column(columnDefinition = "boolean default false")

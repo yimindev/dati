@@ -12,6 +12,4 @@ public class TableInfo extends BaseResource {
 
     private String schema;
 
-    private String displayName;
-
 }

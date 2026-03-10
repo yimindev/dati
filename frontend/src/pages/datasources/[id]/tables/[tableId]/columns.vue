@@ -5,7 +5,7 @@ activeMenu: /datasources
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
-import { useRoute, useRouter } from "vue-router";
+import { useRoute } from "vue-router";
 import { ElMessage } from "element-plus";
 import { Search, Setting } from "@element-plus/icons-vue";
 import { useI18n } from "vue-i18n";
@@ -13,7 +13,6 @@ import { listTableColumns, type TableColumnVO } from "~/api/column";
 import { formatDateTime } from "~/composables";
 
 const { t } = useI18n();
-const router = useRouter();
 const route = useRoute("/datasources/[id]/tables/[tableId]/columns");
 
 const datasourceId = ref(route.params.id);
@@ -42,21 +41,11 @@ const loadColumns = async () => {
         searchKeyword.value,
     );
 
-    // 兼容后端返回：{ data, total } 或直接数组
-    const payload = resp?.data;
-    const data = Array.isArray(payload) ? payload : (payload?.data ?? []);
-    const ttl =
-        typeof payload?.total === "number"
-            ? payload.total
-            : Array.isArray(data)
-                ? data.length
-                : 0;
-
-    columnList.value = data || [];
-    total.value = ttl;
+    columnList.value = resp.data || [];
+    total.value = resp.total ?? 0;
   } catch (error) {
     console.error("加载列信息失败:", error);
-    ElMessage.error(t("datasource.table.loadFailed"));
+    ElMessage.error(t("datasource.tableInfo.loadFailed"));
   } finally {
     loading.value = false;
   }
@@ -84,10 +73,6 @@ const handlePageSizeChange = (ps: number) => {
   loadColumns();
 };
 
-const handleBack = () => {
-  router.back();
-};
-
 const handleConfigMetadata = (col: TableColumnVO) => {
   currentColumn.value = { ...col };
   metadataDialogVisible.value = true;
@@ -97,12 +82,12 @@ const handleSaveMetadata = async () => {
   try {
     // TODO: 调用后端接口保存列级业务元数据
     // await saveColumnMetadata(datasourceId.value, schema.value, tableName.value, currentColumn.value)
-    ElMessage.success(t("datasource.table.saveSuccess"));
+    ElMessage.success(t("datasource.tableInfo.saveSuccess"));
     metadataDialogVisible.value = false;
     await loadColumns();
   } catch (error) {
     console.error("保存列元数据失败:", error);
-    ElMessage.error(t("datasource.table.saveFailed"));
+    ElMessage.error(t("datasource.tableInfo.saveFailed"));
   }
 };
 
@@ -131,7 +116,7 @@ onMounted(() => {
       <div class="flex items-center gap-2">
         <el-input
             v-model="searchKeyword"
-            placeholder="搜索列名 / 显示名 / 注释"
+            placeholder="搜索列名 / 描述"
             clearable
             class="w-72"
             @keyup.enter="handleSearch"
@@ -146,9 +131,8 @@ onMounted(() => {
     <!-- 列表 -->
     <el-table :data="columnList" v-loading="loading" stripe>
       <el-table-column prop="name" label="列名" min-width="180" />
-      <el-table-column prop="display_name" label="显示名" min-width="160" />
+      <el-table-column prop="description" label="描述" min-width="160" />
       <el-table-column prop="column_type" label="类型" min-width="120" />
-      <el-table-column prop="description" label="注释" min-width="240" />
 
       <el-table-column prop="updated_at" :label="t('common.updatedAt')" min-width="140">
         <template #default="{ row }">
@@ -190,17 +174,8 @@ onMounted(() => {
           <el-input v-model="currentColumn.name" disabled />
         </el-form-item>
 
-        <el-form-item label="显示名">
-          <el-input v-model="currentColumn.display_name" placeholder="请输入列显示名" />
-        </el-form-item>
-
-        <el-form-item label="注释">
-          <el-input
-              v-model="currentColumn.description"
-              type="textarea"
-              :rows="3"
-              placeholder="请输入列注释/说明"
-          />
+        <el-form-item label="描述">
+          <el-input v-model="currentColumn.description" placeholder="请输入列描述" />
         </el-form-item>
       </el-form>
 

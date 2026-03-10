@@ -1,9 +1,8 @@
 import type { BaseResourceVO, IdResponse, PageResponse } from "~/api/types.ts";
-import { get, post } from "./http";
+import { get, post, del } from "./http";
 
 export interface TableInfoVO extends BaseResourceVO {
   schema: string;
-  display_name: string;
   datasource_id: string;
 }
 
@@ -39,6 +38,14 @@ export function syncColumns(datasourceId: string, tableId: string, signal?: Abor
   return post<IdResponse, null>(
     `/v1/data-sources/${encodeURIComponent(datasourceId)}/tables/${encodeURIComponent(tableId)}/columns/sync`,
     null,
+    signal
+  );
+}
+
+export function deleteTable(datasourceId: string, tableId: string, signal?: AbortSignal): Promise<void> {
+  return del<void>(
+    `/v1/data-sources/${encodeURIComponent(datasourceId)}/tables/${encodeURIComponent(tableId)}`,
+    undefined,
     signal
   );
 }

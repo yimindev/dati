@@ -12,6 +12,4 @@ public class ColumnInfo extends BaseResource {
 
     private String columnType;
 
-    private String comment;
-
 }

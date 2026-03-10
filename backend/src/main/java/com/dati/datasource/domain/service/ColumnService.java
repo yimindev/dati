@@ -48,7 +48,6 @@ public class ColumnService {
         ColumnInfoPO columnInfoPO = columnInfoDAO.findById(id).orElseThrow();
         columnInfoPO.setName(columnInfo.getName());
         columnInfoPO.setColumnType(columnInfo.getColumnType());
-        columnInfoPO.setComment(columnInfo.getComment());
         columnInfoPO.setDescription(columnInfo.getDescription());
         columnInfoDAO.save(columnInfoPO);
     }
@@ -68,7 +67,7 @@ public class ColumnService {
             columnInfoPO.setTableId(tableId);
             columnInfoPO.setName(column.name());
             columnInfoPO.setColumnType(column.type());
-            columnInfoPO.setComment(column.comment());
+            columnInfoPO.setDescription(column.comment());
             columnInfoPO.setCreatedBy(userId);
             columnInfoPO.setUpdatedBy(userId);
             return columnInfoPO;
