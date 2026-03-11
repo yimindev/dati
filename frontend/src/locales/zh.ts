@@ -1,148 +1,126 @@
 export default {
   common: {
+    // 通用操作
+    save: "保存",
+    cancel: "取消",
+    confirm: "确认",
+    edit: "编辑",
+    delete: "删除",
+    create: "创建",
+    update: "更新",
+    remove: "移除",
+    search: "搜索",
+    testConnection: "测试连接",
     back: "返回",
     refresh: "刷新",
     yes: "是",
     no: "否",
-    save: "保存",
-    cancel: "取消",
-    search: "搜索",
+    warning: "警告",
+    all: "全选",
+    none: "取消全选",
+
+    // 通用字段
     id: "ID",
     name: "名称",
     type: "类型",
-    createdBy: "创建人",
     description: "描述",
+    createdBy: "创建人",
     updatedAt: "更新时间",
     actions: "操作",
-    remove: "移除",
-    confirm: "确认",
-    warning: "警告",
+    schema: "Schema",
+    username: "用户名",
+    password: "密码",
+    tableName: "表名",
+
+    // 通用消息
+    saveSuccess: "保存成功",
+    deleteSuccess: "删除成功",
+    loadFailed: "加载失败",
+    operationFailed: "操作失败",
+    confirmDelete: "确定要删除「{name}」吗？",
+
+    // 表单占位符
+    placeholder: {
+      name: "请输入名称",
+      type: "请选择类型",
+      description: "请输入描述（可选）",
+    },
+
+    // 校验规则
+    required: "请输入{name}",
+    selectRequired: "请选择{name}",
   },
 
-  header: {
-    brand: "DatI",
-    workspace: "工作台",
-    itemOne: "项目一",
-    itemTwo: "项目二",
-    info: "信息",
-    orders: "订单",
-    theme: "主题",
-    language: "语言",
-  },
-
-  side: {
-    expand: "展开",
-    collapse: "收起",
-    mcpBuilder: "构建MCP",
-    sematicModels: "语义模型",
-    dataSources: "数据源",
+  layout: {
+    header: {
+      brand: "DatI",
+      workspace: "工作台",
+      itemOne: "项目一",
+      itemTwo: "项目二",
+      info: "信息",
+      orders: "订单",
+      theme: "主题",
+      language: "语言",
+    },
+    side: {
+      expand: "展开",
+      collapse: "收起",
+      mcpBuilder: "构建MCP",
+      sematicModels: "语义模型",
+      dataSources: "数据源",
+    },
   },
 
   datasource: {
-    common: {
-      cancel: "取消",
-      confirm: "确定",
-      testConnection: "测试连接",
-      update: "更新",
-      create: "创建",
-    },
-    dialog: {
-      createTitle: "创建数据源",
-      editTitle: "编辑数据源",
-    },
-    form: {
-      fields: {
-        name: "连接名称",
-        type: "数据库类型",
-        username: "用户名",
-        password: "密码",
-        description: "描述",
-      },
-      placeholders: {
-        name: "请输入连接名称",
-        type: "请选择数据库类型",
-        jdbc: "请输入JDBC连接字符串",
-        username: "请输入数据库用户名",
-        password: "请输入数据库密码",
-        description: "请输入描述（可选）",
-      },
-      rules: {
-        nameRequired: "请输入连接名称",
-        nameLength: "长度在 1 到 100 个字符",
-        typeRequired: "请选择数据库类型",
-        jdbcRequired: "请输入JDBC连接字符串",
-        usernameRequired: "请输入用户名",
-        passwordRequired: "请输入密码",
-      },
-    },
-    table: {
-      columns: {
-        id: "ID",
-        name: "名称",
-        type: "类型",
-        createdBy: "创建人",
-        description: "描述",
-        updatedAt: "更新时间",
-        actions: "操作",
-      },
-      actions: {
-        edit: "编辑",
-        delete: "删除",
-        tableManage: "表管理",
-      },
-      loadSchemasFailed: "加载 Schema 列表失败",
-    },
-    page: {
-      searchPlaceholder: "名称或ID",
-      createButton: "创建数据源",
-      deleteConfirmTitle: "确认删除",
-      deleteConfirmMessage: '确定要删除数据源 "{name}" 吗？',
-    },
-    tableInfo: {
-      title: "表信息管理",
-      subtitle: "查看和管理数据源中的表信息",
-      tableName: "表名",
-      schema: "Schema",
-      type: "类型",
-      actions: "操作",
-      configButton: "配置信息",
-      configTitle: "表信息配置",
-      description: "描述",
-      descriptionPlaceholder: "请输入表描述",
-      category: "业务分类",
-      categoryPlaceholder: "如：用户域、订单域等",
-      loadFailed: "加载表列表失败",
-      addTable: "添加表",
-      columnSettings: "列配置",
-      saveSuccess: "保存成功",
-      saveFailed: "保存失败",
-      syncColumns: "同步列",
-      loadTablesFailed: "加载表列表失败",
-      selectSchema: "请选择 Schema",
-      availableTables: "可选表",
-      selectAll: "全选",
-      deselectAll: "取消全选",
-      alreadyAdded: "已添加",
-      selectedCount: "已选择 {count} 个表",
-      selectAtLeastOne: "请至少选择一个表",
-      addSuccess: "添加成功",
-      addFailed: "添加失败",
-      addSelected: "添加选中表",
-      syncSuccess: "同步成功",
-      syncFailed: "同步失败",
-      removeConfirm: "确定要移除表「{name}」吗？移除后相关列信息也会被删除。",
-      removeSuccess: "移除成功",
-      removeFailed: "移除失败",
-    },
-    messages: {
-      loadFailed: "加载数据源失败",
-      testSuccess: "连接测试成功",
-      testFailed: "连接测试失败",
-      updateSuccess: "更新成功",
-      createSuccess: "创建成功",
-      operateFailed: "操作失败",
-      deleteSuccess: "删除成功",
-      deleteFailed: "删除失败",
-    },
+    // 页面标题
+    title: "数据源管理",
+    createTitle: "创建数据源",
+    editTitle: "编辑数据源",
+
+    // 数据源特有字段
+    jdbcUrl: "JDBC连接字符串",
+    connectionName: "连接名称",
+    databaseType: "数据库类型",
+
+    // 特有操作
+    tableManage: "表管理",
+
+    // 特有消息
+    testSuccess: "连接测试成功",
+    testFailed: "连接测试失败",
+    deleteConfirmMessage: '确定要删除数据源「{name}」吗？',
+
+    // 列表页
+    createButton: "创建数据源",
+    searchPlaceholder: "名称或ID",
+  },
+
+  tableInfo: {
+    // 页面标题
+    title: "表信息管理",
+    subtitle: "查看和管理数据源中的表",
+
+    // 特有操作
+    addTable: "添加表",
+    syncColumns: "同步列",
+    columnSettings: "列配置",
+    configInfo: "配置信息",
+
+    // 表单相关
+    selectSchema: "请选择 Schema",
+    availableTables: "可选表",
+    alreadyAdded: "已添加",
+    selectedCount: "已选择 {count} 个表",
+    selectAtLeastOne: "请至少选择一个表",
+    addSelected: "添加选中表",
+
+    // 特有消息
+    addSuccess: "添加成功",
+    addFailed: "添加失败",
+    syncSuccess: "同步成功",
+    syncFailed: "同步失败",
+    removeConfirm: "确定要移除表「{name}」吗？移除后相关列信息也会被删除。",
+    removeSuccess: "移除成功",
+    removeFailed: "移除失败",
   },
 };

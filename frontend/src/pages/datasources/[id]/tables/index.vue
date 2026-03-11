@@ -54,7 +54,7 @@ const loadTables = async () => {
     total.value = response.total ?? 0;
   } catch (error) {
     console.error("加载表列表失败:", error);
-    ElMessage.error(t("datasource.tableInfo.loadFailed"));
+    ElMessage.error(t("common.loadFailed"));
   } finally {
     loading.value = false;
   }
@@ -83,7 +83,7 @@ const handleOpenAddTableDialog = async () => {
     addedTableNames.value = await getAddedTableNames(datasourceId.value);
   } catch (error) {
     console.error("加载 schema 列表失败:", error);
-    ElMessage.error(t("datasource.tableInfo.loadSchemasFailed"));
+    ElMessage.error(t("common.loadFailed"));
   } finally {
     schemaLoading.value = false;
   }
@@ -101,7 +101,7 @@ const handleSchemaChange = async (schema: string) => {
     selectedTables.value = [];
   } catch (error) {
     console.error("加载表列表失败:", error);
-    ElMessage.error(t("datasource.tableInfo.loadTablesFailed"));
+    ElMessage.error(t("common.loadFailed"));
   } finally {
     tablesLoading.value = false;
   }
@@ -118,7 +118,7 @@ const handleDeselectAll = () => {
 
 const handleBatchAdd = async () => {
   if (selectedTables.value.length === 0) {
-    ElMessage.warning(t("datasource.tableInfo.selectAtLeastOne"));
+    ElMessage.warning(t("tableInfo.selectAtLeastOne"));
     return;
   }
   
@@ -126,12 +126,12 @@ const handleBatchAdd = async () => {
     addTableLoading.value = true;
     const tables = selectedTables.value.map(name => ({ name, schema: selectedSchema.value }));
     await batchAddTables(datasourceId.value, tables);
-    ElMessage.success(t("datasource.tableInfo.addSuccess"));
+    ElMessage.success(t("tableInfo.addSuccess"));
     addTableDialogVisible.value = false;
     await loadTables();
   } catch (error) {
     console.error("批量添加表失败:", error);
-    ElMessage.error(t("datasource.tableInfo.addFailed"));
+    ElMessage.error(t("tableInfo.addFailed"));
   } finally {
     addTableLoading.value = false;
   }
@@ -140,17 +140,17 @@ const handleBatchAdd = async () => {
 const handleSyncColumns = async (table: TableInfoVO) => {
   try {
     await syncColumns(datasourceId.value, table.id);
-    ElMessage.success(t("datasource.tableInfo.syncSuccess"));
+    ElMessage.success(t("tableInfo.syncSuccess"));
   } catch (error) {
     console.error("同步列信息失败:", error);
-    ElMessage.error(t("datasource.tableInfo.syncFailed"));
+    ElMessage.error(t("tableInfo.syncFailed"));
   }
 };
 
 const handleRemoveTable = async (table: TableInfoVO) => {
   try {
     await ElMessageBox.confirm(
-      t("datasource.tableInfo.removeConfirm", { name: table.name }),
+      t("tableInfo.removeConfirm", { name: table.name }),
       t("common.warning"),
       {
         confirmButtonText: t("common.confirm"),
@@ -159,12 +159,12 @@ const handleRemoveTable = async (table: TableInfoVO) => {
       }
     );
     await deleteTable(datasourceId.value, table.id);
-    ElMessage.success(t("datasource.tableInfo.removeSuccess"));
+    ElMessage.success(t("tableInfo.removeSuccess"));
     await loadTables();
   } catch (error) {
     if (error !== "cancel") {
       console.error("删除表失败:", error);
-      ElMessage.error(t("datasource.tableInfo.removeFailed"));
+      ElMessage.error(t("tableInfo.removeFailed"));
     }
   }
 };
@@ -186,12 +186,12 @@ const handleSaveMetadata = async () => {
   try {
     // TODO: 调用后端接口保存
     // await saveTableMetadata(datasourceId.value, currentTable.value);
-    ElMessage.success(t("datasource.tableInfo.saveSuccess"));
+    ElMessage.success(t("common.saveSuccess"));
     metadataDialogVisible.value = false;
     await loadTables();
   } catch (error) {
     console.error("保存元数据失败:", error);
-    ElMessage.error(t("datasource.tableInfo.saveFailed"));
+    ElMessage.error(t("common.operationFailed"));
   }
 };
 
@@ -216,10 +216,10 @@ onMounted(() => {
   <div class="p-5 md:p-6">
     <el-breadcrumb separator="/" class="mb-6">
       <el-breadcrumb-item :to="{ path: '/datasources' }">
-        {{ t("side.dataSources") }}
+        {{ t("layout.side.dataSources") }}
       </el-breadcrumb-item>
       <el-breadcrumb-item>{{
-        t("datasource.tableInfo.title")
+        t("tableInfo.title")
       }}</el-breadcrumb-item>
     </el-breadcrumb>
 
@@ -229,7 +229,7 @@ onMounted(() => {
       <div class="flex-1">
         <el-input
           v-model="searchKeyword"
-          :placeholder="t('datasource.page.searchPlaceholder')"
+          :placeholder="t('datasource.searchPlaceholder')"
           clearable
           class="max-w-sm"
           @keyup.enter="handleSearch"
@@ -244,7 +244,7 @@ onMounted(() => {
       <!-- 创建按钮 -->
       <div class="flex justify-end">
         <el-button type="primary" :icon="Plus" @click="handleOpenAddTableDialog">
-          {{ t("datasource.tableInfo.addTable") }}
+          {{ t("tableInfo.addTable") }}
         </el-button>
       </div>
     </div>
@@ -253,17 +253,17 @@ onMounted(() => {
     <el-table :data="tableList" v-loading="loading" stripe>
       <el-table-column
         prop="name"
-        :label="t('datasource.tableInfo.tableName')"
+        :label="t('common.tableName')"
         min-width="150"
       />
       <el-table-column
         prop="description"
-        :label="t('datasource.tableInfo.description')"
+        :label="t('common.description')"
         min-width="150"
       />
       <el-table-column
         prop="schema"
-        :label="t('datasource.tableInfo.schema')"
+        :label="t('common.schema')"
         min-width="120"
       />
       <el-table-column
@@ -282,15 +282,15 @@ onMounted(() => {
       >
         <template #default="{ row }">
           <el-button type="primary" link @click="handleColumnManage(row)">
-            {{ t("datasource.tableInfo.columnSettings") }}
+            {{ t("tableInfo.columnSettings") }}
           </el-button>
 
           <el-button link type="primary" @click="handleConfigMetadata(row)">
-            {{ t("datasource.tableInfo.configButton") }}
+            {{ t("tableInfo.configInfo") }}
           </el-button>
 
           <el-button link type="primary" @click="handleSyncColumns(row)">
-            {{ t("datasource.tableInfo.syncColumns") }}
+            {{ t("tableInfo.syncColumns") }}
           </el-button>
 
           <el-button link type="danger" @click="handleRemoveTable(row)">
@@ -316,17 +316,17 @@ onMounted(() => {
     <!-- 元数据配置弹窗 -->
     <el-dialog
       v-model="metadataDialogVisible"
-      :title="t('datasource.tableInfo.configTitle')"
+      :title="t('tableInfo.configInfo')"
       width="600px"
     >
       <el-form v-if="currentTable" :model="currentTable" label-width="120px">
-        <el-form-item :label="t('datasource.tableInfo.tableName')">
+        <el-form-item :label="t('common.tableName')">
           <el-input v-model="currentTable.name" disabled />
         </el-form-item>
-        <el-form-item :label="t('datasource.tableInfo.description')">
+        <el-form-item :label="t('common.description')">
           <el-input
             v-model="currentTable.description"
-            :placeholder="t('datasource.tableInfo.descriptionPlaceholder')"
+            :placeholder="t('common.placeholder.description')"
           />
         </el-form-item>
       </el-form>
@@ -343,15 +343,15 @@ onMounted(() => {
     <!-- 添加表弹窗 -->
     <el-dialog
       v-model="addTableDialogVisible"
-      :title="t('datasource.tableInfo.addTable')"
+      :title="t('tableInfo.addTable')"
       width="600px"
       destroy-on-close
     >
       <el-form label-width="100px">
-        <el-form-item :label="t('datasource.tableInfo.schema')" required>
+        <el-form-item :label="t('common.schema')" required>
           <el-select
             v-model="selectedSchema"
-            :placeholder="t('datasource.tableInfo.selectSchema')"
+            :placeholder="t('tableInfo.selectSchema')"
             :loading="schemaLoading"
             class="w-full"
             @change="handleSchemaChange"
@@ -365,14 +365,14 @@ onMounted(() => {
           </el-select>
         </el-form-item>
 
-        <el-form-item :label="t('datasource.tableInfo.availableTables')" v-if="selectedSchema">
+        <el-form-item :label="t('tableInfo.availableTables')" v-if="selectedSchema">
           <div v-loading="tablesLoading" class="w-full min-h-[200px]">
             <div class="mb-2 flex gap-2">
               <el-button size="small" @click="handleSelectAll">
-                {{ t('datasource.tableInfo.selectAll') }}
+                {{ t('common.all') }}
               </el-button>
               <el-button size="small" @click="handleDeselectAll">
-                {{ t('datasource.tableInfo.deselectAll') }}
+                {{ t('common.none') }}
               </el-button>
             </div>
             <el-checkbox-group v-model="selectedTables" class="w-full">
@@ -385,7 +385,7 @@ onMounted(() => {
               >
                 {{ table }}
                 <span v-if="addedTableNames.includes(table)" class="text-gray-400 text-xs ml-2">
-                  ({{ t('datasource.tableInfo.alreadyAdded') }})
+                  ({{ t('tableInfo.alreadyAdded') }})
                 </span>
               </el-checkbox>
             </el-checkbox-group>
@@ -394,7 +394,7 @@ onMounted(() => {
 
         <el-form-item v-if="selectedSchema">
           <div class="text-sm text-gray-600">
-            {{ t('datasource.tableInfo.selectedCount', { count: selectedTables.length }) }}
+            {{ t('tableInfo.selectedCount', { count: selectedTables.length }) }}
           </div>
         </el-form-item>
       </el-form>
@@ -409,7 +409,7 @@ onMounted(() => {
           :disabled="selectedTables.length === 0"
           @click="handleBatchAdd"
         >
-          {{ t("datasource.tableInfo.addSelected") }}
+          {{ t("tableInfo.addSelected") }}
         </el-button>
       </template>
     </el-dialog>

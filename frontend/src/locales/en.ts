@@ -1,148 +1,126 @@
 export default {
   common: {
+    // General Actions
+    save: "Save",
+    cancel: "Cancel",
+    confirm: "Confirm",
+    edit: "Edit",
+    delete: "Delete",
+    create: "Create",
+    update: "Update",
+    remove: "Remove",
+    search: "Search",
+    testConnection: "Test Connection",
     back: "Back",
     refresh: "Refresh",
     yes: "Yes",
     no: "No",
-    save: "Save",
-    cancel: "Cancel",
-    search: "Search",
+    warning: "Warning",
+    all: "Select All",
+    none: "Deselect All",
+
+    // Common Fields
     id: "ID",
     name: "Name",
     type: "Type",
-    createdBy: "Creator",
     description: "Description",
+    createdBy: "Creator",
     updatedAt: "Updated At",
     actions: "Actions",
-    remove: "Remove",
-    confirm: "Confirm",
-    warning: "Warning",
+    schema: "Schema",
+    username: "Username",
+    password: "Password",
+    tableName: "Table Name",
+
+    // Common Messages
+    saveSuccess: "Saved successfully",
+    deleteSuccess: "Deleted successfully",
+    loadFailed: "Failed to load",
+    operationFailed: "Operation failed",
+    confirmDelete: "Are you sure you want to delete \"{name}\"?",
+
+    // Form Placeholders
+    placeholder: {
+      name: "Enter name",
+      type: "Select type",
+      description: "Enter description (optional)",
+    },
+
+    // Validation Rules
+    required: "Please enter {name}",
+    selectRequired: "Please select {name}",
   },
 
-  header: {
-    brand: "DatI",
-    workspace: "Workspace",
-    itemOne: "item one",
-    itemTwo: "item two",
-    info: "Info",
-    orders: "Orders",
-    theme: "Theme",
-    language: "Language",
-  },
-
-  side: {
-    expand: "Expand",
-    collapse: "Collapse",
-    mcpBuilder: "MCP Builder",
-    sematicModels: "Sematic Models",
-    dataSources: "Data Sources",
+  layout: {
+    header: {
+      brand: "DatI",
+      workspace: "Workspace",
+      itemOne: "Item One",
+      itemTwo: "Item Two",
+      info: "Info",
+      orders: "Orders",
+      theme: "Theme",
+      language: "Language",
+    },
+    side: {
+      expand: "Expand",
+      collapse: "Collapse",
+      mcpBuilder: "MCP Builder",
+      sematicModels: "Sematic Models",
+      dataSources: "Data Sources",
+    },
   },
 
   datasource: {
-    common: {
-      cancel: "Cancel",
-      confirm: "Confirm",
-      testConnection: "Test Connection",
-      update: "Update",
-      create: "Create",
-    },
-    dialog: {
-      createTitle: "Create Data Source",
-      editTitle: "Edit Data Source",
-    },
-    form: {
-      fields: {
-        name: "Connection Name",
-        type: "Database Type",
-        username: "Username",
-        password: "Password",
-        description: "Description",
-      },
-      placeholders: {
-        name: "Enter connection name",
-        type: "Select database type",
-        jdbc: "Enter JDBC connection string",
-        username: "Enter database username",
-        password: "Enter database password",
-        description: "Enter description (optional)",
-      },
-      rules: {
-        nameRequired: "Please enter connection name",
-        nameLength: "Length should be 1 to 100 characters",
-        typeRequired: "Please select database type",
-        jdbcRequired: "Please enter JDBC connection string",
-        usernameRequired: "Please enter username",
-        passwordRequired: "Please enter password",
-      },
-    },
-    table: {
-      columns: {
-        id: "ID",
-        name: "Name",
-        type: "Type",
-        createdBy: "Creator",
-        description: "Description",
-        updatedAt: "Updated At",
-        actions: "Actions",
-      },
-      actions: {
-        edit: "Edit",
-        delete: "Delete",
-        tableManage: "Table Manage",
-      },
-      loadSchemasFailed: "Failed to load schema list",
-    },
-    page: {
-      searchPlaceholder: "Name or ID",
-      createButton: "Create Data Source",
-      deleteConfirmTitle: "Delete Confirmation",
-      deleteConfirmMessage: 'Are you sure to delete data source "{name}"?',
-    },
-    tableInfo: {
-      title: "Table Information Management",
-      subtitle: "View and manage table information in this datasource",
-      tableName: "Table Name",
-      schema: "Schema",
-      type: "Type",
-      actions: "Actions",
-      configButton: "Configure",
-      configTitle: "Table Information Configuration",
-      description: "Description",
-      descriptionPlaceholder: "Enter table description",
-      category: "Category",
-      categoryPlaceholder: "e.g., User Domain, Order Domain",
-      loadFailed: "Failed to load table list",
-      addTable: "Add Tables",
-      columnSettings: "Column Settings",
-      saveSuccess: "Saved successfully",
-      saveFailed: "Failed to save",
-      syncColumns: "Sync Columns",
-      loadTablesFailed: "Failed to load table list",
-      selectSchema: "Select Schema",
-      availableTables: "Available Tables",
-      selectAll: "Select All",
-      deselectAll: "Deselect All",
-      alreadyAdded: "Already Added",
-      selectedCount: "{count} table(s) selected",
-      selectAtLeastOne: "Please select at least one table",
-      addSuccess: "Added successfully",
-      addFailed: "Failed to add",
-      addSelected: "Add Selected Tables",
-      syncSuccess: "Synced successfully",
-      syncFailed: "Failed to sync",
-      removeConfirm: "Are you sure you want to remove table \"{name}\"? Related column information will also be deleted.",
-      removeSuccess: "Removed successfully",
-      removeFailed: "Failed to remove",
-    },
-    messages: {
-      loadFailed: "Failed to load data sources",
-      testSuccess: "Connection test succeeded",
-      testFailed: "Connection test failed",
-      updateSuccess: "Updated successfully",
-      createSuccess: "Created successfully",
-      operateFailed: "Operation failed",
-      deleteSuccess: "Deleted successfully",
-      deleteFailed: "Delete failed",
-    },
+    // Page Titles
+    title: "Data Source Management",
+    createTitle: "Create Data Source",
+    editTitle: "Edit Data Source",
+
+    // Data Source Specific Fields
+    jdbcUrl: "JDBC Connection String",
+    connectionName: "Connection Name",
+    databaseType: "Database Type",
+
+    // Specific Actions
+    tableManage: "Table Manage",
+
+    // Specific Messages
+    testSuccess: "Connection test succeeded",
+    testFailed: "Connection test failed",
+    deleteConfirmMessage: 'Are you sure you want to delete data source "{name}"?',
+
+    // List Page
+    createButton: "Create Data Source",
+    searchPlaceholder: "Name or ID",
+  },
+
+  tableInfo: {
+    // Page Titles
+    title: "Table Information Management",
+    subtitle: "View and manage tables in this datasource",
+
+    // Specific Actions
+    addTable: "Add Tables",
+    syncColumns: "Sync Columns",
+    columnSettings: "Column Settings",
+    configInfo: "Configure",
+
+    // Form Related
+    selectSchema: "Select Schema",
+    availableTables: "Available Tables",
+    alreadyAdded: "Already Added",
+    selectedCount: "{count} table(s) selected",
+    selectAtLeastOne: "Please select at least one table",
+    addSelected: "Add Selected Tables",
+
+    // Specific Messages
+    addSuccess: "Added successfully",
+    addFailed: "Failed to add",
+    syncSuccess: "Synced successfully",
+    syncFailed: "Failed to sync",
+    removeConfirm: 'Are you sure you want to remove table "{name}"? Related column information will also be deleted.',
+    removeSuccess: "Removed successfully",
+    removeFailed: "Failed to remove",
   },
 };

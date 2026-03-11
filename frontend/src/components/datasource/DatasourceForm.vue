@@ -27,15 +27,15 @@ const formRef = ref<FormInstance>();
 // 表单验证规则
 const rules: FormRules = {
   name: [
-    { required: true, message: t("datasource.form.rules.nameRequired"), trigger: "blur" },
-    { min: 1, max: 100, message: t("datasource.form.rules.nameLength"), trigger: "blur" },
+    { required: true, message: t("common.required", { name: t("datasource.connectionName") }), trigger: "blur" },
+    { min: 1, max: 100, message: "长度在 1 到 100 个字符", trigger: "blur" },
   ],
-  type: [{ required: true, message: t("datasource.form.rules.typeRequired"), trigger: "change" }],
+  type: [{ required: true, message: t("common.selectRequired", { name: t("datasource.databaseType") }), trigger: "change" }],
   jdbc_url: [
-    { required: true, message: t("datasource.form.rules.jdbcRequired"), trigger: "blur" },
+    { required: true, message: t("common.required", { name: "JDBC URL" }), trigger: "blur" },
   ],
-  username: [{ required: true, message: t("datasource.form.rules.usernameRequired"), trigger: "blur" }],
-  password: [{ required: true, message: t("datasource.form.rules.passwordRequired"), trigger: "blur" }],
+  username: [{ required: true, message: t("common.required", { name: t("common.username") }), trigger: "blur" }],
+  password: [{ required: true, message: t("common.required", { name: t("common.password") }), trigger: "blur" }],
 };
 
 // 暴露验证方法
@@ -68,18 +68,18 @@ defineExpose({
     label-width="auto"
     @submit.prevent
   >
-    <el-form-item :label="t('datasource.form.fields.name')" prop="name">
+    <el-form-item :label="t('datasource.connectionName')" prop="name">
       <el-input
         v-model="modelValue.name"
-        :placeholder="t('datasource.form.placeholders.name')"
+        :placeholder="t('common.placeholder.name')"
         maxlength="100"
       />
     </el-form-item>
 
-    <el-form-item :label="t('datasource.form.fields.type')" prop="type">
+    <el-form-item :label="t('datasource.databaseType')" prop="type">
       <el-select
         v-model="modelValue.type"
-        :placeholder="t('datasource.form.placeholders.type')"
+        :placeholder="t('common.placeholder.type')"
         style="width: 100%"
       >
         <el-option label="MySQL" value="MYSQL" />
@@ -95,35 +95,35 @@ defineExpose({
       </el-select>
     </el-form-item>
 
-    <el-form-item label="JDBC URL" prop="jdbc_url">
+    <el-form-item :label="t('datasource.jdbcUrl')" prop="jdbc_url">
       <el-input
         v-model="modelValue.jdbc_url"
-        :placeholder="t('datasource.form.placeholders.jdbc')"
+        :placeholder="t('datasource.jdbcUrl')"
         :rows="2"
         type="textarea"
       />
     </el-form-item>
 
-    <el-form-item :label="t('datasource.form.fields.username')" prop="username">
+    <el-form-item :label="t('common.username')" prop="username">
       <el-input
         v-model="modelValue.username"
-        :placeholder="t('datasource.form.placeholders.username')"
+        :placeholder="t('common.username')"
       />
     </el-form-item>
 
-    <el-form-item :label="t('datasource.form.fields.password')" prop="password">
+    <el-form-item :label="t('common.password')" prop="password">
       <el-input
         v-model="modelValue.password"
         type="password"
-        :placeholder="t('datasource.form.placeholders.password')"
+        :placeholder="t('common.password')"
         show-password
       />
     </el-form-item>
 
-    <el-form-item :label="t('datasource.form.fields.description')">
+    <el-form-item :label="t('common.description')">
       <el-input
         v-model="modelValue.description"
-        :placeholder="t('datasource.form.placeholders.description')"
+        :placeholder="t('common.placeholder.description')"
         :rows="3"
         type="textarea"
         maxlength="500"

@@ -94,15 +94,15 @@ const handleTestConnection = async () => {
 
     if (result) {
       testPassed.value = true
-      ElMessage.success(t('datasource.messages.testSuccess'))
+      ElMessage.success(t('datasource.testSuccess'))
     } else {
       testPassed.value = false
-      ElMessage.error(t('datasource.messages.testFailed'))
+      ElMessage.error(t('datasource.testFailed'))
     }
   } catch (error) {
     console.error('测试连接失败:', error)
     testPassed.value = false
-    ElMessage.error(t('datasource.messages.testFailed'))
+    ElMessage.error(t('datasource.testFailed'))
   } finally {
     testing.value = false
   }
@@ -117,16 +117,16 @@ const handleSubmit = async () => {
 
     if (isEdit.value) {
       await updateDataSource(props.datasource!.id, formData.value)
-      ElMessage.success(t('datasource.messages.updateSuccess'))
+      ElMessage.success(t('common.saveSuccess'))
     } else {
       await addDataSource(formData.value)
-      ElMessage.success(t('datasource.messages.createSuccess'))
+      ElMessage.success(t('common.saveSuccess'))
     }
 
     emit('success')
   } catch (error) {
     console.error('提交失败:', error)
-    ElMessage.error(t('datasource.messages.operateFailed'))
+    ElMessage.error(t('common.operationFailed'))
   } finally {
     submitting.value = false
   }
@@ -141,7 +141,7 @@ const handleCancel = () => {
 <template>
   <el-dialog
     v-model="visible"
-    :title="isEdit ? t('datasource.dialog.editTitle') : t('datasource.dialog.createTitle')"
+    :title="isEdit ? t('datasource.editTitle') : t('datasource.createTitle')"
     width="35%"
     :close-on-click-modal="false"
   >
@@ -154,9 +154,9 @@ const handleCancel = () => {
 
     <template #footer>
       <div class="dialog-footer">
-        <el-button @click="handleCancel">{{ t('datasource.common.cancel') }}</el-button>
+        <el-button @click="handleCancel">{{ t('common.cancel') }}</el-button>
         <el-button type="primary" :loading="testing" @click="handleTestConnection">
-          {{ t('datasource.common.testConnection') }}
+          {{ t('common.testConnection') }}
         </el-button>
         <el-button
           type="primary"
@@ -164,7 +164,7 @@ const handleCancel = () => {
           :disabled="!testPassed"
           @click="handleSubmit"
         >
-          {{ isEdit ? t('datasource.common.update') : t('datasource.common.create') }}
+          {{ isEdit ? t('common.update') : t('common.create') }}
         </el-button>
       </div>
     </template>

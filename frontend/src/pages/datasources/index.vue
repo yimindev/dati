@@ -40,7 +40,7 @@ const loadDatasources = async () => {
     total.value = response.total ?? 0;
   } catch (error) {
     console.error("加载数据源失败:", error);
-    ElMessage.error(t("datasource.messages.loadFailed"));
+    ElMessage.error(t("common.loadFailed"));
   } finally {
     loading.value = false;
   }
@@ -103,13 +103,13 @@ const handleTestConnection = async (datasource: DatasourceVO) => {
     const result = await testConnection(payload);
 
     if (result) {
-      ElMessage.success(t("datasource.messages.testSuccess"));
+      ElMessage.success(t("datasource.testSuccess"));
     } else {
-      ElMessage.error(t("datasource.messages.testFailed"));
+      ElMessage.error(t("datasource.testFailed"));
     }
   } catch (error) {
     console.error("测试连接失败:", error);
-    ElMessage.error(t("datasource.messages.testFailed"));
+    ElMessage.error(t("datasource.testFailed"));
   } finally {
     loading.value = false;
   }
@@ -119,22 +119,22 @@ const handleTestConnection = async (datasource: DatasourceVO) => {
 const handleDelete = async (datasource: DatasourceVO) => {
   try {
     await ElMessageBox.confirm(
-      t("datasource.page.deleteConfirmMessage", { name: datasource.name }),
-      t("datasource.page.deleteConfirmTitle"),
+      t("datasource.deleteConfirmMessage", { name: datasource.name }),
+      t("common.warning"),
       {
-        confirmButtonText: t("datasource.common.confirm"),
-        cancelButtonText: t("datasource.common.cancel"),
+        confirmButtonText: t("common.confirm"),
+        cancelButtonText: t("common.cancel"),
         type: "warning",
       },
     );
 
     await deleteDataSource(datasource.id);
-    ElMessage.success(t("datasource.messages.deleteSuccess"));
+    ElMessage.success(t("common.deleteSuccess"));
     await loadDatasources();
   } catch (error) {
     if (error !== "cancel") {
       console.error("删除失败:", error);
-      ElMessage.error(t("datasource.messages.deleteFailed"));
+      ElMessage.error(t("common.operationFailed"));
     }
   }
 };
@@ -159,7 +159,7 @@ onMounted(() => {
       <div class="flex-1">
         <el-input
           v-model="searchKeyword"
-          :placeholder="t('datasource.page.searchPlaceholder')"
+          :placeholder="t('datasource.searchPlaceholder')"
           clearable
           class="max-w-sm"
           @keyup.enter="handleSearch"
@@ -174,7 +174,7 @@ onMounted(() => {
       <!-- 创建按钮 -->
       <div class="flex justify-end">
         <el-button type="primary" :icon="Plus" @click="handleCreate">
-          {{ t("datasource.page.createButton") }}
+          {{ t("datasource.createButton") }}
         </el-button>
       </div>
     </div>

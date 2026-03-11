@@ -29,25 +29,25 @@ const activeMenu = computed(() => {
         <el-icon>
           <span class="icon-[codicon--mcp]"></span>
         </el-icon>
-        <template #title> {{ t("side.mcpBuilder") }} </template>
+        <template #title> {{ t("layout.side.mcpBuilder") }} </template>
       </el-menu-item>
       <el-menu-item index="/nav/2">
         <el-icon>
           <IconMenu />
         </el-icon>
-        <template #title> {{ t("side.sematicModels") }} </template>
+        <template #title> {{ t("layout.side.sematicModels") }} </template>
       </el-menu-item>
       <el-menu-item index="/datasources">
         <el-icon>
           <span class="icon-[codicon--database]"></span>
         </el-icon>
-        <template #title> {{ t("side.dataSources") }} </template>
+        <template #title> {{ t("layout.side.dataSources") }} </template>
       </el-menu-item>
     </el-menu>
 
     <!-- 展开/收起按钮 -->
     <el-tooltip
-      :content="collapsed ? t('side.expand') : t('side.collapse')"
+      :content="collapsed ? t('layout.side.expand') : t('layout.side.collapse')"
       placement="right"
     >
       <button

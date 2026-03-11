@@ -45,7 +45,7 @@ const loadColumns = async () => {
     total.value = resp.total ?? 0;
   } catch (error) {
     console.error("加载列信息失败:", error);
-    ElMessage.error(t("datasource.tableInfo.loadFailed"));
+    ElMessage.error(t("common.loadFailed"));
   } finally {
     loading.value = false;
   }
@@ -82,12 +82,12 @@ const handleSaveMetadata = async () => {
   try {
     // TODO: 调用后端接口保存列级业务元数据
     // await saveColumnMetadata(datasourceId.value, schema.value, tableName.value, currentColumn.value)
-    ElMessage.success(t("datasource.tableInfo.saveSuccess"));
+    ElMessage.success(t("common.saveSuccess"));
     metadataDialogVisible.value = false;
     await loadColumns();
   } catch (error) {
     console.error("保存列元数据失败:", error);
-    ElMessage.error(t("datasource.tableInfo.saveFailed"));
+    ElMessage.error(t("common.operationFailed"));
   }
 };
 
@@ -100,13 +100,13 @@ onMounted(() => {
   <div class="p-5 md:p-6">
     <el-breadcrumb separator="/" class="mb-6">
       <el-breadcrumb-item :to="{ path: '/datasources' }">
-        {{ t("side.dataSources") }}
+        {{ t("layout.side.dataSources") }}
       </el-breadcrumb-item>
       <el-breadcrumb-item :to="{ path: `/datasources/${datasourceId}/tables` }">
-        {{ t("datasource.tableInfo.title") }}
+        {{ t("tableInfo.title") }}
       </el-breadcrumb-item>
       <el-breadcrumb-item>
-        {{ t("datasource.tableInfo.columnSettings") }}
+        {{ t("tableInfo.columnSettings") }}
       </el-breadcrumb-item>
     </el-breadcrumb>
 

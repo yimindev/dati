@@ -20,22 +20,22 @@ async function changeLocale(lang: AppLang) {
       <div class="flex items-center justify-center gap-2">
         <img src="/dati.svg" alt="dati" class="size-7 object-contain" />
         <span class="text-base font-semibold leading-none">
-          {{ t("header.brand") }}
+          {{ t("layout.header.brand") }}
         </span>
       </div>
     </el-menu-item>
 
     <el-sub-menu index="2">
-      <template #title> {{ t("header.workspace") }} </template>
-      <el-menu-item index="2-1"> {{ t("header.itemOne") }} </el-menu-item>
-      <el-menu-item index="2-2"> {{ t("header.itemTwo") }} </el-menu-item>
+      <template #title> {{ t("layout.header.workspace") }} </template>
+      <el-menu-item index="2-1"> {{ t("layout.header.itemOne") }} </el-menu-item>
+      <el-menu-item index="2-2"> {{ t("layout.header.itemTwo") }} </el-menu-item>
     </el-sub-menu>
 
     <el-menu-item class="h-full" @click="toggleDark()">
       <button
         class="w-full cursor-pointer border-0 bg-transparent"
         style="height: var(--ep-menu-item-height)"
-        :title="t('header.theme')"
+        :title="t('layout.header.theme')"
       >
         <el-icon class="inline-flex">
           <component :is="isDark ? Moon : Sunny" />
