@@ -1,0 +1,191 @@
+package com.dati.datasource.server.controller;
+
+import com.dati.TestFixtures;
+import com.dati.datasource.domain.model.ColumnInfo;
+import com.dati.datasource.domain.service.ColumnService;
+import com.dati.datasource.server.assembler.ColumnAssembler;
+import com.dati.datasource.server.pojo.ColumnInfoVO;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.http.MediaType;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.web.servlet.MockMvc;
+
+import java.util.List;
+
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+@WebMvcTest(ColumnController.class)
+@ActiveProfiles("test")
+@AutoConfigureMockMvc(addFilters = false)
+@DisplayName("ColumnController 集成测试")
+class ColumnControllerTest {
+
+    @Autowired
+    private MockMvc mockMvc;
+
+    @Autowired
+    private ObjectMapper objectMapper;
+
+    @MockitoBean
+    private ColumnService columnService;
+
+    @MockitoBean
+    private ColumnAssembler columnAssembler;
+
+    private ColumnInfo testColumnInfo;
+
+    @BeforeEach
+    void setUp() {
+        testColumnInfo = TestFixtures.createTestColumnInfo();
+    }
+
+    @Test
+    @DisplayName("分页查询列 - 成功")
+    void getColumns_shouldReturnPagedResults() throws Exception {
+        // given
+        Page<ColumnInfo> page = new PageImpl<>(List.of(testColumnInfo));
+        when(columnService.getColumns(any(), eq(TestFixtures.TEST_TABLE_ID), any()))
+            .thenReturn(page);
+        
+        ColumnInfoVO vo = new ColumnInfoVO();
+        vo.setId(TestFixtures.TEST_COLUMN_ID);
+        vo.setName("test_column");
+        vo.setTableId(TestFixtures.TEST_TABLE_ID);
+        vo.setColumnType("VARCHAR(255)");
+        when(columnAssembler.toColumnInfoVO(any())).thenReturn(vo);
+
+        // when & then
+        mockMvc.perform(get("/v1/data-sources/{datasourceId}/tables/{tableId}/columns", 
+                    TestFixtures.TEST_DATASOURCE_ID, TestFixtures.TEST_TABLE_ID)
+                .param("page", "1")
+                .param("page_size", "10"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data").isArray())
+            .andExpect(jsonPath("$.data[0].id").value(TestFixtures.TEST_COLUMN_ID))
+            .andExpect(jsonPath("$.data[0].table_id").value(TestFixtures.TEST_TABLE_ID))
+            .andExpect(jsonPath("$.data[0].column_type").value("VARCHAR(255)"));
+    }
+
+    @Test
+    @DisplayName("分页查询列 - 带关键词")
+    void getColumns_withKeyword_shouldReturnFilteredResults() throws Exception {
+        // given
+        Page<ColumnInfo> page = new PageImpl<>(List.of(testColumnInfo));
+        when(columnService.getColumns(any(), eq(TestFixtures.TEST_TABLE_ID), eq("id")))
+            .thenReturn(page);
+        
+        ColumnInfoVO vo = new ColumnInfoVO();
+        vo.setId(TestFixtures.TEST_COLUMN_ID);
+        vo.setName("user_id");
+        when(columnAssembler.toColumnInfoVO(any())).thenReturn(vo);
+
+        // when & then
+        mockMvc.perform(get("/v1/data-sources/{datasourceId}/tables/{tableId}/columns", 
+                    TestFixtures.TEST_DATASOURCE_ID, TestFixtures.TEST_TABLE_ID)
+                .param("page", "1")
+                .param("page_size", "10")
+                .param("keyword", "id"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data").isArray());
+    }
+
+    @Test
+    @DisplayName("更新列 - 成功")
+    void updateColumn_shouldReturnId() throws Exception {
+        // given
+        ColumnInfoVO requestVo = new ColumnInfoVO();
+        requestVo.setName("updated_column");
+        requestVo.setColumnType("INTEGER");
+        requestVo.setTableId(TestFixtures.TEST_TABLE_ID);
+        
+        ColumnInfo columnInfo = TestFixtures.createTestColumnInfo();
+        columnInfo.setName("updated_column");
+        
+        when(columnAssembler.toColumnInfo(any())).thenReturn(columnInfo);
+        doNothing().when(columnService).updateColumn(eq(TestFixtures.TEST_COLUMN_ID), any());
+
+        // when & then
+        mockMvc.perform(put("/v1/data-sources/{datasourceId}/tables/{tableId}/columns/{id}", 
+                    TestFixtures.TEST_DATASOURCE_ID, TestFixtures.TEST_TABLE_ID, TestFixtures.TEST_COLUMN_ID)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(requestVo)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.id").value(TestFixtures.TEST_COLUMN_ID));
+        
+        verify(columnService).updateColumn(eq(TestFixtures.TEST_COLUMN_ID), any());
+    }
+
+    @Test
+    @DisplayName("同步列 - 成功")
+    void syncColumns_shouldReturnTableId() throws Exception {
+        // given
+        doNothing().when(columnService).syncColumns(TestFixtures.TEST_DATASOURCE_ID, TestFixtures.TEST_TABLE_ID);
+
+        // when & then
+        mockMvc.perform(post("/v1/data-sources/{datasourceId}/tables/{tableId}/columns/sync", 
+                    TestFixtures.TEST_DATASOURCE_ID, TestFixtures.TEST_TABLE_ID))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.id").value(TestFixtures.TEST_TABLE_ID));
+        
+        verify(columnService).syncColumns(TestFixtures.TEST_DATASOURCE_ID, TestFixtures.TEST_TABLE_ID);
+    }
+
+    @Test
+    @DisplayName("更新列 - 验证ID参数传递")
+    void updateColumn_shouldPassCorrectId() throws Exception {
+        // given
+        ColumnInfoVO requestVo = new ColumnInfoVO();
+        requestVo.setName("new_name");
+        
+        when(columnAssembler.toColumnInfo(any())).thenReturn(testColumnInfo);
+        doNothing().when(columnService).updateColumn(anyString(), any());
+
+        // when & then
+        mockMvc.perform(put("/v1/data-sources/{datasourceId}/tables/{tableId}/columns/{id}", 
+                    TestFixtures.TEST_DATASOURCE_ID, TestFixtures.TEST_TABLE_ID, "specific-column-id")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(requestVo)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.id").value("specific-column-id"));
+        
+        verify(columnService).updateColumn(eq("specific-column-id"), any());
+    }
+
+    @Test
+    @DisplayName("分页查询列 - 验证路径参数传递")
+    void getColumns_shouldPassCorrectPathParams() throws Exception {
+        // given
+        Page<ColumnInfo> page = new PageImpl<>(List.of());
+        when(columnService.getColumns(any(), eq(TestFixtures.TEST_TABLE_ID), isNull()))
+            .thenReturn(page);
+
+        // when & then
+        mockMvc.perform(get("/v1/data-sources/{datasourceId}/tables/{tableId}/columns", 
+                    TestFixtures.TEST_DATASOURCE_ID, TestFixtures.TEST_TABLE_ID)
+                .param("page", "1")
+                .param("page_size", "10"))
+            .andExpect(status().isOk());
+        
+        verify(columnService).getColumns(any(), eq(TestFixtures.TEST_TABLE_ID), isNull());
+    }
+}
