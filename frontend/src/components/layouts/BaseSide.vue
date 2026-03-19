@@ -35,7 +35,7 @@ const activeMenu = computed(() => {
         <el-icon>
           <IconMenu />
         </el-icon>
-        <template #title> {{ t("layout.side.sematicModels") }} </template>
+        <template #title> {{ t("layout.side.semanticModels") }} </template>
       </el-menu-item>
       <el-menu-item index="/datasources">
         <el-icon>

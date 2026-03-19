@@ -28,12 +28,12 @@ defineEmits<Emits>()
       stripe
       style="width: 100%"
     >
-      <el-table-column prop="id" :label="t('common.id')" min-width="150" />
-      <el-table-column prop="name" :label="t('common.name')" min-width="100" />
-      <el-table-column prop="type" :label="t('common.type')" min-width="100" />
+      <el-table-column prop="id" :label="t('common.id')" min-width="120" show-overflow-tooltip />
+      <el-table-column prop="name" :label="t('common.name')" min-width="140" />
+      <el-table-column prop="type" :label="t('common.type')" min-width="120" />
       <el-table-column prop="created_by" :label="t('common.createdBy')" min-width="100" />
-      <el-table-column prop="description" :label="t('common.description')" min-width="120" show-overflow-tooltip />
-      <el-table-column prop="updated_at" :label="t('common.updatedAt')" min-width="100">
+      <el-table-column prop="description" :label="t('common.description')" min-width="160" show-overflow-tooltip />
+      <el-table-column prop="updated_at" :label="t('common.updatedAt')" min-width="160">
         <template #default="{ row }">
           {{ formatDateTime(row.updated_at) }}
         </template>

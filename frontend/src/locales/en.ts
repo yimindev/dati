@@ -27,6 +27,7 @@ export default {
     createdBy: "Creator",
     updatedAt: "Updated At",
     actions: "Actions",
+    total: "Total {total}",
     schema: "Schema",
     username: "Username",
     password: "Password",
@@ -66,7 +67,7 @@ export default {
       expand: "Expand",
       collapse: "Collapse",
       mcpBuilder: "MCP Builder",
-      sematicModels: "Sematic Models",
+      semanticModels: "Semantic Models",
       dataSources: "Data Sources",
     },
   },
@@ -122,5 +123,22 @@ export default {
     removeConfirm: 'Are you sure you want to remove table "{name}"? Related column information will also be deleted.',
     removeSuccess: "Removed successfully",
     removeFailed: "Failed to remove",
+  },
+
+  column: {
+    // Column Names
+    columnName: "Column Name",
+    description: "Description",
+    type: "Type",
+
+    // Search
+    searchPlaceholder: "Search by column name or description",
+
+    // Actions
+    config: "Configure",
+    configTitle: "Configure Column Metadata",
+
+    // Form
+    enterDescription: "Enter column description",
   },
 };

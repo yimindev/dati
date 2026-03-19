@@ -154,29 +154,25 @@ onMounted(() => {
 <template>
   <div class="p-5 md:p-6">
     <!-- 头部操作区 -->
-    <div class="flex gap-4 mb-6">
+    <div class="flex items-center justify-between gap-4 mb-6">
       <!-- 搜索框 -->
-      <div class="flex-1">
-        <el-input
-          v-model="searchKeyword"
-          :placeholder="t('datasource.searchPlaceholder')"
-          clearable
-          class="max-w-sm"
-          @keyup.enter="handleSearch"
-          @clear="handleClearSearch"
-        >
-        </el-input>
-        <el-button :icon="Search" @click="handleSearch">
-          {{ t("common.search") }}
-        </el-button>
-      </div>
+      <el-input
+        v-model="searchKeyword"
+        :placeholder="t('datasource.searchPlaceholder')"
+        clearable
+        class="max-w-sm"
+        @keyup.enter="handleSearch"
+        @clear="handleClearSearch"
+      >
+        <template #append>
+          <el-button :icon="Search" @click="handleSearch" />
+        </template>
+      </el-input>
 
       <!-- 创建按钮 -->
-      <div class="flex justify-end">
-        <el-button type="primary" :icon="Plus" @click="handleCreate">
-          {{ t("datasource.createButton") }}
-        </el-button>
-      </div>
+      <el-button type="primary" :icon="Plus" @click="handleCreate">
+        {{ t("datasource.createButton") }}
+      </el-button>
     </div>
 
     <!-- 数据表格（只做展示与事件触发） -->
@@ -190,9 +186,10 @@ onMounted(() => {
     />
 
     <!-- 分页（父级集中管理） -->
-    <div class="flex justify-end mt-4">
+    <div class="flex items-center justify-between mt-4">
+      <span class="text-gray-500 text-sm">{{ t('common.total', { total }) }}</span>
       <el-pagination
-        layout="total, sizes, prev, pager, next"
+        layout="sizes, prev, pager, next"
         :current-page="page"
         :page-size="pageSize"
         :page-sizes="[10, 20, 50, 100]"

@@ -27,6 +27,7 @@ export default {
     createdBy: "创建人",
     updatedAt: "更新时间",
     actions: "操作",
+    total: "共 {total} 条",
     schema: "Schema",
     username: "用户名",
     password: "密码",
@@ -66,7 +67,7 @@ export default {
       expand: "展开",
       collapse: "收起",
       mcpBuilder: "构建MCP",
-      sematicModels: "语义模型",
+      semanticModels: "语义模型",
       dataSources: "数据源",
     },
   },
@@ -122,5 +123,22 @@ export default {
     removeConfirm: "确定要移除表「{name}」吗？移除后相关列信息也会被删除。",
     removeSuccess: "移除成功",
     removeFailed: "移除失败",
+  },
+
+  column: {
+    // 列名
+    columnName: "列名",
+    description: "描述",
+    type: "类型",
+
+    // 搜索
+    searchPlaceholder: "搜索列名或描述",
+
+    // 操作
+    config: "配置",
+    configTitle: "配置列元数据",
+
+    // 表单
+    enterDescription: "请输入列描述",
   },
 };

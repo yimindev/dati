@@ -65,7 +65,7 @@ defineExpose({
     ref="formRef"
     :model="modelValue"
     :rules="rules"
-    label-width="auto"
+    label-width="120px"
     @submit.prevent
   >
     <el-form-item :label="t('datasource.connectionName')" prop="name">

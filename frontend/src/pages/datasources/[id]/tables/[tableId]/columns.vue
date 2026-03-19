@@ -111,28 +111,26 @@ onMounted(() => {
     </el-breadcrumb>
 
     <!-- 页面头部 -->
-    <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between mb-6">
-
-      <div class="flex items-center gap-2">
-        <el-input
-            v-model="searchKeyword"
-            placeholder="搜索列名 / 描述"
-            clearable
-            class="w-72"
-            @keyup.enter="handleSearch"
-            @clear="handleClearSearch"
-        />
-        <el-button :icon="Search" @click="handleSearch">
-          {{ t("common.search") }}
-        </el-button>
-      </div>
+    <div class="flex items-center justify-between gap-4 mb-6">
+      <el-input
+          v-model="searchKeyword"
+          :placeholder="t('column.searchPlaceholder')"
+          clearable
+          class="max-w-sm"
+          @keyup.enter="handleSearch"
+          @clear="handleClearSearch"
+      >
+        <template #append>
+          <el-button :icon="Search" @click="handleSearch" />
+        </template>
+      </el-input>
     </div>
 
     <!-- 列表 -->
     <el-table :data="columnList" v-loading="loading" stripe>
-      <el-table-column prop="name" label="列名" min-width="180" />
-      <el-table-column prop="description" label="描述" min-width="160" />
-      <el-table-column prop="column_type" label="类型" min-width="120" />
+      <el-table-column prop="name" :label="t('column.columnName')" min-width="180" />
+      <el-table-column prop="description" :label="t('column.description')" min-width="160" />
+      <el-table-column prop="column_type" :label="t('column.type')" min-width="120" />
 
       <el-table-column prop="updated_at" :label="t('common.updatedAt')" min-width="140">
         <template #default="{ row }">
@@ -148,16 +146,17 @@ onMounted(() => {
               type="primary"
               @click="handleConfigMetadata(row)"
           >
-            配置
+            {{ t('column.config') }}
           </el-button>
         </template>
       </el-table-column>
     </el-table>
 
     <!-- 分页 -->
-    <div class="flex justify-end mt-4">
+    <div class="flex items-center justify-between mt-4">
+      <span class="text-gray-500 text-sm">{{ t('common.total', { total }) }}</span>
       <el-pagination
-          layout="total, sizes, prev, pager, next"
+          layout="sizes, prev, pager, next"
           :current-page="page"
           :page-size="pageSize"
           :page-sizes="[10, 20, 50, 100]"
@@ -167,15 +166,15 @@ onMounted(() => {
       />
     </div>
 
-    <!-- 列元数据配置弹窗（示例：只配显示名+注释） -->
-    <el-dialog v-model="metadataDialogVisible" title="配置列元数据" width="600px">
+    <!-- 列元数据配置弹窗 -->
+    <el-dialog v-model="metadataDialogVisible" :title="t('column.configTitle')" width="600px">
       <el-form v-if="currentColumn" :model="currentColumn" label-width="120px">
-        <el-form-item label="列名">
+        <el-form-item :label="t('column.columnName')">
           <el-input v-model="currentColumn.name" disabled />
         </el-form-item>
 
-        <el-form-item label="描述">
-          <el-input v-model="currentColumn.description" placeholder="请输入列描述" />
+        <el-form-item :label="t('column.description')">
+          <el-input v-model="currentColumn.description" :placeholder="t('column.enterDescription')" />
         </el-form-item>
       </el-form>
 
