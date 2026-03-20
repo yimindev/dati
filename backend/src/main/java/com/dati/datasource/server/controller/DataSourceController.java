@@ -1,6 +1,6 @@
 package com.dati.datasource.server.controller;
 
-import com.dati.base.exception.DciException;
+import com.dati.base.exception.DatiException;
 import com.dati.base.pojo.BasePO;
 import com.dati.base.pojo.IdResponse;
 import com.dati.base.pojo.PageReq;
@@ -81,7 +81,7 @@ public class DataSourceController {
             return dataSourceService.getSchemas(id, catalog);
         } catch (SQLException e) {
             log.error("Failed to get schemas for datasource {}", id, e);
-            throw new DciException("SQL Error: " + e.getMessage());
+            throw new DatiException("SQL Error: " + e.getMessage());
         }
     }
 
@@ -91,7 +91,7 @@ public class DataSourceController {
             return dataSourceService.getTables(id, catalog, schema);
         } catch (SQLException e) {
             log.error("Failed to get tables for datasource {}", id, e);
-            throw new DciException("SQL Error: " + e.getMessage());
+            throw new DatiException("SQL Error: " + e.getMessage());
         }
     }
 
@@ -101,7 +101,7 @@ public class DataSourceController {
             return dataSourceService.getColumns(id, catalog, schema, table);
         } catch (SQLException e) {
             log.error("Failed to get columns for datasource {}", id, e);
-            throw new DciException("SQL Error: " + e.getMessage());
+            throw new DatiException("SQL Error: " + e.getMessage());
         }
     }
 
@@ -111,7 +111,7 @@ public class DataSourceController {
             return dataSourceService.executeSql(id, sqlExecuteRequest.sql());
         } catch (SQLException e) {
             log.error("Failed to get columns for datasource {}", id, e);
-            throw new DciException("SQL Error: " + e.getMessage());
+            throw new DatiException("SQL Error: " + e.getMessage());
         }
     }
 }

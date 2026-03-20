@@ -1,6 +1,6 @@
 package com.dati.datasource.server.controller;
 
-import com.dati.base.exception.DciException;
+import com.dati.base.exception.DatiException;
 import com.dati.base.pojo.IdResponse;
 import com.dati.base.pojo.PageReq;
 import com.dati.base.pojo.PageResponse;
@@ -56,7 +56,7 @@ public class ColumnController {
             return new IdResponse(tableId);
         } catch (SQLException e) {
             log.error("Failed to sync columns for datasource {}, table {}", datasourceId, tableId, e);
-            throw new DciException("SQL Error: " + e.getMessage());
+            throw new DatiException("SQL Error: " + e.getMessage());
         }
     }
 
