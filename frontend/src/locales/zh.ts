@@ -1,4 +1,8 @@
 export default {
+  home: {
+    subtitle: "数据智能平台",
+  },
+
   common: {
     // 通用操作
     save: "保存",

@@ -1,4 +1,8 @@
 export default {
+  home: {
+    subtitle: "Data Intelligence Platform",
+  },
+
   common: {
     // General Actions
     save: "Save",
