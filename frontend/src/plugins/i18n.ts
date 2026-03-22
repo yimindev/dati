@@ -11,7 +11,20 @@ declare module "vue-i18n" {
   export interface DefineLocaleMessage extends MessageSchema {}
 }
 
-const defaultLang: AppLang = (localStorage.getItem("locale") as AppLang) || "en"
+function getDefaultLang(): AppLang {
+  // 1. 优先使用用户手动设置的语言
+  const savedLang = localStorage.getItem("locale") as AppLang
+  if (savedLang) return savedLang
+
+  // 2. 检测浏览器语言
+  const browserLang = navigator.language.toLowerCase()
+  if (browserLang.startsWith('zh')) return 'zh'
+
+  // 3. 默认英文
+  return 'en'
+}
+
+const defaultLang: AppLang = getDefaultLang()
 
 export const i18n = createI18n({
   legacy: false,
