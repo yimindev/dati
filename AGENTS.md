@@ -2,6 +2,12 @@
 
 This file guides agentic coding assistants working on the DatI repository.
 
+## Project Overview
+
+**DatI (Data Intelligence)** is a platform that provides **unified data access capabilities** for large language models (LLMs).
+- **Core Features**: Quickly connect to various data sources (databases, APIs, files) and automatically generate interfaces complying with the [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) standard.
+- **Use Cases**: Building NL2SQL applications, data analysis assistants, and rapid deployment of data query MCP services.
+
 ## Commands
 
 ### Backend (Java/Spring Boot)
