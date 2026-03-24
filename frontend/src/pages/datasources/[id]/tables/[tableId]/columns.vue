@@ -9,7 +9,7 @@ import { useRoute } from "vue-router";
 import { ElMessage } from "element-plus";
 import { Search, Setting } from "@element-plus/icons-vue";
 import { useI18n } from "vue-i18n";
-import { listTableColumns, type TableColumnVO } from "~/api/column";
+import { listTableColumns, saveColumnMetadata, type TableColumnVO } from "~/api/column";
 import { formatDateTime } from "~/composables";
 
 const { t } = useI18n();
@@ -80,8 +80,7 @@ const handleConfigMetadata = (col: TableColumnVO) => {
 
 const handleSaveMetadata = async () => {
   try {
-    // TODO: 调用后端接口保存列级业务元数据
-    // await saveColumnMetadata(datasourceId.value, schema.value, tableName.value, currentColumn.value)
+    await saveColumnMetadata(datasourceId.value, tableId.value, currentColumn.value!);
     ElMessage.success(t("common.saveSuccess"));
     metadataDialogVisible.value = false;
     await loadColumns();

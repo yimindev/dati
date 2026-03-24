@@ -13,6 +13,10 @@ import com.dati.datasource.repository.dao.ColumnInfoDAO;
 import com.dati.datasource.repository.dao.TableInfoDAO;
 import com.dati.datasource.repository.mapper.ColumnMapper;
 import com.dati.datasource.repository.po.ColumnInfoPO;
+import com.dati.semantic.domain.SemanticEntityType;
+import com.dati.semantic.domain.service.SemanticIndexService;
+import com.dati.semantic.repository.po.EntityReference;
+import com.dati.semantic.repository.po.SemanticSearchDocument;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
@@ -30,10 +34,13 @@ public class ColumnService {
 
     private final DataSourceService dataSourceService;
 
-    public ColumnService(ColumnInfoDAO columnInfoDAO, TableInfoDAO tableInfoDAO, DataSourceService dataSourceService) {
+    private final SemanticIndexService semanticIndexService;
+
+    public ColumnService(ColumnInfoDAO columnInfoDAO, TableInfoDAO tableInfoDAO, DataSourceService dataSourceService, SemanticIndexService semanticIndexService) {
         this.columnInfoDAO = columnInfoDAO;
         this.tableInfoDAO = tableInfoDAO;
         this.dataSourceService = dataSourceService;
+        this.semanticIndexService = semanticIndexService;
     }
 
     public Page<ColumnInfo> getColumns(PageReq pageReq, String tableId, String keyword) {
@@ -50,6 +57,21 @@ public class ColumnService {
         columnInfoPO.setColumnType(columnInfo.getColumnType());
         columnInfoPO.setDescription(columnInfo.getDescription());
         columnInfoDAO.save(columnInfoPO);
+
+        TableInfo tableInfo = TableMapper.toTableInfo(tableInfoDAO.findById(columnInfoPO.getTableId()).orElseThrow());
+        EntityReference entity = EntityReference.builder()
+                .tableId(tableInfo.getId())
+                .tableName(tableInfo.getName())
+                .field(columnInfoPO.getName())
+                .build();
+        SemanticSearchDocument doc = SemanticSearchDocument.builder()
+                .id("field:" + id)
+                .type(SemanticEntityType.FIELD)
+                .keywords(List.of(columnInfoPO.getName()))
+                .description(columnInfo.getDescription())
+                .entity(entity)
+                .build();
+        semanticIndexService.save(doc);
     }
 
     @Transactional
@@ -73,7 +95,25 @@ public class ColumnService {
             return columnInfoPO;
         }).toList();
         
-        columnInfoDAO.saveAll(columnInfoPOList);
+        List<ColumnInfoPO> savedList = columnInfoDAO.saveAll(columnInfoPOList);
+        
+        semanticIndexService.deleteByEntityTableId(tableId);
+        
+        List<SemanticSearchDocument> docs = savedList.stream().map(po -> {
+            EntityReference entity = EntityReference.builder()
+                    .tableId(tableId)
+                    .tableName(tableInfo.getName())
+                    .field(po.getName())
+                    .build();
+            return SemanticSearchDocument.builder()
+                    .id("field:" + po.getId())
+                    .type(SemanticEntityType.FIELD)
+                    .keywords(List.of(po.getName()))
+                    .description(po.getDescription())
+                    .entity(entity)
+                    .build();
+        }).toList();
+        semanticIndexService.saveBatch(docs);
     }
 
 }

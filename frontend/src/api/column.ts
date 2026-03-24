@@ -1,7 +1,8 @@
 import type { PageResponse } from "~/api/types.ts";
-import {get} from "~/api/http.ts";
+import {get, put} from "~/api/http.ts";
 
 export type TableColumnVO = {
+  id?: string;
   name: string;
   column_type?: string;
   nullable?: boolean;
@@ -21,5 +22,16 @@ export async function listTableColumns(
   return get<PageResponse<TableColumnVO>>(
     `/v1/data-sources/${datasourceId}/tables/${tableId}/columns`,
     { page, size, keyword },
+  );
+}
+
+export async function saveColumnMetadata(
+  datasourceId: string | number,
+  tableId: string,
+  column: TableColumnVO,
+) {
+  return put(
+    `/v1/data-sources/${datasourceId}/tables/${tableId}/columns/${column.id}`,
+    column,
   );
 }

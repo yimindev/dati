@@ -10,10 +10,14 @@ import com.dati.datasource.repository.dao.TableInfoDAO;
 import com.dati.datasource.repository.po.ColumnInfoPO;
 import com.dati.datasource.repository.po.TableInfoPO;
 import com.dati.db.Column;
+import com.dati.semantic.domain.SemanticEntityType;
+import com.dati.semantic.domain.service.SemanticIndexService;
+import com.dati.semantic.repository.po.SemanticSearchDocument;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
@@ -27,8 +31,15 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("ColumnService 单元测试")
@@ -42,6 +53,9 @@ class ColumnServiceTest {
 
     @Mock
     private DataSourceService dataSourceService;
+
+    @Mock
+    private SemanticIndexService semanticIndexService;
 
     @InjectMocks
     private ColumnService columnService;
@@ -103,6 +117,7 @@ class ColumnServiceTest {
         ColumnInfoPO existingPO = TestFixtures.createTestColumnInfoPO();
         when(columnInfoDAO.findById(TestFixtures.TEST_COLUMN_ID)).thenReturn(Optional.of(existingPO));
         when(columnInfoDAO.save(any(ColumnInfoPO.class))).thenReturn(existingPO);
+        when(tableInfoDAO.findById(TestFixtures.TEST_TABLE_ID)).thenReturn(Optional.of(testTableInfoPO));
 
         ColumnInfo updateInfo = new ColumnInfo();
         updateInfo.setName("updated_column");
@@ -119,6 +134,17 @@ class ColumnServiceTest {
             po.getColumnType().equals("INTEGER") &&
             po.getDescription().equals("Updated description")
         ));
+
+        ArgumentCaptor<SemanticSearchDocument> docCaptor = ArgumentCaptor.forClass(SemanticSearchDocument.class);
+        verify(semanticIndexService).save(docCaptor.capture());
+        SemanticSearchDocument savedDoc = docCaptor.getValue();
+        assertThat(savedDoc.getId()).isEqualTo("field:" + TestFixtures.TEST_COLUMN_ID);
+        assertThat(savedDoc.getType()).isEqualTo(SemanticEntityType.FIELD);
+        assertThat(savedDoc.getKeywords()).containsExactly("updated_column");
+        assertThat(savedDoc.getDescription()).isEqualTo("Updated description");
+        assertThat(savedDoc.getEntity().getTableId()).isEqualTo(TestFixtures.TEST_TABLE_ID);
+        assertThat(savedDoc.getEntity().getTableName()).isEqualTo("test_table");
+        assertThat(savedDoc.getEntity().getField()).isEqualTo("updated_column");
     }
 
     @Test
@@ -151,6 +177,9 @@ class ColumnServiceTest {
         User mockUser = mock(User.class);
         when(mockUser.getId()).thenReturn(TestFixtures.TEST_USER_ID);
         
+        ColumnInfoPO savedPO = TestFixtures.createTestColumnInfoPO();
+        when(columnInfoDAO.saveAll(anyList())).thenReturn(List.of(savedPO));
+        
         try (MockedStatic<RequestContext> mocked = mockStatic(RequestContext.class)) {
             mocked.when(RequestContext::getUser).thenReturn(mockUser);
             
@@ -160,6 +189,8 @@ class ColumnServiceTest {
             // then
             verify(columnInfoDAO).deleteByTableId(TestFixtures.TEST_TABLE_ID);
             verify(columnInfoDAO).saveAll(anyList());
+            verify(semanticIndexService).deleteByEntityTableId(TestFixtures.TEST_TABLE_ID);
+            verify(semanticIndexService).saveBatch(anyList());
         }
     }
 

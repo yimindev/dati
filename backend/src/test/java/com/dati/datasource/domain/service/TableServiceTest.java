@@ -11,6 +11,7 @@ import com.dati.datasource.repository.po.TableInfoPO;
 import com.dati.datasource.server.assembler.TableAssembler;
 import com.dati.datasource.server.pojo.AddTableRequest;
 import com.dati.db.Column;
+import com.dati.semantic.domain.service.SemanticIndexService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -50,6 +51,9 @@ class TableServiceTest {
 
     @Mock
     private TableAssembler tableAssembler;
+
+    @Mock
+    private SemanticIndexService semanticIndexService;
 
     @InjectMocks
     private TableService tableService;
@@ -177,12 +181,13 @@ class TableServiceTest {
 
     @Test
     @DisplayName("删除表 - 成功")
-    void deleteTable_shouldDeleteTableAndColumns() {
+    void deleteTable_shouldDeleteTableAndColumnsAndESDocuments() {
         // when
         tableService.deleteTable(TestFixtures.TEST_TABLE_ID);
 
         // then
         verify(columnInfoDAO).deleteByTableId(TestFixtures.TEST_TABLE_ID);
         verify(tableInfoDAO).deleteById(TestFixtures.TEST_TABLE_ID);
+        verify(semanticIndexService).deleteByEntityTableId(TestFixtures.TEST_TABLE_ID);
     }
 }

@@ -30,7 +30,7 @@ public class SemanticSearchDocument {
     private String id;
     
     /**
-     * 关键词列表
+     * 关键词列表，搜索时权重较高的匹配字段，不同类型的实体存不同的内容，如下
      * 表: 存储原始表名、表别名等
      * 字段: 存储字段名、字段别名等
      * 字段值: 存储具体的字段值

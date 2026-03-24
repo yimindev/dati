@@ -14,6 +14,7 @@ import com.dati.datasource.repository.po.TableInfoPO;
 import com.dati.datasource.server.assembler.TableAssembler;
 import com.dati.datasource.server.pojo.AddTableRequest;
 import com.dati.db.Column;
+import com.dati.semantic.domain.service.SemanticIndexService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
@@ -30,12 +31,14 @@ public class TableService {
     private final ColumnInfoDAO columnInfoDAO;
     private final DataSourceService dataSourceService;
     private final TableAssembler tableAssembler;
+    private final SemanticIndexService semanticIndexService;
 
-    public TableService(TableInfoDAO tableInfoDAO, ColumnInfoDAO columnInfoDAO, DataSourceService dataSourceService, TableAssembler tableAssembler) {
+    public TableService(TableInfoDAO tableInfoDAO, ColumnInfoDAO columnInfoDAO, DataSourceService dataSourceService, TableAssembler tableAssembler, SemanticIndexService semanticIndexService) {
         this.tableInfoDAO = tableInfoDAO;
         this.columnInfoDAO = columnInfoDAO;
         this.dataSourceService = dataSourceService;
         this.tableAssembler = tableAssembler;
+        this.semanticIndexService = semanticIndexService;
     }
 
     public Page<TableInfo> getTables(PageReq pageReq, String datasourceId, String keyword) {
@@ -89,5 +92,6 @@ public class TableService {
     public void deleteTable(String tableId) {
         columnInfoDAO.deleteByTableId(tableId);
         tableInfoDAO.deleteById(tableId);
+        semanticIndexService.deleteByEntityTableId(tableId);
     }
 }
