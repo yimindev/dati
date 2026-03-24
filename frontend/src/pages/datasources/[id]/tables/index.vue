@@ -282,7 +282,7 @@ onMounted(() => {
           </el-button>
 
           <el-button link type="primary" @click="handleConfigMetadata(row)">
-            {{ t("tableInfo.configInfo") }}
+            {{ t("common.edit") }}
           </el-button>
 
           <el-button link type="primary" @click="handleSyncColumns(row)">

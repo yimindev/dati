@@ -7,7 +7,7 @@ activeMenu: /datasources
 import { computed, onMounted, ref } from "vue";
 import { useRoute } from "vue-router";
 import { ElMessage } from "element-plus";
-import { Search, Setting } from "@element-plus/icons-vue";
+import { Search } from "@element-plus/icons-vue";
 import { useI18n } from "vue-i18n";
 import { listTableColumns, saveColumnMetadata, type TableColumnVO } from "~/api/column";
 import { formatDateTime } from "~/composables";
@@ -140,12 +140,11 @@ onMounted(() => {
       <el-table-column :label="t('common.actions')" width="150" fixed="right">
         <template #default="{ row }">
           <el-button
-              size="small"
-              :icon="Setting"
+              link
               type="primary"
               @click="handleConfigMetadata(row)"
           >
-            {{ t('column.config') }}
+            {{ t('common.edit') }}
           </el-button>
         </template>
       </el-table-column>
@@ -166,7 +165,7 @@ onMounted(() => {
     </div>
 
     <!-- 列元数据配置弹窗 -->
-    <el-dialog v-model="metadataDialogVisible" :title="t('column.configTitle')" width="600px">
+    <el-dialog v-model="metadataDialogVisible" :title="t('column.editTitle')" width="600px">
       <el-form v-if="currentColumn" :model="currentColumn" label-width="120px">
         <el-form-item :label="t('column.columnName')">
           <el-input v-model="currentColumn.name" disabled />

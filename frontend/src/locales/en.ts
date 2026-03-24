@@ -109,7 +109,7 @@ export default {
     addTable: "Add Tables",
     syncColumns: "Sync Columns",
     columnSettings: "Column Settings",
-    configInfo: "Configure",
+    configInfo: "Edit",
 
     // Form Related
     selectSchema: "Select Schema",
@@ -139,8 +139,7 @@ export default {
     searchPlaceholder: "Search by column name or description",
 
     // Actions
-    config: "Configure",
-    configTitle: "Configure Column Metadata",
+    editTitle: "Edit Column",
 
     // Form
     enterDescription: "Enter column description",

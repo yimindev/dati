@@ -109,7 +109,7 @@ export default {
     addTable: "添加表",
     syncColumns: "同步列",
     columnSettings: "列配置",
-    configInfo: "配置信息",
+    configInfo: "编辑",
 
     // 表单相关
     selectSchema: "请选择 Schema",
@@ -139,8 +139,7 @@ export default {
     searchPlaceholder: "搜索列名或描述",
 
     // 操作
-    config: "配置",
-    configTitle: "配置列元数据",
+    editTitle: "编辑列信息",
 
     // 表单
     enterDescription: "请输入列描述",
