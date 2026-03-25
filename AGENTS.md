@@ -8,6 +8,12 @@ This file guides agentic coding assistants working on the DatI repository.
 - **Core Features**: Quickly connect to various data sources (databases, APIs, files) and automatically generate interfaces complying with the [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) standard.
 - **Use Cases**: Building NL2SQL applications, data analysis assistants, and rapid deployment of data query MCP services.
 
+## General Principles
+
+1. **Code should be simple and clean, never over-complicate things.**
+2. **Write a detailed test suite as you add more features.** The test must be re-executed at every major change.
+3. **New files should be staged to git.**
+
 ## Commands
 
 ### Backend (Java/Spring Boot)
@@ -45,7 +51,6 @@ pnpm dev                                  # Dev server
 - **Injection**: Constructor injection only (`private final`).
 - **Lombok**: Use `@Data`, `@Slf4j`, `@EqualsAndHashCode(callSuper = true)`.
 - **Response**: Return `IdResponse` for mutations, `PageResponse<T>` for lists.
-- **Errors**: Wrap in `DciException` with user-friendly messages.
 - **JPA**: Use `BaseResourcePO` as base for `id`, `createdAt`, `updatedAt`.
 
 ## Frontend Code Style
