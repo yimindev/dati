@@ -3,6 +3,7 @@ package com.dati.datasource.domain.service;
 import com.dati.TestFixtures;
 import com.dati.datasource.domain.model.DataSource;
 import com.dati.datasource.repository.dao.DataSourceDAO;
+import com.dati.datasource.repository.dao.TableInfoDAO;
 import com.dati.datasource.repository.po.DataSourcePO;
 import com.dati.db.HikariPoolManager;
 import com.dati.db.JdbcConnector;
@@ -39,6 +40,12 @@ class DataSourceServiceTest {
 
     @Mock
     private DataSourceDAO dataSourceDAO;
+
+    @Mock
+    private TableInfoDAO tableInfoDAO;
+
+    @Mock
+    private TableService tableService;
 
     @InjectMocks
     private DataSourceService dataSourceService;
@@ -100,6 +107,7 @@ class DataSourceServiceTest {
     void deleteDataSource_shouldDeleteSuccessfully() {
         // given
         when(dataSourceDAO.findById(TestFixtures.TEST_DATASOURCE_ID)).thenReturn(Optional.of(testDataSourcePO));
+        when(tableInfoDAO.findByDataSourceId(TestFixtures.TEST_DATASOURCE_ID)).thenReturn(List.of());
 
         try (MockedStatic<HikariPoolManager> mockedHikari = mockStatic(HikariPoolManager.class)) {
             // when

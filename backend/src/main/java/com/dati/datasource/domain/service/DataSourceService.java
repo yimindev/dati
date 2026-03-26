@@ -5,9 +5,11 @@ import com.dati.db.Column;
 import com.dati.db.HikariPoolManager;
 import com.dati.db.JdbcConnector;
 import com.dati.datasource.repository.dao.DataSourceDAO;
+import com.dati.datasource.repository.dao.TableInfoDAO;
 import com.dati.datasource.domain.model.DataSource;
 import com.dati.datasource.repository.mapper.DSMapper;
 import com.dati.datasource.repository.po.DataSourcePO;
+import com.dati.datasource.repository.po.TableInfoPO;
 import com.dati.db.JdbcUtils;
 import com.dati.db.client.DbClient;
 import com.dati.db.client.DbClientFactory;
@@ -26,9 +28,13 @@ import java.util.Optional;
 public class DataSourceService {
 
     private final DataSourceDAO dataSourceDAO;
+    private final TableInfoDAO tableInfoDAO;
+    private final TableService tableService;
 
-    public DataSourceService(DataSourceDAO dataSourceDAO) {
+    public DataSourceService(DataSourceDAO dataSourceDAO, TableInfoDAO tableInfoDAO, TableService tableService) {
         this.dataSourceDAO = dataSourceDAO;
+        this.tableInfoDAO = tableInfoDAO;
+        this.tableService = tableService;
     }
 
     public boolean testConnection(JdbcConnector jdbcConnector) {
@@ -54,6 +60,12 @@ public class DataSourceService {
         }
         JdbcConnector jdbcConnector = new JdbcConnector(DSMapper.toDataSource(dataSourcePOOptional.get()));
         HikariPoolManager.close(jdbcConnector);
+        
+        List<TableInfoPO> tables = tableInfoDAO.findByDataSourceId(id);
+        for (TableInfoPO table : tables) {
+            tableService.deleteTable(table.getId());
+        }
+        
         dataSourceDAO.deleteById(id);
     }
 
