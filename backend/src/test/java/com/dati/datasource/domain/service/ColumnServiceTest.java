@@ -52,7 +52,7 @@ class ColumnServiceTest {
     private TableInfoDAO tableInfoDAO;
 
     @Mock
-    private DataSourceService dataSourceService;
+    private JdbcMetaService jdbcMetaService;
 
     @Mock
     private SemanticIndexService semanticIndexService;
@@ -171,7 +171,7 @@ class ColumnServiceTest {
         when(mockColumn.type()).thenReturn("VARCHAR");
         when(mockColumn.comment()).thenReturn("New comment");
         
-        when(dataSourceService.getColumns(TestFixtures.TEST_DATASOURCE_ID, null, "public", "test_table"))
+        when(jdbcMetaService.getColumns(TestFixtures.TEST_DATASOURCE_ID, null, "public", "test_table"))
             .thenReturn(List.of(mockColumn));
         
         User mockUser = mock(User.class);
@@ -213,7 +213,7 @@ class ColumnServiceTest {
     void syncColumns_shouldThrowWhenDataSourceFails() throws SQLException {
         // given
         when(tableInfoDAO.findById(TestFixtures.TEST_TABLE_ID)).thenReturn(Optional.of(testTableInfoPO));
-        when(dataSourceService.getColumns(TestFixtures.TEST_DATASOURCE_ID, null, "public", "test_table"))
+        when(jdbcMetaService.getColumns(TestFixtures.TEST_DATASOURCE_ID, null, "public", "test_table"))
             .thenThrow(new SQLException("Connection failed"));
 
         // when & then
@@ -233,7 +233,7 @@ class ColumnServiceTest {
         when(mockColumn.type()).thenReturn("INT");
         when(mockColumn.comment()).thenReturn(null);
         
-        when(dataSourceService.getColumns(TestFixtures.TEST_DATASOURCE_ID, null, "public", "test_table"))
+        when(jdbcMetaService.getColumns(TestFixtures.TEST_DATASOURCE_ID, null, "public", "test_table"))
             .thenReturn(List.of(mockColumn));
         
         try (MockedStatic<RequestContext> mocked = mockStatic(RequestContext.class)) {

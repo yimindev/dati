@@ -2,12 +2,15 @@ package com.dati.datasource.domain.service;
 
 import com.dati.TestFixtures;
 import com.dati.datasource.domain.model.DataSource;
+import com.dati.datasource.repository.dao.ColumnInfoDAO;
 import com.dati.datasource.repository.dao.DataSourceDAO;
 import com.dati.datasource.repository.dao.TableInfoDAO;
 import com.dati.datasource.repository.po.DataSourcePO;
+import com.dati.datasource.repository.po.TableInfoPO;
 import com.dati.db.HikariPoolManager;
 import com.dati.db.JdbcConnector;
 import com.dati.db.JdbcUtils;
+import com.dati.semantic.domain.service.SemanticIndexService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -21,11 +24,11 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.eq;
@@ -45,7 +48,10 @@ class DataSourceServiceTest {
     private TableInfoDAO tableInfoDAO;
 
     @Mock
-    private TableService tableService;
+    private ColumnInfoDAO columnInfoDAO;
+
+    @Mock
+    private SemanticIndexService semanticIndexService;
 
     @InjectMocks
     private DataSourceService dataSourceService;
@@ -103,11 +109,11 @@ class DataSourceServiceTest {
     }
 
     @Test
-    @DisplayName("删除数据源 - 成功")
-    void deleteDataSource_shouldDeleteSuccessfully() {
+    @DisplayName("删除数据源 - 成功，无关联表")
+    void deleteDataSource_shouldDeleteSuccessfully_withNoTables() {
         // given
         when(dataSourceDAO.findById(TestFixtures.TEST_DATASOURCE_ID)).thenReturn(Optional.of(testDataSourcePO));
-        when(tableInfoDAO.findByDataSourceId(TestFixtures.TEST_DATASOURCE_ID)).thenReturn(List.of());
+        when(tableInfoDAO.findByDataSourceId(TestFixtures.TEST_DATASOURCE_ID)).thenReturn(Collections.emptyList());
 
         try (MockedStatic<HikariPoolManager> mockedHikari = mockStatic(HikariPoolManager.class)) {
             // when
@@ -117,6 +123,26 @@ class DataSourceServiceTest {
             verify(dataSourceDAO).findById(TestFixtures.TEST_DATASOURCE_ID);
             verify(dataSourceDAO).deleteById(TestFixtures.TEST_DATASOURCE_ID);
             mockedHikari.verify(() -> HikariPoolManager.close(any(JdbcConnector.class)));
+        }
+    }
+
+    @Test
+    @DisplayName("删除数据源 - 成功，有关联表")
+    void deleteDataSource_shouldDeleteSuccessfully_withTables() {
+        // given
+        TableInfoPO tableInfoPO = TestFixtures.createTestTableInfoPO();
+        when(dataSourceDAO.findById(TestFixtures.TEST_DATASOURCE_ID)).thenReturn(Optional.of(testDataSourcePO));
+        when(tableInfoDAO.findByDataSourceId(TestFixtures.TEST_DATASOURCE_ID)).thenReturn(List.of(tableInfoPO));
+
+        try (MockedStatic<HikariPoolManager> ignored = mockStatic(HikariPoolManager.class)) {
+            // when
+            dataSourceService.deleteDataSource(TestFixtures.TEST_DATASOURCE_ID);
+
+            // then
+            verify(columnInfoDAO).deleteByTableIdIn(List.of(TestFixtures.TEST_TABLE_ID));
+            verify(tableInfoDAO).deleteAllById(List.of(TestFixtures.TEST_TABLE_ID));
+            verify(semanticIndexService).deleteByEntityTableIds(List.of(TestFixtures.TEST_TABLE_ID));
+            verify(dataSourceDAO).deleteById(TestFixtures.TEST_DATASOURCE_ID);
         }
     }
 
@@ -182,21 +208,5 @@ class DataSourceServiceTest {
             assertThat(result).isTrue();
             mockedJdbc.verify(() -> JdbcUtils.testConnection(eq(testDataSource.getJdbcUrl()), eq(testDataSource.getUsername()), eq(testDataSource.getPassword())));
         }
-    }
-
-    @Test
-    @DisplayName("元数据获取/执行SQL - 数据源不存在时抛出异常")
-    void metadataOperation_shouldThrowWhenDataSourceNotFound() {
-        // given
-        when(dataSourceDAO.findById(TestFixtures.TEST_DATASOURCE_ID)).thenReturn(Optional.empty());
-
-        // when & then
-        assertAll(
-            () -> assertThrows(Exception.class, () -> dataSourceService.getCatalogs(TestFixtures.TEST_DATASOURCE_ID)),
-            () -> assertThrows(Exception.class, () -> dataSourceService.getSchemas(TestFixtures.TEST_DATASOURCE_ID, null)),
-            () -> assertThrows(Exception.class, () -> dataSourceService.getTables(TestFixtures.TEST_DATASOURCE_ID, null, "public")),
-            () -> assertThrows(Exception.class, () -> dataSourceService.getColumns(TestFixtures.TEST_DATASOURCE_ID, null, "public", "test_table")),
-            () -> assertThrows(Exception.class, () -> dataSourceService.executeSql(TestFixtures.TEST_DATASOURCE_ID, "SELECT 1"))
-        );
     }
 }

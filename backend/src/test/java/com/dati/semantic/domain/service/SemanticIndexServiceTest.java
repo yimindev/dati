@@ -129,7 +129,7 @@ class SemanticIndexServiceTest {
     }
 
     @Test
-    @DisplayName("根据 tableId 删除文档 - 应调用 DAO 删除方法")
+    @DisplayName("根据 tableId 删除文档 - 应调用 DAO 批量删除方法")
     void deleteByEntityTableId_shouldCallDaoDeleteMethod() {
         // given
         String tableId = "table-001";
@@ -138,6 +138,19 @@ class SemanticIndexServiceTest {
         semanticIndexService.deleteByEntityTableId(tableId);
 
         // then
-        verify(semanticSearchDAO).deleteByEntity_TableId(tableId);
+        verify(semanticSearchDAO).deleteByEntity_TableIdIn(List.of(tableId));
+    }
+
+    @Test
+    @DisplayName("根据 tableIds 批量删除文档 - 应调用 DAO 批量删除方法")
+    void deleteByEntityTableIds_shouldCallDaoBatchDeleteMethod() {
+        // given
+        List<String> tableIds = List.of("table-001", "table-002");
+
+        // when
+        semanticIndexService.deleteByEntityTableIds(tableIds);
+
+        // then
+        verify(semanticSearchDAO).deleteByEntity_TableIdIn(tableIds);
     }
 }

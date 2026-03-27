@@ -47,7 +47,7 @@ class TableServiceTest {
     private ColumnInfoDAO columnInfoDAO;
 
     @Mock
-    private DataSourceService dataSourceService;
+    private JdbcMetaService jdbcMetaService;
 
     @Mock
     private TableAssembler tableAssembler;
@@ -132,7 +132,7 @@ class TableServiceTest {
         when(mockColumn.type()).thenReturn("VARCHAR");
         when(mockColumn.comment()).thenReturn("Column comment");
         
-        when(dataSourceService.getColumns(TestFixtures.TEST_DATASOURCE_ID, null, "public", "new_table"))
+        when(jdbcMetaService.getColumns(TestFixtures.TEST_DATASOURCE_ID, null, "public", "new_table"))
             .thenReturn(List.of(mockColumn));
         when(tableInfoDAO.save(any(TableInfoPO.class))).thenReturn(testTableInfoPO);
         when(columnInfoDAO.save(any(ColumnInfoPO.class))).thenReturn(TestFixtures.createTestColumnInfoPO());
@@ -156,7 +156,7 @@ class TableServiceTest {
         request.setName("new_table");
         request.setSchema("public");
         
-        when(dataSourceService.getColumns(TestFixtures.TEST_DATASOURCE_ID, null, "public", "new_table"))
+        when(jdbcMetaService.getColumns(TestFixtures.TEST_DATASOURCE_ID, null, "public", "new_table"))
             .thenThrow(new SQLException("Connection failed"));
         when(tableInfoDAO.save(any(TableInfoPO.class))).thenReturn(testTableInfoPO);
         doNothing().when(tableAssembler).fillUsersFromRequest(any(TableInfo.class));
@@ -186,8 +186,35 @@ class TableServiceTest {
         tableService.deleteTable(TestFixtures.TEST_TABLE_ID);
 
         // then
-        verify(columnInfoDAO).deleteByTableId(TestFixtures.TEST_TABLE_ID);
-        verify(tableInfoDAO).deleteById(TestFixtures.TEST_TABLE_ID);
-        verify(semanticIndexService).deleteByEntityTableId(TestFixtures.TEST_TABLE_ID);
+        verify(columnInfoDAO).deleteByTableIdIn(List.of(TestFixtures.TEST_TABLE_ID));
+        verify(tableInfoDAO).deleteAllById(List.of(TestFixtures.TEST_TABLE_ID));
+        verify(semanticIndexService).deleteByEntityTableIds(List.of(TestFixtures.TEST_TABLE_ID));
+    }
+
+    @Test
+    @DisplayName("批量删除表 - 成功")
+    void deleteTables_shouldDeleteTablesAndColumnsAndESDocuments() {
+        // given
+        List<String> tableIds = List.of(TestFixtures.TEST_TABLE_ID, "table_2");
+
+        // when
+        tableService.deleteTables(tableIds);
+
+        // then
+        verify(columnInfoDAO).deleteByTableIdIn(tableIds);
+        verify(tableInfoDAO).deleteAllById(tableIds);
+        verify(semanticIndexService).deleteByEntityTableIds(tableIds);
+    }
+
+    @Test
+    @DisplayName("批量删除表 - 空列表")
+    void deleteTables_withEmptyList_shouldNotCallDAO() {
+        // when
+        tableService.deleteTables(Collections.emptyList());
+
+        // then
+        verify(columnInfoDAO).deleteByTableIdIn(Collections.emptyList());
+        verify(tableInfoDAO).deleteAllById(Collections.emptyList());
+        verify(semanticIndexService).deleteByEntityTableIds(Collections.emptyList());
     }
 }

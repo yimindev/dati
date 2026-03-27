@@ -7,6 +7,7 @@ import com.dati.base.pojo.PageReq;
 import com.dati.base.pojo.PageResponse;
 import com.dati.datasource.domain.model.DataSource;
 import com.dati.datasource.domain.service.DataSourceService;
+import com.dati.datasource.domain.service.JdbcMetaService;
 import com.dati.datasource.server.assembler.DSAssembler;
 import com.dati.datasource.server.pojo.DatasourceVO;
 import com.dati.datasource.server.pojo.SqlExecuteRequest;
@@ -34,11 +35,13 @@ import java.util.Map;
 public class DataSourceController {
 
     private final DataSourceService dataSourceService;
+    private final JdbcMetaService jdbcMetaService;
 
     private final DSAssembler dsAssembler;
 
-    public DataSourceController(DataSourceService dataSourceService, DSAssembler dsAssembler) {
+    public DataSourceController(DataSourceService dataSourceService, JdbcMetaService jdbcMetaService, DSAssembler dsAssembler) {
         this.dataSourceService = dataSourceService;
+        this.jdbcMetaService = jdbcMetaService;
         this.dsAssembler = dsAssembler;
     }
 
@@ -78,7 +81,7 @@ public class DataSourceController {
     @GetMapping("/{id}/schemas")
     public List<String> getSchemas(@PathVariable String id, @RequestParam(name = "catalog", required = false) String catalog) {
         try {
-            return dataSourceService.getSchemas(id, catalog);
+            return jdbcMetaService.getSchemas(id, catalog);
         } catch (SQLException e) {
             log.error("Failed to get schemas for datasource {}", id, e);
             throw new DatiException("SQL Error: " + e.getMessage());
@@ -88,7 +91,7 @@ public class DataSourceController {
     @GetMapping("/{id}/schemas/{schema}/tables")
     public List<String> getTables(@PathVariable String id, @PathVariable String schema, @RequestParam(name = "catalog", required = false) String catalog) {
         try {
-            return dataSourceService.getTables(id, catalog, schema);
+            return jdbcMetaService.getTables(id, catalog, schema);
         } catch (SQLException e) {
             log.error("Failed to get tables for datasource {}", id, e);
             throw new DatiException("SQL Error: " + e.getMessage());
@@ -98,7 +101,7 @@ public class DataSourceController {
     @GetMapping("/{id}/schemas/{schema}/tables/{table}/columns")
     public List<Column> getColumns(@PathVariable String id, @PathVariable String schema, @PathVariable String table, @RequestParam(name = "catalog", required = false) String catalog) {
         try {
-            return dataSourceService.getColumns(id, catalog, schema, table);
+            return jdbcMetaService.getColumns(id, catalog, schema, table);
         } catch (SQLException e) {
             log.error("Failed to get columns for datasource {}", id, e);
             throw new DatiException("SQL Error: " + e.getMessage());
@@ -108,9 +111,9 @@ public class DataSourceController {
     @PostMapping("/{id}/execute-sql")
     public List<Map<String, Object>> executeSql(@PathVariable String id, @RequestBody SqlExecuteRequest sqlExecuteRequest) {
         try {
-            return dataSourceService.executeSql(id, sqlExecuteRequest.sql());
+            return jdbcMetaService.executeSql(id, sqlExecuteRequest.sql());
         } catch (SQLException e) {
-            log.error("Failed to get columns for datasource {}", id, e);
+            log.error("Failed to execute SQL for datasource {}", id, e);
             throw new DatiException("SQL Error: " + e.getMessage());
         }
     }

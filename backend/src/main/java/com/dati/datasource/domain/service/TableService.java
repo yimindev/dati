@@ -29,14 +29,14 @@ public class TableService {
 
     private final TableInfoDAO tableInfoDAO;
     private final ColumnInfoDAO columnInfoDAO;
-    private final DataSourceService dataSourceService;
+    private final JdbcMetaService jdbcMetaService;
     private final TableAssembler tableAssembler;
     private final SemanticIndexService semanticIndexService;
 
-    public TableService(TableInfoDAO tableInfoDAO, ColumnInfoDAO columnInfoDAO, DataSourceService dataSourceService, TableAssembler tableAssembler, SemanticIndexService semanticIndexService) {
+    public TableService(TableInfoDAO tableInfoDAO, ColumnInfoDAO columnInfoDAO, JdbcMetaService jdbcMetaService, TableAssembler tableAssembler, SemanticIndexService semanticIndexService) {
         this.tableInfoDAO = tableInfoDAO;
         this.columnInfoDAO = columnInfoDAO;
-        this.dataSourceService = dataSourceService;
+        this.jdbcMetaService = jdbcMetaService;
         this.tableAssembler = tableAssembler;
         this.semanticIndexService = semanticIndexService;
     }
@@ -70,7 +70,7 @@ public class TableService {
             tableIds.add(tableId);
 
             try {
-                List<Column> columns = dataSourceService.getColumns(datasourceId, null, request.getSchema(), request.getName());
+                List<Column> columns = jdbcMetaService.getColumns(datasourceId, null, request.getSchema(), request.getName());
                 for (Column column : columns) {
                     ColumnInfo columnInfo = new ColumnInfo();
                     columnInfo.setTableId(tableId);
@@ -89,9 +89,14 @@ public class TableService {
     }
 
     @Transactional
+    public void deleteTables(List<String> tableIds) {
+        columnInfoDAO.deleteByTableIdIn(tableIds);
+        tableInfoDAO.deleteAllById(tableIds);
+        semanticIndexService.deleteByEntityTableIds(tableIds);
+    }
+
+    @Transactional
     public void deleteTable(String tableId) {
-        columnInfoDAO.deleteByTableId(tableId);
-        tableInfoDAO.deleteById(tableId);
-        semanticIndexService.deleteByEntityTableId(tableId);
+        deleteTables(List.of(tableId));
     }
 }

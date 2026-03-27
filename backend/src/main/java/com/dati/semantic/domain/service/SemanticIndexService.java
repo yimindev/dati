@@ -35,8 +35,12 @@ public class SemanticIndexService {
         semanticSearchDAO.saveAll(docs);
     }
 
+    public void deleteByEntityTableIds(List<String> tableIds) {
+        semanticSearchDAO.deleteByEntity_TableIdIn(tableIds);
+    }
+
     public void deleteByEntityTableId(String tableId) {
-        semanticSearchDAO.deleteByEntity_TableId(tableId);
+        deleteByEntityTableIds(List.of(tableId));
     }
 
 }

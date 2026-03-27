@@ -3,6 +3,7 @@ package com.dati.datasource.server.controller;
 import com.dati.TestFixtures;
 import com.dati.datasource.domain.model.DataSource;
 import com.dati.datasource.domain.service.DataSourceService;
+import com.dati.datasource.domain.service.JdbcMetaService;
 import com.dati.datasource.server.assembler.DSAssembler;
 import com.dati.datasource.server.pojo.DatasourceVO;
 import com.dati.db.Column;
@@ -50,6 +51,9 @@ class DataSourceControllerTest {
 
     @MockitoBean
     private DataSourceService dataSourceService;
+
+    @MockitoBean
+    private JdbcMetaService jdbcMetaService;
 
     @MockitoBean
     private DSAssembler dsAssembler;
@@ -156,7 +160,7 @@ class DataSourceControllerTest {
     @DisplayName("获取Schemas - 成功")
     void getSchemas_shouldReturnSchemaList() throws Exception {
         // given
-        when(dataSourceService.getSchemas(TestFixtures.TEST_DATASOURCE_ID, null))
+        when(jdbcMetaService.getSchemas(TestFixtures.TEST_DATASOURCE_ID, null))
             .thenReturn(List.of("public", "information_schema"));
 
         // when & then
@@ -171,7 +175,7 @@ class DataSourceControllerTest {
     @DisplayName("获取Tables - 成功")
     void getTables_shouldReturnTableList() throws Exception {
         // given
-        when(dataSourceService.getTables(TestFixtures.TEST_DATASOURCE_ID, null, "public"))
+        when(jdbcMetaService.getTables(TestFixtures.TEST_DATASOURCE_ID, null, "public"))
             .thenReturn(List.of("users", "orders", "products"));
 
         // when & then
@@ -188,7 +192,7 @@ class DataSourceControllerTest {
     void getColumns_shouldReturnColumnList() throws Exception {
         // given
         Column column = new Column("id", "INTEGER", "Primary key");
-        when(dataSourceService.getColumns(TestFixtures.TEST_DATASOURCE_ID, null, "public", "users"))
+        when(jdbcMetaService.getColumns(TestFixtures.TEST_DATASOURCE_ID, null, "public", "users"))
             .thenReturn(List.of(column));
 
         // when & then
@@ -205,7 +209,7 @@ class DataSourceControllerTest {
     void executeSql_shouldReturnResults() throws Exception {
         // given
         Map<String, Object> row = Map.of("id", 1, "name", "test");
-        when(dataSourceService.executeSql(TestFixtures.TEST_DATASOURCE_ID, "SELECT * FROM users"))
+        when(jdbcMetaService.executeSql(TestFixtures.TEST_DATASOURCE_ID, "SELECT * FROM users"))
             .thenReturn(List.of(row));
 
         String requestBody = "{\"sql\": \"SELECT * FROM users\"}";

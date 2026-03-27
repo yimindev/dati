@@ -32,14 +32,14 @@ public class ColumnService {
 
     private final TableInfoDAO tableInfoDAO;
 
-    private final DataSourceService dataSourceService;
+    private final JdbcMetaService jdbcMetaService;
 
     private final SemanticIndexService semanticIndexService;
 
-    public ColumnService(ColumnInfoDAO columnInfoDAO, TableInfoDAO tableInfoDAO, DataSourceService dataSourceService, SemanticIndexService semanticIndexService) {
+    public ColumnService(ColumnInfoDAO columnInfoDAO, TableInfoDAO tableInfoDAO, JdbcMetaService jdbcMetaService, SemanticIndexService semanticIndexService) {
         this.columnInfoDAO = columnInfoDAO;
         this.tableInfoDAO = tableInfoDAO;
-        this.dataSourceService = dataSourceService;
+        this.jdbcMetaService = jdbcMetaService;
         this.semanticIndexService = semanticIndexService;
     }
 
@@ -77,7 +77,7 @@ public class ColumnService {
     @Transactional
     public void syncColumns(String datasourceId, String tableId) throws SQLException {
         TableInfo tableInfo = TableMapper.toTableInfo(tableInfoDAO.findById(tableId).orElseThrow());
-        List<Column> columns = dataSourceService.getColumns(datasourceId, null, tableInfo.getSchema(), tableInfo.getName());
+        List<Column> columns = jdbcMetaService.getColumns(datasourceId, null, tableInfo.getSchema(), tableInfo.getName());
         
         columnInfoDAO.deleteByTableId(tableId);
         
