@@ -10,11 +10,15 @@ import com.dati.datasource.repository.dao.ColumnInfoDAO;
 import com.dati.datasource.repository.dao.TableInfoDAO;
 import com.dati.datasource.repository.mapper.ColumnMapper;
 import com.dati.datasource.repository.mapper.TableMapper;
+import com.dati.datasource.repository.po.ColumnInfoPO;
 import com.dati.datasource.repository.po.TableInfoPO;
 import com.dati.datasource.server.assembler.TableAssembler;
 import com.dati.datasource.server.pojo.AddTableRequest;
 import com.dati.db.Column;
+import com.dati.semantic.domain.SemanticEntityType;
 import com.dati.semantic.domain.service.SemanticIndexService;
+import com.dati.semantic.repository.po.EntityReference;
+import com.dati.semantic.repository.po.SemanticSearchDocument;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
@@ -58,6 +62,8 @@ public class TableService {
     @Transactional
     public List<String> batchAddTables(String datasourceId, List<AddTableRequest> tables) {
         List<String> tableIds = new ArrayList<>();
+        List<SemanticSearchDocument> docsToSave = new ArrayList<>();
+
         for (AddTableRequest request : tables) {
             TableInfo tableInfo = new TableInfo();
             tableInfo.setDatasourceId(datasourceId);
@@ -65,9 +71,21 @@ public class TableService {
             tableInfo.setSchema(request.getSchema());
             tableAssembler.fillUsersFromRequest(tableInfo);
 
-            TableInfoPO savedPO = tableInfoDAO.save(TableMapper.toTableInfoPO(tableInfo));
-            String tableId = savedPO.getId();
+            TableInfoPO savedTablePO = tableInfoDAO.save(TableMapper.toTableInfoPO(tableInfo));
+            String tableId = savedTablePO.getId();
             tableIds.add(tableId);
+
+            EntityReference tableEntity = EntityReference.builder()
+                    .tableId(tableId)
+                    .tableName(tableInfo.getName())
+                    .build();
+            docsToSave.add(SemanticSearchDocument.builder()
+                    .id("table:" + tableId)
+                    .type(SemanticEntityType.TABLE)
+                    .keywords(List.of(tableInfo.getName()))
+                    .description(tableInfo.getDescription())
+                    .entity(tableEntity)
+                    .build());
 
             try {
                 List<Column> columns = jdbcMetaService.getColumns(datasourceId, null, request.getSchema(), request.getName());
@@ -77,14 +95,29 @@ public class TableService {
                     columnInfo.setName(column.name());
                     columnInfo.setColumnType(column.type());
                     String columnComment = column.comment();
-                    columnInfo.setDescription(StringUtils.isNotBlank(columnComment) ? columnComment : column.name());
+                    columnInfo.setDescription(columnComment);
                     tableAssembler.fillUsersFromRequest(columnInfo);
-                    columnInfoDAO.save(ColumnMapper.toColumnInfoPO(columnInfo));
+                    ColumnInfoPO savedColumnPO = columnInfoDAO.save(ColumnMapper.toColumnInfoPO(columnInfo));
+
+                    EntityReference columnEntity = EntityReference.builder()
+                            .tableId(tableId)
+                            .tableName(tableInfo.getName())
+                            .field(column.name())
+                            .build();
+                    docsToSave.add(SemanticSearchDocument.builder()
+                            .id("field:" + savedColumnPO.getId())
+                            .type(SemanticEntityType.FIELD)
+                            .keywords(List.of(column.name()))
+                            .description(columnInfo.getDescription())
+                            .entity(columnEntity)
+                            .build());
                 }
             } catch (Exception e) {
                 throw new RuntimeException("Failed to sync columns for table " + request.getName(), e);
             }
         }
+
+        semanticIndexService.saveBatch(docsToSave);
         return tableIds;
     }
 
