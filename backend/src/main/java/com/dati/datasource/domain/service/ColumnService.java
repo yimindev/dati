@@ -23,6 +23,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -55,6 +56,7 @@ public class ColumnService {
         ColumnInfoPO columnInfoPO = columnInfoDAO.findById(id).orElseThrow();
         columnInfoPO.setName(columnInfo.getName());
         columnInfoPO.setColumnType(columnInfo.getColumnType());
+        columnInfoPO.setDisplayName(columnInfo.getDisplayName());
         columnInfoPO.setDescription(columnInfo.getDescription());
         columnInfoDAO.save(columnInfoPO);
 
@@ -64,10 +66,15 @@ public class ColumnService {
                 .tableName(tableInfo.getName())
                 .field(columnInfoPO.getName())
                 .build();
+        List<String> columnKeywords = new ArrayList<>();
+        columnKeywords.add(columnInfoPO.getName());
+        if (StringUtils.isNotBlank(columnInfoPO.getDisplayName())) {
+            columnKeywords.add(columnInfoPO.getDisplayName());
+        }
         SemanticSearchDocument doc = SemanticSearchDocument.builder()
                 .id("field:" + id)
                 .type(SemanticEntityType.FIELD)
-                .keywords(List.of(columnInfoPO.getName()))
+                .keywords(columnKeywords)
                 .description(columnInfo.getDescription())
                 .entity(entity)
                 .build();
@@ -89,7 +96,8 @@ public class ColumnService {
             columnInfoPO.setTableId(tableId);
             columnInfoPO.setName(column.name());
             columnInfoPO.setColumnType(column.type());
-            columnInfoPO.setDescription(column.comment());
+            columnInfoPO.setDisplayName(column.comment());
+            columnInfoPO.setDescription(null);
             columnInfoPO.setCreatedBy(userId);
             columnInfoPO.setUpdatedBy(userId);
             return columnInfoPO;
@@ -105,10 +113,15 @@ public class ColumnService {
                     .tableName(tableInfo.getName())
                     .field(po.getName())
                     .build();
+            List<String> columnKeywords = new ArrayList<>();
+            columnKeywords.add(po.getName());
+            if (StringUtils.isNotBlank(po.getDisplayName())) {
+                columnKeywords.add(po.getDisplayName());
+            }
             return SemanticSearchDocument.builder()
                     .id("field:" + po.getId())
                     .type(SemanticEntityType.FIELD)
-                    .keywords(List.of(po.getName()))
+                    .keywords(columnKeywords)
                     .description(po.getDescription())
                     .entity(entity)
                     .build();

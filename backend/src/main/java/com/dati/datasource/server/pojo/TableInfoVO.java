@@ -9,4 +9,5 @@ import lombok.EqualsAndHashCode;
 public class TableInfoVO extends BaseResourceVO {
     private String schema;
     private String datasourceId;
+    private String displayName;
 }

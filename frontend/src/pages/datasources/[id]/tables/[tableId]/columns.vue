@@ -128,6 +128,7 @@ onMounted(() => {
     <!-- 列表 -->
     <el-table :data="columnList" v-loading="loading" stripe>
       <el-table-column prop="name" :label="t('column.columnName')" min-width="180" />
+      <el-table-column prop="display_name" :label="t('column.displayName')" min-width="160" />
       <el-table-column prop="description" :label="t('column.description')" min-width="160" />
       <el-table-column prop="column_type" :label="t('column.type')" min-width="120" />
 
@@ -169,6 +170,10 @@ onMounted(() => {
       <el-form v-if="currentColumn" :model="currentColumn" label-width="120px">
         <el-form-item :label="t('column.columnName')">
           <el-input v-model="currentColumn.name" disabled />
+        </el-form-item>
+
+        <el-form-item :label="t('column.displayName')">
+          <el-input v-model="currentColumn.display_name" :placeholder="t('column.enterDescription')" />
         </el-form-item>
 
         <el-form-item :label="t('column.description')">

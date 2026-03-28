@@ -22,4 +22,7 @@ public class ColumnInfoPO extends BaseResourcePO {
     @Column(length = 64)
     private String columnType;
 
+    @Column(length = 256)
+    private String displayName;
+
 }

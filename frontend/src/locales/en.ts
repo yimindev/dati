@@ -111,6 +111,9 @@ export default {
     columnSettings: "Column Settings",
     configInfo: "Edit",
 
+    // Fields
+    displayName: "Display Name",
+
     // Form Related
     selectSchema: "Select Schema",
     availableTables: "Available Tables",
@@ -134,6 +137,7 @@ export default {
     columnName: "Column Name",
     description: "Description",
     type: "Type",
+    displayName: "Display Name",
 
     // Search
     searchPlaceholder: "Search by column name or description",

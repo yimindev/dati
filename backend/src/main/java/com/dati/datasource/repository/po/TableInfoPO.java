@@ -24,4 +24,7 @@ public class TableInfoPO extends BaseResourcePO {
     @Column(length = 64)
     private String schema;
 
+    @Column(length = 256)
+    private String displayName;
+
 }

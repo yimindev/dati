@@ -69,6 +69,7 @@ public class TableService {
             tableInfo.setDatasourceId(datasourceId);
             tableInfo.setName(request.getName());
             tableInfo.setSchema(request.getSchema());
+            tableInfo.setDescription(null);
             tableAssembler.fillUsersFromRequest(tableInfo);
 
             TableInfoPO savedTablePO = tableInfoDAO.save(TableMapper.toTableInfoPO(tableInfo));
@@ -94,8 +95,8 @@ public class TableService {
                     columnInfo.setTableId(tableId);
                     columnInfo.setName(column.name());
                     columnInfo.setColumnType(column.type());
-                    String columnComment = column.comment();
-                    columnInfo.setDescription(columnComment);
+                    columnInfo.setDisplayName(column.comment());
+                    columnInfo.setDescription(null);
                     tableAssembler.fillUsersFromRequest(columnInfo);
                     ColumnInfoPO savedColumnPO = columnInfoDAO.save(ColumnMapper.toColumnInfoPO(columnInfo));
 
@@ -104,10 +105,15 @@ public class TableService {
                             .tableName(tableInfo.getName())
                             .field(column.name())
                             .build();
+                    List<String> columnKeywords = new ArrayList<>();
+                    columnKeywords.add(column.name());
+                    if (StringUtils.isNotBlank(columnInfo.getDisplayName())) {
+                        columnKeywords.add(columnInfo.getDisplayName());
+                    }
                     docsToSave.add(SemanticSearchDocument.builder()
                             .id("field:" + savedColumnPO.getId())
                             .type(SemanticEntityType.FIELD)
-                            .keywords(List.of(column.name()))
+                            .keywords(columnKeywords)
                             .description(columnInfo.getDescription())
                             .entity(columnEntity)
                             .build());

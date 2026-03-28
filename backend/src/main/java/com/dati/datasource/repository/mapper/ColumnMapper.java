@@ -11,6 +11,7 @@ public class ColumnMapper {
         MapperUtils.copyBaseInfo(columnInfoPO, columnInfo);
         columnInfo.setTableId(columnInfoPO.getTableId());
         columnInfo.setColumnType(columnInfoPO.getColumnType());
+        columnInfo.setDisplayName(columnInfoPO.getDisplayName());
         return columnInfo;
     }
 
@@ -19,6 +20,7 @@ public class ColumnMapper {
         MapperUtils.copyBaseInfo(columnInfo, columnInfoPO);
         columnInfoPO.setTableId(columnInfo.getTableId());
         columnInfoPO.setColumnType(columnInfo.getColumnType());
+        columnInfoPO.setDisplayName(columnInfo.getDisplayName());
         return columnInfoPO;
     }
 

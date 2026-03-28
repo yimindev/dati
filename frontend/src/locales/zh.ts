@@ -111,6 +111,9 @@ export default {
     columnSettings: "列配置",
     configInfo: "编辑",
 
+    // 字段
+    displayName: "显示名称",
+
     // 表单相关
     selectSchema: "请选择 Schema",
     availableTables: "可选表",
@@ -134,6 +137,7 @@ export default {
     columnName: "列名",
     description: "描述",
     type: "类型",
+    displayName: "显示名称",
 
     // 搜索
     searchPlaceholder: "搜索列名或描述",

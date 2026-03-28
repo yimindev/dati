@@ -253,6 +253,11 @@ onMounted(() => {
         min-width="150"
       />
       <el-table-column
+        prop="display_name"
+        :label="t('tableInfo.displayName')"
+        min-width="150"
+      />
+      <el-table-column
         prop="description"
         :label="t('common.description')"
         min-width="150"
@@ -319,6 +324,12 @@ onMounted(() => {
       <el-form v-if="currentTable" :model="currentTable" label-width="120px">
         <el-form-item :label="t('common.tableName')">
           <el-input v-model="currentTable.name" disabled />
+        </el-form-item>
+        <el-form-item :label="t('tableInfo.displayName')">
+          <el-input
+            v-model="currentTable.display_name"
+            :placeholder="t('common.placeholder.name')"
+          />
         </el-form-item>
         <el-form-item :label="t('common.description')">
           <el-input
