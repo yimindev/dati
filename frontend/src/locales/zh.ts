@@ -22,6 +22,7 @@ export default {
     warning: "警告",
     all: "全选",
     none: "取消全选",
+    clear: "清空",
 
     // 通用字段
     id: "ID",
@@ -32,6 +33,8 @@ export default {
     updatedAt: "更新时间",
     actions: "操作",
     total: "共 {total} 条",
+    totalItems: "个",
+    selectedItems: "个已选",
     schema: "Schema",
     username: "用户名",
     password: "密码",
@@ -117,6 +120,8 @@ export default {
     // 表单相关
     selectSchema: "请选择 Schema",
     availableTables: "可选表",
+    selectedTables: "已选表",
+    noSelected: "暂无选中表",
     alreadyAdded: "已添加",
     selectedCount: "已选择 {count} 个表",
     selectAtLeastOne: "请至少选择一个表",

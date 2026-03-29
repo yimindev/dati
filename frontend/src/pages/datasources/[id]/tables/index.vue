@@ -4,7 +4,7 @@ meta:
 </route>
 
 <script setup lang="ts">
-import { onMounted, ref } from "vue";
+import { onMounted, ref, computed } from "vue";
 import { useRoute } from "vue-router";
 import { ElMessage, ElMessageBox } from "element-plus";
 import { Plus, Search } from "@element-plus/icons-vue";
@@ -30,6 +30,7 @@ const total = ref(0);
 const metadataDialogVisible = ref(false);
 const currentTable = ref<TableInfoVO | null>(null);
 
+// 添加表弹窗相关
 const addTableDialogVisible = ref(false);
 const schemas = ref<string[]>([]);
 const selectedSchema = ref("");
@@ -40,7 +41,22 @@ const schemaLoading = ref(false);
 const tablesLoading = ref(false);
 const addTableLoading = ref(false);
 
-// 加载表列表（待实现接口）
+// Transfer 组件数据
+interface TransferItem {
+  key: string;
+  label: string;
+  disabled: boolean;
+}
+
+const transferData = computed<TransferItem[]>(() => {
+  return availableTables.value.map(table => ({
+    key: table,
+    label: table,
+    disabled: addedTableNames.value.includes(table),
+  }));
+});
+
+// 加载表列表
 const loadTables = async () => {
   try {
     loading.value = true;
@@ -76,7 +92,7 @@ const handleOpenAddTableDialog = async () => {
   selectedSchema.value = "";
   availableTables.value = [];
   selectedTables.value = [];
-  
+
   try {
     schemaLoading.value = true;
     schemas.value = await getSchemas(datasourceId.value);
@@ -94,7 +110,7 @@ const handleSchemaChange = async (schema: string) => {
     availableTables.value = [];
     return;
   }
-  
+
   try {
     tablesLoading.value = true;
     availableTables.value = await getTables(datasourceId.value, schema);
@@ -107,21 +123,12 @@ const handleSchemaChange = async (schema: string) => {
   }
 };
 
-const handleSelectAll = () => {
-  const unaddedTables = availableTables.value.filter(t => !addedTableNames.value.includes(t));
-  selectedTables.value = [...unaddedTables];
-};
-
-const handleDeselectAll = () => {
-  selectedTables.value = [];
-};
-
 const handleBatchAdd = async () => {
   if (selectedTables.value.length === 0) {
     ElMessage.warning(t("tableInfo.selectAtLeastOne"));
     return;
   }
-  
+
   try {
     addTableLoading.value = true;
     const tables = selectedTables.value.map(name => ({ name, schema: selectedSchema.value }));
@@ -351,7 +358,7 @@ onMounted(() => {
     <el-dialog
       v-model="addTableDialogVisible"
       :title="t('tableInfo.addTable')"
-      width="600px"
+      width="700px"
       destroy-on-close
     >
       <el-form label-width="100px">
@@ -360,7 +367,6 @@ onMounted(() => {
             v-model="selectedSchema"
             :placeholder="t('tableInfo.selectSchema')"
             :loading="schemaLoading"
-            class="w-full"
             @change="handleSchemaChange"
           >
             <el-option
@@ -372,37 +378,15 @@ onMounted(() => {
           </el-select>
         </el-form-item>
 
-        <el-form-item :label="t('tableInfo.availableTables')" v-if="selectedSchema">
-          <div v-loading="tablesLoading" class="w-full min-h-[200px]">
-            <div class="mb-2 flex gap-2">
-              <el-button size="small" @click="handleSelectAll">
-                {{ t('common.all') }}
-              </el-button>
-              <el-button size="small" @click="handleDeselectAll">
-                {{ t('common.none') }}
-              </el-button>
-            </div>
-            <el-checkbox-group v-model="selectedTables" class="w-full">
-              <el-checkbox
-                v-for="table in availableTables"
-                :key="table"
-                :label="table"
-                :disabled="addedTableNames.includes(table)"
-                class="w-full"
-              >
-                {{ table }}
-                <span v-if="addedTableNames.includes(table)" class="text-gray-400 text-xs ml-2">
-                  ({{ t('tableInfo.alreadyAdded') }})
-                </span>
-              </el-checkbox>
-            </el-checkbox-group>
-          </div>
-        </el-form-item>
-
-        <el-form-item v-if="selectedSchema">
-          <div class="text-sm text-gray-600">
-            {{ t('tableInfo.selectedCount', { count: selectedTables.length }) }}
-          </div>
+        <el-form-item v-if="selectedSchema" v-loading="tablesLoading">
+          <el-transfer
+            v-model="selectedTables"
+            :data="transferData"
+            filterable
+            :filter-placeholder="t('common.search')"
+            :titles="[t('tableInfo.availableTables'), t('tableInfo.selectedTables')]"
+            :button-texts="['', '']"
+          />
         </el-form-item>
       </el-form>
 
@@ -410,9 +394,9 @@ onMounted(() => {
         <el-button @click="addTableDialogVisible = false">
           {{ t("common.cancel") }}
         </el-button>
-        <el-button 
-          type="primary" 
-          :loading="addTableLoading" 
+        <el-button
+          type="primary"
+          :loading="addTableLoading"
           :disabled="selectedTables.length === 0"
           @click="handleBatchAdd"
         >

@@ -22,6 +22,7 @@ export default {
     warning: "Warning",
     all: "Select All",
     none: "Deselect All",
+    clear: "Clear",
 
     // Common Fields
     id: "ID",
@@ -32,6 +33,8 @@ export default {
     updatedAt: "Updated At",
     actions: "Actions",
     total: "Total {total}",
+    totalItems: "items",
+    selectedItems: "selected",
     schema: "Schema",
     username: "Username",
     password: "Password",
@@ -117,6 +120,8 @@ export default {
     // Form Related
     selectSchema: "Select Schema",
     availableTables: "Available Tables",
+    selectedTables: "Selected Tables",
+    noSelected: "No tables selected",
     alreadyAdded: "Already Added",
     selectedCount: "{count} table(s) selected",
     selectAtLeastOne: "Please select at least one table",
