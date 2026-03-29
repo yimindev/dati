@@ -9,7 +9,7 @@ import { useRoute } from "vue-router";
 import { ElMessage, ElMessageBox } from "element-plus";
 import { Plus, Search } from "@element-plus/icons-vue";
 import { useI18n } from "vue-i18n";
-import { listTableInfos, getAddedTableNames, batchAddTables, syncColumns, deleteTable, type TableInfoVO } from "~/api/tableinfo.ts";
+import { listTableInfos, getAddedTableNames, batchAddTables, syncColumns, deleteTable, updateTable, type TableInfoVO } from "~/api/tableinfo.ts";
 import { getSchemas, getTables } from "~/api/datasource.ts";
 import { formatDateTime } from "~/composables";
 
@@ -184,8 +184,7 @@ const handleColumnManage = (table: TableInfoVO) => {
 // 保存元数据配置
 const handleSaveMetadata = async () => {
   try {
-    // TODO: 调用后端接口保存
-    // await saveTableMetadata(datasourceId.value, currentTable.value);
+    await updateTable(datasourceId.value, currentTable.value!.id!, currentTable.value!);
     ElMessage.success(t("common.saveSuccess"));
     metadataDialogVisible.value = false;
     await loadTables();

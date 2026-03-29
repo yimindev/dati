@@ -80,10 +80,15 @@ public class TableService {
                     .tableId(tableId)
                     .tableName(tableInfo.getName())
                     .build();
+            List<String> tableKeywords = new ArrayList<>();
+            tableKeywords.add(tableInfo.getName());
+            if (StringUtils.isNotBlank(tableInfo.getDisplayName())) {
+                tableKeywords.add(tableInfo.getDisplayName());
+            }
             docsToSave.add(SemanticSearchDocument.builder()
                     .id("table:" + tableId)
                     .type(SemanticEntityType.TABLE)
-                    .keywords(List.of(tableInfo.getName()))
+                    .keywords(tableKeywords)
                     .description(tableInfo.getDescription())
                     .entity(tableEntity)
                     .build());
@@ -137,5 +142,35 @@ public class TableService {
     @Transactional
     public void deleteTable(String tableId) {
         deleteTables(List.of(tableId));
+    }
+
+    @Transactional
+    public void updateTable(String tableId, TableInfo tableInfo) {
+        TableInfoPO existingPO = tableInfoDAO.findById(tableId).orElseThrow();
+
+        existingPO.setDisplayName(tableInfo.getDisplayName());
+        existingPO.setDescription(tableInfo.getDescription());
+        tableInfoDAO.save(existingPO);
+
+        EntityReference entity = EntityReference.builder()
+                .tableId(tableId)
+                .tableName(existingPO.getName())
+                .build();
+
+        List<String> tableKeywords = new ArrayList<>();
+        tableKeywords.add(existingPO.getName());
+        if (StringUtils.isNotBlank(tableInfo.getDisplayName())) {
+            tableKeywords.add(tableInfo.getDisplayName());
+        }
+
+        SemanticSearchDocument doc = SemanticSearchDocument.builder()
+                .id("table:" + tableId)
+                .type(SemanticEntityType.TABLE)
+                .keywords(tableKeywords)
+                .description(tableInfo.getDescription())
+                .entity(entity)
+                .build();
+
+        semanticIndexService.save(doc);
     }
 }

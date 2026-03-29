@@ -1,5 +1,5 @@
 import type { BaseResourceVO, IdResponse, PageResponse } from "~/api/types.ts";
-import { get, post, del } from "./http";
+import { get, post, put, del } from "./http";
 
 export interface TableInfoVO extends BaseResourceVO {
   schema: string;
@@ -47,6 +47,14 @@ export function deleteTable(datasourceId: string, tableId: string, signal?: Abor
   return del<void>(
     `/v1/data-sources/${encodeURIComponent(datasourceId)}/tables/${encodeURIComponent(tableId)}`,
     undefined,
+    signal
+  );
+}
+
+export function updateTable(datasourceId: string, tableId: string, data: TableInfoVO, signal?: AbortSignal): Promise<IdResponse> {
+  return put<IdResponse, TableInfoVO>(
+    `/v1/data-sources/${encodeURIComponent(datasourceId)}/tables/${encodeURIComponent(tableId)}`,
+    data,
     signal
   );
 }

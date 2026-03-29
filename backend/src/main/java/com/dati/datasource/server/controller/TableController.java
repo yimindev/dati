@@ -47,4 +47,13 @@ public class TableController {
         tableService.deleteTable(tableId);
     }
 
+    @PutMapping("/tables/{tableId}")
+    public IdResponse updateTable(
+            @PathVariable String datasourceId,
+            @PathVariable String tableId,
+            @RequestBody TableInfoVO tableInfoVO) {
+        tableService.updateTable(tableId, tableAssembler.toTableInfo(tableInfoVO));
+        return new IdResponse(tableId);
+    }
+
 }

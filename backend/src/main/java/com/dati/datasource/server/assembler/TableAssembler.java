@@ -17,4 +17,14 @@ public class TableAssembler extends BaseAssembler {
         return tableInfoVO;
     }
 
+    public TableInfo toTableInfo(TableInfoVO vo) {
+        TableInfo tableInfo = new TableInfo();
+        super.copyBaseInfo(vo, tableInfo);
+        tableInfo.setDatasourceId(vo.getDatasourceId());
+        tableInfo.setSchema(vo.getSchema());
+        tableInfo.setDisplayName(vo.getDisplayName());
+        tableInfo.setDescription(vo.getDescription());
+        return tableInfo;
+    }
+
 }
