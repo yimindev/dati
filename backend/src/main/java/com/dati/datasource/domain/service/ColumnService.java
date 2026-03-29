@@ -25,6 +25,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 public class ColumnService {
@@ -84,20 +87,37 @@ public class ColumnService {
     @Transactional
     public void syncColumns(String datasourceId, String tableId) throws SQLException {
         TableInfo tableInfo = TableMapper.toTableInfo(tableInfoDAO.findById(tableId).orElseThrow());
-        List<Column> columns = jdbcMetaService.getColumns(datasourceId, null, tableInfo.getSchema(), tableInfo.getName());
+        
+        Map<String, ColumnInfoPO> existingColumns = columnInfoDAO.findByTableId(tableId)
+                .stream()
+                .collect(Collectors.toMap(ColumnInfoPO::getName, Function.identity()));
+        
+        List<Column> dbColumns = jdbcMetaService.getColumns(datasourceId, null, tableInfo.getSchema(), tableInfo.getName());
         
         columnInfoDAO.deleteByTableId(tableId);
         
         User user = RequestContext.getUser();
         String userId = user != null ? user.getId() : null;
         
-        List<ColumnInfoPO> columnInfoPOList = columns.stream().map(column -> {
+        List<ColumnInfoPO> columnInfoPOList = dbColumns.stream().map(column -> {
             ColumnInfoPO columnInfoPO = new ColumnInfoPO();
             columnInfoPO.setTableId(tableId);
             columnInfoPO.setName(column.name());
             columnInfoPO.setColumnType(column.type());
-            columnInfoPO.setDisplayName(column.comment());
-            columnInfoPO.setDescription(null);
+            
+            ColumnInfoPO existing = existingColumns.get(column.name());
+            
+            String dbComment = column.comment();
+            if (StringUtils.isNotBlank(dbComment)) {
+                columnInfoPO.setDisplayName(dbComment);
+            } else if (existing != null) {
+                columnInfoPO.setDisplayName(existing.getDisplayName());
+            }
+            
+            if (existing != null) {
+                columnInfoPO.setDescription(existing.getDescription());
+            }
+            
             columnInfoPO.setCreatedBy(userId);
             columnInfoPO.setUpdatedBy(userId);
             return columnInfoPO;

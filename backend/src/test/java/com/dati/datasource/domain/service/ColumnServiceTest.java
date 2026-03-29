@@ -249,4 +249,84 @@ class ColumnServiceTest {
             }));
         }
     }
+
+    @Test
+    @DisplayName("同步列 - 数据库 comment 为空时应保留旧的 displayName 和 description")
+    void syncColumns_shouldPreserveOldDisplayNameAndDescriptionWhenDbCommentEmpty() throws SQLException {
+        // given
+        when(tableInfoDAO.findById(TestFixtures.TEST_TABLE_ID)).thenReturn(Optional.of(testTableInfoPO));
+        
+        ColumnInfoPO existingColumn = new ColumnInfoPO();
+        existingColumn.setId("existing_col_id");
+        existingColumn.setTableId(TestFixtures.TEST_TABLE_ID);
+        existingColumn.setName("col1");
+        existingColumn.setColumnType("VARCHAR");
+        existingColumn.setDisplayName("Old Display Name");
+        existingColumn.setDescription("User maintained description");
+        
+        when(columnInfoDAO.findByTableId(TestFixtures.TEST_TABLE_ID)).thenReturn(List.of(existingColumn));
+        
+        Column mockColumn = mock(Column.class);
+        when(mockColumn.name()).thenReturn("col1");
+        when(mockColumn.type()).thenReturn("VARCHAR");
+        when(mockColumn.comment()).thenReturn(null);
+        
+        when(jdbcMetaService.getColumns(TestFixtures.TEST_DATASOURCE_ID, null, "public", "test_table"))
+            .thenReturn(List.of(mockColumn));
+        
+        try (MockedStatic<RequestContext> mocked = mockStatic(RequestContext.class)) {
+            mocked.when(RequestContext::getUser).thenReturn(null);
+            
+            // when
+            columnService.syncColumns(TestFixtures.TEST_DATASOURCE_ID, TestFixtures.TEST_TABLE_ID);
+
+            // then
+            verify(columnInfoDAO).saveAll(argThat(list -> {
+                List<ColumnInfoPO> columns = (List<ColumnInfoPO>) list;
+                ColumnInfoPO savedCol = columns.getFirst();
+                return savedCol.getDisplayName().equals("Old Display Name") &&
+                       savedCol.getDescription().equals("User maintained description");
+            }));
+        }
+    }
+
+    @Test
+    @DisplayName("同步列 - 数据库 comment 不为空时应覆盖 displayName")
+    void syncColumns_shouldOverwriteDisplayNameWhenDbCommentNotEmpty() throws SQLException {
+        // given
+        when(tableInfoDAO.findById(TestFixtures.TEST_TABLE_ID)).thenReturn(Optional.of(testTableInfoPO));
+        
+        ColumnInfoPO existingColumn = new ColumnInfoPO();
+        existingColumn.setId("existing_col_id");
+        existingColumn.setTableId(TestFixtures.TEST_TABLE_ID);
+        existingColumn.setName("col1");
+        existingColumn.setColumnType("VARCHAR");
+        existingColumn.setDisplayName("Old Display Name");
+        existingColumn.setDescription("User maintained description");
+        
+        when(columnInfoDAO.findByTableId(TestFixtures.TEST_TABLE_ID)).thenReturn(List.of(existingColumn));
+        
+        Column mockColumn = mock(Column.class);
+        when(mockColumn.name()).thenReturn("col1");
+        when(mockColumn.type()).thenReturn("VARCHAR");
+        when(mockColumn.comment()).thenReturn("New DB Comment");
+        
+        when(jdbcMetaService.getColumns(TestFixtures.TEST_DATASOURCE_ID, null, "public", "test_table"))
+            .thenReturn(List.of(mockColumn));
+        
+        try (MockedStatic<RequestContext> mocked = mockStatic(RequestContext.class)) {
+            mocked.when(RequestContext::getUser).thenReturn(null);
+            
+            // when
+            columnService.syncColumns(TestFixtures.TEST_DATASOURCE_ID, TestFixtures.TEST_TABLE_ID);
+
+            // then
+            verify(columnInfoDAO).saveAll(argThat(list -> {
+                List<ColumnInfoPO> columns = (List<ColumnInfoPO>) list;
+                ColumnInfoPO savedCol = columns.getFirst();
+                return savedCol.getDisplayName().equals("New DB Comment") &&
+                       savedCol.getDescription().equals("User maintained description");
+            }));
+        }
+    }
 }

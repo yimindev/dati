@@ -11,6 +11,8 @@ public interface ColumnInfoDAO extends JpaRepository<ColumnInfoPO, String> {
 
     Page<ColumnInfoPO> findByTableId(String tableId, Pageable pageable);
 
+    List<ColumnInfoPO> findByTableId(String tableId);
+
     Page<ColumnInfoPO> findByTableIdAndNameContaining(String tableId, String columnName, Pageable pageable);
 
     void deleteByTableId(String tableId);
