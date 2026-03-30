@@ -10,4 +10,6 @@ import java.util.List;
 public interface SemanticSearchDAO extends ElasticsearchRepository<SemanticSearchDocument, String> {
 
     void deleteByEntity_TableIdIn(List<String> tableIds);
+
+    void deleteByEntity_SubjectId(String subjectId);
 }

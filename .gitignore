@@ -20,3 +20,10 @@ target/
 
 .DS_Store
 **/.DS_Store
+
+# Git worktrees
+.worktrees/
+
+# H2 Database files
+*.mv.db
+*.trace.db

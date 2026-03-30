@@ -153,4 +153,30 @@ class SemanticIndexServiceTest {
         // then
         verify(semanticSearchDAO).deleteByEntity_TableIdIn(tableIds);
     }
+
+    @Test
+    @DisplayName("根据 subjectId 删除文档 - 应调用 DAO 删除方法")
+    void deleteByEntity_SubjectId_shouldCallDaoDeleteMethod() {
+        // given
+        String subjectId = "subject-001";
+
+        // when
+        semanticIndexService.deleteByEntity_SubjectId(subjectId);
+
+        // then
+        verify(semanticSearchDAO).deleteByEntity_SubjectId(subjectId);
+    }
+
+    @Test
+    @DisplayName("根据 ID 删除文档 - 应调用 DAO 删除方法")
+    void deleteById_shouldCallDaoDeleteMethod() {
+        // given
+        String id = "term:123";
+
+        // when
+        semanticIndexService.deleteById(id);
+
+        // then
+        verify(semanticSearchDAO).deleteById(id);
+    }
 }
