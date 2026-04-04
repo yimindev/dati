@@ -25,7 +25,6 @@ import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -125,27 +124,10 @@ public class SubjectService {
             throw new IllegalStateException("Table is already associated with this subject");
         }
 
-        String id = UUID.randomUUID().toString();
-        LocalDateTime now = LocalDateTime.now();
-
         SubjectTablePO subjectTablePO = new SubjectTablePO();
-        subjectTablePO.setId(id);
         subjectTablePO.setSubjectId(subjectId);
         subjectTablePO.setTableId(tableId);
-        subjectTablePO.setCreatedAt(now.toInstant(ZoneOffset.UTC));
         subjectTableDAO.save(subjectTablePO);
-
-        SemanticSearchDocument doc = SemanticSearchDocument.builder()
-                .id("subject_table:" + subjectId + ":" + tableId)
-                .type(SemanticEntityType.SUBJECT)
-                .keywords(List.of(tableInfoPO.getName(), tableInfoPO.getDisplayName()))
-                .entity(EntityReference.builder()
-                        .subjectId(subjectId)
-                        .tableId(tableId)
-                        .tableName(tableInfoPO.getName())
-                        .build())
-                .build();
-        semanticIndexService.save(doc);
     }
 
     @Transactional
@@ -153,7 +135,6 @@ public class SubjectService {
         SubjectTablePO subjectTablePO = subjectTableDAO.findBySubjectIdAndTableId(subjectId, tableId)
                 .orElseThrow(() -> new DatiException("Association not found"));
         subjectTableDAO.deleteBySubjectIdAndTableId(subjectId, tableId);
-        semanticIndexService.deleteById("subject_table:" + subjectId + ":" + tableId);
     }
 
     @Transactional(readOnly = true)
