@@ -1,6 +1,6 @@
 <route lang="yaml">
 meta:
-activeMenu: /datasources
+  activeMenu: /datasources
 </route>
 
 <script setup lang="ts">

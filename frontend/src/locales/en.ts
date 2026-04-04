@@ -57,6 +57,7 @@ export default {
     // Validation Rules
     required: "Please enter {name}",
     selectRequired: "Please select {name}",
+    nameLengthError: "Length must be between 1 and 100 characters",
   },
 
   layout: {
@@ -101,6 +102,25 @@ export default {
     // List Page
     createButton: "Create Data Source",
     searchPlaceholder: "Name or ID",
+  },
+
+  subject: {
+    // Page Titles
+    title: "Subject Management",
+    createTitle: "Create Subject",
+    editTitle: "Edit Subject",
+
+    // Fields
+    datasource: "Associated Data Source",
+    tableCount: "Associated Tables",
+    selectDatasource: "Select a data source",
+    tableManagement: "Table Management",
+    termManagement: "Term Management",
+    basicInfo: "Basic Information",
+
+    // Success Messages
+    createSuccess: "Subject created successfully",
+    updateSuccess: "Subject updated successfully",
   },
 
   tableInfo: {

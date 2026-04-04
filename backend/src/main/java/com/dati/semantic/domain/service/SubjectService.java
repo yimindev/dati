@@ -189,7 +189,10 @@ public class SubjectService {
 
     @Transactional(readOnly = true)
     public List<Subject> getSubjectsByDatasource(String datasourceId) {
-        return subjectDAO.findByDatasourceId(datasourceId).stream()
+        List<SubjectPO> pos = (datasourceId == null || datasourceId.isBlank())
+                ? subjectDAO.findAll()
+                : subjectDAO.findByDatasourceId(datasourceId);
+        return pos.stream()
                 .map(this::toSubject)
                 .collect(Collectors.toList());
     }

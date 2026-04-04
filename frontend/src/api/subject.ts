@@ -1,0 +1,130 @@
+import type { BaseResourceVO, IdResponse, PageResponse } from "~/api/types.ts";
+import { get, post, put, del } from "./http";
+
+export interface SubjectVO extends BaseResourceVO {
+  datasource_id: string;
+  datasource_name?: string;
+  table_count?: number;
+}
+
+export interface SubjectDetailVO extends SubjectVO {
+  tables: SubjectTableVO[];
+}
+
+export interface SubjectTableVO {
+  id: string;
+  subject_id: string;
+  table_id: string;
+  table_name: string;
+  table_display_name?: string;
+  schema?: string;
+  description?: string;
+}
+
+export interface TermVO extends BaseResourceVO {
+  subject_id: string;
+}
+
+export interface TermRelationVO {
+  id: string;
+  term_id: string;
+  entity_type: 'TABLE' | 'FIELD';
+  table_id: string;
+  table_name?: string;
+  field_name?: string;
+}
+
+export interface CreateSubjectRequest {
+  name: string;
+  description?: string;
+  datasource_id: string;
+}
+
+export interface UpdateSubjectRequest {
+  name?: string;
+  description?: string;
+}
+
+export interface AddTableToSubjectRequest {
+  table_id: string;
+}
+
+export interface CreateTermRequest {
+  name: string;
+  description?: string;
+}
+
+export interface UpdateTermRequest {
+  name?: string;
+  description?: string;
+}
+
+export interface LinkTermRelationRequest {
+  entity_type: 'TABLE' | 'FIELD';
+  table_id: string;
+  field_name?: string;
+}
+
+export function listSubjects(page: number, size: number, datasourceId?: string, signal?: AbortSignal): Promise<PageResponse<SubjectVO>> {
+  return get<PageResponse<SubjectVO>>(
+    "/v1/subjects",
+    { page, size, datasource_id: datasourceId },
+    signal,
+  );
+}
+
+export function getSubjectDetail(id: string, signal?: AbortSignal): Promise<SubjectDetailVO> {
+  return get<SubjectDetailVO>(`/v1/subjects/${encodeURIComponent(id)}`, undefined, signal);
+}
+
+export function createSubject(body: CreateSubjectRequest, signal?: AbortSignal): Promise<IdResponse> {
+  return post<IdResponse, CreateSubjectRequest>("/v1/subjects", body, signal);
+}
+
+export function updateSubject(id: string, body: UpdateSubjectRequest, signal?: AbortSignal): Promise<IdResponse> {
+  return put<IdResponse, UpdateSubjectRequest>(`/v1/subjects/${encodeURIComponent(id)}`, body, signal);
+}
+
+export function deleteSubject(id: string, signal?: AbortSignal): Promise<IdResponse> {
+  return del<IdResponse>(`/v1/subjects/${encodeURIComponent(id)}`, undefined, signal);
+}
+
+export function getSubjectTables(subjectId: string, signal?: AbortSignal): Promise<SubjectTableVO[]> {
+  return get<SubjectTableVO[]>(`/v1/subjects/${encodeURIComponent(subjectId)}/tables`, undefined, signal);
+}
+
+export function addTableToSubject(subjectId: string, body: AddTableToSubjectRequest, signal?: AbortSignal): Promise<IdResponse> {
+  return post<IdResponse, AddTableToSubjectRequest>(`/v1/subjects/${encodeURIComponent(subjectId)}/tables`, body, signal);
+}
+
+export function removeTableFromSubject(subjectId: string, tableId: string, signal?: AbortSignal): Promise<IdResponse> {
+  return del<IdResponse>(`/v1/subjects/${encodeURIComponent(subjectId)}/tables/${encodeURIComponent(tableId)}`, undefined, signal);
+}
+
+export function getTermsBySubject(subjectId: string, signal?: AbortSignal): Promise<TermVO[]> {
+  return get<TermVO[]>(`/v1/subjects/${encodeURIComponent(subjectId)}/terms`, undefined, signal);
+}
+
+export function createTerm(subjectId: string, body: CreateTermRequest, signal?: AbortSignal): Promise<IdResponse> {
+  return post<IdResponse, CreateTermRequest>(`/v1/subjects/${encodeURIComponent(subjectId)}/terms`, body, signal);
+}
+
+export function updateTerm(id: string, body: UpdateTermRequest, signal?: AbortSignal): Promise<IdResponse> {
+  return put<IdResponse, UpdateTermRequest>(`/v1/terms/${encodeURIComponent(id)}`, body, signal);
+}
+
+export function deleteTerm(id: string, signal?: AbortSignal): Promise<IdResponse> {
+  return del<IdResponse>(`/v1/terms/${encodeURIComponent(id)}`, undefined, signal);
+}
+
+export function getTermDetail(id: string, signal?: AbortSignal): Promise<TermVO & { relations: TermRelationVO[] }> {
+  return get<TermVO & { relations: TermRelationVO[] }>(`/v1/terms/${encodeURIComponent(id)}`, undefined, signal);
+}
+
+export function linkTermRelation(termId: string, body: LinkTermRelationRequest, signal?: AbortSignal): Promise<IdResponse> {
+  return post<IdResponse, LinkTermRelationRequest>(`/v1/terms/${encodeURIComponent(termId)}/relations`, body, signal);
+}
+
+export function unlinkTermRelation(termId: string, tableId: string, fieldName: string, signal?: AbortSignal): Promise<IdResponse> {
+  return del<IdResponse>(`/v1/terms/${encodeURIComponent(termId)}/relations`, { table_id: tableId, field_name: fieldName }, signal);
+}

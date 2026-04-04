@@ -2,7 +2,7 @@ spring:
   datasource:
     driver-class-name: org.h2.Driver
 #    url: jdbc:h2:mem:dataconnai;DATABASE_TO_UPPER=false;QUERY_TIMEOUT=30
-    url: jdbc:h2:file:./db/dataconnai;QUERY_TIMEOUT=30;mode=mysql
+    url: jdbc:h2:file:${user.dir}/IdeaProjects/dati/db/dataconnai;QUERY_TIMEOUT=30;mode=mysql
     username: root
     password: dca
   jpa:

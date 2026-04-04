@@ -25,6 +25,8 @@ declare module 'vue-router/auto-routes' {
     '/nav/1/item-1': RouteRecordInfo<'/nav/1/item-1', '/nav/1/item-1', Record<never, never>, Record<never, never>>,
     '/nav/2': RouteRecordInfo<'/nav/2', '/nav/2', Record<never, never>, Record<never, never>>,
     '/nav/4': RouteRecordInfo<'/nav/4', '/nav/4', Record<never, never>, Record<never, never>>,
+    '/subjects/': RouteRecordInfo<'/subjects/', '/subjects', Record<never, never>, Record<never, never>>,
+    '/subjects/[id]': RouteRecordInfo<'/subjects/[id]', '/subjects/:id', { id: ParamValue<true> }, { id: ParamValue<false> }>,
   }
 
   /**
@@ -64,6 +66,14 @@ declare module 'vue-router/auto-routes' {
     }
     'src/pages/nav/4.vue': {
       routes: '/nav/4'
+      views: never
+    }
+    'src/pages/subjects/index.vue': {
+      routes: '/subjects/'
+      views: never
+    }
+    'src/pages/subjects/[id].vue': {
+      routes: '/subjects/[id]'
       views: never
     }
   }

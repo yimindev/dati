@@ -71,7 +71,7 @@ public class SubjectController {
     }
 
     @GetMapping
-    public List<SubjectVO> getSubjects(@RequestParam String datasourceId) {
+    public List<SubjectVO> getSubjects(@RequestParam(required = false) String datasourceId) {
         return subjectService.getSubjectsByDatasource(datasourceId).stream()
                 .map(subjectAssembler::toVO)
                 .toList();
