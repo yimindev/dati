@@ -1,12 +1,8 @@
 package com.dati.semantic.domain.service;
 
 import com.dati.semantic.domain.SemanticEntityType;
-import com.dati.semantic.domain.model.Term;
-import com.dati.semantic.domain.model.TermRelation;
-import com.dati.semantic.repository.dao.SubjectTableDAO;
 import com.dati.semantic.repository.dao.TermDAO;
 import com.dati.semantic.repository.dao.TermRelationDAO;
-import com.dati.semantic.repository.po.EntityReference;
 import com.dati.semantic.repository.po.SemanticSearchDocument;
 import com.dati.semantic.repository.po.TermPO;
 import com.dati.semantic.repository.po.TermRelationPO;
@@ -18,14 +14,13 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.time.Instant;
-import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("TermService 单元测试")
@@ -36,9 +31,6 @@ class TermServiceTest {
 
     @Mock
     private TermRelationDAO termRelationDAO;
-
-    @Mock
-    private SubjectTableDAO subjectTableDAO;
 
     @Mock
     private SemanticIndexService semanticIndexService;
@@ -53,14 +45,9 @@ class TermServiceTest {
         String name = "客户";
         String description = "客户相关信息";
 
-        when(termDAO.save(any(TermPO.class))).thenAnswer(invocation -> {
-            TermPO po = invocation.getArgument(0);
-            po.setCreatedAt(Instant.now());
-            po.setUpdatedAt(Instant.now());
-            return po;
-        });
+        when(termDAO.save(any(TermPO.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        Term result = termService.createTerm(subjectId, name, description);
+        termService.createTerm(subjectId, name, description);
 
         ArgumentCaptor<TermPO> termCaptor = ArgumentCaptor.forClass(TermPO.class);
         verify(termDAO).save(termCaptor.capture());

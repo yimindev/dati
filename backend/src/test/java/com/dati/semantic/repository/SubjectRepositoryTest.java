@@ -7,6 +7,8 @@ import com.dati.semantic.repository.po.SubjectTablePO;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.test.context.ActiveProfiles;
 
 import java.util.List;
@@ -46,10 +48,10 @@ class SubjectRepositoryTest {
         subject.setDatasourceId("ds-002");
         subjectDAO.save(subject);
         
-        List<SubjectPO> results = subjectDAO.findByDatasourceId("ds-002");
+        Page<SubjectPO> results = subjectDAO.findByDatasourceId("ds-002", PageRequest.of(0, 10));
         
-        assertEquals(1, results.size());
-        assertEquals("DS Subject", results.get(0).getName());
+        assertEquals(1, results.getTotalElements());
+        assertEquals("DS Subject", results.getContent().getFirst().getName());
     }
 
     @Test

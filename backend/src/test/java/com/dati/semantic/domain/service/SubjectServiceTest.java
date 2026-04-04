@@ -8,7 +8,6 @@ import com.dati.semantic.domain.model.Subject;
 import com.dati.semantic.domain.model.SubjectDetailVO;
 import com.dati.semantic.repository.dao.SubjectDAO;
 import com.dati.semantic.repository.dao.SubjectTableDAO;
-import com.dati.semantic.repository.po.EntityReference;
 import com.dati.semantic.repository.po.SemanticSearchDocument;
 import com.dati.semantic.repository.po.SubjectPO;
 import com.dati.semantic.repository.po.SubjectTablePO;
@@ -20,18 +19,20 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 
 import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("SubjectService 单元测试")
@@ -79,7 +80,13 @@ class SubjectServiceTest {
         String description = "New Description";
         String datasourceId = "datasource-001";
 
-        when(subjectDAO.save(any(SubjectPO.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(subjectDAO.save(any(SubjectPO.class))).thenAnswer(invocation -> {
+            SubjectPO po = invocation.getArgument(0);
+            if (po.getId() == null) {
+                po.setId("generated-subject-id");
+            }
+            return po;
+        });
 
         Subject result = subjectService.createSubject(name, description, datasourceId);
 
@@ -199,8 +206,8 @@ class SubjectServiceTest {
     }
 
     @Test
-    @DisplayName("addTableToSubject - 有效添加应保存并索引 ES 文档")
-    void addTableToSubject_shouldSaveAndIndexWhenValid() {
+    @DisplayName("addTableToSubject - 有效添加应保存关联")
+    void addTableToSubject_shouldSaveAssociation() {
         String subjectId = "subject-001";
         String tableId = "table-001";
 
@@ -212,20 +219,12 @@ class SubjectServiceTest {
         subjectService.addTableToSubject(subjectId, tableId);
 
         verify(subjectTableDAO).save(any(SubjectTablePO.class));
-
-        ArgumentCaptor<SemanticSearchDocument> docCaptor = ArgumentCaptor.forClass(SemanticSearchDocument.class);
-        verify(semanticIndexService).save(docCaptor.capture());
-
-        SemanticSearchDocument savedDoc = docCaptor.getValue();
-        assertThat(savedDoc.getId()).isEqualTo("subject_table:" + subjectId + ":" + tableId);
-        assertThat(savedDoc.getType()).isEqualTo(SemanticEntityType.SUBJECT);
-        assertThat(savedDoc.getEntity().getSubjectId()).isEqualTo(subjectId);
-        assertThat(savedDoc.getEntity().getTableId()).isEqualTo(tableId);
+        verify(semanticIndexService, never()).save(any());
     }
 
     @Test
-    @DisplayName("removeTableFromSubject - 应删除关联和 ES 文档")
-    void removeTableFromSubject_shouldDeleteAssociationAndEsDoc() {
+    @DisplayName("removeTableFromSubject - 应删除关联")
+    void removeTableFromSubject_shouldDeleteAssociation() {
         String subjectId = "subject-001";
         String tableId = "table-001";
 
@@ -240,7 +239,6 @@ class SubjectServiceTest {
         subjectService.removeTableFromSubject(subjectId, tableId);
 
         verify(subjectTableDAO).deleteBySubjectIdAndTableId(subjectId, tableId);
-        verify(semanticIndexService).deleteById("subject_table:" + subjectId + ":" + tableId);
     }
 
     @Test
@@ -278,21 +276,23 @@ class SubjectServiceTest {
         assertThat(result.getSubject()).isNotNull();
         assertThat(result.getSubject().getName()).isEqualTo("Test Subject");
         assertThat(result.getTables()).hasSize(1);
-        assertThat(result.getTables().get(0).getTableId()).isEqualTo("table-001");
-        assertThat(result.getTables().get(0).getTableName()).isEqualTo("test_table");
-        assertThat(result.getTables().get(0).getDisplayName()).isEqualTo("Test Table");
+        assertThat(result.getTables().getFirst().getTableId()).isEqualTo("table-001");
+        assertThat(result.getTables().getFirst().getTableName()).isEqualTo("test_table");
+        assertThat(result.getTables().getFirst().getDisplayName()).isEqualTo("Test Table");
     }
 
     @Test
     @DisplayName("getSubjectsByDatasource - 应返回该 datasource 的所有 subjects")
     void getSubjectsByDatasource_shouldReturnSubjects() {
         String datasourceId = "datasource-001";
+        Pageable pageable = PageRequest.of(0, 10);
 
-        when(subjectDAO.findByDatasourceId(datasourceId)).thenReturn(List.of(sampleSubjectPO));
+        Page<SubjectPO> subjectPOPage = new org.springframework.data.domain.PageImpl<>(List.of(sampleSubjectPO), pageable, 1);
+        when(subjectDAO.findByDatasourceId(datasourceId, pageable)).thenReturn(subjectPOPage);
 
-        List<Subject> result = subjectService.getSubjectsByDatasource(datasourceId);
+        Page<Subject> result = subjectService.getSubjectsByDatasource(datasourceId, pageable);
 
-        assertThat(result).hasSize(1);
-        assertThat(result.get(0).getName()).isEqualTo("Test Subject");
+        assertThat(result.getTotalElements()).isEqualTo(1);
+        assertThat(result.getContent().getFirst().getName()).isEqualTo("Test Subject");
     }
 }
