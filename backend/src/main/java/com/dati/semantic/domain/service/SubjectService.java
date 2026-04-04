@@ -13,6 +13,7 @@ import com.dati.semantic.repository.po.EntityReference;
 import com.dati.semantic.repository.po.SemanticSearchDocument;
 import com.dati.semantic.repository.po.SubjectPO;
 import com.dati.semantic.repository.po.SubjectTablePO;
+import com.dati.semantic.server.pojo.vo.SubjectAvailableTableVO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -195,6 +196,31 @@ public class SubjectService {
                 ? subjectDAO.findAll(pageable)
                 : subjectDAO.findByDatasourceId(datasourceId, pageable);
         return pos.map(this::toSubject);
+    }
+
+    @Transactional(readOnly = true)
+    public List<SubjectAvailableTableVO> getAvailableTables(String subjectId, String schema) {
+        SubjectPO subjectPO = subjectDAO.findById(subjectId)
+                .orElseThrow(() -> new DatiException("Subject not found: " + subjectId));
+
+        List<SubjectTablePO> linkedTables = subjectTableDAO.findBySubjectId(subjectId);
+        List<String> linkedTableIds = linkedTables.stream()
+                .map(SubjectTablePO::getTableId)
+                .collect(Collectors.toList());
+
+        List<TableInfoPO> allTables = tableInfoDAO.findByDataSourceIdAndSchema(subjectPO.getDatasourceId(), schema);
+
+        return allTables.stream()
+                .filter(table -> !linkedTableIds.contains(table.getId()))
+                .map(table -> {
+                    SubjectAvailableTableVO vo = new SubjectAvailableTableVO();
+                    vo.setTableId(table.getId());
+                    vo.setTableName(table.getName());
+                    vo.setSchema(table.getSchema());
+                    vo.setDescription(table.getDescription());
+                    return vo;
+                })
+                .collect(Collectors.toList());
     }
 
     private Subject toSubject(SubjectPO po) {

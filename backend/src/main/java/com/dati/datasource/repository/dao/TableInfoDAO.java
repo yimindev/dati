@@ -11,4 +11,5 @@ public interface TableInfoDAO extends JpaRepository<TableInfoPO, String> {
     Page<TableInfoPO> findByDataSourceId(String dataSourceId, Pageable pageable);
     Page<TableInfoPO> findByDataSourceIdAndNameContaining(String dataSourceId, String name, Pageable pageable);
     List<TableInfoPO> findByDataSourceId(String dataSourceId);
+    List<TableInfoPO> findByDataSourceIdAndSchema(String dataSourceId, String schema);
 }

@@ -21,6 +21,13 @@ export interface SubjectTableVO {
   description?: string;
 }
 
+export interface SubjectAvailableTableVO {
+  table_id: string;
+  table_name: string;
+  schema?: string;
+  description?: string;
+}
+
 export interface TermVO extends BaseResourceVO {
   subject_id: string;
 }
@@ -91,6 +98,14 @@ export function deleteSubject(id: string, signal?: AbortSignal): Promise<IdRespo
 
 export function getSubjectTables(subjectId: string, signal?: AbortSignal): Promise<SubjectTableVO[]> {
   return get<SubjectTableVO[]>(`/v1/subjects/${encodeURIComponent(subjectId)}/tables`, undefined, signal);
+}
+
+export function getAvailableTables(subjectId: string, schema: string, signal?: AbortSignal): Promise<SubjectAvailableTableVO[]> {
+  return get<SubjectAvailableTableVO[]>(
+    `/v1/subjects/${encodeURIComponent(subjectId)}/available-tables`,
+    { schema },
+    signal
+  );
 }
 
 export function addTableToSubject(subjectId: string, body: AddTableToSubjectRequest, signal?: AbortSignal): Promise<IdResponse> {

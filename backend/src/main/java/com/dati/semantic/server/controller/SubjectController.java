@@ -8,6 +8,7 @@ import com.dati.semantic.server.assembler.SubjectAssembler;
 import com.dati.semantic.server.pojo.request.AddTableToSubjectRequest;
 import com.dati.semantic.server.pojo.request.CreateSubjectRequest;
 import com.dati.semantic.server.pojo.request.UpdateSubjectRequest;
+import com.dati.semantic.server.pojo.vo.SubjectAvailableTableVO;
 import com.dati.semantic.server.pojo.vo.SubjectDetailVO;
 import com.dati.semantic.server.pojo.vo.SubjectTableVO;
 import com.dati.semantic.server.pojo.vo.SubjectVO;
@@ -60,6 +61,13 @@ public class SubjectController {
         return subjectService.getSubjectWithTables(id).getTables().stream()
                 .map(subjectAssembler::toSubjectTableVO)
                 .toList();
+    }
+
+    @GetMapping("/{id}/available-tables")
+    public List<SubjectAvailableTableVO> getAvailableTables(
+            @PathVariable String id,
+            @RequestParam String schema) {
+        return subjectService.getAvailableTables(id, schema);
     }
 
     @PostMapping("/{id}/tables")

@@ -3,9 +3,9 @@ import { onMounted, ref, computed } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
 import { Plus } from "@element-plus/icons-vue";
 import { useI18n } from "vue-i18n";
-import type { SubjectTableVO } from "~/api/subject";
-import { getSubjectTables, addTableToSubject, removeTableFromSubject } from "~/api/subject";
-import { getSchemas, getTables } from "~/api/datasource";
+import type { SubjectTableVO, SubjectAvailableTableVO } from "~/api/subject";
+import { getSubjectTables, getAvailableTables, addTableToSubject, removeTableFromSubject } from "~/api/subject";
+import { getSchemas } from "~/api/datasource";
 
 const { t } = useI18n();
 
@@ -22,8 +22,8 @@ const tableList = ref<SubjectTableVO[]>([]);
 const addTableDialogVisible = ref(false);
 const schemas = ref<string[]>([]);
 const selectedSchema = ref("");
-const availableTables = ref<string[]>([]);
-const selectedTables = ref<string[]>([]);
+const availableTables = ref<SubjectAvailableTableVO[]>([]);
+const selectedTableIds = ref<string[]>([]);
 const schemaLoading = ref(false);
 const tablesLoading = ref(false);
 const addTableLoading = ref(false);
@@ -34,15 +34,15 @@ interface TransferItem {
   disabled: boolean;
 }
 
-const linkedTableKeys = computed(() => {
-  return tableList.value.map(t => t.table_name);
+const linkedTableIds = computed(() => {
+  return tableList.value.map(t => t.table_id);
 });
 
 const transferData = computed<TransferItem[]>(() => {
   return availableTables.value.map(table => ({
-    key: table,
-    label: table,
-    disabled: linkedTableKeys.value.includes(table),
+    key: table.table_id,
+    label: table.table_name,
+    disabled: linkedTableIds.value.includes(table.table_id),
   }));
 });
 
@@ -62,7 +62,7 @@ const handleOpenAddTableDialog = async () => {
   addTableDialogVisible.value = true;
   selectedSchema.value = "";
   availableTables.value = [];
-  selectedTables.value = [];
+  selectedTableIds.value = [];
 
   try {
     schemaLoading.value = true;
@@ -83,8 +83,8 @@ const handleSchemaChange = async (schema: string) => {
 
   try {
     tablesLoading.value = true;
-    availableTables.value = await getTables(props.datasourceId, schema);
-    selectedTables.value = [];
+    availableTables.value = await getAvailableTables(props.subjectId, schema);
+    selectedTableIds.value = [];
   } catch (error) {
     console.error("Failed to load tables:", error);
     ElMessage.error(t("common.loadFailed"));
@@ -94,18 +94,15 @@ const handleSchemaChange = async (schema: string) => {
 };
 
 const handleBatchAdd = async () => {
-  if (selectedTables.value.length === 0) {
+  if (selectedTableIds.value.length === 0) {
     ElMessage.warning(t("tableInfo.selectAtLeastOne"));
     return;
   }
 
   try {
     addTableLoading.value = true;
-    for (const tableName of selectedTables.value) {
-      const table = tableList.value.find(t => t.table_name === tableName);
-      if (table) {
-        await addTableToSubject(props.subjectId, { table_id: table.table_id });
-      }
+    for (const tableId of selectedTableIds.value) {
+      await addTableToSubject(props.subjectId, { table_id: tableId });
     }
     ElMessage.success(t("subject.addTableSuccess"));
     addTableDialogVisible.value = false;
@@ -215,7 +212,7 @@ onMounted(() => {
 
         <el-form-item v-if="selectedSchema" v-loading="tablesLoading">
           <el-transfer
-            v-model="selectedTables"
+            v-model="selectedTableIds"
             :data="transferData"
             filterable
             :filter-placeholder="t('common.search')"
@@ -232,7 +229,7 @@ onMounted(() => {
         <el-button
           type="primary"
           :loading="addTableLoading"
-          :disabled="selectedTables.length === 0"
+          :disabled="selectedTableIds.length === 0"
           @click="handleBatchAdd"
         >
           {{ t("tableInfo.addSelected") }}
