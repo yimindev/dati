@@ -14,6 +14,8 @@ import com.dati.semantic.repository.po.SemanticSearchDocument;
 import com.dati.semantic.repository.po.SubjectPO;
 import com.dati.semantic.repository.po.SubjectTablePO;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -48,17 +50,17 @@ public class SubjectService {
         if (name == null || name.isBlank()) {
             throw new IllegalArgumentException("Subject name cannot be null or empty");
         }
-        String id = UUID.randomUUID().toString();
         LocalDateTime now = LocalDateTime.now();
 
         SubjectPO subjectPO = new SubjectPO();
-        subjectPO.setId(id);
         subjectPO.setName(name);
         subjectPO.setDescription(description);
         subjectPO.setDatasourceId(datasourceId);
         subjectPO.setCreatedAt(now.toInstant(ZoneOffset.UTC));
         subjectPO.setUpdatedAt(now.toInstant(ZoneOffset.UTC));
         subjectDAO.save(subjectPO);
+
+        String id = subjectPO.getId();
 
         SemanticSearchDocument doc = SemanticSearchDocument.builder()
                 .id("subject:" + id)
@@ -188,13 +190,11 @@ public class SubjectService {
     }
 
     @Transactional(readOnly = true)
-    public List<Subject> getSubjectsByDatasource(String datasourceId) {
-        List<SubjectPO> pos = (datasourceId == null || datasourceId.isBlank())
-                ? subjectDAO.findAll()
-                : subjectDAO.findByDatasourceId(datasourceId);
-        return pos.stream()
-                .map(this::toSubject)
-                .collect(Collectors.toList());
+    public Page<Subject> getSubjectsByDatasource(String datasourceId, Pageable pageable) {
+        Page<SubjectPO> pos = (datasourceId == null || datasourceId.isBlank())
+                ? subjectDAO.findAll(pageable)
+                : subjectDAO.findByDatasourceId(datasourceId, pageable);
+        return pos.map(this::toSubject);
     }
 
     private Subject toSubject(SubjectPO po) {

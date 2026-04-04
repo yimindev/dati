@@ -1,5 +1,7 @@
 package com.dati.semantic.server.controller;
 
+import com.dati.base.pojo.PageReq;
+import com.dati.base.pojo.PageResponse;
 import com.dati.semantic.domain.model.Subject;
 import com.dati.semantic.domain.service.SubjectService;
 import com.dati.semantic.server.assembler.SubjectAssembler;
@@ -10,6 +12,8 @@ import com.dati.semantic.server.pojo.vo.SubjectDetailVO;
 import com.dati.semantic.server.pojo.vo.SubjectTableVO;
 import com.dati.semantic.server.pojo.vo.SubjectVO;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
@@ -71,9 +75,10 @@ public class SubjectController {
     }
 
     @GetMapping
-    public List<SubjectVO> getSubjects(@RequestParam(required = false) String datasourceId) {
-        return subjectService.getSubjectsByDatasource(datasourceId).stream()
-                .map(subjectAssembler::toVO)
-                .toList();
+    public PageResponse<SubjectVO> getSubjects(PageReq pageReq, @RequestParam(required = false) String datasourceId) {
+        Sort sortBy = Sort.by(Sort.Direction.DESC, "updatedAt");
+        Page<SubjectVO> subjectVOPage = subjectService.getSubjectsByDatasource(datasourceId, pageReq.toPageRequest().withSort(sortBy))
+                .map(subjectAssembler::toVO);
+        return PageResponse.of(subjectVOPage);
     }
 }
