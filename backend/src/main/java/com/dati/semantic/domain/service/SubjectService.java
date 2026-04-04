@@ -20,7 +20,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
@@ -50,14 +49,11 @@ public class SubjectService {
         if (name == null || name.isBlank()) {
             throw new IllegalArgumentException("Subject name cannot be null or empty");
         }
-        LocalDateTime now = LocalDateTime.now();
 
         SubjectPO subjectPO = new SubjectPO();
         subjectPO.setName(name);
         subjectPO.setDescription(description);
         subjectPO.setDatasourceId(datasourceId);
-        subjectPO.setCreatedAt(now.toInstant(ZoneOffset.UTC));
-        subjectPO.setUpdatedAt(now.toInstant(ZoneOffset.UTC));
         subjectDAO.save(subjectPO);
 
         String id = subjectPO.getId();
@@ -84,7 +80,6 @@ public class SubjectService {
 
         subjectPO.setName(name);
         subjectPO.setDescription(description);
-        subjectPO.setUpdatedAt(Instant.now());
         subjectDAO.save(subjectPO);
 
         SemanticSearchDocument doc = SemanticSearchDocument.builder()

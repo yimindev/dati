@@ -16,10 +16,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.Instant;
-import java.time.ZoneOffset;
 import java.util.List;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -44,17 +41,14 @@ public class TermService {
         if (name == null || name.isBlank()) {
             throw new IllegalArgumentException("Term name cannot be null or empty");
         }
-        String id = UUID.randomUUID().toString();
-        Instant now = Instant.now();
 
         TermPO termPO = new TermPO();
-        termPO.setId(id);
         termPO.setSubjectId(subjectId);
         termPO.setName(name);
         termPO.setDescription(description);
-        termPO.setCreatedAt(now);
-        termPO.setUpdatedAt(now);
         termDAO.save(termPO);
+
+        String id = termPO.getId();
 
         SemanticSearchDocument doc = SemanticSearchDocument.builder()
                 .id("term:" + id)
@@ -78,7 +72,6 @@ public class TermService {
 
         termPO.setName(name);
         termPO.setDescription(description);
-        termPO.setUpdatedAt(Instant.now());
         termDAO.save(termPO);
 
         SemanticSearchDocument doc = SemanticSearchDocument.builder()
@@ -117,7 +110,6 @@ public class TermService {
         }
 
         TermRelationPO relationPO = TermRelationMapper.toPO(termId, entityType, tableId, fieldName);
-        relationPO.setCreatedAt(Instant.now());
         termRelationDAO.save(relationPO);
     }
 
