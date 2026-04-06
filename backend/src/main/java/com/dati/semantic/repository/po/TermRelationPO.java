@@ -1,6 +1,6 @@
 package com.dati.semantic.repository.po;
 
-import com.dati.base.pojo.BaseResourcePO;
+import com.dati.base.pojo.BasePO;
 import com.dati.semantic.domain.SemanticEntityType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -16,7 +16,7 @@ import java.io.Serial;
 @Getter
 @Entity
 @Table(name = "term_relation")
-public class TermRelationPO extends BaseResourcePO {
+public class TermRelationPO extends BasePO {
 
     @Serial
     private static final long serialVersionUID = 1L;

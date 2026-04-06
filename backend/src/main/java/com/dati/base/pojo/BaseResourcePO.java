@@ -10,10 +10,6 @@ import lombok.experimental.FieldNameConstants;
 @MappedSuperclass
 @FieldNameConstants
 public class BaseResourcePO extends BasePO {
-    @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    @Column(length = 36)
-    private String id;
 
     @Column(length = 64)
     private String name;
