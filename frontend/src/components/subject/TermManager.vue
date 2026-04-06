@@ -248,8 +248,7 @@ onMounted(() => {
 
 <template>
   <div class="term-manager">
-    <div class="flex items-center justify-between mb-4">
-      <h3 class="text-lg font-medium">{{ t('subject.termManagement') }}</h3>
+    <div class="flex items-center justify-end mb-4">
       <el-button type="primary" :icon="Plus" @click="handleOpenTermDialog()">
         {{ t('subject.addTerm') }}
       </el-button>

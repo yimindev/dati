@@ -144,8 +144,7 @@ onMounted(() => {
 
 <template>
   <div class="subject-table-list">
-    <div class="flex items-center justify-between mb-4">
-      <h3 class="text-lg font-medium">{{ t("subject.tableManagement") }}</h3>
+    <div class="flex items-center justify-end mb-4">
       <el-button type="primary" :icon="Plus" @click="handleOpenAddTableDialog">
         {{ t("subject.addTable") }}
       </el-button>
