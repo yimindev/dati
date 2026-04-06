@@ -9,9 +9,9 @@ import com.dati.semantic.server.pojo.request.AddTableToSubjectRequest;
 import com.dati.semantic.server.pojo.request.CreateSubjectRequest;
 import com.dati.semantic.server.pojo.request.UpdateSubjectRequest;
 import com.dati.semantic.server.pojo.vo.SubjectAvailableTableVO;
-import com.dati.semantic.server.pojo.vo.SubjectDetailVO;
-import com.dati.semantic.server.pojo.vo.SubjectTableVO;
 import com.dati.semantic.server.pojo.vo.SubjectVO;
+import com.dati.datasource.server.assembler.TableAssembler;
+import com.dati.datasource.server.pojo.TableInfoVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Sort;
@@ -27,6 +27,7 @@ public class SubjectController {
 
     private final SubjectService subjectService;
     private final SubjectAssembler subjectAssembler;
+    private final TableAssembler tableAssembler;
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
@@ -52,14 +53,14 @@ public class SubjectController {
     }
 
     @GetMapping("/{id}")
-    public SubjectDetailVO getSubject(@PathVariable String id) {
-        return subjectAssembler.toDetailVO(subjectService.getSubjectWithTables(id));
+    public SubjectVO getSubject(@PathVariable String id) {
+        return subjectAssembler.toVO(subjectService.getSubjectById(id));
     }
 
     @GetMapping("/{id}/tables")
-    public List<SubjectTableVO> getSubjectTables(@PathVariable String id) {
-        return subjectService.getSubjectWithTables(id).getTables().stream()
-                .map(subjectAssembler::toSubjectTableVO)
+    public List<TableInfoVO> getSubjectTables(@PathVariable String id) {
+        return subjectService.getTablesBySubjectId(id).stream()
+                .map(tableAssembler::toTableInfoVO)
                 .toList();
     }
 

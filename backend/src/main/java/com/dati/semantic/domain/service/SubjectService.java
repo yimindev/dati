@@ -5,8 +5,6 @@ import com.dati.datasource.repository.dao.TableInfoDAO;
 import com.dati.datasource.repository.po.TableInfoPO;
 import com.dati.semantic.domain.SemanticEntityType;
 import com.dati.semantic.domain.model.Subject;
-import com.dati.semantic.domain.model.SubjectDetailVO;
-import com.dati.semantic.domain.model.SubjectTable;
 import com.dati.semantic.repository.dao.SubjectDAO;
 import com.dati.semantic.repository.dao.SubjectTableDAO;
 import com.dati.semantic.repository.po.EntityReference;
@@ -23,8 +21,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
-import java.util.Map;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
@@ -127,43 +123,9 @@ public class SubjectService {
 
     @Transactional
     public void removeTableFromSubject(String subjectId, String tableId) {
-        SubjectTablePO subjectTablePO = subjectTableDAO.findBySubjectIdAndTableId(subjectId, tableId)
+        subjectTableDAO.findBySubjectIdAndTableId(subjectId, tableId)
                 .orElseThrow(() -> new DatiException("Association not found"));
         subjectTableDAO.deleteBySubjectIdAndTableId(subjectId, tableId);
-    }
-
-    @Transactional(readOnly = true)
-    public SubjectDetailVO getSubjectWithTables(String id) {
-        SubjectPO subjectPO = subjectDAO.findById(id)
-                .orElseThrow(() -> new DatiException("Subject not found: " + id));
-
-        List<SubjectTablePO> subjectTables = subjectTableDAO.findBySubjectId(id);
-
-        List<String> tableIds = subjectTables.stream()
-                .map(SubjectTablePO::getTableId)
-                .collect(Collectors.toList());
-
-        Map<String, TableInfoPO> tableInfoMap = tableInfoDAO.findAllById(tableIds).stream()
-                .collect(Collectors.toMap(TableInfoPO::getId, Function.identity()));
-
-        List<SubjectTable> tables = subjectTables.stream()
-                .map(st -> {
-                    TableInfoPO tableInfo = tableInfoMap.get(st.getTableId());
-                    return SubjectTable.builder()
-                            .id(st.getId())
-                            .subjectId(st.getSubjectId())
-                            .tableId(st.getTableId())
-                            .tableName(tableInfo != null ? tableInfo.getName() : null)
-                            .displayName(tableInfo != null ? tableInfo.getDisplayName() : null)
-                            .createdAt(tableInfo != null ? LocalDateTime.ofInstant(st.getCreatedAt(), ZoneOffset.UTC) : null)
-                            .build();
-                })
-                .collect(Collectors.toList());
-
-        return SubjectDetailVO.builder()
-                .subject(toSubject(subjectPO))
-                .tables(tables)
-                .build();
     }
 
     @Transactional(readOnly = true)
@@ -182,7 +144,7 @@ public class SubjectService {
         List<SubjectTablePO> linkedTables = subjectTableDAO.findBySubjectId(subjectId);
         List<String> linkedTableIds = linkedTables.stream()
                 .map(SubjectTablePO::getTableId)
-                .collect(Collectors.toList());
+                .toList();
 
         List<TableInfoPO> allTables = tableInfoDAO.findByDataSourceIdAndSchema(subjectPO.getDatasourceId(), schema);
 
@@ -197,6 +159,40 @@ public class SubjectService {
                     return vo;
                 })
                 .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public List<com.dati.datasource.domain.model.TableInfo> getTablesBySubjectId(String subjectId) {
+        if (!subjectDAO.existsById(subjectId)) {
+            throw new DatiException("Subject not found: " + subjectId);
+        }
+
+        List<SubjectTablePO> subjectTables = subjectTableDAO.findBySubjectId(subjectId);
+        List<String> tableIds = subjectTables.stream()
+                .map(SubjectTablePO::getTableId)
+                .collect(Collectors.toList());
+
+        return tableInfoDAO.findAllById(tableIds).stream()
+                .map(tableInfo -> {
+                    com.dati.datasource.domain.model.TableInfo ti = new com.dati.datasource.domain.model.TableInfo();
+                    ti.setId(tableInfo.getId());
+                    ti.setName(tableInfo.getName());
+                    ti.setDescription(tableInfo.getDescription());
+                    ti.setDatasourceId(tableInfo.getDataSourceId());
+                    ti.setSchema(tableInfo.getSchema());
+                    ti.setDisplayName(tableInfo.getDisplayName());
+                    ti.setCreatedAt(tableInfo.getCreatedAt());
+                    ti.setUpdatedAt(tableInfo.getUpdatedAt());
+                    return ti;
+                })
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public Subject getSubjectById(String id) {
+        SubjectPO subjectPO = subjectDAO.findById(id)
+                .orElseThrow(() -> new DatiException("Subject not found: " + id));
+        return toSubject(subjectPO);
     }
 
     private Subject toSubject(SubjectPO po) {

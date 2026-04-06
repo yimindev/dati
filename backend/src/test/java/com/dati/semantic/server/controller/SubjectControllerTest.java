@@ -1,13 +1,13 @@
 package com.dati.semantic.server.controller;
 
+import com.dati.datasource.domain.model.TableInfo;
+import com.dati.datasource.server.assembler.TableAssembler;
+import com.dati.datasource.server.pojo.TableInfoVO;
 import com.dati.semantic.domain.model.Subject;
-import com.dati.semantic.domain.model.SubjectTable;
 import com.dati.semantic.domain.service.SubjectService;
 import com.dati.semantic.server.assembler.SubjectAssembler;
 import com.dati.semantic.server.pojo.request.AddTableToSubjectRequest;
 import com.dati.semantic.server.pojo.request.CreateSubjectRequest;
-import com.dati.semantic.server.pojo.vo.SubjectDetailVO;
-import com.dati.semantic.server.pojo.vo.SubjectTableVO;
 import com.dati.semantic.server.pojo.vo.SubjectVO;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.DisplayName;
@@ -15,11 +15,12 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -30,7 +31,6 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -46,11 +46,14 @@ class SubjectControllerTest {
     @Autowired
     private ObjectMapper objectMapper;
 
-    @MockBean
+    @MockitoBean
     private SubjectService subjectService;
 
-    @MockBean
+    @MockitoBean
     private SubjectAssembler subjectAssembler;
+
+    @MockitoBean
+    private TableAssembler tableAssembler;
 
     @Test
     @DisplayName("创建 Subject - 成功返回 201")
@@ -91,52 +94,32 @@ class SubjectControllerTest {
     }
 
     @Test
-    @DisplayName("获取 Subject - 成功返回 200 和详情(含tables)")
-    void getSubject_shouldReturn200WithDetail() throws Exception {
-        Subject subject = Subject.builder()
-                .id("subject-001")
-                .name("Test Subject")
-                .description("Test Description")
-                .datasourceId("datasource-001")
-                .createdAt(LocalDateTime.now())
-                .updatedAt(LocalDateTime.now())
-                .build();
+    @DisplayName("获取 Subject Tables - 成功返回 200")
+    void getSubjectTables_shouldReturn200() throws Exception {
+        TableInfo tableInfo = new TableInfo();
+        tableInfo.setId("table-001");
+        tableInfo.setName("users");
+        tableInfo.setDescription("Users table description");
+        tableInfo.setDatasourceId("datasource-001");
+        tableInfo.setSchema("public");
+        tableInfo.setDisplayName("Users Table");
+        tableInfo.setCreatedAt(Instant.now());
+        tableInfo.setUpdatedAt(Instant.now());
 
-        SubjectTable subjectTable = SubjectTable.builder()
-                .id("st-001")
-                .subjectId("subject-001")
-                .tableId("table-001")
-                .tableName("users")
-                .displayName("Users Table")
-                .createdAt(LocalDateTime.now())
-                .build();
+        TableInfoVO tableVO = new TableInfoVO();
+        tableVO.setId("table-001");
+        tableVO.setName("users");
+        tableVO.setDisplayName("Users Table");
+        tableVO.setSchema("public");
+        tableVO.setDescription("Users table description");
 
-        com.dati.semantic.domain.model.SubjectDetailVO domainDetail = 
-                new com.dati.semantic.domain.model.SubjectDetailVO(subject, List.of(subjectTable));
+        when(subjectService.getTablesBySubjectId("subject-001")).thenReturn(List.of(tableInfo));
+        when(tableAssembler.toTableInfoVO(any(TableInfo.class))).thenReturn(tableVO);
 
-        SubjectDetailVO serverDetail = new SubjectDetailVO();
-        serverDetail.setId("subject-001");
-        serverDetail.setName("Test Subject");
-        serverDetail.setDescription("Test Description");
-        serverDetail.setDatasourceId("datasource-001");
-        serverDetail.setCreatedAt(subject.getCreatedAt());
-        serverDetail.setUpdatedAt(subject.getUpdatedAt());
-        SubjectTableVO tableVO = new SubjectTableVO();
-        tableVO.setId("st-001");
-        tableVO.setSubjectId("subject-001");
-        tableVO.setTableId("table-001");
-        tableVO.setCreatedAt(subjectTable.getCreatedAt());
-        serverDetail.setTables(List.of(tableVO));
-
-        when(subjectService.getSubjectWithTables("subject-001")).thenReturn(domainDetail);
-        when(subjectAssembler.toDetailVO(any(com.dati.semantic.domain.model.SubjectDetailVO.class))).thenReturn(serverDetail);
-
-        mockMvc.perform(get("/v1/subjects/subject-001"))
+        mockMvc.perform(get("/v1/subjects/subject-001/tables"))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.id").value("subject-001"))
-            .andExpect(jsonPath("$.name").value("Test Subject"))
-            .andExpect(jsonPath("$.tables[0].id").value("st-001"))
-            .andExpect(jsonPath("$.tables[0].table_id").value("table-001"));
+            .andExpect(jsonPath("$[0].id").value("table-001"))
+            .andExpect(jsonPath("$[0].name").value("users"));
     }
 
     @Test

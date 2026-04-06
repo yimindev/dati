@@ -4,7 +4,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import { useI18n } from 'vue-i18n'
 import type { FormInstance, FormRules } from 'element-plus'
-import type { TermVO, TermRelationVO, CreateTermRequest, UpdateTermRequest, LinkTermRelationRequest, SubjectTableVO } from '~/api/subject'
+import type { TermVO, TermRelationVO, CreateTermRequest, UpdateTermRequest, LinkTermRelationRequest, TableInfoVO } from '~/api/subject'
 import { getTermsBySubject, createTerm, updateTerm, deleteTerm, getTermDetail, linkTermRelation, unlinkTermRelation, getSubjectTables } from '~/api/subject'
 import { listTableColumns } from '~/api/column'
 
@@ -30,7 +30,7 @@ const termFormData = ref<CreateTermRequest>({ name: '', description: '' })
 const relationDialogVisible = ref(false)
 const relationDialogLoading = ref(false)
 const relationTermId = ref('')
-const availableTables = ref<SubjectTableVO[]>([])
+const availableTables = ref<TableInfoVO[]>([])
 const selectedTableId = ref('')
 const tableColumns = ref<{ name: string }[]>([])
 const columnsLoading = ref(false)
@@ -175,14 +175,14 @@ const handleTableChange = async (tableId: string) => {
     return
   }
 
-  const table = availableTables.value.find(t => t.table_id === tableId)
+  const table = availableTables.value.find(t => t.id === tableId)
   if (!table) return
 
   try {
     columnsLoading.value = true
-    const tableInfo = availableTables.value.find(t => t.table_id === tableId)
+    const tableInfo = availableTables.value.find(t => t.id === tableId)
     if (tableInfo) {
-      const response = await listTableColumns(tableInfo.table_id, tableId, 1, 1000)
+      const response = await listTableColumns(tableInfo.id, tableId, 1, 1000)
       tableColumns.value = response.data || []
     }
   } catch (error) {
@@ -401,9 +401,9 @@ onMounted(() => {
           >
             <el-option
               v-for="table in availableTables"
-              :key="table.table_id"
-              :label="table.table_name"
-              :value="table.table_id"
+              :key="table.id"
+              :label="table.name"
+              :value="table.id"
             />
           </el-select>
         </el-form-item>

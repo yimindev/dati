@@ -5,7 +5,7 @@ import com.dati.datasource.repository.dao.TableInfoDAO;
 import com.dati.datasource.repository.po.TableInfoPO;
 import com.dati.semantic.domain.SemanticEntityType;
 import com.dati.semantic.domain.model.Subject;
-import com.dati.semantic.domain.model.SubjectDetailVO;
+import com.dati.datasource.domain.model.TableInfo;
 import com.dati.semantic.repository.dao.SubjectDAO;
 import com.dati.semantic.repository.dao.SubjectTableDAO;
 import com.dati.semantic.repository.po.SemanticSearchDocument;
@@ -256,8 +256,8 @@ class SubjectServiceTest {
     }
 
     @Test
-    @DisplayName("getSubjectWithTables - 应返回 Subject 和关联的 tables")
-    void getSubjectWithTables_shouldReturnSubjectWithTables() {
+    @DisplayName("getTablesBySubjectId - 应返回 Subject 关联的 tables")
+    void getTablesBySubjectId_shouldReturnTables() {
         String subjectId = "subject-001";
 
         SubjectTablePO subjectTablePO = new SubjectTablePO();
@@ -266,19 +266,16 @@ class SubjectServiceTest {
         subjectTablePO.setTableId("table-001");
         subjectTablePO.setCreatedAt(Instant.now());
 
-        when(subjectDAO.findById(subjectId)).thenReturn(Optional.of(sampleSubjectPO));
+        when(subjectDAO.existsById(subjectId)).thenReturn(true);
         when(subjectTableDAO.findBySubjectId(subjectId)).thenReturn(List.of(subjectTablePO));
         when(tableInfoDAO.findAllById(List.of("table-001"))).thenReturn(List.of(sampleTableInfoPO));
 
-        SubjectDetailVO result = subjectService.getSubjectWithTables(subjectId);
+        List<TableInfo> result = subjectService.getTablesBySubjectId(subjectId);
 
-        assertThat(result).isNotNull();
-        assertThat(result.getSubject()).isNotNull();
-        assertThat(result.getSubject().getName()).isEqualTo("Test Subject");
-        assertThat(result.getTables()).hasSize(1);
-        assertThat(result.getTables().getFirst().getTableId()).isEqualTo("table-001");
-        assertThat(result.getTables().getFirst().getTableName()).isEqualTo("test_table");
-        assertThat(result.getTables().getFirst().getDisplayName()).isEqualTo("Test Table");
+        assertThat(result).hasSize(1);
+        assertThat(result.getFirst().getId()).isEqualTo("table-001");
+        assertThat(result.getFirst().getName()).isEqualTo("test_table");
+        assertThat(result.getFirst().getDisplayName()).isEqualTo("Test Table");
     }
 
     @Test

@@ -3,7 +3,7 @@ import { onMounted, ref, computed } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
 import { Plus } from "@element-plus/icons-vue";
 import { useI18n } from "vue-i18n";
-import type { SubjectTableVO, SubjectAvailableTableVO } from "~/api/subject";
+import type { TableInfoVO, SubjectAvailableTableVO } from "~/api/subject";
 import { getSubjectTables, getAvailableTables, addTableToSubject, removeTableFromSubject } from "~/api/subject";
 import { getSchemas } from "~/api/datasource";
 
@@ -17,7 +17,7 @@ interface Props {
 const props = defineProps<Props>();
 
 const loading = ref(false);
-const tableList = ref<SubjectTableVO[]>([]);
+const tableList = ref<TableInfoVO[]>([]);
 
 const addTableDialogVisible = ref(false);
 const schemas = ref<string[]>([]);
@@ -35,7 +35,7 @@ interface TransferItem {
 }
 
 const linkedTableIds = computed(() => {
-  return tableList.value.map(t => t.table_id);
+  return tableList.value.map(t => t.id);
 });
 
 const transferData = computed<TransferItem[]>(() => {
@@ -115,10 +115,10 @@ const handleBatchAdd = async () => {
   }
 };
 
-const handleRemoveTable = async (table: SubjectTableVO) => {
+const handleRemoveTable = async (table: TableInfoVO) => {
   try {
     await ElMessageBox.confirm(
-      t("subject.removeTableConfirm", { name: table.table_name }),
+      t("subject.removeTableConfirm", { name: table.name }),
       t("common.warning"),
       {
         confirmButtonText: t("common.confirm"),
@@ -126,7 +126,7 @@ const handleRemoveTable = async (table: SubjectTableVO) => {
         type: "warning",
       }
     );
-    await removeTableFromSubject(props.subjectId, table.table_id);
+    await removeTableFromSubject(props.subjectId, table.id);
     ElMessage.success(t("subject.removeTableSuccess"));
     await loadTables();
   } catch (error) {
@@ -153,12 +153,12 @@ onMounted(() => {
 
     <el-table :data="tableList" v-loading="loading" stripe>
       <el-table-column
-        prop="table_name"
+        prop="name"
         :label="t('common.tableName')"
         min-width="150"
       />
       <el-table-column
-        prop="table_display_name"
+        prop="display_name"
         :label="t('tableInfo.displayName')"
         min-width="150"
       />

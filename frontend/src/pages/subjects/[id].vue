@@ -8,8 +8,8 @@ import { onMounted, ref, computed } from "vue";
 import { useRoute } from "vue-router";
 import { ElMessage } from "element-plus";
 import { useI18n } from "vue-i18n";
-import type { SubjectDetailVO, UpdateSubjectRequest } from "~/api/subject";
-import { getSubjectDetail, updateSubject } from "~/api/subject";
+import type { SubjectVO, UpdateSubjectRequest } from "~/api/subject";
+import { getSubject, updateSubject } from "~/api/subject";
 
 const { t } = useI18n();
 
@@ -18,18 +18,18 @@ const route = useRoute("/subjects/[id]");
 const subjectId = computed(() => route.params.id as string);
 
 const loading = ref(false);
-const subjectDetail = ref<SubjectDetailVO | null>(null);
+const subject = ref<SubjectVO | null>(null);
 
 const isEditing = ref(false);
 const editForm = ref<UpdateSubjectRequest>({});
 const saveLoading = ref(false);
 
-const loadSubjectDetail = async () => {
+const loadSubject = async () => {
   try {
     loading.value = true;
-    subjectDetail.value = await getSubjectDetail(subjectId.value);
+    subject.value = await getSubject(subjectId.value);
   } catch (error) {
-    console.error("Failed to load subject detail:", error);
+    console.error("Failed to load subject:", error);
     ElMessage.error(t("common.loadFailed"));
   } finally {
     loading.value = false;
@@ -37,10 +37,10 @@ const loadSubjectDetail = async () => {
 };
 
 const handleEdit = () => {
-  if (!subjectDetail.value) return;
+  if (!subject.value) return;
   editForm.value = {
-    name: subjectDetail.value.name,
-    description: subjectDetail.value.description || undefined,
+    name: subject.value.name,
+    description: subject.value.description || undefined,
   };
   isEditing.value = true;
 };
@@ -56,7 +56,7 @@ const handleSave = async () => {
     await updateSubject(subjectId.value, editForm.value);
     ElMessage.success(t("subject.updateSuccess"));
     isEditing.value = false;
-    await loadSubjectDetail();
+    await loadSubject();
   } catch (error) {
     console.error("Failed to update subject:", error);
     ElMessage.error(t("common.operationFailed"));
@@ -66,7 +66,7 @@ const handleSave = async () => {
 };
 
 onMounted(() => {
-  loadSubjectDetail();
+  loadSubject();
 });
 </script>
 
@@ -76,18 +76,18 @@ onMounted(() => {
       <el-breadcrumb-item :to="{ path: '/subjects' }">
         {{ t("subject.title") }}
       </el-breadcrumb-item>
-      <el-breadcrumb-item>{{ subjectDetail?.name || "" }}</el-breadcrumb-item>
+      <el-breadcrumb-item>{{ subject?.name || "" }}</el-breadcrumb-item>
     </el-breadcrumb>
 
     <el-tabs>
       <el-tab-pane :label="t('subject.basicInfo')">
         <div class="basic-info" v-loading="loading">
-          <el-form v-if="subjectDetail" label-width="120px">
+          <el-form v-if="subject" label-width="120px">
             <el-form-item :label="t('common.name')">
               <template v-if="isEditing">
                 <el-input v-model="editForm.name" />
               </template>
-              <span v-else>{{ subjectDetail.name }}</span>
+              <span v-else>{{ subject.name }}</span>
             </el-form-item>
 
             <el-form-item :label="t('common.description')">
@@ -99,11 +99,11 @@ onMounted(() => {
                   :placeholder="t('common.placeholder.description')"
                 />
               </template>
-              <span v-else>{{ subjectDetail.description || "-" }}</span>
+              <span v-else>{{ subject.description || "-" }}</span>
             </el-form-item>
 
             <el-form-item :label="t('subject.datasource')">
-              <span>{{ subjectDetail.datasource_name || subjectDetail.datasource_id }}</span>
+              <span>{{ subject.datasource_name || subject.datasource_id }}</span>
             </el-form-item>
           </el-form>
 
@@ -124,9 +124,9 @@ onMounted(() => {
 
       <el-tab-pane :label="t('subject.tableManagement')">
         <SubjectTableList
-          v-if="subjectDetail?.datasource_id"
+          v-if="subject?.datasource_id"
           :subject-id="subjectId"
-          :datasource-id="subjectDetail.datasource_id"
+          :datasource-id="subject.datasource_id"
         />
       </el-tab-pane>
 

@@ -1,24 +1,13 @@
 import type { BaseResourceVO, IdResponse, PageResponse } from "~/api/types.ts";
+import type { TableInfoVO } from "~/api/tableinfo";
 import { get, post, put, del } from "./http";
+
+export type { TableInfoVO };
 
 export interface SubjectVO extends BaseResourceVO {
   datasource_id: string;
   datasource_name?: string;
   table_count?: number;
-}
-
-export interface SubjectDetailVO extends SubjectVO {
-  tables: SubjectTableVO[];
-}
-
-export interface SubjectTableVO {
-  id: string;
-  subject_id: string;
-  table_id: string;
-  table_name: string;
-  table_display_name?: string;
-  schema?: string;
-  description?: string;
 }
 
 export interface SubjectAvailableTableVO {
@@ -80,8 +69,8 @@ export function listSubjects(page: number, size: number, datasourceId?: string, 
   );
 }
 
-export function getSubjectDetail(id: string, signal?: AbortSignal): Promise<SubjectDetailVO> {
-  return get<SubjectDetailVO>(`/v1/subjects/${encodeURIComponent(id)}`, undefined, signal);
+export function getSubject(id: string, signal?: AbortSignal): Promise<SubjectVO> {
+  return get<SubjectVO>(`/v1/subjects/${encodeURIComponent(id)}`, undefined, signal);
 }
 
 export function createSubject(body: CreateSubjectRequest, signal?: AbortSignal): Promise<IdResponse> {
@@ -96,8 +85,8 @@ export function deleteSubject(id: string, signal?: AbortSignal): Promise<IdRespo
   return del<IdResponse>(`/v1/subjects/${encodeURIComponent(id)}`, undefined, signal);
 }
 
-export function getSubjectTables(subjectId: string, signal?: AbortSignal): Promise<SubjectTableVO[]> {
-  return get<SubjectTableVO[]>(`/v1/subjects/${encodeURIComponent(subjectId)}/tables`, undefined, signal);
+export function getSubjectTables(subjectId: string, signal?: AbortSignal): Promise<TableInfoVO[]> {
+  return get<TableInfoVO[]>(`/v1/subjects/${encodeURIComponent(subjectId)}/tables`, undefined, signal);
 }
 
 export function getAvailableTables(subjectId: string, schema: string, signal?: AbortSignal): Promise<SubjectAvailableTableVO[]> {
