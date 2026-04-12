@@ -1,11 +1,10 @@
 package com.dati.semantic.domain.model;
 
 import com.dati.semantic.domain.SemanticEntityType;
-import lombok.Data;
-import lombok.EqualsAndHashCode;
-import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Data
 @NoArgsConstructor
@@ -22,5 +21,9 @@ public class TermRelation {
     private String tableId;
 
     private String fieldName;
+
+    private String tableName;
+
+    private String schema;
 
 }

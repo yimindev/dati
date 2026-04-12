@@ -7,6 +7,7 @@ export default {
     // 通用操作
     save: "保存",
     cancel: "取消",
+    close: "关闭",
     confirm: "确认",
     edit: "编辑",
     delete: "删除",
@@ -16,6 +17,7 @@ export default {
     search: "搜索",
     testConnection: "测试连接",
     back: "返回",
+    nextStep: "下一步",
     refresh: "刷新",
     yes: "是",
     no: "否",
@@ -23,6 +25,7 @@ export default {
     all: "全选",
     none: "取消全选",
     clear: "清空",
+    selected: "已选",
 
     // 通用字段
     id: "ID",
@@ -76,7 +79,6 @@ export default {
       collapse: "收起",
       mcpBuilder: "构建MCP",
       semanticModels: "语义模型",
-      semanticManagement: "语义管理",
       dataSources: "数据源",
     },
   },
@@ -113,7 +115,6 @@ export default {
 
     // 字段
     datasource: "关联数据源",
-    tableCount: "关联表数量",
     selectDatasource: "请选择数据源",
     tableManagement: "表管理",
     termManagement: "术语管理",
@@ -127,16 +128,28 @@ export default {
     deleteTerm: "删除术语",
     addRelation: "添加关联",
     removeRelation: "移除关联",
+    manageRelation: "管理关联",
+    linkedEntities: "已关联实体",
 
     // 术语关联
-    linkedTables: "已关联",
-    linkToTable: "关联到表",
-    linkToField: "关联到字段",
     selectTable: "请选择表",
-    selectField: "请选择字段（可选）",
-    fieldOptional: "不选则关联整张表",
     tableLevel: "整表",
     fieldLevel: "字段",
+
+    // 关联弹窗
+    selectType: "选择类型",
+    selectTableStep: "选择表",
+    selectTarget: "选择目标",
+    searchTable: "搜索表...",
+    filterSchema: "Schema",
+    searchField: "搜索字段...",
+    existingRelations: "当前已有关联",
+    noRelations: "暂无关联",
+    noSearchResults: "无匹配结果",
+    noFieldsInTable: "该表暂无字段",
+    relationAlreadyExists: "所选关联已存在",
+    fieldConfig: "字段配置",
+    tableLevelRelation: "整表关联",
 
     // 列表页
     createButton: "创建主题",
@@ -144,9 +157,6 @@ export default {
     noSubject: "暂无主题",
     noTables: "暂无关联表",
     noTerms: "暂无术语",
-
-    // 确认消息
-    deleteConfirmMessage: "确定要删除主题「{name}」吗？删除后相关术语和关联也会被删除。",
     removeTableConfirm: "确定要移除表「{name}」吗？",
     removeTermConfirm: "确定要删除术语「{name}」吗？",
     removeRelationConfirm: "确定要移除该关联吗？",
@@ -160,7 +170,7 @@ export default {
     addTermSuccess: "术语创建成功",
     updateTermSuccess: "术语更新成功",
     deleteTermSuccess: "术语删除成功",
-    addRelationSuccess: "关联添加成功",
+    addRelationResult: "已添加 {added} 条，跳过 {skipped} 条重复关联",
     removeRelationSuccess: "关联移除成功",
   },
 

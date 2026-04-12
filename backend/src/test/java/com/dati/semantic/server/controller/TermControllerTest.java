@@ -1,9 +1,11 @@
 package com.dati.semantic.server.controller;
 
 import com.dati.semantic.domain.model.Term;
+import com.dati.semantic.domain.model.TermRelation;
 import com.dati.semantic.domain.service.TermService;
 import com.dati.semantic.server.assembler.TermAssembler;
 import com.dati.semantic.server.pojo.request.CreateTermRequest;
+import com.dati.semantic.server.pojo.vo.TermRelationVO;
 import com.dati.semantic.server.pojo.vo.TermVO;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.DisplayName;
@@ -11,21 +13,21 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
-import java.time.Instant;
+import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -41,10 +43,10 @@ class TermControllerTest {
     @Autowired
     private ObjectMapper objectMapper;
 
-    @MockBean
+    @MockitoBean
     private TermService termService;
 
-    @MockBean
+    @MockitoBean
     private TermAssembler termAssembler;
 
     @Test
@@ -93,20 +95,44 @@ class TermControllerTest {
         term.setDescription("Test Description");
         term.setCreatedAt(java.time.Instant.now());
         term.setUpdatedAt(java.time.Instant.now());
+        TermRelation relation = TermRelation.builder()
+                .id("rel-001")
+                .termId("term-001")
+                .entityType(com.dati.semantic.domain.SemanticEntityType.FIELD)
+                .tableId("table-001")
+                .tableName("orders")
+                .schema("sales")
+                .fieldName("amount")
+                .build();
+        term.setRelations(List.of(relation));
 
         TermVO termVO = new TermVO();
         termVO.setId("term-001");
         termVO.setSubjectId("subject-001");
         termVO.setName("Test Term");
         termVO.setDescription("Test Description");
+        termVO.setRelations(List.of(
+                TermRelationVO.builder()
+                        .id("rel-001")
+                        .termId("term-001")
+                        .entityType("FIELD")
+                        .tableId("table-001")
+                        .tableName("orders")
+                        .schema("sales")
+                        .fieldName("amount")
+                        .build()
+        ));
 
-        when(termService.getTermById("term-001")).thenReturn(term);
-        when(termAssembler.toVO(term)).thenReturn(termVO);
+        when(termService.getTermByIdWithRelations("term-001")).thenReturn(term);
+        when(termAssembler.toVO(term, term.getRelations())).thenReturn(termVO);
 
         mockMvc.perform(get("/v1/terms/term-001"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.id").value("term-001"))
-            .andExpect(jsonPath("$.name").value("Test Term"));
+            .andExpect(jsonPath("$.name").value("Test Term"))
+            .andExpect(jsonPath("$.relations[0].table_name").value("orders"))
+            .andExpect(jsonPath("$.relations[0].schema").value("sales"))
+            .andExpect(jsonPath("$.relations[0].field_name").value("amount"));
     }
 
     @Test

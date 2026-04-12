@@ -1,12 +1,15 @@
 package com.dati.semantic.domain.service;
 
 import com.dati.base.exception.DatiException;
+import com.dati.datasource.repository.po.TableInfoPO;
 import com.dati.semantic.domain.SemanticEntityType;
 import com.dati.semantic.domain.model.Term;
 import com.dati.semantic.domain.model.TermRelation;
+import com.dati.datasource.repository.dao.TableInfoDAO;
 import com.dati.semantic.repository.dao.SubjectTableDAO;
 import com.dati.semantic.repository.dao.TermDAO;
 import com.dati.semantic.repository.dao.TermRelationDAO;
+import com.dati.semantic.repository.mapper.TermMapper;
 import com.dati.semantic.repository.mapper.TermRelationMapper;
 import com.dati.semantic.repository.po.EntityReference;
 import com.dati.semantic.repository.po.SemanticSearchDocument;
@@ -16,7 +19,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -26,13 +32,16 @@ public class TermService {
     private final TermDAO termDAO;
     private final TermRelationDAO termRelationDAO;
     private final SubjectTableDAO subjectTableDAO;
+    private final TableInfoDAO tableInfoDAO;
     private final SemanticIndexService semanticIndexService;
 
     public TermService(TermDAO termDAO, TermRelationDAO termRelationDAO,
-                       SubjectTableDAO subjectTableDAO, SemanticIndexService semanticIndexService) {
+                       SubjectTableDAO subjectTableDAO, TableInfoDAO tableInfoDAO,
+                       SemanticIndexService semanticIndexService) {
         this.termDAO = termDAO;
         this.termRelationDAO = termRelationDAO;
         this.subjectTableDAO = subjectTableDAO;
+        this.tableInfoDAO = tableInfoDAO;
         this.semanticIndexService = semanticIndexService;
     }
 
@@ -42,10 +51,7 @@ public class TermService {
             throw new IllegalArgumentException("Term name cannot be null or empty");
         }
 
-        TermPO termPO = new TermPO();
-        termPO.setSubjectId(subjectId);
-        termPO.setName(name);
-        termPO.setDescription(description);
+        TermPO termPO = TermMapper.toPO(subjectId, name, description);
         termDAO.save(termPO);
 
         String id = termPO.getId();
@@ -119,7 +125,7 @@ public class TermService {
             termRelationDAO.deleteByTermIdAndTableId(termId, tableId);
         } else {
             termRelationDAO.findByTermIdAndTableIdAndFieldName(termId, tableId, fieldName)
-                    .ifPresent(relation -> termRelationDAO.delete(relation));
+                    .ifPresent(termRelationDAO::delete);
         }
     }
 
@@ -132,8 +138,10 @@ public class TermService {
 
     @Transactional(readOnly = true)
     public List<TermRelation> getTermRelations(String termId) {
-        return termRelationDAO.findByTermId(termId).stream()
-                .map(this::toTermRelation)
+        List<TermRelationPO> relationPOList = termRelationDAO.findByTermId(termId);
+        Map<String, TableInfoPO> tableInfoMap = getTableInfoMap(termId, relationPOList);
+        return relationPOList.stream()
+                .map(relation -> toTermRelation(relation, tableInfoMap))
                 .collect(Collectors.toList());
     }
 
@@ -142,6 +150,14 @@ public class TermService {
         TermPO termPO = termDAO.findById(id)
                 .orElseThrow(() -> new DatiException("Term not found: " + id));
         return toTerm(termPO);
+    }
+
+    @Transactional(readOnly = true)
+    public Term getTermByIdWithRelations(String id) {
+        Term term = getTermById(id);
+        List<TermRelation> relations = getTermRelations(id);
+        term.setRelations(relations);
+        return term;
     }
 
     private Term toTerm(TermPO po) {
@@ -155,13 +171,41 @@ public class TermService {
         return term;
     }
 
-    private TermRelation toTermRelation(TermRelationPO po) {
+    private Map<String, TableInfoPO> getTableInfoMap(String termId, List<TermRelationPO> relations) {
+        Set<String> tableIds = relations.stream()
+                .map(TermRelationPO::getTableId)
+                .filter(tableId -> tableId != null && !tableId.isBlank())
+                .collect(Collectors.toSet());
+        if (tableIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+
+        try {
+            return tableInfoDAO.findAllById(tableIds).stream()
+                    .collect(Collectors.toMap(TableInfoPO::getId, table -> table));
+        } catch (Exception e) {
+            log.warn("Failed to load table metadata for termId={}, tableIds={}", termId, tableIds, e);
+            return Collections.emptyMap();
+        }
+    }
+
+    private TermRelation toTermRelation(TermRelationPO po, Map<String, TableInfoPO> tableInfoMap) {
+        String tableName = null;
+        String schema = null;
+        TableInfoPO tableInfo = tableInfoMap.get(po.getTableId());
+        if (tableInfo != null) {
+            tableName = tableInfo.getName();
+            schema = tableInfo.getSchema();
+        }
+
         return TermRelation.builder()
                 .id(po.getId())
                 .termId(po.getTermId())
                 .entityType(po.getEntityType())
                 .tableId(po.getTableId())
                 .fieldName(po.getFieldName())
+                .tableName(tableName)
+                .schema(schema)
                 .build();
     }
 

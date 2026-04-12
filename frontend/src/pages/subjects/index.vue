@@ -79,7 +79,7 @@ const handleEdit = (subject: SubjectVO) => {
 const handleDelete = async (subject: SubjectVO) => {
   try {
     await ElMessageBox.confirm(
-      t("common.deleteConfirmMessage", { name: subject.name }),
+      t("common.confirmDelete", { name: subject.name }),
       t("common.warning"),
       {
         confirmButtonText: t("common.confirm"),
@@ -116,13 +116,13 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="p-5 md:p-6">
-    <div class="flex items-center justify-between gap-4 mb-6">
+  <div class="space-y-4 p-5 md:p-6">
+    <div class="flex flex-wrap items-center justify-between gap-3">
       <el-input
         v-model="searchKeyword"
         :placeholder="t('subject.searchPlaceholder')"
         clearable
-        class="max-w-sm"
+        class="w-full md:max-w-sm"
         @keyup.enter="handleSearch"
         @clear="handleClearSearch"
       >
@@ -130,17 +130,14 @@ onMounted(() => {
           <el-button :icon="Search" @click="handleSearch" />
         </template>
       </el-input>
-
       <el-button type="primary" :icon="Plus" @click="handleCreate">
         {{ t("subject.createButton") }}
       </el-button>
     </div>
 
-    <div v-if="subjectList.length === 0 && !loading" class="text-center text-gray-400 py-12">
-      {{ t("subject.noSubject") }}
-    </div>
+    <el-skeleton v-if="loading" :rows="6" animated />
 
-    <div v-else class="subject-grid">
+    <div v-else-if="subjectList.length > 0" class="subject-grid">
       <SubjectCard
         v-for="subject in subjectList"
         :key="subject.id"
@@ -151,7 +148,9 @@ onMounted(() => {
       />
     </div>
 
-    <div v-if="total > 0" class="flex items-center justify-between mt-6">
+    <el-empty v-else :description="t('subject.noSubject')" />
+
+    <div v-if="!loading && total > 0" class="mt-2 flex items-center justify-between">
       <span class="text-gray-500 text-sm">{{ t("common.total", { total }) }}</span>
       <el-pagination
         layout="sizes, prev, pager, next"

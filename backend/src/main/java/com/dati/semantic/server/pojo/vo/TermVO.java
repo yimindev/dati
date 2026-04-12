@@ -2,6 +2,7 @@ package com.dati.semantic.server.pojo.vo;
 
 import lombok.Data;
 import java.time.Instant;
+import java.util.List;
 
 @Data
 public class TermVO {
@@ -11,4 +12,5 @@ public class TermVO {
     private String description;
     private Instant createdAt;
     private Instant updatedAt;
+    private List<TermRelationVO> relations;
 }

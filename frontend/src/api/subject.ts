@@ -27,6 +27,7 @@ export interface TermRelationVO {
   entity_type: 'TABLE' | 'FIELD';
   table_id: string;
   table_name?: string;
+  schema?: string;
   field_name?: string;
 }
 
@@ -129,6 +130,17 @@ export function linkTermRelation(termId: string, body: LinkTermRelationRequest, 
   return post<IdResponse, LinkTermRelationRequest>(`/v1/terms/${encodeURIComponent(termId)}/relations`, body, signal);
 }
 
-export function unlinkTermRelation(termId: string, tableId: string, fieldName: string, signal?: AbortSignal): Promise<IdResponse> {
-  return del<IdResponse>(`/v1/terms/${encodeURIComponent(termId)}/relations`, { table_id: tableId, field_name: fieldName }, signal);
+export function unlinkTermRelation(
+  termId: string,
+  tableId: string,
+  fieldName: string | null,
+  signal?: AbortSignal
+): Promise<IdResponse> {
+  const encodedTableId = encodeURIComponent(tableId);
+  const encodedFieldName = encodeURIComponent(fieldName === null ? '_' : fieldName);
+  return del<IdResponse>(
+    `/v1/terms/${encodeURIComponent(termId)}/relations/${encodedTableId}/${encodedFieldName}`,
+    undefined,
+    signal
+  );
 }

@@ -2,6 +2,7 @@
 import type { SubjectVO } from '~/api/subject'
 import { formatDateTime } from '~/composables'
 import { useI18n } from 'vue-i18n'
+import { MoreFilled } from '@element-plus/icons-vue'
 
 const { t } = useI18n()
 
@@ -15,53 +16,64 @@ interface Emits {
   (e: 'click', subject: SubjectVO): void
 }
 
-defineProps<Props>()
-defineEmits<Emits>()
+const props = defineProps<Props>()
+const emit = defineEmits<Emits>()
+
+const handleCardClick = (event: MouseEvent) => {
+  const target = event.target as HTMLElement | null
+  if (target?.closest('[data-stop-card-click="true"]')) {
+    return
+  }
+  emit('click', props.subject)
+}
 </script>
 
 <template>
   <el-card
     class="subject-card cursor-pointer transition-all duration-200 hover:-translate-y-0.5"
     shadow="hover"
-    @click="$emit('click', subject)"
+    @click="handleCardClick"
   >
     <template #header>
       <div class="flex items-center justify-between">
-        <span class="font-medium">{{ subject.name }}</span>
-        <div class="flex gap-1" @click.stop>
-          <el-button type="primary" link @click="$emit('edit', subject)">
-            {{ t('common.edit') }}
-          </el-button>
-          <el-button type="danger" link @click="$emit('delete', subject)">
-            {{ t('common.delete') }}
-          </el-button>
-        </div>
+        <span class="truncate font-medium text-slate-800">{{ subject.name }}</span>
+        <el-dropdown trigger="click" data-stop-card-click="true">
+          <el-button text :icon="MoreFilled" data-stop-card-click="true" />
+          <template #dropdown>
+            <el-dropdown-menu data-stop-card-click="true">
+              <el-dropdown-item data-stop-card-click="true" @click="$emit('edit', subject)">{{ t('common.edit') }}</el-dropdown-item>
+              <el-dropdown-item data-stop-card-click="true" @click="$emit('delete', subject)">
+                <span class="text-red-500">{{ t('common.delete') }}</span>
+              </el-dropdown-item>
+            </el-dropdown-menu>
+          </template>
+        </el-dropdown>
       </div>
     </template>
 
     <template #default>
       <p
         v-if="subject.description"
-        class="text-gray-600 text-sm line-clamp-2 mb-3"
+        class="mb-3 line-clamp-2 min-h-10 text-sm text-slate-600"
       >
         {{ subject.description }}
       </p>
-      <p v-else class="text-gray-400 text-sm italic mb-3">
+      <p v-else class="mb-3 min-h-10 text-sm italic text-slate-400">
         {{ t('common.placeholder.description') }}
       </p>
 
-      <div class="text-xs text-gray-500 space-y-1">
-        <div v-if="subject.datasource_name">
-          <span class="text-gray-400">{{ t('datasource.connectionName') }}:</span>
-          {{ subject.datasource_name }}
+      <div class="space-y-1 text-xs text-slate-500">
+        <div v-if="subject.datasource_name" class="truncate">
+          <span class="text-slate-400">{{ t('datasource.connectionName') }}:</span>
+          <span class="ml-1">{{ subject.datasource_name }}</span>
         </div>
         <div v-if="subject.table_count !== undefined">
-          <span class="text-gray-400">{{ t('tableInfo.title') }}:</span>
-          {{ subject.table_count }}
+          <span class="text-slate-400">{{ t('tableInfo.title') }}:</span>
+          <span class="ml-1">{{ subject.table_count }}</span>
         </div>
         <div v-if="subject.updated_at">
-          <span class="text-gray-400">{{ t('common.updatedAt') }}:</span>
-          {{ formatDateTime(subject.updated_at) }}
+          <span class="text-slate-400">{{ t('common.updatedAt') }}:</span>
+          <span class="ml-1">{{ formatDateTime(subject.updated_at) }}</span>
         </div>
       </div>
     </template>

@@ -16,7 +16,6 @@ Subject (1) ─────< SubjectTable (M:N) >───── (1) TableInfo
             └────< TermRelation (M:1)
                         ├── TABLE
                         ├── FIELD
-                        └── FIELD_VALUE
 ```
 
 同时维护 Elasticsearch 索引（`SemanticSearchDocument`）实现跨语义实体的全文搜索。
@@ -97,13 +96,13 @@ backend/src/main/java/com/dati/semantic/
 
 | Method | Path | 说明 |
 |--------|------|------|
-| GET | `/v1/terms?subjectId=` | 查询主题下的术语 |
+| GET | `/v1/subjects/{subjectId}/terms` | 查询主题下的术语 |
 | GET | `/v1/terms/{id}` | 获取术语详情（含关联） |
-| POST | `/v1/terms?subjectId=` | 创建术语 |
+| POST | `/v1/subjects/{subjectId}/terms` | 创建术语 |
 | PUT | `/v1/terms/{id}` | 更新术语 |
 | DELETE | `/v1/terms/{id}` | 删除术语 |
 | POST | `/v1/terms/{id}/relations` | 关联术语到表/字段 |
-| DELETE | `/v1/terms/{id}/relations?tableId=&fieldName=` | 取消关联 |
+| DELETE | `/v1/terms/{id}/relations/{tableId}/{fieldNameOr_}` | 取消关联 |
 
 ## 前端架构
 
@@ -124,7 +123,7 @@ frontend/src/pages/subjects/
 | `SubjectTableList` | `components/` | 主题关联的表管理（含 schema 选择） |
 | `TermManager` | `components/` | 术语的增删改及关联管理 |
 
-### 前端 API 封装（`frontend/src/api/semantic.ts`）
+### 前端 API 封装（`frontend/src/api/subject.ts`）
 
 ```typescript
 // Subject
@@ -145,7 +144,7 @@ createTerm(subjectId, body): IdResponse
 updateTerm(id, body): void
 deleteTerm(id): void
 linkTermRelation(termId, body): void
-unlinkTermRelation(termId, tableId, fieldName): void
+unlinkTermRelation(termId, tableId, fieldNameOrNull): void
 ```
 
 ## 技术要点

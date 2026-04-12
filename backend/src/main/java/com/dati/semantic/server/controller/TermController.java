@@ -42,7 +42,8 @@ public class TermController {
 
     @GetMapping("/terms/{id}")
     public TermVO getTerm(@PathVariable String id) {
-        return termAssembler.toVO(termService.getTermById(id));
+        Term term = termService.getTermByIdWithRelations(id);
+        return termAssembler.toVO(term, term.getRelations());
     }
 
     @GetMapping("/subjects/{subjectId}/terms")

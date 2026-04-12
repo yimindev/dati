@@ -31,17 +31,12 @@ const activeMenu = computed(() => {
         </el-icon>
         <template #title> {{ t("layout.side.mcpBuilder") }} </template>
       </el-menu-item>
-      <el-sub-menu index="/semantic">
-        <template #title>
-          <el-icon>
-            <IconMenu />
-          </el-icon>
-          <span>{{ t("layout.side.semanticManagement") }}</span>
-        </template>
-        <el-menu-item index="/subjects">
-          <span>{{ t("subject.title") }}</span>
-        </el-menu-item>
-      </el-sub-menu>
+      <el-menu-item index="/subjects">
+        <el-icon>
+          <IconMenu />
+        </el-icon>
+        <template #title> {{ t("subject.title") }} </template>
+      </el-menu-item>
       <el-menu-item index="/datasources">
         <el-icon>
           <span class="icon-[codicon--database]"></span>

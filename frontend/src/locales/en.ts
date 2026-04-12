@@ -7,6 +7,7 @@ export default {
     // General Actions
     save: "Save",
     cancel: "Cancel",
+    close: "Close",
     confirm: "Confirm",
     edit: "Edit",
     delete: "Delete",
@@ -16,6 +17,7 @@ export default {
     search: "Search",
     testConnection: "Test Connection",
     back: "Back",
+    nextStep: "Next",
     refresh: "Refresh",
     yes: "Yes",
     no: "No",
@@ -23,6 +25,7 @@ export default {
     all: "Select All",
     none: "Deselect All",
     clear: "Clear",
+    selected: "Selected",
 
     // Common Fields
     id: "ID",
@@ -112,15 +115,63 @@ export default {
 
     // Fields
     datasource: "Associated Data Source",
-    tableCount: "Associated Tables",
     selectDatasource: "Select a data source",
     tableManagement: "Table Management",
     termManagement: "Term Management",
     basicInfo: "Basic Information",
 
+    // Actions
+    addTable: "Add Table",
+    removeTable: "Remove Table",
+    addTerm: "Add Term",
+    editTerm: "Edit Term",
+    deleteTerm: "Delete Term",
+    addRelation: "Add Relation",
+    removeRelation: "Remove Relation",
+    manageRelation: "Manage Relation",
+    linkedEntities: "Linked Entities",
+
+    // Term Relations
+    selectTable: "Please select a table",
+    tableLevel: "Table",
+    fieldLevel: "Field",
+
+    // Relation Dialog
+    selectType: "Select Type",
+    selectTableStep: "Select Table",
+    selectTarget: "Select Target",
+    searchTable: "Search table...",
+    filterSchema: "Schema",
+    searchField: "Search field...",
+    existingRelations: "Existing Relations",
+    noRelations: "No relations yet",
+    noSearchResults: "No matching results",
+    noFieldsInTable: "No fields found in this table",
+    relationAlreadyExists: "The selected relation already exists",
+    fieldConfig: "Field Configuration",
+    tableLevelRelation: "Table-level Relation",
+
+    // List Page
+    createButton: "Create Subject",
+    searchPlaceholder: "Search subject name",
+    noSubject: "No subjects yet",
+    noTables: "No linked tables",
+    noTerms: "No terms yet",
+    removeTableConfirm: "Are you sure you want to remove table \"{name}\"?",
+    removeTermConfirm: "Are you sure you want to delete term \"{name}\"?",
+    removeRelationConfirm: "Are you sure you want to remove this relation?",
+
     // Success Messages
     createSuccess: "Subject created successfully",
     updateSuccess: "Subject updated successfully",
+    deleteSuccess: "Subject deleted successfully",
+    addTableSuccess: "Table added successfully",
+    removeTableSuccess: "Table removed successfully",
+    addTermSuccess: "Term created successfully",
+    updateTermSuccess: "Term updated successfully",
+    deleteTermSuccess: "Term deleted successfully",
+    addRelationResult: "{added} added, {skipped} duplicates skipped",
+    removeRelationSuccess: "Relation removed successfully",
   },
 
   tableInfo: {
