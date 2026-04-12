@@ -27,7 +27,7 @@ target/
 # H2 Database files
 *.mv.db
 *.trace.db
-/.claude/skills/
+/.agents/skills/
 /.superpowers/
 /.playwright-cli/
 /design/
