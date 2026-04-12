@@ -1,7 +1,9 @@
 package com.dati.semantic.repository.po;
 
 import com.dati.base.pojo.BasePO;
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
 
