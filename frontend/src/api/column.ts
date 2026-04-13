@@ -9,7 +9,7 @@ export type TableColumnVO = {
   primary_key?: boolean;
   default_value?: string | null;
   description?: string;
-  display_name?: string;
+  aliases?: string[];
   ordinal_position?: number;
 };
 

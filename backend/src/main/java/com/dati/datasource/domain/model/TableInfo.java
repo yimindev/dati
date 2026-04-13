@@ -4,6 +4,9 @@ import com.dati.base.pojo.BaseResource;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @EqualsAndHashCode(callSuper = true)
 @Data
 public class TableInfo extends BaseResource {
@@ -12,6 +15,6 @@ public class TableInfo extends BaseResource {
 
     private String schema;
 
-    private String displayName;
+    private List<String> aliases = new ArrayList<>();
 
 }

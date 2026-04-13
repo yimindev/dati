@@ -59,7 +59,7 @@ public class ColumnService {
         ColumnInfoPO columnInfoPO = columnInfoDAO.findById(id).orElseThrow();
         columnInfoPO.setName(columnInfo.getName());
         columnInfoPO.setColumnType(columnInfo.getColumnType());
-        columnInfoPO.setDisplayName(columnInfo.getDisplayName());
+        columnInfoPO.setAliases(columnInfo.getAliases());
         columnInfoPO.setDescription(columnInfo.getDescription());
         columnInfoDAO.save(columnInfoPO);
 
@@ -71,13 +71,13 @@ public class ColumnService {
                 .build();
         List<String> columnKeywords = new ArrayList<>();
         columnKeywords.add(columnInfoPO.getName());
-        if (StringUtils.isNotBlank(columnInfoPO.getDisplayName())) {
-            columnKeywords.add(columnInfoPO.getDisplayName());
+        if (columnInfoPO.getAliases() != null) {
+            columnKeywords.addAll(columnInfoPO.getAliases());
         }
         SemanticSearchDocument doc = SemanticSearchDocument.builder()
                 .id("field:" + id)
                 .type(SemanticEntityType.FIELD)
-                .keywords(columnKeywords)
+                .keywords(columnKeywords.stream().distinct().toList())
                 .description(columnInfo.getDescription())
                 .entity(entity)
                 .build();
@@ -109,12 +109,11 @@ public class ColumnService {
             
             String dbComment = column.comment();
             if (StringUtils.isNotBlank(dbComment)) {
-                columnInfoPO.setDisplayName(dbComment);
-            } else if (existing != null) {
-                columnInfoPO.setDisplayName(existing.getDisplayName());
+                columnInfoPO.setDescription(dbComment);
             }
             
             if (existing != null) {
+                columnInfoPO.setAliases(existing.getAliases());
                 columnInfoPO.setDescription(existing.getDescription());
             }
             
@@ -135,13 +134,13 @@ public class ColumnService {
                     .build();
             List<String> columnKeywords = new ArrayList<>();
             columnKeywords.add(po.getName());
-            if (StringUtils.isNotBlank(po.getDisplayName())) {
-                columnKeywords.add(po.getDisplayName());
+            if (po.getAliases() != null) {
+                columnKeywords.addAll(po.getAliases());
             }
             return SemanticSearchDocument.builder()
                     .id("field:" + po.getId())
                     .type(SemanticEntityType.FIELD)
-                    .keywords(columnKeywords)
+                    .keywords(columnKeywords.stream().distinct().toList())
                     .description(po.getDescription())
                     .entity(entity)
                     .build();

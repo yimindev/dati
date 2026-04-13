@@ -4,9 +4,10 @@ meta:
 </route>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue";
+import { computed, nextTick, onMounted, ref } from "vue";
 import { useRoute } from "vue-router";
 import { ElMessage } from "element-plus";
+import type { InputInstance } from "element-plus";
 import { Search } from "@element-plus/icons-vue";
 import { useI18n } from "vue-i18n";
 import { listTableColumns, saveColumnMetadata, type TableColumnVO } from "~/api/column";
@@ -74,8 +75,37 @@ const handlePageSizeChange = (ps: number) => {
 };
 
 const handleConfigMetadata = (col: TableColumnVO) => {
-  currentColumn.value = { ...col };
+  currentColumn.value = { ...col, aliases: col.aliases || [] };
   metadataDialogVisible.value = true;
+};
+
+// 别名管理
+const newAlias = ref('');
+const newAliasInputVisible = ref(false);
+const newAliasInputRef = ref<InputInstance>();
+
+const handleNewAliasConfirm = () => {
+  if (!currentColumn.value || !newAlias.value.trim()) return;
+  if (!currentColumn.value.aliases) {
+    currentColumn.value.aliases = [];
+  }
+  if (!currentColumn.value.aliases.includes(newAlias.value.trim())) {
+    currentColumn.value.aliases.push(newAlias.value.trim());
+  }
+  newAliasInputVisible.value = false;
+  newAlias.value = '';
+};
+
+const showNewAliasInput = () => {
+  newAliasInputVisible.value = true;
+  nextTick(() => {
+    newAliasInputRef.value?.focus();
+  });
+};
+
+const removeAlias = (alias: string) => {
+  if (!currentColumn.value?.aliases) return;
+  currentColumn.value.aliases = currentColumn.value.aliases.filter(a => a !== alias);
 };
 
 const handleSaveMetadata = async () => {
@@ -128,7 +158,19 @@ onMounted(() => {
     <!-- 列表 -->
     <el-table :data="columnList" v-loading="loading" stripe>
       <el-table-column prop="name" :label="t('column.columnName')" min-width="180" />
-      <el-table-column prop="display_name" :label="t('column.displayName')" min-width="160" />
+      <el-table-column :label="t('common.aliases')" min-width="180">
+        <template #default="{ row }">
+          <el-tag
+            v-for="alias in row.aliases"
+            :key="alias"
+            size="small"
+            class="mr-1"
+          >
+            {{ alias }}
+          </el-tag>
+          <span v-if="!row.aliases?.length" class="text-gray-400">-</span>
+        </template>
+      </el-table-column>
       <el-table-column prop="description" :label="t('column.description')" min-width="160" />
       <el-table-column prop="column_type" :label="t('column.type')" min-width="120" />
 
@@ -172,8 +214,30 @@ onMounted(() => {
           <el-input v-model="currentColumn.name" disabled />
         </el-form-item>
 
-        <el-form-item :label="t('column.displayName')">
-          <el-input v-model="currentColumn.display_name" :placeholder="t('column.enterDescription')" />
+        <el-form-item :label="t('common.aliases')">
+          <div class="flex gap-2 flex-wrap">
+            <el-tag
+              v-for="alias in currentColumn.aliases"
+              :key="alias"
+              closable
+              :disable-transitions="false"
+              @close="removeAlias(alias)"
+            >
+              {{ alias }}
+            </el-tag>
+            <el-input
+              v-if="newAliasInputVisible"
+              ref="newAliasInputRef"
+              v-model="newAlias"
+              class="w-20"
+              size="small"
+              @keyup.enter="handleNewAliasConfirm"
+              @blur="handleNewAliasConfirm"
+            />
+            <el-button v-else size="small" @click="showNewAliasInput">
+              + {{ t('common.aliases') }}
+            </el-button>
+          </div>
         </el-form-item>
 
         <el-form-item :label="t('column.description')">

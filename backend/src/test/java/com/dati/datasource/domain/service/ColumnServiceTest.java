@@ -251,8 +251,8 @@ class ColumnServiceTest {
     }
 
     @Test
-    @DisplayName("同步列 - 数据库 comment 为空时应保留旧的 displayName 和 description")
-    void syncColumns_shouldPreserveOldDisplayNameAndDescriptionWhenDbCommentEmpty() throws SQLException {
+    @DisplayName("同步列 - 数据库 comment 为空时应保留旧的 aliases 和 description")
+    void syncColumns_shouldPreserveOldAliasesAndDescriptionWhenDbCommentEmpty() throws SQLException {
         // given
         when(tableInfoDAO.findById(TestFixtures.TEST_TABLE_ID)).thenReturn(Optional.of(testTableInfoPO));
         
@@ -261,7 +261,7 @@ class ColumnServiceTest {
         existingColumn.setTableId(TestFixtures.TEST_TABLE_ID);
         existingColumn.setName("col1");
         existingColumn.setColumnType("VARCHAR");
-        existingColumn.setDisplayName("Old Display Name");
+        existingColumn.setAliases(List.of("order_no", "订单号"));
         existingColumn.setDescription("User maintained description");
         
         when(columnInfoDAO.findByTableId(TestFixtures.TEST_TABLE_ID)).thenReturn(List.of(existingColumn));
@@ -284,15 +284,15 @@ class ColumnServiceTest {
             verify(columnInfoDAO).saveAll(argThat(list -> {
                 List<ColumnInfoPO> columns = (List<ColumnInfoPO>) list;
                 ColumnInfoPO savedCol = columns.getFirst();
-                return savedCol.getDisplayName().equals("Old Display Name") &&
+                return savedCol.getAliases().equals(List.of("order_no", "订单号")) &&
                        savedCol.getDescription().equals("User maintained description");
             }));
         }
     }
 
     @Test
-    @DisplayName("同步列 - 数据库 comment 不为空时应覆盖 displayName")
-    void syncColumns_shouldOverwriteDisplayNameWhenDbCommentNotEmpty() throws SQLException {
+    @DisplayName("同步列 - 旧列存在时应保留 aliases 和 description（忽略新的 DB comment）")
+    void syncColumns_shouldPreserveOldAliasesAndDescriptionWhenExistingColumnFound() throws SQLException {
         // given
         when(tableInfoDAO.findById(TestFixtures.TEST_TABLE_ID)).thenReturn(Optional.of(testTableInfoPO));
         
@@ -301,8 +301,8 @@ class ColumnServiceTest {
         existingColumn.setTableId(TestFixtures.TEST_TABLE_ID);
         existingColumn.setName("col1");
         existingColumn.setColumnType("VARCHAR");
-        existingColumn.setDisplayName("Old Display Name");
-        existingColumn.setDescription("User maintained description");
+        existingColumn.setAliases(List.of("order_no", "订单号"));
+        existingColumn.setDescription("Old user description");
         
         when(columnInfoDAO.findByTableId(TestFixtures.TEST_TABLE_ID)).thenReturn(List.of(existingColumn));
         
@@ -324,8 +324,8 @@ class ColumnServiceTest {
             verify(columnInfoDAO).saveAll(argThat(list -> {
                 List<ColumnInfoPO> columns = (List<ColumnInfoPO>) list;
                 ColumnInfoPO savedCol = columns.getFirst();
-                return savedCol.getDisplayName().equals("New DB Comment") &&
-                       savedCol.getDescription().equals("User maintained description");
+                return savedCol.getAliases().equals(List.of("order_no", "订单号")) &&
+                       savedCol.getDescription().equals("Old user description");
             }));
         }
     }

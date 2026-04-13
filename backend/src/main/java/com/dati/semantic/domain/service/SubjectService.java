@@ -180,7 +180,7 @@ public class SubjectService {
                     ti.setDescription(tableInfo.getDescription());
                     ti.setDatasourceId(tableInfo.getDataSourceId());
                     ti.setSchema(tableInfo.getSchema());
-                    ti.setDisplayName(tableInfo.getDisplayName());
+                    ti.setAliases(tableInfo.getAliases());
                     ti.setCreatedAt(tableInfo.getCreatedAt());
                     ti.setUpdatedAt(tableInfo.getUpdatedAt());
                     return ti;

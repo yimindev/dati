@@ -13,7 +13,7 @@ public class ColumnAssembler extends BaseAssembler {
         super.copyBaseInfo(columnInfo, columnInfoVO);
         columnInfoVO.setTableId(columnInfo.getTableId());
         columnInfoVO.setColumnType(columnInfo.getColumnType());
-        columnInfoVO.setDisplayName(columnInfo.getDisplayName());
+        columnInfoVO.setAliases(columnInfo.getAliases());
         return columnInfoVO;
     }
 
@@ -22,7 +22,7 @@ public class ColumnAssembler extends BaseAssembler {
         super.copyBaseInfo(columnInfoVO, columnInfo);
         columnInfo.setTableId(columnInfoVO.getTableId());
         columnInfo.setColumnType(columnInfoVO.getColumnType());
-        columnInfo.setDisplayName(columnInfoVO.getDisplayName());
+        columnInfo.setAliases(columnInfoVO.getAliases());
         return columnInfo;
     }
 

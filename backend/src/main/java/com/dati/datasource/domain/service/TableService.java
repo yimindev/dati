@@ -70,6 +70,7 @@ public class TableService {
             tableInfo.setName(request.getName());
             tableInfo.setSchema(request.getSchema());
             tableInfo.setDescription(null);
+            tableInfo.setAliases(new ArrayList<>());
             tableAssembler.fillUsersFromRequest(tableInfo);
 
             TableInfoPO savedTablePO = tableInfoDAO.save(TableMapper.toTableInfoPO(tableInfo));
@@ -82,13 +83,13 @@ public class TableService {
                     .build();
             List<String> tableKeywords = new ArrayList<>();
             tableKeywords.add(tableInfo.getName());
-            if (StringUtils.isNotBlank(tableInfo.getDisplayName())) {
-                tableKeywords.add(tableInfo.getDisplayName());
+            if (tableInfo.getAliases() != null) {
+                tableKeywords.addAll(tableInfo.getAliases());
             }
             docsToSave.add(SemanticSearchDocument.builder()
                     .id("table:" + tableId)
                     .type(SemanticEntityType.TABLE)
-                    .keywords(tableKeywords)
+                    .keywords(tableKeywords.stream().distinct().toList())
                     .description(tableInfo.getDescription())
                     .entity(tableEntity)
                     .build());
@@ -100,8 +101,8 @@ public class TableService {
                     columnInfo.setTableId(tableId);
                     columnInfo.setName(column.name());
                     columnInfo.setColumnType(column.type());
-                    columnInfo.setDisplayName(column.comment());
-                    columnInfo.setDescription(null);
+                    columnInfo.setDescription(column.comment());
+                    columnInfo.setAliases(new ArrayList<>());
                     tableAssembler.fillUsersFromRequest(columnInfo);
                     ColumnInfoPO savedColumnPO = columnInfoDAO.save(ColumnMapper.toColumnInfoPO(columnInfo));
 
@@ -112,13 +113,13 @@ public class TableService {
                             .build();
                     List<String> columnKeywords = new ArrayList<>();
                     columnKeywords.add(column.name());
-                    if (StringUtils.isNotBlank(columnInfo.getDisplayName())) {
-                        columnKeywords.add(columnInfo.getDisplayName());
+                    if (columnInfo.getAliases() != null) {
+                        columnKeywords.addAll(columnInfo.getAliases());
                     }
                     docsToSave.add(SemanticSearchDocument.builder()
                             .id("field:" + savedColumnPO.getId())
                             .type(SemanticEntityType.FIELD)
-                            .keywords(columnKeywords)
+                            .keywords(columnKeywords.stream().distinct().toList())
                             .description(columnInfo.getDescription())
                             .entity(columnEntity)
                             .build());
@@ -148,7 +149,7 @@ public class TableService {
     public void updateTable(String tableId, TableInfo tableInfo) {
         TableInfoPO existingPO = tableInfoDAO.findById(tableId).orElseThrow();
 
-        existingPO.setDisplayName(tableInfo.getDisplayName());
+        existingPO.setAliases(tableInfo.getAliases());
         existingPO.setDescription(tableInfo.getDescription());
         tableInfoDAO.save(existingPO);
 
@@ -159,14 +160,14 @@ public class TableService {
 
         List<String> tableKeywords = new ArrayList<>();
         tableKeywords.add(existingPO.getName());
-        if (StringUtils.isNotBlank(tableInfo.getDisplayName())) {
-            tableKeywords.add(tableInfo.getDisplayName());
+        if (tableInfo.getAliases() != null) {
+            tableKeywords.addAll(tableInfo.getAliases());
         }
 
         SemanticSearchDocument doc = SemanticSearchDocument.builder()
                 .id("table:" + tableId)
                 .type(SemanticEntityType.TABLE)
-                .keywords(tableKeywords)
+                .keywords(tableKeywords.stream().distinct().toList())
                 .description(tableInfo.getDescription())
                 .entity(entity)
                 .build();

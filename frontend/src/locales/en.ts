@@ -42,6 +42,8 @@ export default {
     username: "Username",
     password: "Password",
     tableName: "Table Name",
+    aliases: "Aliases",
+    aliasesPlaceholder: "Enter alias and press Enter to add",
 
     // Common Messages
     saveSuccess: "Saved successfully",
@@ -185,9 +187,6 @@ export default {
     columnSettings: "Column Settings",
     configInfo: "Edit",
 
-    // Fields
-    displayName: "Display Name",
-
     // Form Related
     selectSchema: "Select Schema",
     availableTables: "Available Tables",
@@ -213,7 +212,6 @@ export default {
     columnName: "Column Name",
     description: "Description",
     type: "Type",
-    displayName: "Display Name",
 
     // Search
     searchPlaceholder: "Search by column name or description",

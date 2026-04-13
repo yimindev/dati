@@ -4,7 +4,7 @@ import { get, post, put, del } from "./http";
 export interface TableInfoVO extends BaseResourceVO {
   schema: string;
   datasource_id: string;
-  display_name?: string;
+  aliases?: string[];
 }
 
 export function listTableInfos(datasourceId: string, page: number, size: number, keyword?: string){

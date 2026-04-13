@@ -6,8 +6,12 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.io.Serial;
+import java.util.ArrayList;
+import java.util.List;
 
 @Getter
 @Setter
@@ -24,7 +28,8 @@ public class TableInfoPO extends BaseResourcePO {
     @Column(length = 64)
     private String schema;
 
-    @Column(length = 256)
-    private String displayName;
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(columnDefinition = "json")
+    private List<String> aliases = new ArrayList<>();
 
 }
