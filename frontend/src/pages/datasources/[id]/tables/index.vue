@@ -11,7 +11,7 @@ import type { InputInstance } from "element-plus";
 import { Plus, Search } from "@element-plus/icons-vue";
 import { useI18n } from "vue-i18n";
 import { listTableInfos, getAddedTableNames, batchAddTables, syncColumns, deleteTable, updateTable, type TableInfoVO } from "~/api/tableinfo.ts";
-import { getSchemas, getTables } from "~/api/datasource.ts";
+import { getSchemas, getTables, type TableVO } from "~/api/datasource.ts";
 import { formatDateTime } from "~/composables";
 
 const { t } = useI18n();
@@ -35,7 +35,7 @@ const currentTable = ref<TableInfoVO | null>(null);
 const addTableDialogVisible = ref(false);
 const schemas = ref<string[]>([]);
 const selectedSchema = ref("");
-const availableTables = ref<string[]>([]);
+const availableTables = ref<TableVO[]>([]);
 const selectedTables = ref<string[]>([]);
 const addedTableNames = ref<string[]>([]);
 const schemaLoading = ref(false);
@@ -51,9 +51,9 @@ interface TransferItem {
 
 const transferData = computed<TransferItem[]>(() => {
   return availableTables.value.map(table => ({
-    key: table,
-    label: table,
-    disabled: addedTableNames.value.includes(table),
+    key: table.name,
+    label: table.name,
+    disabled: addedTableNames.value.includes(table.name),
   }));
 });
 

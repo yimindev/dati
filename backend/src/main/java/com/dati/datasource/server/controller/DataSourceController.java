@@ -12,6 +12,7 @@ import com.dati.datasource.server.assembler.DSAssembler;
 import com.dati.datasource.server.pojo.DatasourceVO;
 import com.dati.datasource.server.pojo.SqlExecuteRequest;
 import com.dati.db.Column;
+import com.dati.db.Table;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Sort;
@@ -89,7 +90,7 @@ public class DataSourceController {
     }
 
     @GetMapping("/{id}/schemas/{schema}/tables")
-    public List<String> getTables(@PathVariable String id, @PathVariable String schema, @RequestParam(name = "catalog", required = false) String catalog) {
+    public List<Table> getTables(@PathVariable String id, @PathVariable String schema, @RequestParam(name = "catalog", required = false) String catalog) {
         try {
             return jdbcMetaService.getTables(id, catalog, schema);
         } catch (SQLException e) {

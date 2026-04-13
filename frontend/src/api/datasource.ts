@@ -32,6 +32,12 @@ export interface ColumnVO {
   is_auto_increment?: boolean;
 }
 
+// 表信息
+export interface TableVO {
+  name: string;
+  comment?: string;
+}
+
 // 执行 SQL 的请求体
 export interface SqlExecuteRequest {
   sql: string;
@@ -86,8 +92,8 @@ export function getTables(
   schema: string,
   params?: CatalogParam,
   signal?: AbortSignal
-): Promise<string[]> {
-  return get<string[]>(
+): Promise<TableVO[]> {
+  return get<TableVO[]>(
     `/v1/data-sources/${encodeURIComponent(id)}/schemas/${encodeURIComponent(schema)}/tables`,
     params,
     signal

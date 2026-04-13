@@ -7,6 +7,7 @@ import com.dati.datasource.domain.service.JdbcMetaService;
 import com.dati.datasource.server.assembler.DSAssembler;
 import com.dati.datasource.server.pojo.DatasourceVO;
 import com.dati.db.Column;
+import com.dati.db.Table;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -176,7 +177,7 @@ class DataSourceControllerTest {
     void getTables_shouldReturnTableList() throws Exception {
         // given
         when(jdbcMetaService.getTables(TestFixtures.TEST_DATASOURCE_ID, null, "public"))
-            .thenReturn(List.of("users", "orders", "products"));
+            .thenReturn(List.of(new Table("users", "用户表"), new Table("orders", "订单表"), new Table("products", "产品表")));
 
         // when & then
         mockMvc.perform(get("/v1/data-sources/{id}/schemas/{schema}/tables", 
@@ -184,7 +185,8 @@ class DataSourceControllerTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$").isArray())
             .andExpect(jsonPath("$", hasSize(3)))
-            .andExpect(jsonPath("$[0]").value("users"));
+            .andExpect(jsonPath("$[0].name").value("users"))
+            .andExpect(jsonPath("$[0].comment").value("用户表"));
     }
 
     @Test

@@ -3,6 +3,7 @@ package com.dati.db.client;
 import com.dati.db.Column;
 import com.dati.db.HikariPoolManager;
 import com.dati.db.JdbcConnector;
+import com.dati.db.Table;
 import jakarta.annotation.Nullable;
 
 
@@ -45,12 +46,14 @@ public abstract class AbstractDbClient implements DbClient {
     }
 
     @Override
-    public List<String> getTables(JdbcConnector jdbcConnector, @Nullable String catalog, String schema) throws SQLException {
-        List<String> tables = new ArrayList<>();
+    public List<Table> getTables(JdbcConnector jdbcConnector, @Nullable String catalog, String schema) throws SQLException {
+        List<Table> tables = new ArrayList<>();
         try (Connection connection = HikariPoolManager.getConnection(jdbcConnector);
              ResultSet resultSet = connection.getMetaData().getTables(catalog, schema, null, new String[] { "TABLE", "VIEW"})) {
             while (resultSet.next()) {
-                tables.add(resultSet.getString(TABLE_COLUMN));
+                String tableName = resultSet.getString(TABLE_COLUMN);
+                String tableComment = resultSet.getString("REMARKS");
+                tables.add(new Table(tableName, tableComment));
             }
         }
         return tables;

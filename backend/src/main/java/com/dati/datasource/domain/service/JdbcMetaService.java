@@ -3,6 +3,7 @@ package com.dati.datasource.domain.service;
 import com.dati.db.Column;
 import com.dati.db.HikariPoolManager;
 import com.dati.db.JdbcConnector;
+import com.dati.db.Table;
 import com.dati.db.client.DbClient;
 import com.dati.db.client.DbClientFactory;
 import com.dati.datasource.domain.model.DataSource;
@@ -40,7 +41,7 @@ public class JdbcMetaService {
         return dbClient.getSchemas(new JdbcConnector(dataSource), catalog);
     }
 
-    public List<String> getTables(String dataSourceId, @Nullable String catalog, String schema) throws SQLException {
+    public List<Table> getTables(String dataSourceId, @Nullable String catalog, String schema) throws SQLException {
         DataSourcePO dataSourcePO = dataSourceDAO.findById(dataSourceId).orElseThrow();
         DbClient dbClient = DbClientFactory.getDbClient(dataSourcePO.getType());
         DataSource dataSource = DSMapper.toDataSource(dataSourcePO);

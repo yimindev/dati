@@ -15,6 +15,7 @@ import com.dati.datasource.repository.po.TableInfoPO;
 import com.dati.datasource.server.assembler.TableAssembler;
 import com.dati.datasource.server.pojo.AddTableRequest;
 import com.dati.db.Column;
+import com.dati.db.Table;
 import com.dati.semantic.domain.SemanticEntityType;
 import com.dati.semantic.domain.service.SemanticIndexService;
 import com.dati.semantic.repository.po.EntityReference;
@@ -24,8 +25,11 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -61,15 +65,28 @@ public class TableService {
 
     @Transactional
     public List<String> batchAddTables(String datasourceId, List<AddTableRequest> tables) {
+        if (tables.isEmpty()) {
+            return Collections.emptyList();
+        }
+
         List<String> tableIds = new ArrayList<>();
         List<SemanticSearchDocument> docsToSave = new ArrayList<>();
+
+        Map<String, String> tableCommentMap;
+        try {
+            List<Table> dbTables = jdbcMetaService.getTables(datasourceId, null, tables.getFirst().getSchema());
+            tableCommentMap = dbTables.stream()
+                    .collect(Collectors.toMap(Table::name, t -> t.comment() != null ? t.comment() : ""));
+        } catch (SQLException e) {
+            throw new RuntimeException("Failed to get table comments", e);
+        }
 
         for (AddTableRequest request : tables) {
             TableInfo tableInfo = new TableInfo();
             tableInfo.setDatasourceId(datasourceId);
             tableInfo.setName(request.getName());
             tableInfo.setSchema(request.getSchema());
-            tableInfo.setDescription(null);
+            tableInfo.setDescription(tableCommentMap.getOrDefault(request.getName(), null));
             tableInfo.setAliases(new ArrayList<>());
             tableAssembler.fillUsersFromRequest(tableInfo);
 
