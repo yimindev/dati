@@ -4,7 +4,7 @@ meta:
 </route>
 
 <script setup lang="ts">
-import { onMounted, ref, computed } from "vue";
+import { onMounted, ref, computed, nextTick } from "vue";
 import { useRoute } from "vue-router";
 import { ElMessage } from "element-plus";
 import { useI18n } from "vue-i18n";
@@ -36,11 +36,39 @@ const loadSubject = async () => {
   }
 };
 
+const newAlias = ref('')
+const newAliasInputVisible = ref(false)
+const newAliasInputRef = ref()
+
+const showNewAliasInput = () => {
+  newAliasInputVisible.value = true
+  nextTick(() => {
+    newAliasInputRef.value?.focus()
+  })
+}
+
+const handleNewAliasConfirm = () => {
+  const value = newAlias.value.trim()
+  if (value && !editForm.value.aliases?.includes(value)) {
+    if (!editForm.value.aliases) {
+      editForm.value.aliases = []
+    }
+    editForm.value.aliases.push(value)
+  }
+  newAlias.value = ''
+  newAliasInputVisible.value = false
+}
+
+const removeAlias = (alias: string) => {
+  editForm.value.aliases = editForm.value.aliases?.filter(a => a !== alias) || []
+}
+
 const handleEdit = () => {
   if (!subject.value) return;
   editForm.value = {
     name: subject.value.name,
     description: subject.value.description || undefined,
+    aliases: subject.value.aliases ? [...subject.value.aliases] : [],
   };
   isEditing.value = true;
 };
@@ -90,6 +118,32 @@ onMounted(() => {
                 <el-input v-model="editForm.name" />
               </el-form-item>
 
+              <el-form-item :label="t('common.aliases')">
+                <div class="flex gap-2 flex-wrap">
+                  <el-tag
+                    v-for="alias in editForm.aliases"
+                    :key="alias"
+                    closable
+                    :disable-transitions="false"
+                    @close="removeAlias(alias)"
+                  >
+                    {{ alias }}
+                  </el-tag>
+                  <el-input
+                    v-if="newAliasInputVisible"
+                    ref="newAliasInputRef"
+                    v-model="newAlias"
+                    class="w-20"
+                    size="small"
+                    @keyup.enter="handleNewAliasConfirm"
+                    @blur="handleNewAliasConfirm"
+                  />
+                  <el-button v-else size="small" @click="showNewAliasInput">
+                    + {{ t('common.aliases') }}
+                  </el-button>
+                </div>
+              </el-form-item>
+
               <el-form-item :label="t('common.description')">
                 <el-input
                   v-model="editForm.description"
@@ -107,6 +161,14 @@ onMounted(() => {
             <el-descriptions v-else :column="1" border size="default">
               <el-descriptions-item :label="t('common.name')">
                 {{ subject.name }}
+              </el-descriptions-item>
+              <el-descriptions-item :label="t('common.aliases')">
+                <template v-if="subject.aliases && subject.aliases.length > 0">
+                  <el-tag v-for="alias in subject.aliases" :key="alias" size="small" class="mr-1">
+                    {{ alias }}
+                  </el-tag>
+                </template>
+                <span v-else>-</span>
               </el-descriptions-item>
               <el-descriptions-item :label="t('common.description')">
                 {{ subject.description || "-" }}

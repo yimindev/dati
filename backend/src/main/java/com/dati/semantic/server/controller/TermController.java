@@ -24,13 +24,13 @@ public class TermController {
     @PostMapping("/subjects/{subjectId}/terms")
     @ResponseStatus(HttpStatus.CREATED)
     public TermVO createTerm(@PathVariable String subjectId, @RequestBody CreateTermRequest request) {
-        Term term = termService.createTerm(subjectId, request.getName(), request.getDescription());
+        Term term = termService.createTerm(subjectId, request.getName(), request.getDescription(), request.getAliases());
         return termAssembler.toVO(term);
     }
 
     @PutMapping("/terms/{id}")
     public TermVO updateTerm(@PathVariable String id, @RequestBody UpdateTermRequest request) {
-        Term term = termService.updateTerm(id, request.getName(), request.getDescription());
+        Term term = termService.updateTerm(id, request.getName(), request.getDescription(), request.getAliases());
         return termAssembler.toVO(term);
     }
 

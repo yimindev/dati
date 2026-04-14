@@ -14,6 +14,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -47,7 +48,7 @@ class TermServiceTest {
 
         when(termDAO.save(any(TermPO.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        termService.createTerm(subjectId, name, description);
+        termService.createTerm(subjectId, name, description, List.of());
 
         ArgumentCaptor<TermPO> termCaptor = ArgumentCaptor.forClass(TermPO.class);
         verify(termDAO).save(termCaptor.capture());

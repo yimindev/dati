@@ -46,20 +46,26 @@ public class TermService {
     }
 
     @Transactional
-    public Term createTerm(String subjectId, String name, String description) {
+    public Term createTerm(String subjectId, String name, String description, List<String> aliases) {
         if (name == null || name.isBlank()) {
             throw new IllegalArgumentException("Term name cannot be null or empty");
         }
 
-        TermPO termPO = TermMapper.toPO(subjectId, name, description);
+        TermPO termPO = TermMapper.toPO(subjectId, name, description, aliases);
         termDAO.save(termPO);
 
         String id = termPO.getId();
 
+        List<String> keywords = new java.util.ArrayList<>();
+        keywords.add(name);
+        if (aliases != null) {
+            keywords.addAll(aliases);
+        }
+
         SemanticSearchDocument doc = SemanticSearchDocument.builder()
                 .id("term:" + id)
                 .type(SemanticEntityType.TERM)
-                .keywords(List.of(name))
+                .keywords(keywords.stream().distinct().toList())
                 .description(description)
                 .entity(EntityReference.builder().subjectId(subjectId).build())
                 .build();
@@ -69,7 +75,7 @@ public class TermService {
     }
 
     @Transactional
-    public Term updateTerm(String id, String name, String description) {
+    public Term updateTerm(String id, String name, String description, List<String> aliases) {
         if (name == null || name.isBlank()) {
             throw new IllegalArgumentException("Term name cannot be null or empty");
         }
@@ -78,12 +84,19 @@ public class TermService {
 
         termPO.setName(name);
         termPO.setDescription(description);
+        termPO.setAliases(aliases != null ? aliases : new java.util.ArrayList<>());
         termDAO.save(termPO);
+
+        List<String> keywords = new java.util.ArrayList<>();
+        keywords.add(name);
+        if (aliases != null) {
+            keywords.addAll(aliases);
+        }
 
         SemanticSearchDocument doc = SemanticSearchDocument.builder()
                 .id("term:" + id)
                 .type(SemanticEntityType.TERM)
-                .keywords(List.of(name))
+                .keywords(keywords.stream().distinct().toList())
                 .description(description)
                 .entity(EntityReference.builder().subjectId(termPO.getSubjectId()).build())
                 .build();
@@ -166,6 +179,7 @@ public class TermService {
         term.setSubjectId(po.getSubjectId());
         term.setName(po.getName());
         term.setDescription(po.getDescription());
+        term.setAliases(po.getAliases() != null ? po.getAliases() : new java.util.ArrayList<>());
         term.setCreatedAt(po.getCreatedAt());
         term.setUpdatedAt(po.getUpdatedAt());
         return term;

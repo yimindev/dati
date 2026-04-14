@@ -4,6 +4,8 @@ import com.dati.semantic.domain.model.Subject;
 import com.dati.semantic.server.pojo.vo.SubjectVO;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
+
 @Component
 public class SubjectAssembler {
 
@@ -16,6 +18,7 @@ public class SubjectAssembler {
         vo.setName(subject.getName());
         vo.setDescription(subject.getDescription());
         vo.setDatasourceId(subject.getDatasourceId());
+        vo.setAliases(subject.getAliases() != null ? subject.getAliases() : new ArrayList<>());
         vo.setCreatedAt(subject.getCreatedAt());
         vo.setUpdatedAt(subject.getUpdatedAt());
         return vo;

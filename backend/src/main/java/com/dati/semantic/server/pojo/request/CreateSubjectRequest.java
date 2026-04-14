@@ -3,6 +3,8 @@ package com.dati.semantic.server.pojo.request;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
+import java.util.List;
+
 @Data
 public class CreateSubjectRequest {
     @NotBlank
@@ -10,4 +12,5 @@ public class CreateSubjectRequest {
     private String description;
     @NotBlank
     private String datasourceId;
+    private List<String> aliases;
 }

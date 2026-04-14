@@ -6,8 +6,12 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.io.Serial;
+import java.util.ArrayList;
+import java.util.List;
 
 @Setter
 @Getter
@@ -20,4 +24,8 @@ public class SubjectPO extends BaseResourcePO {
 
     @Column(name = "datasource_id", nullable = false, length = 64)
     private String datasourceId;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(columnDefinition = "json")
+    private List<String> aliases = new ArrayList<>();
 }

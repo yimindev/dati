@@ -69,7 +69,6 @@ class SubjectServiceTest {
         sampleTableInfoPO = new TableInfoPO();
         sampleTableInfoPO.setId("table-001");
         sampleTableInfoPO.setName("test_table");
-        sampleTableInfoPO.setDisplayName("Test Table");
         sampleTableInfoPO.setDataSourceId("datasource-001");
     }
 
@@ -88,7 +87,7 @@ class SubjectServiceTest {
             return po;
         });
 
-        Subject result = subjectService.createSubject(name, description, datasourceId);
+        Subject result = subjectService.createSubject(name, description, datasourceId, List.of());
 
         assertThat(result).isNotNull();
         assertThat(result.getId()).isNotNull();
@@ -118,7 +117,7 @@ class SubjectServiceTest {
         when(subjectDAO.findById(id)).thenReturn(Optional.of(sampleSubjectPO));
         when(subjectDAO.save(any(SubjectPO.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        Subject result = subjectService.updateSubject(id, newName, newDescription);
+        Subject result = subjectService.updateSubject(id, newName, newDescription, List.of());
 
         assertThat(result).isNotNull();
         assertThat(result.getName()).isEqualTo(newName);
@@ -140,7 +139,7 @@ class SubjectServiceTest {
         String id = "non-existent";
         when(subjectDAO.findById(id)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> subjectService.updateSubject(id, "name", "desc"))
+        assertThatThrownBy(() -> subjectService.updateSubject(id, "name", "desc", List.of()))
                 .isInstanceOf(DatiException.class)
                 .hasMessageContaining("Subject not found");
     }
@@ -275,7 +274,6 @@ class SubjectServiceTest {
         assertThat(result).hasSize(1);
         assertThat(result.getFirst().getId()).isEqualTo("table-001");
         assertThat(result.getFirst().getName()).isEqualTo("test_table");
-        assertThat(result.getFirst().getDisplayName()).isEqualTo("Test Table");
     }
 
     @Test

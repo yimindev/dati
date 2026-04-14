@@ -80,7 +80,7 @@ class SubjectControllerTest {
         subjectVO.setCreatedAt(LocalDateTime.now());
         subjectVO.setUpdatedAt(LocalDateTime.now());
 
-        when(subjectService.createSubject(anyString(), anyString(), anyString())).thenReturn(subject);
+        when(subjectService.createSubject(anyString(), anyString(), anyString(), any())).thenReturn(subject);
         when(subjectAssembler.toVO(any(Subject.class))).thenReturn(subjectVO);
 
         mockMvc.perform(post("/v1/subjects")
@@ -102,14 +102,12 @@ class SubjectControllerTest {
         tableInfo.setDescription("Users table description");
         tableInfo.setDatasourceId("datasource-001");
         tableInfo.setSchema("public");
-        tableInfo.setDisplayName("Users Table");
         tableInfo.setCreatedAt(Instant.now());
         tableInfo.setUpdatedAt(Instant.now());
 
         TableInfoVO tableVO = new TableInfoVO();
         tableVO.setId("table-001");
         tableVO.setName("users");
-        tableVO.setDisplayName("Users Table");
         tableVO.setSchema("public");
         tableVO.setDescription("Users table description");
 

@@ -72,7 +72,7 @@ class TermControllerTest {
         termVO.setCreatedAt(java.time.Instant.now());
         termVO.setUpdatedAt(java.time.Instant.now());
 
-        when(termService.createTerm(anyString(), anyString(), anyString())).thenReturn(term);
+        when(termService.createTerm(anyString(), anyString(), anyString(), any())).thenReturn(term);
         when(termAssembler.toVO(any(Term.class))).thenReturn(termVO);
 
         mockMvc.perform(post("/v1/subjects/subject-001/terms")
@@ -167,7 +167,7 @@ class TermControllerTest {
         termVO.setCreatedAt(java.time.Instant.now());
         termVO.setUpdatedAt(java.time.Instant.now());
 
-        when(termService.updateTerm(anyString(), anyString(), anyString())).thenReturn(term);
+        when(termService.updateTerm(anyString(), anyString(), anyString(), any())).thenReturn(term);
         when(termAssembler.toVO(any(Term.class))).thenReturn(termVO);
 
         mockMvc.perform(put("/v1/terms/term-001")

@@ -6,6 +6,7 @@ import com.dati.semantic.server.pojo.vo.TermRelationVO;
 import com.dati.semantic.server.pojo.vo.TermVO;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Component
@@ -20,6 +21,7 @@ public class TermAssembler {
         vo.setSubjectId(term.getSubjectId());
         vo.setName(term.getName());
         vo.setDescription(term.getDescription());
+        vo.setAliases(term.getAliases() != null ? term.getAliases() : new ArrayList<>());
         vo.setCreatedAt(term.getCreatedAt());
         vo.setUpdatedAt(term.getUpdatedAt());
         return vo;

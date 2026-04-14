@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref, computed } from 'vue'
+import { onMounted, ref, computed, nextTick } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Search } from '@element-plus/icons-vue'
 import { useI18n } from 'vue-i18n'
@@ -24,7 +24,7 @@ const termDialogVisible = ref(false)
 const termDialogLoading = ref(false)
 const editingTerm = ref<TermVO | null>(null)
 const termFormRef = ref<FormInstance>()
-const termFormData = ref<CreateTermRequest>({ name: '', description: '' })
+const termFormData = ref<CreateTermRequest>({ name: '', description: '', aliases: [] })
 
 const relationDialogVisible = ref(false)
 const relationDialogLoading = ref(false)
@@ -47,6 +47,33 @@ const rules: FormRules = {
     { required: true, message: t('common.required', { name: t('common.name') }), trigger: 'blur' },
     { min: 1, max: 100, message: t('common.nameLengthError'), trigger: 'blur' }
   ]
+}
+
+const newAlias = ref('')
+const newAliasInputVisible = ref(false)
+const newAliasInputRef = ref()
+
+const showNewAliasInput = () => {
+  newAliasInputVisible.value = true
+  nextTick(() => {
+    newAliasInputRef.value?.focus()
+  })
+}
+
+const handleNewAliasConfirm = () => {
+  const value = newAlias.value.trim()
+  if (value && !termFormData.value.aliases?.includes(value)) {
+    if (!termFormData.value.aliases) {
+      termFormData.value.aliases = []
+    }
+    termFormData.value.aliases.push(value)
+  }
+  newAlias.value = ''
+  newAliasInputVisible.value = false
+}
+
+const removeTermAlias = (alias: string) => {
+  termFormData.value.aliases = termFormData.value.aliases?.filter(a => a !== alias) || []
 }
 
 const loadTerms = async () => {
@@ -240,11 +267,12 @@ const handleOpenTermDialog = (term?: TermVO) => {
     editingTerm.value = term
     termFormData.value = {
       name: term.name,
-      description: term.description || ''
+      description: term.description || '',
+      aliases: term.aliases ? [...term.aliases] : []
     }
   } else {
     editingTerm.value = null
-    termFormData.value = { name: '', description: '' }
+    termFormData.value = { name: '', description: '', aliases: [] }
   }
   termDialogVisible.value = true
 }
@@ -264,7 +292,8 @@ const handleSubmitTerm = async () => {
     if (editingTerm.value) {
       const updateData: UpdateTermRequest = {
         name: termFormData.value.name,
-        description: termFormData.value.description
+        description: termFormData.value.description,
+        aliases: termFormData.value.aliases
       }
       await updateTerm(editingTerm.value.id, updateData)
       ElMessage.success(t('subject.updateTermSuccess'))
@@ -452,6 +481,16 @@ onMounted(() => {
 
     <el-table :data="termList" v-loading="loading" stripe border>
       <el-table-column prop="name" :label="t('common.name')" min-width="150" />
+      <el-table-column :label="t('common.aliases')" min-width="180">
+        <template #default="{ row }">
+          <template v-if="row.aliases && row.aliases.length > 0">
+            <el-tag v-for="alias in row.aliases" :key="alias" size="small" class="mr-1">
+              {{ alias }}
+            </el-tag>
+          </template>
+          <span v-else class="text-sm text-slate-400">-</span>
+        </template>
+      </el-table-column>
       <el-table-column prop="description" :label="t('common.description')" min-width="220" />
       <el-table-column :label="t('subject.linkedEntities')" min-width="260">
         <template #default="{ row }">
@@ -502,6 +541,31 @@ onMounted(() => {
       <el-form ref="termFormRef" :model="termFormData" :rules="rules" label-width="100px" @submit.prevent>
         <el-form-item :label="t('common.name')" prop="name">
           <el-input v-model="termFormData.name" :placeholder="t('common.placeholder.name')" maxlength="100" show-word-limit />
+        </el-form-item>
+        <el-form-item :label="t('common.aliases')">
+          <div class="flex gap-2 flex-wrap">
+            <el-tag
+              v-for="alias in termFormData.aliases"
+              :key="alias"
+              closable
+              :disable-transitions="false"
+              @close="removeTermAlias(alias)"
+            >
+              {{ alias }}
+            </el-tag>
+            <el-input
+              v-if="newAliasInputVisible"
+              ref="newAliasInputRef"
+              v-model="newAlias"
+              class="w-20"
+              size="small"
+              @keyup.enter="handleNewAliasConfirm"
+              @blur="handleNewAliasConfirm"
+            />
+            <el-button v-else size="small" @click="showNewAliasInput">
+              + {{ t('common.aliases') }}
+            </el-button>
+          </div>
         </el-form-item>
         <el-form-item :label="t('common.description')">
           <el-input v-model="termFormData.description" :placeholder="t('common.placeholder.description')" type="textarea" :rows="3" maxlength="500" />

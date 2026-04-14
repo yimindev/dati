@@ -20,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -41,7 +42,7 @@ public class SubjectService {
     }
 
     @Transactional
-    public Subject createSubject(String name, String description, String datasourceId) {
+    public Subject createSubject(String name, String description, String datasourceId, List<String> aliases) {
         if (name == null || name.isBlank()) {
             throw new IllegalArgumentException("Subject name cannot be null or empty");
         }
@@ -50,14 +51,21 @@ public class SubjectService {
         subjectPO.setName(name);
         subjectPO.setDescription(description);
         subjectPO.setDatasourceId(datasourceId);
+        subjectPO.setAliases(aliases != null ? aliases : new java.util.ArrayList<>());
         subjectDAO.save(subjectPO);
 
         String id = subjectPO.getId();
 
+        List<String> keywords = new java.util.ArrayList<>();
+        keywords.add(name);
+        if (aliases != null) {
+            keywords.addAll(aliases);
+        }
+
         SemanticSearchDocument doc = SemanticSearchDocument.builder()
                 .id("subject:" + id)
                 .type(SemanticEntityType.SUBJECT)
-                .keywords(List.of(name))
+                .keywords(keywords.stream().distinct().toList())
                 .description(description)
                 .entity(EntityReference.builder().subjectId(id).build())
                 .build();
@@ -67,7 +75,7 @@ public class SubjectService {
     }
 
     @Transactional
-    public Subject updateSubject(String id, String name, String description) {
+    public Subject updateSubject(String id, String name, String description, List<String> aliases) {
         if (name == null || name.isBlank()) {
             throw new IllegalArgumentException("Subject name cannot be null or empty");
         }
@@ -76,12 +84,19 @@ public class SubjectService {
 
         subjectPO.setName(name);
         subjectPO.setDescription(description);
+        subjectPO.setAliases(aliases != null ? aliases : new java.util.ArrayList<>());
         subjectDAO.save(subjectPO);
+
+        List<String> keywords = new java.util.ArrayList<>();
+        keywords.add(name);
+        if (aliases != null) {
+            keywords.addAll(aliases);
+        }
 
         SemanticSearchDocument doc = SemanticSearchDocument.builder()
                 .id("subject:" + id)
                 .type(SemanticEntityType.SUBJECT)
-                .keywords(List.of(name))
+                .keywords(keywords.stream().distinct().toList())
                 .description(description)
                 .entity(EntityReference.builder().subjectId(id).build())
                 .build();
@@ -201,6 +216,7 @@ public class SubjectService {
                 .name(po.getName())
                 .description(po.getDescription())
                 .datasourceId(po.getDatasourceId())
+                .aliases(po.getAliases() != null ? po.getAliases() : new ArrayList<>())
                 .createdAt(po.getCreatedAt() != null ? LocalDateTime.ofInstant(po.getCreatedAt(), ZoneOffset.UTC) : null)
                 .updatedAt(po.getUpdatedAt() != null ? LocalDateTime.ofInstant(po.getUpdatedAt(), ZoneOffset.UTC) : null)
                 .build();

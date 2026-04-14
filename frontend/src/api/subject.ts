@@ -8,6 +8,7 @@ export interface SubjectVO extends BaseResourceVO {
   datasource_id: string;
   datasource_name?: string;
   table_count?: number;
+  aliases?: string[];
 }
 
 export interface SubjectAvailableTableVO {
@@ -19,6 +20,7 @@ export interface SubjectAvailableTableVO {
 
 export interface TermVO extends BaseResourceVO {
   subject_id: string;
+  aliases?: string[];
 }
 
 export interface TermRelationVO {
@@ -35,11 +37,13 @@ export interface CreateSubjectRequest {
   name: string;
   description?: string;
   datasource_id: string;
+  aliases?: string[];
 }
 
 export interface UpdateSubjectRequest {
   name?: string;
   description?: string;
+  aliases?: string[];
 }
 
 export interface AddTableToSubjectRequest {
@@ -49,11 +53,13 @@ export interface AddTableToSubjectRequest {
 export interface CreateTermRequest {
   name: string;
   description?: string;
+  aliases?: string[];
 }
 
 export interface UpdateTermRequest {
   name?: string;
   description?: string;
+  aliases?: string[];
 }
 
 export interface LinkTermRelationRequest {

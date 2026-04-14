@@ -35,14 +35,15 @@ public class SubjectController {
         Subject subject = subjectService.createSubject(
                 request.getName(),
                 request.getDescription(),
-                request.getDatasourceId()
+                request.getDatasourceId(),
+                request.getAliases()
         );
         return subjectAssembler.toVO(subject);
     }
 
     @PutMapping("/{id}")
     public SubjectVO updateSubject(@PathVariable String id, @RequestBody UpdateSubjectRequest request) {
-        Subject subject = subjectService.updateSubject(id, request.getName(), request.getDescription());
+        Subject subject = subjectService.updateSubject(id, request.getName(), request.getDescription(), request.getAliases());
         return subjectAssembler.toVO(subject);
     }
 

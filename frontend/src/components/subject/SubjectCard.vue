@@ -54,13 +54,24 @@ const handleCardClick = (event: MouseEvent) => {
     <template #default>
       <p
         v-if="subject.description"
-        class="mb-3 line-clamp-2 min-h-10 text-sm text-slate-600"
+        class="mb-2 line-clamp-2 min-h-10 text-sm text-slate-600"
       >
         {{ subject.description }}
       </p>
-      <p v-else class="mb-3 min-h-10 text-sm italic text-slate-400">
-        {{ t('common.placeholder.description') }}
+      <p v-else class="mb-2 min-h-10 text-sm text-slate-400">
+        -
       </p>
+
+      <div v-if="subject.aliases?.length" class="mb-2 flex flex-wrap gap-1">
+        <el-tag
+          v-for="alias in subject.aliases"
+          :key="alias"
+          size="small"
+          type="info"
+        >
+          {{ alias }}
+        </el-tag>
+      </div>
 
       <div class="space-y-1 text-xs text-slate-500">
         <div v-if="subject.datasource_name" class="truncate">
