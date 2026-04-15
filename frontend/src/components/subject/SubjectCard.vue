@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import type { SubjectVO } from '~/api/subject'
 import { formatDateTime } from '~/composables'
-import { useI18n } from 'vue-i18n'
 import { MoreFilled } from '@element-plus/icons-vue'
+import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 
 const { t } = useI18n()
 
@@ -19,6 +20,13 @@ interface Emits {
 const props = defineProps<Props>()
 const emit = defineEmits<Emits>()
 
+const visibleAliases = computed(() => props.subject.aliases?.slice(0, 2) ?? [])
+
+const hiddenAliasCount = computed(() => {
+  const totalAliases = props.subject.aliases?.length ?? 0
+  return Math.max(totalAliases - visibleAliases.value.length, 0)
+})
+
 const handleCardClick = (event: MouseEvent) => {
   const target = event.target as HTMLElement | null
   if (target?.closest('[data-stop-card-click="true"]')) {
@@ -30,15 +38,41 @@ const handleCardClick = (event: MouseEvent) => {
 
 <template>
   <el-card
-    class="subject-card cursor-pointer transition-all duration-200 hover:-translate-y-0.5"
+    class="w-full cursor-pointer transition-all duration-200 hover:-translate-y-0.5 [&_.el-card__header]:!px-3 [&_.el-card__header]:!py-1.5 [&_.el-card__body]:!px-3 [&_.el-card__body]:!pt-2 [&_.el-card__body]:!pb-3"
     shadow="hover"
     @click="handleCardClick"
   >
     <template #header>
-      <div class="flex items-center justify-between">
-        <span class="truncate font-medium text-slate-800">{{ subject.name }}</span>
+      <div class="flex items-center justify-between gap-1.5">
+        <div class="min-w-0 flex flex-1 items-center gap-1.5 overflow-hidden">
+          <div class="shrink min-w-0 truncate text-sm font-medium text-slate-800">{{ subject.name }}</div>
+          <div
+            v-if="subject.aliases?.length"
+            class="min-w-0 flex shrink items-center gap-1 overflow-hidden"
+          >
+            <span
+              v-for="alias in visibleAliases"
+              :key="alias"
+              class="min-w-0 max-w-full truncate rounded-full bg-slate-100 px-1.5 py-0 text-[11px] text-slate-600"
+            >
+              {{ alias }}
+            </span>
+            <span
+              v-if="hiddenAliasCount > 0"
+              class="shrink-0 rounded-full bg-slate-100 px-1.5 py-0 text-[11px] text-slate-500"
+            >
+              +{{ hiddenAliasCount }}
+            </span>
+          </div>
+        </div>
         <el-dropdown trigger="click" data-stop-card-click="true">
-          <el-button text :icon="MoreFilled" data-stop-card-click="true" />
+          <el-button
+            text
+            size="small"
+            :icon="MoreFilled"
+            class="!m-0 !px-1 !py-0.5"
+            data-stop-card-click="true"
+          />
           <template #dropdown>
             <el-dropdown-menu data-stop-card-click="true">
               <el-dropdown-item data-stop-card-click="true" @click="$emit('edit', subject)">{{ t('common.edit') }}</el-dropdown-item>
@@ -54,24 +88,13 @@ const handleCardClick = (event: MouseEvent) => {
     <template #default>
       <p
         v-if="subject.description"
-        class="mb-2 line-clamp-2 min-h-10 text-sm text-slate-600"
+        class="mb-1 line-clamp-3 min-h-[3.75rem] text-sm text-slate-600"
       >
         {{ subject.description }}
       </p>
-      <p v-else class="mb-2 min-h-10 text-sm text-slate-400">
+      <p v-else class="mb-1 min-h-[3.75rem] text-sm text-slate-400">
         -
       </p>
-
-      <div v-if="subject.aliases?.length" class="mb-2 flex flex-wrap gap-1">
-        <el-tag
-          v-for="alias in subject.aliases"
-          :key="alias"
-          size="small"
-          type="info"
-        >
-          {{ alias }}
-        </el-tag>
-      </div>
 
       <div class="space-y-1 text-xs text-slate-500">
         <div v-if="subject.datasource_name" class="truncate">
@@ -90,9 +113,3 @@ const handleCardClick = (event: MouseEvent) => {
     </template>
   </el-card>
 </template>
-
-<style scoped>
-.subject-card {
-  width: 100%;
-}
-</style>
