@@ -184,7 +184,7 @@ class ColumnServiceTest {
             mocked.when(RequestContext::getUser).thenReturn(mockUser);
             
             // when
-            columnService.syncColumns(TestFixtures.TEST_DATASOURCE_ID, TestFixtures.TEST_TABLE_ID);
+            columnService.syncColumns(TestFixtures.TEST_DATASOURCE_ID, TestFixtures.TEST_TABLE_ID, true);
 
             // then
             verify(columnInfoDAO).deleteByTableId(TestFixtures.TEST_TABLE_ID);
@@ -202,7 +202,7 @@ class ColumnServiceTest {
 
         // when & then
         assertThrows(Exception.class, () ->
-            columnService.syncColumns(TestFixtures.TEST_DATASOURCE_ID, TestFixtures.TEST_TABLE_ID)
+            columnService.syncColumns(TestFixtures.TEST_DATASOURCE_ID, TestFixtures.TEST_TABLE_ID, true)
         );
         verify(columnInfoDAO, never()).deleteByTableId(any());
         verify(columnInfoDAO, never()).saveAll(any());
@@ -218,7 +218,7 @@ class ColumnServiceTest {
 
         // when & then
         assertThrows(SQLException.class, () ->
-            columnService.syncColumns(TestFixtures.TEST_DATASOURCE_ID, TestFixtures.TEST_TABLE_ID)
+            columnService.syncColumns(TestFixtures.TEST_DATASOURCE_ID, TestFixtures.TEST_TABLE_ID, true)
         );
     }
 
@@ -240,7 +240,7 @@ class ColumnServiceTest {
             mocked.when(RequestContext::getUser).thenReturn(null);
             
             // when
-            columnService.syncColumns(TestFixtures.TEST_DATASOURCE_ID, TestFixtures.TEST_TABLE_ID);
+            columnService.syncColumns(TestFixtures.TEST_DATASOURCE_ID, TestFixtures.TEST_TABLE_ID, true);
 
             // then
             verify(columnInfoDAO).saveAll(argThat(list -> {
@@ -251,8 +251,8 @@ class ColumnServiceTest {
     }
 
     @Test
-    @DisplayName("同步列 - 数据库 comment 为空时应保留旧的 aliases 和 description")
-    void syncColumns_shouldPreserveOldAliasesAndDescriptionWhenDbCommentEmpty() throws SQLException {
+    @DisplayName("同步列 - DB comment 为空时应保留旧的 description（flag=true）")
+    void syncColumns_shouldPreserveOldDescriptionWhenDbCommentEmptyEvenIfFlagTrue() throws SQLException {
         // given
         when(tableInfoDAO.findById(TestFixtures.TEST_TABLE_ID)).thenReturn(Optional.of(testTableInfoPO));
         
@@ -277,8 +277,8 @@ class ColumnServiceTest {
         try (MockedStatic<RequestContext> mocked = mockStatic(RequestContext.class)) {
             mocked.when(RequestContext::getUser).thenReturn(null);
             
-            // when
-            columnService.syncColumns(TestFixtures.TEST_DATASOURCE_ID, TestFixtures.TEST_TABLE_ID);
+            // when - flag true but DB comment is empty, should preserve
+            columnService.syncColumns(TestFixtures.TEST_DATASOURCE_ID, TestFixtures.TEST_TABLE_ID, true);
 
             // then
             verify(columnInfoDAO).saveAll(argThat(list -> {
@@ -291,8 +291,8 @@ class ColumnServiceTest {
     }
 
     @Test
-    @DisplayName("同步列 - 旧列存在时应保留 aliases 和 description（忽略新的 DB comment）")
-    void syncColumns_shouldPreserveOldAliasesAndDescriptionWhenExistingColumnFound() throws SQLException {
+    @DisplayName("同步列 - 已存在列 + flag=true + DB comment 有内容时应用 DB comment 覆盖")
+    void syncColumns_shouldOverwriteWhenFlagTrueAndDbCommentExists() throws SQLException {
         // given
         when(tableInfoDAO.findById(TestFixtures.TEST_TABLE_ID)).thenReturn(Optional.of(testTableInfoPO));
         
@@ -317,8 +317,48 @@ class ColumnServiceTest {
         try (MockedStatic<RequestContext> mocked = mockStatic(RequestContext.class)) {
             mocked.when(RequestContext::getUser).thenReturn(null);
             
-            // when
-            columnService.syncColumns(TestFixtures.TEST_DATASOURCE_ID, TestFixtures.TEST_TABLE_ID);
+            // when - flag true and DB comment exists, should overwrite
+            columnService.syncColumns(TestFixtures.TEST_DATASOURCE_ID, TestFixtures.TEST_TABLE_ID, true);
+
+            // then
+            verify(columnInfoDAO).saveAll(argThat(list -> {
+                List<ColumnInfoPO> columns = (List<ColumnInfoPO>) list;
+                ColumnInfoPO savedCol = columns.getFirst();
+                return savedCol.getAliases().equals(List.of("order_no", "订单号")) &&
+                       savedCol.getDescription().equals("New DB Comment");
+            }));
+        }
+    }
+
+    @Test
+    @DisplayName("同步列 - 已存在列 + flag=false 时应保留旧的 description")
+    void syncColumns_shouldPreserveWhenFlagFalse() throws SQLException {
+        // given
+        when(tableInfoDAO.findById(TestFixtures.TEST_TABLE_ID)).thenReturn(Optional.of(testTableInfoPO));
+        
+        ColumnInfoPO existingColumn = new ColumnInfoPO();
+        existingColumn.setId("existing_col_id");
+        existingColumn.setTableId(TestFixtures.TEST_TABLE_ID);
+        existingColumn.setName("col1");
+        existingColumn.setColumnType("VARCHAR");
+        existingColumn.setAliases(List.of("order_no", "订单号"));
+        existingColumn.setDescription("Old user description");
+        
+        when(columnInfoDAO.findByTableId(TestFixtures.TEST_TABLE_ID)).thenReturn(List.of(existingColumn));
+        
+        Column mockColumn = mock(Column.class);
+        when(mockColumn.name()).thenReturn("col1");
+        when(mockColumn.type()).thenReturn("VARCHAR");
+        when(mockColumn.comment()).thenReturn("New DB Comment");
+        
+        when(jdbcMetaService.getColumns(TestFixtures.TEST_DATASOURCE_ID, null, "public", "test_table"))
+            .thenReturn(List.of(mockColumn));
+        
+        try (MockedStatic<RequestContext> mocked = mockStatic(RequestContext.class)) {
+            mocked.when(RequestContext::getUser).thenReturn(null);
+            
+            // when - flag false, should preserve old
+            columnService.syncColumns(TestFixtures.TEST_DATASOURCE_ID, TestFixtures.TEST_TABLE_ID, false);
 
             // then
             verify(columnInfoDAO).saveAll(argThat(list -> {
@@ -326,6 +366,37 @@ class ColumnServiceTest {
                 ColumnInfoPO savedCol = columns.getFirst();
                 return savedCol.getAliases().equals(List.of("order_no", "订单号")) &&
                        savedCol.getDescription().equals("Old user description");
+            }));
+        }
+    }
+
+    @Test
+    @DisplayName("同步列 - 新列时无论 flag 值都使用 DB comment")
+    void syncColumns_newColumn_shouldUseDbCommentRegardlessOfFlag() throws SQLException {
+        // given
+        when(tableInfoDAO.findById(TestFixtures.TEST_TABLE_ID)).thenReturn(Optional.of(testTableInfoPO));
+        
+        when(columnInfoDAO.findByTableId(TestFixtures.TEST_TABLE_ID)).thenReturn(List.of());
+        
+        Column mockColumn = mock(Column.class);
+        when(mockColumn.name()).thenReturn("new_col");
+        when(mockColumn.type()).thenReturn("VARCHAR");
+        when(mockColumn.comment()).thenReturn("New column comment");
+        
+        when(jdbcMetaService.getColumns(TestFixtures.TEST_DATASOURCE_ID, null, "public", "test_table"))
+            .thenReturn(List.of(mockColumn));
+        
+        try (MockedStatic<RequestContext> mocked = mockStatic(RequestContext.class)) {
+            mocked.when(RequestContext::getUser).thenReturn(null);
+            
+            // when - new column, flag false, should use DB comment
+            columnService.syncColumns(TestFixtures.TEST_DATASOURCE_ID, TestFixtures.TEST_TABLE_ID, false);
+
+            // then
+            verify(columnInfoDAO).saveAll(argThat(list -> {
+                List<ColumnInfoPO> columns = (List<ColumnInfoPO>) list;
+                ColumnInfoPO savedCol = columns.getFirst();
+                return savedCol.getDescription().equals("New column comment");
             }));
         }
     }

@@ -136,10 +136,10 @@ class ColumnControllerTest {
     }
 
     @Test
-    @DisplayName("同步列 - 成功")
+    @DisplayName("同步列 - 成功（默认不覆盖）")
     void syncColumns_shouldReturnTableId() throws Exception {
         // given
-        doNothing().when(columnService).syncColumns(TestFixtures.TEST_DATASOURCE_ID, TestFixtures.TEST_TABLE_ID);
+        doNothing().when(columnService).syncColumns(TestFixtures.TEST_DATASOURCE_ID, TestFixtures.TEST_TABLE_ID, false);
 
         // when & then
         mockMvc.perform(post("/v1/data-sources/{datasourceId}/tables/{tableId}/columns/sync", 
@@ -147,7 +147,23 @@ class ColumnControllerTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.id").value(TestFixtures.TEST_TABLE_ID));
         
-        verify(columnService).syncColumns(TestFixtures.TEST_DATASOURCE_ID, TestFixtures.TEST_TABLE_ID);
+        verify(columnService).syncColumns(TestFixtures.TEST_DATASOURCE_ID, TestFixtures.TEST_TABLE_ID, false);
+    }
+
+    @Test
+    @DisplayName("同步列 - 指定覆盖已有内容")
+    void syncColumns_withOverwriteExistingTrue_shouldPassTrueToService() throws Exception {
+        // given
+        doNothing().when(columnService).syncColumns(TestFixtures.TEST_DATASOURCE_ID, TestFixtures.TEST_TABLE_ID, true);
+
+        // when & then
+        mockMvc.perform(post("/v1/data-sources/{datasourceId}/tables/{tableId}/columns/sync", 
+                    TestFixtures.TEST_DATASOURCE_ID, TestFixtures.TEST_TABLE_ID)
+                .param("overwrite_existing", "true"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.id").value(TestFixtures.TEST_TABLE_ID));
+        
+        verify(columnService).syncColumns(TestFixtures.TEST_DATASOURCE_ID, TestFixtures.TEST_TABLE_ID, true);
     }
 
     @Test

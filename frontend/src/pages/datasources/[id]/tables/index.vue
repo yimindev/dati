@@ -146,9 +146,20 @@ const handleBatchAdd = async () => {
 };
 
 const handleSyncColumns = async (table: TableInfoVO) => {
+  syncDialogVisible.value = true;
+  syncDialogTable.value = table;
+};
+
+const syncDialogVisible = ref(false);
+const syncDialogTable = ref<TableInfoVO | null>(null);
+const syncDialogOverwrite = ref(true);
+
+const confirmSyncColumns = async () => {
+  if (!syncDialogTable.value) return;
   try {
-    await syncColumns(datasourceId.value, table.id);
+    await syncColumns(datasourceId.value, syncDialogTable.value.id, syncDialogOverwrite.value);
     ElMessage.success(t("tableInfo.syncSuccess"));
+    syncDialogVisible.value = false;
   } catch (error) {
     console.error("同步列信息失败:", error);
     ElMessage.error(t("tableInfo.syncFailed"));
@@ -461,6 +472,26 @@ onMounted(() => {
           @click="handleBatchAdd"
         >
           {{ t("tableInfo.addSelected") }}
+        </el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 同步列弹窗 -->
+    <el-dialog
+      v-model="syncDialogVisible"
+      :title="t('tableInfo.syncColumns')"
+      width="400px"
+    >
+      <p class="mb-4">{{ t("tableInfo.syncColumnsConfirm") }}</p>
+      <el-checkbox v-model="syncDialogOverwrite">
+        {{ t("tableInfo.syncColumnsOverwrite") }}
+      </el-checkbox>
+      <template #footer>
+        <el-button @click="syncDialogVisible = false">
+          {{ t("common.cancel") }}
+        </el-button>
+        <el-button type="primary" @click="confirmSyncColumns">
+          {{ t("common.confirmSync") }}
         </el-button>
       </template>
     </el-dialog>

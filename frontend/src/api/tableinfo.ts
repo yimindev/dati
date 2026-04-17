@@ -35,9 +35,14 @@ export function batchAddTables(datasourceId: string, tables: AddTableRequest[], 
   );
 }
 
-export function syncColumns(datasourceId: string, tableId: string, signal?: AbortSignal): Promise<IdResponse> {
+export function syncColumns(datasourceId: string, tableId: string, overwriteExisting?: boolean, signal?: AbortSignal): Promise<IdResponse> {
+  const params = new URLSearchParams();
+  if (overwriteExisting !== undefined) {
+    params.set('overwrite_existing', String(overwriteExisting));
+  }
+  const query = params.toString() ? `?${params.toString()}` : '';
   return post<IdResponse, null>(
-    `/v1/data-sources/${encodeURIComponent(datasourceId)}/tables/${encodeURIComponent(tableId)}/columns/sync`,
+    `/v1/data-sources/${encodeURIComponent(datasourceId)}/tables/${encodeURIComponent(tableId)}/columns/sync${query}`,
     null,
     signal
   );

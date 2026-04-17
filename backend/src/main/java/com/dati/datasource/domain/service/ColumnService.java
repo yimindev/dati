@@ -85,7 +85,7 @@ public class ColumnService {
     }
 
     @Transactional
-    public void syncColumns(String datasourceId, String tableId) throws SQLException {
+    public void syncColumns(String datasourceId, String tableId, boolean overwriteExisting) throws SQLException {
         TableInfo tableInfo = TableMapper.toTableInfo(tableInfoDAO.findById(tableId).orElseThrow());
         
         Map<String, ColumnInfoPO> existingColumns = columnInfoDAO.findByTableId(tableId)
@@ -107,14 +107,19 @@ public class ColumnService {
             
             ColumnInfoPO existing = existingColumns.get(column.name());
             
-            String dbComment = column.comment();
-            if (StringUtils.isNotBlank(dbComment)) {
-                columnInfoPO.setDescription(dbComment);
-            }
-            
             if (existing != null) {
                 columnInfoPO.setAliases(existing.getAliases());
-                columnInfoPO.setDescription(existing.getDescription());
+                String dbComment = column.comment();
+                if (overwriteExisting && StringUtils.isNotBlank(dbComment)) {
+                    columnInfoPO.setDescription(dbComment);
+                } else {
+                    columnInfoPO.setDescription(existing.getDescription());
+                }
+            } else {
+                String dbComment = column.comment();
+                if (StringUtils.isNotBlank(dbComment)) {
+                    columnInfoPO.setDescription(dbComment);
+                }
             }
             
             columnInfoPO.setCreatedBy(userId);

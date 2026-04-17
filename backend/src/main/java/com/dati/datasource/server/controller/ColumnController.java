@@ -50,9 +50,12 @@ public class ColumnController {
     }
 
     @PostMapping("/sync")
-    public IdResponse syncColumns(@PathVariable String datasourceId, @PathVariable String tableId) {
+    public IdResponse syncColumns(
+            @PathVariable String datasourceId,
+            @PathVariable String tableId,
+            @RequestParam(name = "overwrite_existing", defaultValue = "false") boolean overwriteExisting) {
         try {
-            columnService.syncColumns(datasourceId, tableId);
+            columnService.syncColumns(datasourceId, tableId, overwriteExisting);
             return new IdResponse(tableId);
         } catch (SQLException e) {
             log.error("Failed to sync columns for datasource {}, table {}", datasourceId, tableId, e);
