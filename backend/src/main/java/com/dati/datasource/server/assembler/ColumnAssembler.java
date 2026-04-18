@@ -14,6 +14,7 @@ public class ColumnAssembler extends BaseAssembler {
         columnInfoVO.setTableId(columnInfo.getTableId());
         columnInfoVO.setColumnType(columnInfo.getColumnType());
         columnInfoVO.setAliases(columnInfo.getAliases());
+        columnInfoVO.setExtractValueEnabled(columnInfo.getExtractValueEnabled());
         return columnInfoVO;
     }
 
@@ -23,6 +24,7 @@ public class ColumnAssembler extends BaseAssembler {
         columnInfo.setTableId(columnInfoVO.getTableId());
         columnInfo.setColumnType(columnInfoVO.getColumnType());
         columnInfo.setAliases(columnInfoVO.getAliases());
+        columnInfo.setExtractValueEnabled(columnInfoVO.getExtractValueEnabled());
         return columnInfo;
     }
 

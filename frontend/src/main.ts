@@ -16,8 +16,11 @@ import 'element-plus/theme-chalk/src/message-box.scss'
 // if you do not need ssg:
 import { createApp } from "vue";
 import { createRouter, createWebHistory } from "vue-router";
+import { pinia } from "./stores";
 
 const app = createApp(App);
+
+app.use(pinia)
 app.use(createRouter({
   history: createWebHistory(),
   routes,

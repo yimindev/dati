@@ -1,10 +1,13 @@
 package com.dati.datasource.server.controller;
 
 import com.dati.TestFixtures;
+import com.dati.base.pojo.PageReq;
 import com.dati.datasource.domain.model.ColumnInfo;
 import com.dati.datasource.domain.service.ColumnService;
+import com.dati.datasource.domain.service.ColumnValueService;
 import com.dati.datasource.server.assembler.ColumnAssembler;
 import com.dati.datasource.server.pojo.ColumnInfoVO;
+import com.dati.datasource.server.pojo.ColumnValueVO;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -14,6 +17,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -52,6 +56,9 @@ class ColumnControllerTest {
     @MockitoBean
     private ColumnAssembler columnAssembler;
 
+    @MockitoBean
+    private ColumnValueService columnValueService;
+
     private ColumnInfo testColumnInfo;
 
     @BeforeEach
@@ -66,7 +73,7 @@ class ColumnControllerTest {
         Page<ColumnInfo> page = new PageImpl<>(List.of(testColumnInfo));
         when(columnService.getColumns(any(), eq(TestFixtures.TEST_TABLE_ID), any()))
             .thenReturn(page);
-        
+
         ColumnInfoVO vo = new ColumnInfoVO();
         vo.setId(TestFixtures.TEST_COLUMN_ID);
         vo.setName("test_column");
@@ -75,7 +82,7 @@ class ColumnControllerTest {
         when(columnAssembler.toColumnInfoVO(any())).thenReturn(vo);
 
         // when & then
-        mockMvc.perform(get("/v1/data-sources/{datasourceId}/tables/{tableId}/columns", 
+        mockMvc.perform(get("/v1/data-sources/{datasourceId}/tables/{tableId}/columns",
                     TestFixtures.TEST_DATASOURCE_ID, TestFixtures.TEST_TABLE_ID)
                 .param("page", "1")
                 .param("page_size", "10"))
@@ -93,14 +100,14 @@ class ColumnControllerTest {
         Page<ColumnInfo> page = new PageImpl<>(List.of(testColumnInfo));
         when(columnService.getColumns(any(), eq(TestFixtures.TEST_TABLE_ID), eq("id")))
             .thenReturn(page);
-        
+
         ColumnInfoVO vo = new ColumnInfoVO();
         vo.setId(TestFixtures.TEST_COLUMN_ID);
         vo.setName("user_id");
         when(columnAssembler.toColumnInfoVO(any())).thenReturn(vo);
 
         // when & then
-        mockMvc.perform(get("/v1/data-sources/{datasourceId}/tables/{tableId}/columns", 
+        mockMvc.perform(get("/v1/data-sources/{datasourceId}/tables/{tableId}/columns",
                     TestFixtures.TEST_DATASOURCE_ID, TestFixtures.TEST_TABLE_ID)
                 .param("page", "1")
                 .param("page_size", "10")
@@ -117,21 +124,21 @@ class ColumnControllerTest {
         requestVo.setName("updated_column");
         requestVo.setColumnType("INTEGER");
         requestVo.setTableId(TestFixtures.TEST_TABLE_ID);
-        
+
         ColumnInfo columnInfo = TestFixtures.createTestColumnInfo();
         columnInfo.setName("updated_column");
-        
+
         when(columnAssembler.toColumnInfo(any())).thenReturn(columnInfo);
         doNothing().when(columnService).updateColumn(eq(TestFixtures.TEST_COLUMN_ID), any());
 
         // when & then
-        mockMvc.perform(put("/v1/data-sources/{datasourceId}/tables/{tableId}/columns/{id}", 
+        mockMvc.perform(put("/v1/data-sources/{datasourceId}/tables/{tableId}/columns/{id}",
                     TestFixtures.TEST_DATASOURCE_ID, TestFixtures.TEST_TABLE_ID, TestFixtures.TEST_COLUMN_ID)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(requestVo)))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.id").value(TestFixtures.TEST_COLUMN_ID));
-        
+
         verify(columnService).updateColumn(eq(TestFixtures.TEST_COLUMN_ID), any());
     }
 
@@ -142,11 +149,11 @@ class ColumnControllerTest {
         doNothing().when(columnService).syncColumns(TestFixtures.TEST_DATASOURCE_ID, TestFixtures.TEST_TABLE_ID, false);
 
         // when & then
-        mockMvc.perform(post("/v1/data-sources/{datasourceId}/tables/{tableId}/columns/sync", 
+        mockMvc.perform(post("/v1/data-sources/{datasourceId}/tables/{tableId}/columns/sync",
                     TestFixtures.TEST_DATASOURCE_ID, TestFixtures.TEST_TABLE_ID))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.id").value(TestFixtures.TEST_TABLE_ID));
-        
+
         verify(columnService).syncColumns(TestFixtures.TEST_DATASOURCE_ID, TestFixtures.TEST_TABLE_ID, false);
     }
 
@@ -157,12 +164,12 @@ class ColumnControllerTest {
         doNothing().when(columnService).syncColumns(TestFixtures.TEST_DATASOURCE_ID, TestFixtures.TEST_TABLE_ID, true);
 
         // when & then
-        mockMvc.perform(post("/v1/data-sources/{datasourceId}/tables/{tableId}/columns/sync", 
+        mockMvc.perform(post("/v1/data-sources/{datasourceId}/tables/{tableId}/columns/sync",
                     TestFixtures.TEST_DATASOURCE_ID, TestFixtures.TEST_TABLE_ID)
                 .param("overwrite_existing", "true"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.id").value(TestFixtures.TEST_TABLE_ID));
-        
+
         verify(columnService).syncColumns(TestFixtures.TEST_DATASOURCE_ID, TestFixtures.TEST_TABLE_ID, true);
     }
 
@@ -172,18 +179,18 @@ class ColumnControllerTest {
         // given
         ColumnInfoVO requestVo = new ColumnInfoVO();
         requestVo.setName("new_name");
-        
+
         when(columnAssembler.toColumnInfo(any())).thenReturn(testColumnInfo);
         doNothing().when(columnService).updateColumn(anyString(), any());
 
         // when & then
-        mockMvc.perform(put("/v1/data-sources/{datasourceId}/tables/{tableId}/columns/{id}", 
+        mockMvc.perform(put("/v1/data-sources/{datasourceId}/tables/{tableId}/columns/{id}",
                     TestFixtures.TEST_DATASOURCE_ID, TestFixtures.TEST_TABLE_ID, "specific-column-id")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(requestVo)))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.id").value("specific-column-id"));
-        
+
         verify(columnService).updateColumn(eq("specific-column-id"), any());
     }
 
@@ -196,12 +203,49 @@ class ColumnControllerTest {
             .thenReturn(page);
 
         // when & then
-        mockMvc.perform(get("/v1/data-sources/{datasourceId}/tables/{tableId}/columns", 
+        mockMvc.perform(get("/v1/data-sources/{datasourceId}/tables/{tableId}/columns",
                     TestFixtures.TEST_DATASOURCE_ID, TestFixtures.TEST_TABLE_ID)
                 .param("page", "1")
                 .param("page_size", "10"))
             .andExpect(status().isOk());
-        
+
         verify(columnService).getColumns(any(), eq(TestFixtures.TEST_TABLE_ID), isNull());
+    }
+
+    @Test
+    @DisplayName("分页查询列值 - 成功")
+    void getValues_shouldReturnPagedResults() throws Exception {
+        // given
+        ColumnValueVO vo = new ColumnValueVO();
+        vo.setId("doc1");
+        vo.setValue("北京");
+        vo.setSynonyms(List.of("帝都"));
+
+        Page<ColumnValueService.ValueItem> page = new PageImpl<>(
+                List.of(createValueItem("doc1", "北京", List.of("帝都"))),
+                PageRequest.of(0, 10),
+                1
+        );
+        when(columnValueService.getValues(anyString(), any(PageReq.class), isNull())).thenReturn(page);
+
+        // when & then
+        mockMvc.perform(get("/v1/data-sources/{dsId}/tables/{tableId}/columns/{columnId}/values",
+                    TestFixtures.TEST_DATASOURCE_ID, TestFixtures.TEST_TABLE_ID, TestFixtures.TEST_COLUMN_ID)
+                .param("page", "1")
+                .param("size", "10"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data").isArray())
+            .andExpect(jsonPath("$.data[0].id").value("doc1"))
+            .andExpect(jsonPath("$.total").value(1))
+            .andExpect(jsonPath("$.page").value(1))
+            .andExpect(jsonPath("$.size").value(10));
+    }
+
+    private ColumnValueService.ValueItem createValueItem(String id, String value, List<String> synonyms) {
+        ColumnValueService.ValueItem item = new ColumnValueService.ValueItem();
+        item.setId(id);
+        item.setValue(value);
+        item.setSynonyms(synonyms);
+        return item;
     }
 }

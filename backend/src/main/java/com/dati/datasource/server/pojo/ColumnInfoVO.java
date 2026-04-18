@@ -19,4 +19,6 @@ public class ColumnInfoVO extends BaseResourceVO {
 
     private List<String> aliases = new ArrayList<>();
 
+    private Boolean extractValueEnabled = false;
+
 }

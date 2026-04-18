@@ -4,6 +4,7 @@ import com.dati.base.pojo.BaseResourcePO;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
@@ -27,7 +28,9 @@ public class ColumnInfoPO extends BaseResourcePO {
     private String columnType;
 
     @JdbcTypeCode(SqlTypes.JSON)
-    @Column(columnDefinition = "json")
     private List<String> aliases = new ArrayList<>();
+
+    @ColumnDefault( "false")
+    private boolean extractValueEnabled = false;
 
 }

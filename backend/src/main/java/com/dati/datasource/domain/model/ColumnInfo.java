@@ -17,4 +17,6 @@ public class ColumnInfo extends BaseResource {
 
     private List<String> aliases = new ArrayList<>();
 
+    private Boolean extractValueEnabled = false;
+
 }

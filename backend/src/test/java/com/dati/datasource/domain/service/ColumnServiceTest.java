@@ -123,6 +123,7 @@ class ColumnServiceTest {
         updateInfo.setName("updated_column");
         updateInfo.setColumnType("INTEGER");
         updateInfo.setDescription("Updated description");
+        updateInfo.setExtractValueEnabled(true);
 
         // when
         columnService.updateColumn(TestFixtures.TEST_COLUMN_ID, updateInfo);
@@ -132,7 +133,8 @@ class ColumnServiceTest {
         verify(columnInfoDAO).save(argThat(po -> 
             po.getName().equals("updated_column") &&
             po.getColumnType().equals("INTEGER") &&
-            po.getDescription().equals("Updated description")
+            po.getDescription().equals("Updated description") &&
+            po.isExtractValueEnabled()
         ));
 
         ArgumentCaptor<SemanticSearchDocument> docCaptor = ArgumentCaptor.forClass(SemanticSearchDocument.class);
@@ -145,6 +147,52 @@ class ColumnServiceTest {
         assertThat(savedDoc.getEntity().getTableId()).isEqualTo(TestFixtures.TEST_TABLE_ID);
         assertThat(savedDoc.getEntity().getTableName()).isEqualTo("test_table");
         assertThat(savedDoc.getEntity().getField()).isEqualTo("updated_column");
+    }
+
+    @Test
+    @DisplayName("更新列 - 禁用值匹配时清理 FIELD_VALUE 类型数据")
+    void updateColumn_disableValueMatching_shouldClearFieldValues() {
+        // given
+        ColumnInfoPO existingPO = TestFixtures.createTestColumnInfoPO();
+        existingPO.setExtractValueEnabled(true);
+        when(columnInfoDAO.findById(TestFixtures.TEST_COLUMN_ID)).thenReturn(Optional.of(existingPO));
+        when(columnInfoDAO.save(any())).thenReturn(existingPO);
+        when(tableInfoDAO.findById(TestFixtures.TEST_TABLE_ID)).thenReturn(Optional.of(testTableInfoPO));
+
+        ColumnInfo updateInfo = new ColumnInfo();
+        updateInfo.setName("test_column");
+        updateInfo.setColumnType("VARCHAR");
+        updateInfo.setExtractValueEnabled(false);
+
+        // when
+        columnService.updateColumn(TestFixtures.TEST_COLUMN_ID, updateInfo);
+
+        // then
+        verify(columnInfoDAO).save(argThat(po -> !po.isExtractValueEnabled()));
+        verify(semanticIndexService).deleteByTableFieldAndType(TestFixtures.TEST_TABLE_ID, "test_column", SemanticEntityType.FIELD_VALUE);
+    }
+
+    @Test
+    @DisplayName("更新列 - 保持禁用时不清除数据")
+    void updateColumn_keepDisabled_shouldNotClearValues() {
+        // given
+        ColumnInfoPO existingPO = TestFixtures.createTestColumnInfoPO();
+        existingPO.setExtractValueEnabled(false);
+        when(columnInfoDAO.findById(TestFixtures.TEST_COLUMN_ID)).thenReturn(Optional.of(existingPO));
+        when(columnInfoDAO.save(any())).thenReturn(existingPO);
+        when(tableInfoDAO.findById(TestFixtures.TEST_TABLE_ID)).thenReturn(Optional.of(testTableInfoPO));
+
+        ColumnInfo updateInfo = new ColumnInfo();
+        updateInfo.setName("test_column");
+        updateInfo.setColumnType("VARCHAR");
+        updateInfo.setExtractValueEnabled(false);
+
+        // when
+        columnService.updateColumn(TestFixtures.TEST_COLUMN_ID, updateInfo);
+
+        // then
+        verify(columnInfoDAO).save(any());
+        verify(semanticIndexService, never()).deleteByTableFieldAndType(any(), any(), any());
     }
 
     @Test

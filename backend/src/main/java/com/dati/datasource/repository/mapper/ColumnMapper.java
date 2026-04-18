@@ -12,6 +12,7 @@ public class ColumnMapper {
         columnInfo.setTableId(columnInfoPO.getTableId());
         columnInfo.setColumnType(columnInfoPO.getColumnType());
         columnInfo.setAliases(columnInfoPO.getAliases());
+        columnInfo.setExtractValueEnabled(columnInfoPO.isExtractValueEnabled());
         return columnInfo;
     }
 
@@ -21,6 +22,7 @@ public class ColumnMapper {
         columnInfoPO.setTableId(columnInfo.getTableId());
         columnInfoPO.setColumnType(columnInfo.getColumnType());
         columnInfoPO.setAliases(columnInfo.getAliases());
+        columnInfoPO.setExtractValueEnabled(columnInfo.getExtractValueEnabled());
         return columnInfoPO;
     }
 

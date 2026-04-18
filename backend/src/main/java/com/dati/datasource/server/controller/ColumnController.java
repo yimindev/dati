@@ -6,8 +6,11 @@ import com.dati.base.pojo.PageReq;
 import com.dati.base.pojo.PageResponse;
 import com.dati.datasource.domain.model.ColumnInfo;
 import com.dati.datasource.domain.service.ColumnService;
+import com.dati.datasource.domain.service.ColumnValueService;
 import com.dati.datasource.server.assembler.ColumnAssembler;
 import com.dati.datasource.server.pojo.ColumnInfoVO;
+import com.dati.datasource.server.pojo.ColumnValueListRequest;
+import com.dati.datasource.server.pojo.ColumnValueVO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -19,6 +22,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.sql.SQLException;
+import java.util.List;
 
 @Slf4j
 @RestController
@@ -29,9 +33,12 @@ public class ColumnController {
 
     private final ColumnAssembler columnAssembler;
 
-    public ColumnController(ColumnService columnService, ColumnAssembler columnAssembler) {
+    private final ColumnValueService columnValueService;
+
+    public ColumnController(ColumnService columnService, ColumnAssembler columnAssembler, ColumnValueService columnValueService) {
         this.columnService = columnService;
         this.columnAssembler = columnAssembler;
+        this.columnValueService = columnValueService;
     }
 
     @GetMapping
@@ -61,6 +68,53 @@ public class ColumnController {
             log.error("Failed to sync columns for datasource {}, table {}", datasourceId, tableId, e);
             throw new DatiException("SQL Error: " + e.getMessage());
         }
+    }
+
+    @PostMapping("/{columnId}/values/extract")
+    public IdResponse extractValues(
+            @PathVariable String datasourceId,
+            @PathVariable String columnId,
+            @RequestParam(defaultValue = "false") boolean overwrite) {
+        try {
+            columnValueService.extractValues(datasourceId, columnId, overwrite);
+            return new IdResponse(columnId);
+        } catch (SQLException e) {
+            log.error("Failed to extract values for column {}", columnId, e);
+            throw new DatiException("SQL Error: " + e.getMessage());
+        }
+    }
+
+    @GetMapping("/{columnId}/values")
+    public PageResponse<ColumnValueVO> getValues(
+            @PathVariable String columnId,
+            PageReq pageReq,
+            @RequestParam(required = false) String keyword) {
+        return PageResponse.of(
+                columnValueService.getValues(columnId, pageReq, keyword)
+                        .map(item -> {
+                            ColumnValueVO vo = new ColumnValueVO();
+                            vo.setId(item.getId());
+                            vo.setValue(item.getValue());
+                            vo.setSynonyms(item.getSynonyms());
+                            return vo;
+                        })
+        );
+    }
+
+    @PutMapping("/{columnId}/values")
+    public IdResponse saveValues(
+            @PathVariable String datasourceId,
+            @PathVariable String columnId,
+            @RequestBody ColumnValueListRequest request) {
+        List<ColumnValueService.ValueItem> items = request.getValues().stream().map(vo -> {
+            ColumnValueService.ValueItem item = new ColumnValueService.ValueItem();
+            item.setId(vo.getId());
+            item.setValue(vo.getValue());
+            item.setSynonyms(vo.getSynonyms());
+            return item;
+        }).toList();
+        columnValueService.saveValues(columnId, items, request.getDeletedIds());
+        return new IdResponse(columnId);
     }
 
 }

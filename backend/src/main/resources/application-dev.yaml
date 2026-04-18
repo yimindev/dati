@@ -24,3 +24,7 @@ spring:
     elasticsearch:
       repositories:
         enabled: true
+#logging:
+#  level:
+#    # 核心：打印es 交互信息
+#    org.apache.http.wire: DEBUG

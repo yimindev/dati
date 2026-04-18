@@ -1,8 +1,15 @@
 <script setup lang="ts">
+import { onMounted } from "vue";
 import BaseHeader from "~/components/layouts/BaseHeader.vue";
 import BaseSide from "~/components/layouts/BaseSide.vue";
+import { useSystemStore } from "~/stores/system";
 
-const isCollapse = ref(false)
+const isCollapse = ref(false);
+const systemStore = useSystemStore();
+
+onMounted(() => {
+  systemStore.loadConfig();
+});
 </script>
 
 <template>

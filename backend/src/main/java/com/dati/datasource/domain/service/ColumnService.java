@@ -57,11 +57,25 @@ public class ColumnService {
 
     public void updateColumn(String id, ColumnInfo columnInfo) {
         ColumnInfoPO columnInfoPO = columnInfoDAO.findById(id).orElseThrow();
+
+        boolean wasEnabled = columnInfoPO.isExtractValueEnabled();
+        boolean nowEnabled = columnInfo.getExtractValueEnabled();
+
         columnInfoPO.setName(columnInfo.getName());
         columnInfoPO.setColumnType(columnInfo.getColumnType());
         columnInfoPO.setAliases(columnInfo.getAliases());
         columnInfoPO.setDescription(columnInfo.getDescription());
+        columnInfoPO.setExtractValueEnabled(columnInfo.getExtractValueEnabled());
         columnInfoDAO.save(columnInfoPO);
+
+        // 从开启变为禁用，清理该列的值数据
+        if (wasEnabled && !nowEnabled) {
+            semanticIndexService.deleteByTableFieldAndType(
+                    columnInfoPO.getTableId(),
+                    columnInfoPO.getName(),
+                    SemanticEntityType.FIELD_VALUE
+            );
+        }
 
         TableInfo tableInfo = TableMapper.toTableInfo(tableInfoDAO.findById(columnInfoPO.getTableId()).orElseThrow());
         EntityReference entity = EntityReference.builder()

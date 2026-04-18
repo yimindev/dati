@@ -1,3 +1,7 @@
+system:
+  column-value-sample-limit: 1000
+  column-value-length-limit: 256
+
 server:
   port: 8085
 
