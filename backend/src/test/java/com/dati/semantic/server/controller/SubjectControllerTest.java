@@ -21,7 +21,6 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.Instant;
-import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -63,22 +62,21 @@ class SubjectControllerTest {
         request.setDescription("Test Description");
         request.setDatasourceId("datasource-001");
 
-        Subject subject = Subject.builder()
-                .id("subject-001")
-                .name("Test Subject")
-                .description("Test Description")
-                .datasourceId("datasource-001")
-                .createdAt(LocalDateTime.now())
-                .updatedAt(LocalDateTime.now())
-                .build();
+        Subject subject = new Subject();
+        subject.setId("subject-001");
+        subject.setName("Test Subject");
+        subject.setDescription("Test Description");
+        subject.setDatasourceId("datasource-001");
+        subject.setCreatedAt(Instant.now());
+        subject.setUpdatedAt(Instant.now());
 
         SubjectVO subjectVO = new SubjectVO();
         subjectVO.setId("subject-001");
         subjectVO.setName("Test Subject");
         subjectVO.setDescription("Test Description");
         subjectVO.setDatasourceId("datasource-001");
-        subjectVO.setCreatedAt(LocalDateTime.now());
-        subjectVO.setUpdatedAt(LocalDateTime.now());
+        subjectVO.setCreatedAt(Instant.now());
+        subjectVO.setUpdatedAt(Instant.now());
 
         when(subjectService.createSubject(anyString(), anyString(), anyString(), any())).thenReturn(subject);
 

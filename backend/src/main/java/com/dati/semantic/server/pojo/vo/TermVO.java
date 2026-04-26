@@ -1,18 +1,20 @@
 package com.dati.semantic.server.pojo.vo;
 
+import com.dati.base.pojo.BaseResourceVO;
 import lombok.Data;
-import java.time.Instant;
+import lombok.EqualsAndHashCode;
+
 import java.util.ArrayList;
 import java.util.List;
 
+@EqualsAndHashCode(callSuper = true)
 @Data
-public class TermVO {
-    private String id;
+public class TermVO extends BaseResourceVO {
+
     private String subjectId;
-    private String name;
-    private String description;
+
     private List<String> aliases = new ArrayList<>();
-    private Instant createdAt;
-    private Instant updatedAt;
+
     private List<TermRelationVO> relations;
+
 }

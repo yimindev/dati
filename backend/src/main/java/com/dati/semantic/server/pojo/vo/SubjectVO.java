@@ -1,17 +1,18 @@
 package com.dati.semantic.server.pojo.vo;
 
+import com.dati.base.pojo.BaseResourceVO;
 import lombok.Data;
-import java.time.LocalDateTime;
+import lombok.EqualsAndHashCode;
+
 import java.util.ArrayList;
 import java.util.List;
 
+@EqualsAndHashCode(callSuper = true)
 @Data
-public class SubjectVO {
-    private String id;
-    private String name;
-    private String description;
+public class SubjectVO extends BaseResourceVO {
+
     private String datasourceId;
+
     private List<String> aliases = new ArrayList<>();
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
+
 }

@@ -18,13 +18,9 @@ public class TermAssembler extends BaseAssembler {
             return null;
         }
         TermVO vo = new TermVO();
-        vo.setId(term.getId());
+        super.copyBaseInfo(term, vo);
         vo.setSubjectId(term.getSubjectId());
-        vo.setName(term.getName());
-        vo.setDescription(term.getDescription());
         vo.setAliases(term.getAliases() != null ? term.getAliases() : new ArrayList<>());
-        vo.setCreatedAt(term.getCreatedAt());
-        vo.setUpdatedAt(term.getUpdatedAt());
         return vo;
     }
 

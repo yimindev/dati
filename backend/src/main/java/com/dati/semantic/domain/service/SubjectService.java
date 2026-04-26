@@ -18,8 +18,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -211,14 +209,14 @@ public class SubjectService {
     }
 
     private Subject toSubject(SubjectPO po) {
-        return Subject.builder()
-                .id(po.getId())
-                .name(po.getName())
-                .description(po.getDescription())
-                .datasourceId(po.getDatasourceId())
-                .aliases(po.getAliases() != null ? po.getAliases() : new ArrayList<>())
-                .createdAt(po.getCreatedAt() != null ? LocalDateTime.ofInstant(po.getCreatedAt(), ZoneOffset.UTC) : null)
-                .updatedAt(po.getUpdatedAt() != null ? LocalDateTime.ofInstant(po.getUpdatedAt(), ZoneOffset.UTC) : null)
-                .build();
+        Subject subject = new Subject();
+        subject.setId(po.getId());
+        subject.setName(po.getName());
+        subject.setDescription(po.getDescription());
+        subject.setDatasourceId(po.getDatasourceId());
+        subject.setAliases(po.getAliases() != null ? po.getAliases() : new ArrayList<>());
+        subject.setCreatedAt(po.getCreatedAt());
+        subject.setUpdatedAt(po.getUpdatedAt());
+        return subject;
     }
 }

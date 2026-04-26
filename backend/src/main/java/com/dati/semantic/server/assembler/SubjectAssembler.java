@@ -15,13 +15,9 @@ public class SubjectAssembler extends BaseAssembler {
             return null;
         }
         SubjectVO vo = new SubjectVO();
-        vo.setId(subject.getId());
-        vo.setName(subject.getName());
-        vo.setDescription(subject.getDescription());
+        super.copyBaseInfo(subject, vo);
         vo.setDatasourceId(subject.getDatasourceId());
         vo.setAliases(subject.getAliases() != null ? subject.getAliases() : new ArrayList<>());
-        vo.setCreatedAt(subject.getCreatedAt());
-        vo.setUpdatedAt(subject.getUpdatedAt());
         return vo;
     }
 }

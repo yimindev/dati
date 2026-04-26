@@ -1,24 +1,18 @@
 package com.dati.semantic.domain.model;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
+import com.dati.base.pojo.BaseResource;
 import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.EqualsAndHashCode;
 
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
+@EqualsAndHashCode(callSuper = true)
 @Data
-@Builder
-@NoArgsConstructor
-@AllArgsConstructor
-public class Subject {
-    private String id;
-    private String name;
-    private String description;
+public class Subject extends BaseResource {
+
     private String datasourceId;
+
     private List<String> aliases = new ArrayList<>();
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
+
 }
