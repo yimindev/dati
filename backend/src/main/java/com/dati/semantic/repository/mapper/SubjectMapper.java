@@ -1,15 +1,18 @@
 package com.dati.semantic.repository.mapper;
 
+import com.dati.base.MapperUtils;
+import com.dati.semantic.domain.model.Subject;
 import com.dati.semantic.repository.po.SubjectPO;
-import com.dati.semantic.repository.po.SubjectTablePO;
+
+import java.util.ArrayList;
 
 public class SubjectMapper {
-    
-    public static SubjectPO toSubjectPO(SubjectPO subject) {
+
+    public static Subject toSubject(SubjectPO po) {
+        Subject subject = new Subject();
+        MapperUtils.copyBaseInfo(po, subject);
+        subject.setDatasourceId(po.getDatasourceId());
+        subject.setAliases(po.getAliases() != null ? po.getAliases() : new ArrayList<>());
         return subject;
-    }
-    
-    public static SubjectTablePO toSubjectTablePO(SubjectTablePO subjectTable) {
-        return subjectTable;
     }
 }

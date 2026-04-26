@@ -71,7 +71,7 @@ public class TermService {
                 .build();
         semanticIndexService.save(doc);
 
-        return toTerm(termPO);
+        return TermMapper.toTerm(termPO);
     }
 
     @Transactional
@@ -102,7 +102,7 @@ public class TermService {
                 .build();
         semanticIndexService.save(doc);
 
-        return toTerm(termPO);
+        return TermMapper.toTerm(termPO);
     }
 
     @Transactional
@@ -145,7 +145,7 @@ public class TermService {
     @Transactional(readOnly = true)
     public List<Term> getTermsBySubject(String subjectId) {
         return termDAO.findBySubjectId(subjectId).stream()
-                .map(this::toTerm)
+                .map(TermMapper::toTerm)
                 .collect(Collectors.toList());
     }
 
@@ -162,7 +162,7 @@ public class TermService {
     public Term getTermById(String id) {
         TermPO termPO = termDAO.findById(id)
                 .orElseThrow(() -> new DatiException("Term not found: " + id));
-        return toTerm(termPO);
+        return TermMapper.toTerm(termPO);
     }
 
     @Transactional(readOnly = true)
@@ -170,18 +170,6 @@ public class TermService {
         Term term = getTermById(id);
         List<TermRelation> relations = getTermRelations(id);
         term.setRelations(relations);
-        return term;
-    }
-
-    private Term toTerm(TermPO po) {
-        Term term = new Term();
-        term.setId(po.getId());
-        term.setSubjectId(po.getSubjectId());
-        term.setName(po.getName());
-        term.setDescription(po.getDescription());
-        term.setAliases(po.getAliases() != null ? po.getAliases() : new java.util.ArrayList<>());
-        term.setCreatedAt(po.getCreatedAt());
-        term.setUpdatedAt(po.getUpdatedAt());
         return term;
     }
 

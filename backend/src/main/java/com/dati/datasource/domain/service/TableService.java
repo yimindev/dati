@@ -1,5 +1,6 @@
 package com.dati.datasource.domain.service;
 
+import com.dati.base.RequestContext;
 import com.dati.base.exception.DatiException;
 import com.dati.base.pojo.BasePO;
 import com.dati.base.pojo.BaseResourcePO;
@@ -13,7 +14,6 @@ import com.dati.datasource.repository.mapper.ColumnMapper;
 import com.dati.datasource.repository.mapper.TableMapper;
 import com.dati.datasource.repository.po.ColumnInfoPO;
 import com.dati.datasource.repository.po.TableInfoPO;
-import com.dati.datasource.server.assembler.TableAssembler;
 import com.dati.datasource.server.pojo.AddTableRequest;
 import com.dati.db.Column;
 import com.dati.db.Table;
@@ -39,14 +39,12 @@ public class TableService {
     private final TableInfoDAO tableInfoDAO;
     private final ColumnInfoDAO columnInfoDAO;
     private final JdbcMetaService jdbcMetaService;
-    private final TableAssembler tableAssembler;
     private final SemanticIndexService semanticIndexService;
 
-    public TableService(TableInfoDAO tableInfoDAO, ColumnInfoDAO columnInfoDAO, JdbcMetaService jdbcMetaService, TableAssembler tableAssembler, SemanticIndexService semanticIndexService) {
+    public TableService(TableInfoDAO tableInfoDAO, ColumnInfoDAO columnInfoDAO, JdbcMetaService jdbcMetaService, SemanticIndexService semanticIndexService) {
         this.tableInfoDAO = tableInfoDAO;
         this.columnInfoDAO = columnInfoDAO;
         this.jdbcMetaService = jdbcMetaService;
-        this.tableAssembler = tableAssembler;
         this.semanticIndexService = semanticIndexService;
     }
 
@@ -89,7 +87,8 @@ public class TableService {
             tableInfo.setSchema(request.getSchema());
             tableInfo.setDescription(tableCommentMap.getOrDefault(request.getName(), null));
             tableInfo.setAliases(new ArrayList<>());
-            tableAssembler.fillUsersFromRequest(tableInfo);
+            tableInfo.setCreatedBy(RequestContext.getUser().getId());
+            tableInfo.setUpdatedBy(RequestContext.getUser().getId());
 
             TableInfoPO savedTablePO = tableInfoDAO.save(TableMapper.toTableInfoPO(tableInfo));
             String tableId = savedTablePO.getId();
@@ -121,7 +120,8 @@ public class TableService {
                     columnInfo.setColumnType(column.type());
                     columnInfo.setDescription(column.comment());
                     columnInfo.setAliases(new ArrayList<>());
-                    tableAssembler.fillUsersFromRequest(columnInfo);
+                    columnInfo.setCreatedBy(RequestContext.getUser().getId());
+                    columnInfo.setUpdatedBy(RequestContext.getUser().getId());
                     ColumnInfoPO savedColumnPO = columnInfoDAO.save(ColumnMapper.toColumnInfoPO(columnInfo));
 
                     EntityReference columnEntity = EntityReference.builder()

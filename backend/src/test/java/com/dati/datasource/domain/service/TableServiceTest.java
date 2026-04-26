@@ -1,14 +1,14 @@
 package com.dati.datasource.domain.service;
 
 import com.dati.TestFixtures;
+import com.dati.auth.authentication.User;
+import com.dati.base.RequestContext;
 import com.dati.base.pojo.PageReq;
-import com.dati.datasource.domain.model.ColumnInfo;
 import com.dati.datasource.domain.model.TableInfo;
 import com.dati.datasource.repository.dao.ColumnInfoDAO;
 import com.dati.datasource.repository.dao.TableInfoDAO;
 import com.dati.datasource.repository.po.ColumnInfoPO;
 import com.dati.datasource.repository.po.TableInfoPO;
-import com.dati.datasource.server.assembler.TableAssembler;
 import com.dati.datasource.server.pojo.AddTableRequest;
 import com.dati.db.Column;
 import com.dati.semantic.domain.service.SemanticIndexService;
@@ -18,6 +18,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -31,8 +32,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -49,9 +50,6 @@ class TableServiceTest {
 
     @Mock
     private JdbcMetaService jdbcMetaService;
-
-    @Mock
-    private TableAssembler tableAssembler;
 
     @Mock
     private SemanticIndexService semanticIndexService;
@@ -137,17 +135,22 @@ class TableServiceTest {
             .thenReturn(List.of(mockColumn));
         when(tableInfoDAO.save(any(TableInfoPO.class))).thenReturn(testTableInfoPO);
         when(columnInfoDAO.save(any(ColumnInfoPO.class))).thenReturn(TestFixtures.createTestColumnInfoPO());
-        doNothing().when(tableAssembler).fillUsersFromRequest(any(TableInfo.class));
-        doNothing().when(tableAssembler).fillUsersFromRequest(any(ColumnInfo.class));
 
-        // when
-        List<String> result = tableService.batchAddTables(TestFixtures.TEST_DATASOURCE_ID, List.of(request));
+        User mockUser = mock(User.class);
+        when(mockUser.getId()).thenReturn(TestFixtures.TEST_USER_ID);
 
-        // then
-        assertThat(result).hasSize(1);
-        verify(tableInfoDAO).save(any(TableInfoPO.class));
-        verify(columnInfoDAO).save(any(ColumnInfoPO.class));
-        verify(semanticIndexService).saveBatch(anyList());
+        try (MockedStatic<RequestContext> mocked = mockStatic(RequestContext.class)) {
+            mocked.when(RequestContext::getUser).thenReturn(mockUser);
+
+            // when
+            List<String> result = tableService.batchAddTables(TestFixtures.TEST_DATASOURCE_ID, List.of(request));
+
+            // then
+            assertThat(result).hasSize(1);
+            verify(tableInfoDAO).save(any(TableInfoPO.class));
+            verify(columnInfoDAO).save(any(ColumnInfoPO.class));
+            verify(semanticIndexService).saveBatch(anyList());
+        }
     }
 
     @Test
@@ -158,16 +161,24 @@ class TableServiceTest {
         request.setName("new_table");
         request.setSchema("public");
         
+        when(jdbcMetaService.getTables(TestFixtures.TEST_DATASOURCE_ID, null, "public"))
+            .thenReturn(List.of());
         when(jdbcMetaService.getColumns(TestFixtures.TEST_DATASOURCE_ID, null, "public", "new_table"))
             .thenThrow(new SQLException("Connection failed"));
         when(tableInfoDAO.save(any(TableInfoPO.class))).thenReturn(testTableInfoPO);
-        doNothing().when(tableAssembler).fillUsersFromRequest(any(TableInfo.class));
 
-        // when & then
-        RuntimeException exception = assertThrows(RuntimeException.class, () ->
-            tableService.batchAddTables(TestFixtures.TEST_DATASOURCE_ID, List.of(request))
-        );
-        assertThat(exception.getMessage()).contains("Failed to sync columns");
+        User mockUser = mock(User.class);
+        when(mockUser.getId()).thenReturn(TestFixtures.TEST_USER_ID);
+
+        try (MockedStatic<RequestContext> mocked = mockStatic(RequestContext.class)) {
+            mocked.when(RequestContext::getUser).thenReturn(mockUser);
+
+            // when & then
+            RuntimeException exception = assertThrows(RuntimeException.class, () ->
+                tableService.batchAddTables(TestFixtures.TEST_DATASOURCE_ID, List.of(request))
+            );
+            assertThat(exception.getMessage()).contains("Failed to sync columns");
+        }
     }
 
     @Test

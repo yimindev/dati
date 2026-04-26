@@ -51,13 +51,13 @@ public class BaseAssembler {
             if (vo.getCreatedBy() != null) {
                 User user = userMap.get(vo.getCreatedBy());
                 if (user != null) {
-                    vo.setCreatedBy(user.getDisplayName());
+                    vo.setCreatedUserName(user.getDisplayName());
                 }
             }
             if (vo.getUpdatedBy() != null) {
                 User user = userMap.get(vo.getUpdatedBy());
                 if (user != null) {
-                    vo.setUpdatedBy(user.getDisplayName());
+                    vo.setUpdatedUserName(user.getDisplayName());
                 }
             }
         });

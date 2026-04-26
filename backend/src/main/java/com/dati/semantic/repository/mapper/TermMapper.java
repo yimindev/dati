@@ -1,7 +1,10 @@
 package com.dati.semantic.repository.mapper;
 
+import com.dati.base.MapperUtils;
+import com.dati.semantic.domain.model.Term;
 import com.dati.semantic.repository.po.TermPO;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class TermMapper {
@@ -13,5 +16,13 @@ public class TermMapper {
         po.setDescription(description);
         po.setAliases(aliases != null ? aliases : new java.util.ArrayList<>());
         return po;
+    }
+
+    public static Term toTerm(TermPO po) {
+        Term term = new Term();
+        MapperUtils.copyBaseInfo(po, term);
+        term.setSubjectId(po.getSubjectId());
+        term.setAliases(po.getAliases() != null ? po.getAliases() : new ArrayList<>());
+        return term;
     }
 }
