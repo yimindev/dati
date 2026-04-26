@@ -1,5 +1,6 @@
 package com.dati.semantic.server.assembler;
 
+import com.dati.base.BaseAssembler;
 import com.dati.semantic.domain.model.Subject;
 import com.dati.semantic.server.pojo.vo.SubjectVO;
 import org.springframework.stereotype.Component;
@@ -7,7 +8,7 @@ import org.springframework.stereotype.Component;
 import java.util.ArrayList;
 
 @Component
-public class SubjectAssembler {
+public class SubjectAssembler extends BaseAssembler {
 
     public SubjectVO toVO(Subject subject) {
         if (subject == null) {

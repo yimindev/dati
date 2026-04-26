@@ -1,7 +1,10 @@
 package com.dati.semantic.server.controller;
 
+import com.dati.base.pojo.IdResponse;
 import com.dati.base.pojo.PageReq;
 import com.dati.base.pojo.PageResponse;
+import com.dati.datasource.server.assembler.TableAssembler;
+import com.dati.datasource.server.pojo.TableInfoVO;
 import com.dati.semantic.domain.model.Subject;
 import com.dati.semantic.domain.service.SubjectService;
 import com.dati.semantic.server.assembler.SubjectAssembler;
@@ -10,13 +13,18 @@ import com.dati.semantic.server.pojo.request.CreateSubjectRequest;
 import com.dati.semantic.server.pojo.request.UpdateSubjectRequest;
 import com.dati.semantic.server.pojo.vo.SubjectAvailableTableVO;
 import com.dati.semantic.server.pojo.vo.SubjectVO;
-import com.dati.datasource.server.assembler.TableAssembler;
-import com.dati.datasource.server.pojo.TableInfoVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Sort;
-import org.springframework.http.HttpStatus;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
@@ -30,27 +38,26 @@ public class SubjectController {
     private final TableAssembler tableAssembler;
 
     @PostMapping
-    @ResponseStatus(HttpStatus.CREATED)
-    public SubjectVO createSubject(@RequestBody CreateSubjectRequest request) {
+    public IdResponse createSubject(@RequestBody CreateSubjectRequest request) {
         Subject subject = subjectService.createSubject(
                 request.getName(),
                 request.getDescription(),
                 request.getDatasourceId(),
                 request.getAliases()
         );
-        return subjectAssembler.toVO(subject);
+        return new IdResponse(subject.getId());
     }
 
     @PutMapping("/{id}")
-    public SubjectVO updateSubject(@PathVariable String id, @RequestBody UpdateSubjectRequest request) {
-        Subject subject = subjectService.updateSubject(id, request.getName(), request.getDescription(), request.getAliases());
-        return subjectAssembler.toVO(subject);
+    public IdResponse updateSubject(@PathVariable String id, @RequestBody UpdateSubjectRequest request) {
+        subjectService.updateSubject(id, request.getName(), request.getDescription(), request.getAliases());
+        return new IdResponse(id);
     }
 
     @DeleteMapping("/{id}")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void deleteSubject(@PathVariable String id) {
+    public IdResponse deleteSubject(@PathVariable String id) {
         subjectService.deleteSubject(id);
+        return new IdResponse(id);
     }
 
     @GetMapping("/{id}")
@@ -73,15 +80,15 @@ public class SubjectController {
     }
 
     @PostMapping("/{id}/tables")
-    @ResponseStatus(HttpStatus.CREATED)
-    public void addTableToSubject(@PathVariable String id, @RequestBody AddTableToSubjectRequest request) {
+    public IdResponse addTableToSubject(@PathVariable String id, @RequestBody AddTableToSubjectRequest request) {
         subjectService.addTableToSubject(id, request.getTableId());
+        return new IdResponse(request.getTableId());
     }
 
     @DeleteMapping("/{id}/tables/{tableId}")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void removeTableFromSubject(@PathVariable String id, @PathVariable String tableId) {
+    public IdResponse removeTableFromSubject(@PathVariable String id, @PathVariable String tableId) {
         subjectService.removeTableFromSubject(id, tableId);
+        return new IdResponse(tableId);
     }
 
     @GetMapping

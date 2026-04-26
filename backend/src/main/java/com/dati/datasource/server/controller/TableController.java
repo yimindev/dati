@@ -43,8 +43,9 @@ public class TableController {
     }
 
     @DeleteMapping("/tables/{tableId}")
-    public void deleteTable(@PathVariable String datasourceId, @PathVariable String tableId) {
+    public IdResponse deleteTable(@PathVariable String datasourceId, @PathVariable String tableId) {
         tableService.deleteTable(tableId);
+        return new IdResponse(tableId);
     }
 
     @PutMapping("/tables/{tableId}")

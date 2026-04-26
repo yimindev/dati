@@ -81,16 +81,12 @@ class SubjectControllerTest {
         subjectVO.setUpdatedAt(LocalDateTime.now());
 
         when(subjectService.createSubject(anyString(), anyString(), anyString(), any())).thenReturn(subject);
-        when(subjectAssembler.toVO(any(Subject.class))).thenReturn(subjectVO);
 
         mockMvc.perform(post("/v1/subjects")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
-            .andExpect(status().isCreated())
-            .andExpect(jsonPath("$.id").value("subject-001"))
-            .andExpect(jsonPath("$.name").value("Test Subject"))
-            .andExpect(jsonPath("$.description").value("Test Description"))
-            .andExpect(jsonPath("$.datasource_id").value("datasource-001"));
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.id").value("subject-001"));
     }
 
     @Test
@@ -121,17 +117,18 @@ class SubjectControllerTest {
     }
 
     @Test
-    @DisplayName("删除 Subject - 成功返回 204")
-    void deleteSubject_shouldReturn204() throws Exception {
+    @DisplayName("删除 Subject - 成功返回 200")
+    void deleteSubject_shouldReturn200() throws Exception {
         doNothing().when(subjectService).deleteSubject("subject-001");
 
         mockMvc.perform(delete("/v1/subjects/subject-001"))
-            .andExpect(status().isNoContent());
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.id").value("subject-001"));
     }
 
     @Test
-    @DisplayName("添加 Table 到 Subject - 成功返回 201")
-    void addTableToSubject_shouldReturn201() throws Exception {
+    @DisplayName("添加 Table 到 Subject - 成功返回 200")
+    void addTableToSubject_shouldReturn200() throws Exception {
         AddTableToSubjectRequest request = new AddTableToSubjectRequest();
         request.setTableId("table-001");
 
@@ -140,15 +137,17 @@ class SubjectControllerTest {
         mockMvc.perform(post("/v1/subjects/subject-001/tables")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
-            .andExpect(status().isCreated());
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.id").value("table-001"));
     }
 
     @Test
-    @DisplayName("删除 Subject 的 Table - 成功返回 204")
-    void removeTableFromSubject_shouldReturn204() throws Exception {
+    @DisplayName("删除 Subject 的 Table - 成功返回 200")
+    void removeTableFromSubject_shouldReturn200() throws Exception {
         doNothing().when(subjectService).removeTableFromSubject("subject-001", "table-001");
 
         mockMvc.perform(delete("/v1/subjects/subject-001/tables/table-001"))
-            .andExpect(status().isNoContent());
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.id").value("table-001"));
     }
 }

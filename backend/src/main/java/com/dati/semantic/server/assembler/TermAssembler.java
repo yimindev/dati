@@ -1,5 +1,6 @@
 package com.dati.semantic.server.assembler;
 
+import com.dati.base.BaseAssembler;
 import com.dati.semantic.domain.model.Term;
 import com.dati.semantic.domain.model.TermRelation;
 import com.dati.semantic.server.pojo.vo.TermRelationVO;
@@ -10,7 +11,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Component
-public class TermAssembler {
+public class TermAssembler extends BaseAssembler {
 
     public TermVO toVO(Term term) {
         if (term == null) {

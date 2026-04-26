@@ -158,7 +158,8 @@ class TableControllerTest {
         // when & then
         mockMvc.perform(delete("/v1/data-sources/{datasourceId}/tables/{tableId}", 
                     TestFixtures.TEST_DATASOURCE_ID, TestFixtures.TEST_TABLE_ID))
-            .andExpect(status().isOk());
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.id").value(TestFixtures.TEST_TABLE_ID));
         
         verify(tableService).deleteTable(TestFixtures.TEST_TABLE_ID);
     }
@@ -172,7 +173,8 @@ class TableControllerTest {
         // when & then
         mockMvc.perform(delete("/v1/data-sources/{datasourceId}/tables/{tableId}", 
                     "any-datasource-id", TestFixtures.TEST_TABLE_ID))
-            .andExpect(status().isOk());
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.id").value(TestFixtures.TEST_TABLE_ID));
         
         // Verify that only tableId is used for deletion
         verify(tableService).deleteTable(TestFixtures.TEST_TABLE_ID);

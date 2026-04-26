@@ -73,16 +73,12 @@ class TermControllerTest {
         termVO.setUpdatedAt(java.time.Instant.now());
 
         when(termService.createTerm(anyString(), anyString(), anyString(), any())).thenReturn(term);
-        when(termAssembler.toVO(any(Term.class))).thenReturn(termVO);
 
         mockMvc.perform(post("/v1/subjects/subject-001/terms")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
-            .andExpect(status().isCreated())
-            .andExpect(jsonPath("$.id").value("term-001"))
-            .andExpect(jsonPath("$.name").value("Test Term"))
-            .andExpect(jsonPath("$.description").value("Test Description"))
-            .andExpect(jsonPath("$.subject_id").value("subject-001"));
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.id").value("term-001"));
     }
 
     @Test
@@ -136,12 +132,13 @@ class TermControllerTest {
     }
 
     @Test
-    @DisplayName("删除 Term - 成功返回 204")
-    void deleteTerm_shouldReturn204() throws Exception {
+    @DisplayName("删除 Term - 成功返回 200")
+    void deleteTerm_shouldReturn200() throws Exception {
         doNothing().when(termService).deleteTerm("term-001");
 
         mockMvc.perform(delete("/v1/terms/term-001"))
-            .andExpect(status().isNoContent());
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.id").value("term-001"));
     }
 
     @Test
@@ -168,19 +165,17 @@ class TermControllerTest {
         termVO.setUpdatedAt(java.time.Instant.now());
 
         when(termService.updateTerm(anyString(), anyString(), anyString(), any())).thenReturn(term);
-        when(termAssembler.toVO(any(Term.class))).thenReturn(termVO);
 
         mockMvc.perform(put("/v1/terms/term-001")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.id").value("term-001"))
-            .andExpect(jsonPath("$.name").value("Updated Term"));
+            .andExpect(jsonPath("$.id").value("term-001"));
     }
 
     @Test
-    @DisplayName("关联 Term 关系 - 成功返回 201")
-    void linkTermRelation_shouldReturn201() throws Exception {
+    @DisplayName("关联 Term 关系 - 成功返回 200")
+    void linkTermRelation_shouldReturn200() throws Exception {
         com.dati.semantic.server.pojo.request.LinkTermRelationRequest request = new com.dati.semantic.server.pojo.request.LinkTermRelationRequest();
         request.setEntityType(com.dati.semantic.domain.SemanticEntityType.FIELD);
         request.setTableId("table-001");
@@ -191,16 +186,18 @@ class TermControllerTest {
         mockMvc.perform(post("/v1/terms/term-001/relations")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
-            .andExpect(status().isCreated());
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.id").value("term-001"));
     }
 
     @Test
-    @DisplayName("取消关联 Term 关系 - 成功返回 204")
-    void unlinkTermRelation_shouldReturn204() throws Exception {
+    @DisplayName("取消关联 Term 关系 - 成功返回 200")
+    void unlinkTermRelation_shouldReturn200() throws Exception {
         doNothing().when(termService).unlinkEntity(anyString(), anyString(), anyString());
 
         mockMvc.perform(delete("/v1/terms/term-001/relations/table-001/field-001"))
-            .andExpect(status().isNoContent());
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.id").value("term-001"));
     }
 
     @Test
