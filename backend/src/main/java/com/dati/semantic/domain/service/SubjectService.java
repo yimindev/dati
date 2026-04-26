@@ -42,7 +42,7 @@ public class SubjectService {
     @Transactional
     public Subject createSubject(String name, String description, String datasourceId, List<String> aliases) {
         if (name == null || name.isBlank()) {
-            throw new IllegalArgumentException("Subject name cannot be null or empty");
+            throw new DatiException("Subject name cannot be null or empty");
         }
 
         SubjectPO subjectPO = new SubjectPO();
@@ -75,7 +75,7 @@ public class SubjectService {
     @Transactional
     public Subject updateSubject(String id, String name, String description, List<String> aliases) {
         if (name == null || name.isBlank()) {
-            throw new IllegalArgumentException("Subject name cannot be null or empty");
+            throw new DatiException("Subject name cannot be null or empty");
         }
         SubjectPO subjectPO = subjectDAO.findById(id)
                 .orElseThrow(() -> new DatiException("Subject not found: " + id));
@@ -121,11 +121,11 @@ public class SubjectService {
                 .orElseThrow(() -> new DatiException("Table not found: " + tableId));
 
         if (!subjectPO.getDatasourceId().equals(tableInfoPO.getDataSourceId())) {
-            throw new IllegalStateException("Table does not belong to the subject's datasource");
+            throw new DatiException("Table does not belong to the subject's datasource");
         }
 
         if (subjectTableDAO.existsBySubjectIdAndTableId(subjectId, tableId)) {
-            throw new IllegalStateException("Table is already associated with this subject");
+            throw new DatiException("Table is already associated with this subject");
         }
 
         SubjectTablePO subjectTablePO = new SubjectTablePO();

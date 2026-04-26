@@ -48,7 +48,7 @@ public class TermService {
     @Transactional
     public Term createTerm(String subjectId, String name, String description, List<String> aliases) {
         if (name == null || name.isBlank()) {
-            throw new IllegalArgumentException("Term name cannot be null or empty");
+            throw new DatiException("Term name cannot be null or empty");
         }
 
         TermPO termPO = TermMapper.toPO(subjectId, name, description, aliases);
@@ -77,7 +77,7 @@ public class TermService {
     @Transactional
     public Term updateTerm(String id, String name, String description, List<String> aliases) {
         if (name == null || name.isBlank()) {
-            throw new IllegalArgumentException("Term name cannot be null or empty");
+            throw new DatiException("Term name cannot be null or empty");
         }
         TermPO termPO = termDAO.findById(id)
                 .orElseThrow(() -> new DatiException("Term not found: " + id));
@@ -121,11 +121,11 @@ public class TermService {
                 .orElseThrow(() -> new DatiException("Term not found: " + termId));
 
         if (entityType == SemanticEntityType.FIELD && fieldName == null) {
-            throw new IllegalArgumentException("fieldName is required for FIELD entity type");
+            throw new DatiException("fieldName is required for FIELD entity type");
         }
 
         if (!subjectTableDAO.existsBySubjectIdAndTableId(termPO.getSubjectId(), tableId)) {
-            throw new IllegalStateException("Table does not belong to subject");
+            throw new DatiException("Table does not belong to subject");
         }
 
         TermRelationPO relationPO = TermRelationMapper.toPO(termId, entityType, tableId, fieldName);

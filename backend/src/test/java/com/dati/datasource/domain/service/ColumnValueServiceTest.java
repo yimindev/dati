@@ -1,5 +1,6 @@
 package com.dati.datasource.domain.service;
 
+import com.dati.base.exception.DatiException;
 import com.dati.base.pojo.PageReq;
 import com.dati.config.ColumnValueConfig;
 import com.dati.datasource.repository.dao.ColumnInfoDAO;
@@ -173,7 +174,7 @@ class ColumnValueServiceTest {
         void extractValues_columnNotFound() {
             when(columnInfoDAO.findById("invalid")).thenReturn(Optional.empty());
 
-            assertThrows(IllegalArgumentException.class, () ->
+            assertThrows(DatiException.class, () ->
                     columnValueService.extractValues("ds1", "invalid", false)
             );
         }
@@ -270,11 +271,11 @@ class ColumnValueServiceTest {
         }
 
         @Test
-        @DisplayName("columnId 不存在时抛出 IllegalArgumentException")
+        @DisplayName("columnId 不存在时抛出 DatiException")
         void getValues_columnNotFound() {
             when(columnInfoDAO.findById("invalid")).thenReturn(Optional.empty());
 
-            assertThrows(IllegalArgumentException.class, () ->
+            assertThrows(DatiException.class, () ->
                     columnValueService.getValues("invalid", new PageReq(), null)
             );
         }

@@ -181,7 +181,7 @@ class SubjectServiceTest {
         when(tableInfoDAO.findById(tableId)).thenReturn(Optional.of(otherDatasourceTable));
 
         assertThatThrownBy(() -> subjectService.addTableToSubject(subjectId, tableId))
-                .isInstanceOf(IllegalStateException.class)
+                .isInstanceOf(DatiException.class)
                 .hasMessageContaining("Table does not belong to the subject's datasource");
 
         verify(semanticIndexService, never()).save(any());
@@ -198,7 +198,7 @@ class SubjectServiceTest {
         when(subjectTableDAO.existsBySubjectIdAndTableId(subjectId, tableId)).thenReturn(true);
 
         assertThatThrownBy(() -> subjectService.addTableToSubject(subjectId, tableId))
-                .isInstanceOf(IllegalStateException.class)
+                .isInstanceOf(DatiException.class)
                 .hasMessageContaining("already associated");
 
         verify(semanticIndexService, never()).save(any());

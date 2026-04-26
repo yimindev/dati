@@ -1,5 +1,6 @@
 package com.dati.semantic.domain.service;
 
+import com.dati.base.exception.DatiException;
 import com.dati.semantic.domain.SemanticEntityType;
 import com.dati.semantic.repository.dao.TermDAO;
 import com.dati.semantic.repository.dao.TermRelationDAO;
@@ -81,7 +82,7 @@ class TermServiceTest {
         when(termDAO.findById(termId)).thenReturn(Optional.of(term));
 
         assertThatThrownBy(() -> termService.linkEntity(termId, SemanticEntityType.FIELD, tableId, null))
-                .isInstanceOf(IllegalArgumentException.class)
+                .isInstanceOf(DatiException.class)
                 .hasMessageContaining("fieldName is required for FIELD entity type");
     }
 

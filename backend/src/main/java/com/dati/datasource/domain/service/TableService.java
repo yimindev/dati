@@ -1,5 +1,6 @@
 package com.dati.datasource.domain.service;
 
+import com.dati.base.exception.DatiException;
 import com.dati.base.pojo.BasePO;
 import com.dati.base.pojo.BaseResourcePO;
 import com.dati.base.pojo.PageReq;
@@ -78,7 +79,7 @@ public class TableService {
             tableCommentMap = dbTables.stream()
                     .collect(Collectors.toMap(Table::name, t -> t.comment() != null ? t.comment() : ""));
         } catch (SQLException e) {
-            throw new RuntimeException("Failed to get table comments", e);
+            throw new DatiException("Failed to get table comments: " + e.getMessage());
         }
 
         for (AddTableRequest request : tables) {
@@ -142,7 +143,7 @@ public class TableService {
                             .build());
                 }
             } catch (Exception e) {
-                throw new RuntimeException("Failed to sync columns for table " + request.getName(), e);
+                throw new DatiException("Failed to sync columns for table " + request.getName() + ": " + e.getMessage());
             }
         }
 

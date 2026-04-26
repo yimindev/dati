@@ -1,5 +1,6 @@
 package com.dati.datasource.domain.service;
 
+import com.dati.base.exception.DatiException;
 import com.dati.base.pojo.PageReq;
 import com.dati.config.ColumnValueConfig;
 import com.dati.datasource.repository.dao.ColumnInfoDAO;
@@ -48,7 +49,7 @@ public class ColumnValueService {
 
     public void extractValues(String datasourceId, String columnId, boolean overwrite) throws SQLException {
         ColumnInfoPO columnPO = columnInfoDAO.findById(columnId)
-                .orElseThrow(() -> new IllegalArgumentException("Column not found: " + columnId));
+                .orElseThrow(() -> new DatiException("Column not found: " + columnId));
 
         String tableId = columnPO.getTableId();
         String columnName = columnPO.getName();
@@ -130,7 +131,8 @@ public class ColumnValueService {
 
         if (values != null && !values.isEmpty()) {
             ColumnInfoPO columnPO = columnInfoDAO.findById(columnId)
-                    .orElseThrow(() -> new IllegalArgumentException("Column not found: " + columnId));
+                    .orElseThrow(() -> new DatiException("Column not found: " + columnId));
+
             List<SemanticSearchDocument> docs = new ArrayList<>();
             for (ValueItem item : values) {
                 EntityReference entity = EntityReference.builder()
@@ -162,7 +164,7 @@ public class ColumnValueService {
 
     public Page<ValueItem> getValues(String columnId, PageReq pageReq, String keyword) {
         ColumnInfoPO columnPO = columnInfoDAO.findById(columnId)
-                .orElseThrow(() -> new IllegalArgumentException("Column not found: " + columnId));
+                .orElseThrow(() -> new DatiException("Column not found: " + columnId));
 
         Page<SemanticSearchDocument> docsPage = semanticIndexService.findByTableFieldAndTypePaginated(
                 columnPO.getTableId(),
@@ -179,7 +181,7 @@ public class ColumnValueService {
         return Optional.ofNullable(tableId)
                 .flatMap(tableInfoDAO::findById)
                 .map(TableInfoPO::getName)
-                .orElseThrow(() -> new IllegalStateException("Table not found: " + tableId));
+                .orElseThrow(() -> new DatiException("Table not found: " + tableId));
     }
 
     @Data
