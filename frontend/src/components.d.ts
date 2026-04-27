@@ -10,7 +10,6 @@ declare module 'vue' {
   export interface GlobalComponents {
     BaseHeader: typeof import('./components/layouts/BaseHeader.vue')['default']
     BaseSide: typeof import('./components/layouts/BaseSide.vue')['default']
-    DatasourceAction: typeof import('./components/datasource/DatasourceAction.vue')['default']
     DatasourceDialog: typeof import('./components/datasource/DatasourceDialog.vue')['default']
     DatasourceForm: typeof import('./components/datasource/DatasourceForm.vue')['default']
     DatasourceTable: typeof import('./components/datasource/DatasourceTable.vue')['default']
@@ -49,7 +48,6 @@ declare module 'vue' {
     ElTag: typeof import('element-plus/es')['ElTag']
     ElTooltip: typeof import('element-plus/es')['ElTooltip']
     ElTransfer: typeof import('element-plus/es')['ElTransfer']
-    HelloWorld: typeof import('./components/HelloWorld.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
     SubjectCard: typeof import('./components/subject/SubjectCard.vue')['default']

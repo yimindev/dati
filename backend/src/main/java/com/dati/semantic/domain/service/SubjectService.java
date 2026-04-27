@@ -52,12 +52,12 @@ public class SubjectService {
         subjectPO.setName(name);
         subjectPO.setDescription(description);
         subjectPO.setDatasourceId(datasourceId);
-        subjectPO.setAliases(aliases != null ? aliases : new java.util.ArrayList<>());
+        subjectPO.setAliases(aliases != null ? aliases : new ArrayList<>());
         subjectDAO.save(subjectPO);
 
         String id = subjectPO.getId();
 
-        List<String> keywords = new java.util.ArrayList<>();
+        List<String> keywords = new ArrayList<>();
         keywords.add(name);
         if (aliases != null) {
             keywords.addAll(aliases);
@@ -191,18 +191,7 @@ public class SubjectService {
                 .collect(Collectors.toList());
 
         return tableInfoDAO.findAllById(tableIds).stream()
-                .map(tableInfo -> {
-                    com.dati.datasource.domain.model.TableInfo ti = new com.dati.datasource.domain.model.TableInfo();
-                    ti.setId(tableInfo.getId());
-                    ti.setName(tableInfo.getName());
-                    ti.setDescription(tableInfo.getDescription());
-                    ti.setDatasourceId(tableInfo.getDataSourceId());
-                    ti.setSchema(tableInfo.getSchema());
-                    ti.setAliases(tableInfo.getAliases());
-                    ti.setCreatedAt(tableInfo.getCreatedAt());
-                    ti.setUpdatedAt(tableInfo.getUpdatedAt());
-                    return ti;
-                })
+                .map(com.dati.datasource.repository.mapper.TableMapper::toTableInfo)
                 .collect(Collectors.toList());
     }
 

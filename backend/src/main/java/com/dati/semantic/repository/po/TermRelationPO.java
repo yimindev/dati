@@ -9,11 +9,13 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
+import lombok.experimental.FieldNameConstants;
 
 import java.io.Serial;
 
 @Setter
 @Getter
+@FieldNameConstants
 @Entity
 @Table(name = "term_relation")
 public class TermRelationPO extends BasePO {

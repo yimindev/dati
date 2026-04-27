@@ -22,9 +22,6 @@ declare module 'vue-router/auto-routes' {
     '/datasources/': RouteRecordInfo<'/datasources/', '/datasources', Record<never, never>, Record<never, never>>,
     '/datasources/[id]/tables/': RouteRecordInfo<'/datasources/[id]/tables/', '/datasources/:id/tables', { id: ParamValue<true> }, { id: ParamValue<false> }>,
     '/datasources/[id]/tables/[tableId]/columns': RouteRecordInfo<'/datasources/[id]/tables/[tableId]/columns', '/datasources/:id/tables/:tableId/columns', { id: ParamValue<true>, tableId: ParamValue<true> }, { id: ParamValue<false>, tableId: ParamValue<false> }>,
-    '/nav/1/item-1': RouteRecordInfo<'/nav/1/item-1', '/nav/1/item-1', Record<never, never>, Record<never, never>>,
-    '/nav/2': RouteRecordInfo<'/nav/2', '/nav/2', Record<never, never>, Record<never, never>>,
-    '/nav/4': RouteRecordInfo<'/nav/4', '/nav/4', Record<never, never>, Record<never, never>>,
     '/subjects/': RouteRecordInfo<'/subjects/', '/subjects', Record<never, never>, Record<never, never>>,
     '/subjects/[id]': RouteRecordInfo<'/subjects/[id]', '/subjects/:id', { id: ParamValue<true> }, { id: ParamValue<false> }>,
   }
@@ -54,18 +51,6 @@ declare module 'vue-router/auto-routes' {
     }
     'src/pages/datasources/[id]/tables/[tableId]/columns.vue': {
       routes: '/datasources/[id]/tables/[tableId]/columns'
-      views: never
-    }
-    'src/pages/nav/1/item-1.vue': {
-      routes: '/nav/1/item-1'
-      views: never
-    }
-    'src/pages/nav/2.vue': {
-      routes: '/nav/2'
-      views: never
-    }
-    'src/pages/nav/4.vue': {
-      routes: '/nav/4'
       views: never
     }
     'src/pages/subjects/index.vue': {

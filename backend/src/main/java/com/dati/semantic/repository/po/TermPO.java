@@ -6,6 +6,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
+import lombok.experimental.FieldNameConstants;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
@@ -15,6 +16,7 @@ import java.util.List;
 
 @Setter
 @Getter
+@FieldNameConstants
 @Entity
 @Table(name = "term")
 public class TermPO extends BaseResourcePO {

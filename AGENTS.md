@@ -98,13 +98,13 @@ com.dati.<module>/
 - **`DatiException`**: Runtime exception for business errors
 
 **Common Package (`com.dati.common`):**
-- **`StringUtils`**: `isBlank()`, `isNotBlank()` wrappers
+- **`StringUtils`**: `isEmpty()`, `isNotEmpty()` wrappers
 - **`JsonUtils`**: Jackson-based JSON serialization/deserialization helpers
 
 ### Key Rules
 - **Naming**: `PascalCase` classes, `camelCase` methods, `lowercase` packages.
 - **Injection**: Constructor injection only (`private final`).
-- **Lombok**: Use `@Data`, `@Slf4j`, `@FieldNameConstants`. POs use `@Getter`/`@Setter`.
+- **Lombok**: Used throughout the project. POs use `@Getter`/`@Setter`; `@FieldNameConstants` is optional and PO-only; `@Slf4j` as needed.
 - **Response**: Return `IdResponse` for mutations. Return `PageResponse<T>` for paginated lists; raw `List<T>` is acceptable for metadata queries (schemas, tables, columns) where pagination is unnecessary.
 - **Exception**: Use `DatiException` for business errors, log with `@Slf4j`.
 - **JSON**: Dev profile uses `SNAKE_CASE` naming strategy.

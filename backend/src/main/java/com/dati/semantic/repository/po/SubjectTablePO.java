@@ -6,11 +6,13 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
+import lombok.experimental.FieldNameConstants;
 
 import java.io.Serial;
 
 @Setter
 @Getter
+@FieldNameConstants
 @Entity
 @Table(name = "subject_table")
 public class SubjectTablePO extends BasePO {

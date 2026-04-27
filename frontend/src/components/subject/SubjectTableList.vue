@@ -157,11 +157,6 @@ onMounted(() => {
         min-width="150"
       />
       <el-table-column
-        prop="display_name"
-        :label="t('tableInfo.displayName')"
-        min-width="150"
-      />
-      <el-table-column
         prop="schema"
         :label="t('common.schema')"
         min-width="120"

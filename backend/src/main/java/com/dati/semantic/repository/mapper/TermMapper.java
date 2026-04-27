@@ -14,7 +14,7 @@ public class TermMapper {
         po.setSubjectId(subjectId);
         po.setName(name);
         po.setDescription(description);
-        po.setAliases(aliases != null ? aliases : new java.util.ArrayList<>());
+        po.setAliases(aliases != null ? aliases : new ArrayList<>());
         return po;
     }
 

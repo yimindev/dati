@@ -4,6 +4,7 @@ import com.dati.base.pojo.BaseResourcePO;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+import lombok.experimental.FieldNameConstants;
 import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
@@ -14,6 +15,7 @@ import java.util.List;
 
 @Getter
 @Setter
+@FieldNameConstants
 @Entity
 @Table(name = "column_info")
 public class ColumnInfoPO extends BaseResourcePO {

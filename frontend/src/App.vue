@@ -4,7 +4,6 @@ import BaseHeader from "~/components/layouts/BaseHeader.vue";
 import BaseSide from "~/components/layouts/BaseSide.vue";
 import { useSystemStore } from "~/stores/system";
 
-const isCollapse = ref(false);
 const systemStore = useSystemStore();
 
 onMounted(() => {
@@ -14,10 +13,7 @@ onMounted(() => {
 
 <template>
   <el-config-provider namespace="ep">
-    <BaseHeader
-      :collapsed="isCollapse"
-      @toggle-collapse="isCollapse = !isCollapse"
-    />
+    <BaseHeader />
     <div class="main-container flex">
       <BaseSide/>
       <div class="flex-1 min-w-0 bg-[var(--ep-fill-color-light)]">
