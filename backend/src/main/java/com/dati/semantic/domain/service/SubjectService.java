@@ -11,9 +11,11 @@ import com.dati.semantic.repository.mapper.SubjectMapper;
 import com.dati.semantic.repository.po.EntityReference;
 import com.dati.semantic.repository.po.SemanticSearchDocument;
 import com.dati.semantic.repository.po.SubjectPO;
+import com.dati.common.StringUtils;
 import com.dati.semantic.repository.po.SubjectTablePO;
 import com.dati.semantic.server.pojo.vo.SubjectAvailableTableVO;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.lang.Nullable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -140,10 +142,16 @@ public class SubjectService {
         subjectTableDAO.deleteBySubjectIdAndTableId(subjectId, tableId);
     }
 
+    /**
+     * 查询指定数据源下的 Subject 列表。
+     * datasourceId 为 null 或空字符串时，查询全部 Subject。
+     */
     @Transactional(readOnly = true)
-    public Page<Subject> getSubjectsByDatasource(String datasourceId, Pageable pageable) {
-        return subjectDAO.findByDatasourceId(datasourceId, pageable)
-                .map(SubjectMapper::toSubject);
+    public Page<Subject> getSubjectsByDatasource(@Nullable String datasourceId, Pageable pageable) {
+        Page<SubjectPO> pos = StringUtils.isEmpty(datasourceId)
+                ? subjectDAO.findAll(pageable)
+                : subjectDAO.findByDatasourceId(datasourceId, pageable);
+        return pos.map(SubjectMapper::toSubject);
     }
 
     @Transactional(readOnly = true)

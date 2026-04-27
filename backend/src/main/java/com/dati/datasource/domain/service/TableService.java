@@ -50,7 +50,7 @@ public class TableService {
 
     public Page<TableInfo> getTables(PageReq pageReq, String datasourceId, String keyword) {
         Sort sortBy = Sort.by(Sort.Direction.DESC, BasePO.Fields.createdAt);
-        if (StringUtils.isBlank(keyword)) {
+        if (StringUtils.isEmpty(keyword)) {
             return tableInfoDAO.findByDataSourceId(datasourceId, pageReq.toPageRequest().withSort(sortBy)).map(TableMapper::toTableInfo);
         }
         return tableInfoDAO.findByDataSourceIdAndNameContaining(datasourceId, keyword, pageReq.toPageRequest().withSort(sortBy)).map(TableMapper::toTableInfo);

@@ -68,7 +68,7 @@ public class DataSourceService {
     }
 
     public Page<DataSource> listDataSources(String keyword, Pageable pageable) {
-        if (StringUtils.isBlank(keyword)) {
+        if (StringUtils.isEmpty(keyword)) {
             return dataSourceDAO.findAll(pageable).map(DSMapper::toDataSource);
         }
         return dataSourceDAO.findAllByNameContainingOrId(keyword, keyword, pageable).map(DSMapper::toDataSource);

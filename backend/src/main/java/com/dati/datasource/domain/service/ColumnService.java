@@ -49,7 +49,7 @@ public class ColumnService {
 
     public Page<ColumnInfo> getColumns(PageReq pageReq, String tableId, String keyword) {
         Sort sortBy = Sort.by(Sort.Direction.ASC, BasePO.Fields.createdAt);
-        if (StringUtils.isBlank(keyword)) {
+        if (StringUtils.isEmpty(keyword)) {
             return columnInfoDAO.findByTableId(tableId, pageReq.toPageRequest().withSort(sortBy)).map(ColumnMapper::toColumnInfo);
         }
         return columnInfoDAO.findByTableIdAndNameContaining(tableId, keyword, pageReq.toPageRequest().withSort(sortBy)).map(ColumnMapper::toColumnInfo);
@@ -124,14 +124,14 @@ public class ColumnService {
             if (existing != null) {
                 columnInfoPO.setAliases(existing.getAliases());
                 String dbComment = column.comment();
-                if (overwriteExisting && StringUtils.isNotBlank(dbComment)) {
+                if (overwriteExisting && StringUtils.isNotEmpty(dbComment)) {
                     columnInfoPO.setDescription(dbComment);
                 } else {
                     columnInfoPO.setDescription(existing.getDescription());
                 }
             } else {
                 String dbComment = column.comment();
-                if (StringUtils.isNotBlank(dbComment)) {
+                if (StringUtils.isNotEmpty(dbComment)) {
                     columnInfoPO.setDescription(dbComment);
                 }
             }

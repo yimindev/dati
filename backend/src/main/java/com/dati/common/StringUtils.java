@@ -4,12 +4,12 @@ import org.springframework.util.ObjectUtils;
 
 public class StringUtils {
 
-    public static boolean isBlank(String str) {
+    public static boolean isEmpty(String str) {
         return ObjectUtils.isEmpty(str);
     }
 
-    public static boolean isNotBlank(String str) {
-        return !isBlank(str);
+    public static boolean isNotEmpty(String str) {
+        return !isEmpty(str);
     }
 
 }

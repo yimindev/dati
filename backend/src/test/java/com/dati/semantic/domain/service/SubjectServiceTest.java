@@ -15,6 +15,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.NullAndEmptySource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -289,5 +291,21 @@ class SubjectServiceTest {
 
         assertThat(result.getTotalElements()).isEqualTo(1);
         assertThat(result.getContent().getFirst().getName()).isEqualTo("Test Subject");
+    }
+
+    @ParameterizedTest
+    @NullAndEmptySource
+    @DisplayName("getSubjectsByDatasource - datasourceId 为 null 或空时应查所有")
+    void getSubjectsByDatasource_nullOrEmpty_shouldReturnAll(String datasourceId) {
+        Pageable pageable = PageRequest.of(0, 10);
+
+        Page<SubjectPO> subjectPOPage = new org.springframework.data.domain.PageImpl<>(List.of(sampleSubjectPO), pageable, 1);
+        when(subjectDAO.findAll(pageable)).thenReturn(subjectPOPage);
+
+        Page<Subject> result = subjectService.getSubjectsByDatasource(datasourceId, pageable);
+
+        assertThat(result.getTotalElements()).isEqualTo(1);
+        assertThat(result.getContent().getFirst().getName()).isEqualTo("Test Subject");
+        verify(subjectDAO, never()).findByDatasourceId(any(), any());
     }
 }
