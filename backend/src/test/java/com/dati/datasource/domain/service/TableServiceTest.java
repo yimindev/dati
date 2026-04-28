@@ -177,7 +177,7 @@ class TableServiceTest {
             RuntimeException exception = assertThrows(RuntimeException.class, () ->
                 tableService.batchAddTables(TestFixtures.TEST_DATASOURCE_ID, List.of(request))
             );
-            assertThat(exception.getMessage()).contains("Failed to sync columns");
+            assertThat(exception.getMessage()).contains("Failed to sync metadata");
         }
     }
 

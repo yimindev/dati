@@ -55,6 +55,19 @@ class SubjectControllerTest {
     private TableAssembler tableAssembler;
 
     @Test
+    @DisplayName("创建 Subject - 参数校验失败返回 400")
+    void createSubject_withInvalidRequest_shouldReturn400() throws Exception {
+        CreateSubjectRequest request = new CreateSubjectRequest();
+        request.setName("");
+        request.setDatasourceId("");
+
+        mockMvc.perform(post("/v1/subjects")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+            .andExpect(status().isBadRequest());
+    }
+
+    @Test
     @DisplayName("创建 Subject - 成功返回 201")
     void createSubject_shouldReturn201() throws Exception {
         CreateSubjectRequest request = new CreateSubjectRequest();

@@ -82,8 +82,7 @@ class TermServiceTest {
         when(termDAO.findById(termId)).thenReturn(Optional.of(term));
 
         assertThatThrownBy(() -> termService.linkEntity(termId, SemanticEntityType.FIELD, tableId, null))
-                .isInstanceOf(DatiException.class)
-                .hasMessageContaining("fieldName is required for FIELD entity type");
+                .isInstanceOf(DatiException.class);
     }
 
     @Test

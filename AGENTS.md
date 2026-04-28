@@ -95,7 +95,17 @@ com.dati.<module>/
 - **`BaseAssembler`**: Base class for assemblers. Provides `copyBaseInfo()`, `fillUsersFromRequest()`, `fillUpdateUserFromRequest()`, `fillUserInfo()`
 - **`RequestContext`**: Thread-local context holder for current user. Use `RequestContext.getUser()`
 - **`EncryptionUtils`**: Password encryption/decryption (currently pass-through, TODO for actual encryption)
-- **`DatiException`**: Runtime exception for business errors
+- **`DatiException`**: Business exception with structured error codes. Supports parameterized messages via `MessageFormat` templates.
+  
+**`ErrorCode`**: Enum defining all error codes with fixed prefixes:
+  - `CM` (Common): Generic errors — e.g. `CM001` (400), `CM004` (404), `CM005` (500)
+  - `DS` (DataSource): Data source module — e.g. `DS001` (connection failed)
+  - `SM` (Semantic): Semantic module — e.g. `SM001` (subject not found)
+  - Template messages use `{0}`, `{1}` placeholders (Java `MessageFormat`)
+  
+**`ErrorResponse`**: Standard error response body `{ code, message, timestamp }`
+  
+**`GlobalExceptionHandler`**: `@RestControllerAdvice` that automatically converts exceptions to `ErrorResponse` with proper HTTP status codes
 
 **Common Package (`com.dati.common`):**
 - **`StringUtils`**: `isEmpty()`, `isNotEmpty()` wrappers
@@ -107,6 +117,8 @@ com.dati.<module>/
 - **Lombok**: Used throughout the project. POs use `@Getter`/`@Setter`; `@FieldNameConstants` is optional and PO-only; `@Slf4j` as needed.
 - **Response**: Return `IdResponse` for mutations. Return `PageResponse<T>` for paginated lists; raw `List<T>` is acceptable for metadata queries (schemas, tables, columns) where pagination is unnecessary.
 - **Exception**: Use `DatiException` for business errors, log with `@Slf4j`.
+  - Add new `ErrorCode` entries for new business scenarios (follow existing prefix conventions)
+  - All exceptions return unified `ErrorResponse` with proper HTTP status codes
 - **JSON**: Dev profile uses `SNAKE_CASE` naming strategy.
 - **Security**: Passwords encrypted via `EncryptionUtils` in mapper layer.
 

@@ -1,6 +1,7 @@
 package com.dati.semantic.domain.service;
 
 import com.dati.base.exception.DatiException;
+import com.dati.base.exception.ErrorCode;
 import com.dati.datasource.repository.po.TableInfoPO;
 import com.dati.semantic.domain.SemanticEntityType;
 import com.dati.semantic.domain.model.Term;
@@ -47,10 +48,6 @@ public class TermService {
 
     @Transactional
     public Term createTerm(String subjectId, String name, String description, List<String> aliases) {
-        if (name == null || name.isBlank()) {
-            throw new DatiException("Term name cannot be null or empty");
-        }
-
         TermPO termPO = TermMapper.toPO(subjectId, name, description, aliases);
         termDAO.save(termPO);
 
@@ -76,11 +73,8 @@ public class TermService {
 
     @Transactional
     public Term updateTerm(String id, String name, String description, List<String> aliases) {
-        if (name == null || name.isBlank()) {
-            throw new DatiException("Term name cannot be null or empty");
-        }
         TermPO termPO = termDAO.findById(id)
-                .orElseThrow(() -> new DatiException("Term not found: " + id));
+                .orElseThrow(() -> new DatiException(ErrorCode.SM_TERM_NOT_FOUND, id));
 
         termPO.setName(name);
         termPO.setDescription(description);
@@ -108,7 +102,7 @@ public class TermService {
     @Transactional
     public void deleteTerm(String id) {
         if (!termDAO.existsById(id)) {
-            throw new DatiException("Term not found: " + id);
+            throw new DatiException(ErrorCode.SM_TERM_NOT_FOUND, id);
         }
         termRelationDAO.deleteByTermId(id);
         termDAO.deleteById(id);
@@ -118,14 +112,14 @@ public class TermService {
     @Transactional
     public void linkEntity(String termId, SemanticEntityType entityType, String tableId, String fieldName) {
         TermPO termPO = termDAO.findById(termId)
-                .orElseThrow(() -> new DatiException("Term not found: " + termId));
+                .orElseThrow(() -> new DatiException(ErrorCode.SM_TERM_NOT_FOUND, termId));
 
         if (entityType == SemanticEntityType.FIELD && fieldName == null) {
-            throw new DatiException("fieldName is required for FIELD entity type");
+            throw new DatiException(ErrorCode.INVALID_PARAMETER, "fieldName is required");
         }
 
         if (!subjectTableDAO.existsBySubjectIdAndTableId(termPO.getSubjectId(), tableId)) {
-            throw new DatiException("Table does not belong to subject");
+            throw new DatiException(ErrorCode.SM_TABLE_NOT_IN_SUBJECT, tableId, termPO.getSubjectId());
         }
 
         TermRelationPO relationPO = TermRelationMapper.toPO(termId, entityType, tableId, fieldName);
@@ -161,7 +155,7 @@ public class TermService {
     @Transactional(readOnly = true)
     public Term getTermById(String id) {
         TermPO termPO = termDAO.findById(id)
-                .orElseThrow(() -> new DatiException("Term not found: " + id));
+                .orElseThrow(() -> new DatiException(ErrorCode.SM_TERM_NOT_FOUND, id));
         return TermMapper.toTerm(termPO);
     }
 

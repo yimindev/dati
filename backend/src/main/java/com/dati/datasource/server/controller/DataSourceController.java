@@ -1,6 +1,7 @@
 package com.dati.datasource.server.controller;
 
 import com.dati.base.exception.DatiException;
+import com.dati.base.exception.ErrorCode;
 import com.dati.base.pojo.BasePO;
 import com.dati.base.pojo.IdResponse;
 import com.dati.base.pojo.PageReq;
@@ -13,6 +14,7 @@ import com.dati.datasource.server.pojo.DatasourceVO;
 import com.dati.datasource.server.pojo.SqlExecuteRequest;
 import com.dati.db.Column;
 import com.dati.db.Table;
+import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Sort;
@@ -52,13 +54,13 @@ public class DataSourceController {
     }
 
     @PostMapping
-    public IdResponse addDataSource(@RequestBody DataSource dataSource) {
+    public IdResponse addDataSource(@Valid @RequestBody DataSource dataSource) {
         dsAssembler.fillUsersFromRequest(dataSource);
         return new IdResponse(dataSourceService.addDataSource(dataSource));
     }
 
     @PutMapping("/{id}")
-    public IdResponse updateDataSource(@PathVariable String id, @RequestBody DataSource dataSource) {
+    public IdResponse updateDataSource(@PathVariable String id, @Valid @RequestBody DataSource dataSource) {
         dsAssembler.fillUpdateUserFromRequest(dataSource);
         dataSourceService.updateDataSource(id, dataSource);
         return new IdResponse(dataSource.getId());
@@ -85,7 +87,7 @@ public class DataSourceController {
             return jdbcMetaService.getSchemas(id, catalog);
         } catch (SQLException e) {
             log.error("Failed to get schemas for datasource {}", id, e);
-            throw new DatiException("SQL Error: " + e.getMessage());
+            throw new DatiException(ErrorCode.DS_SQL_ERROR, e.getMessage());
         }
     }
 
@@ -95,7 +97,7 @@ public class DataSourceController {
             return jdbcMetaService.getTables(id, catalog, schema);
         } catch (SQLException e) {
             log.error("Failed to get tables for datasource {}", id, e);
-            throw new DatiException("SQL Error: " + e.getMessage());
+            throw new DatiException(ErrorCode.DS_SQL_ERROR, e.getMessage());
         }
     }
 
@@ -105,7 +107,7 @@ public class DataSourceController {
             return jdbcMetaService.getColumns(id, catalog, schema, table);
         } catch (SQLException e) {
             log.error("Failed to get columns for datasource {}", id, e);
-            throw new DatiException("SQL Error: " + e.getMessage());
+            throw new DatiException(ErrorCode.DS_SQL_ERROR, e.getMessage());
         }
     }
 
@@ -115,7 +117,7 @@ public class DataSourceController {
             return jdbcMetaService.executeSql(id, sqlExecuteRequest.sql());
         } catch (SQLException e) {
             log.error("Failed to execute SQL for datasource {}", id, e);
-            throw new DatiException("SQL Error: " + e.getMessage());
+            throw new DatiException(ErrorCode.DS_SQL_ERROR, e.getMessage());
         }
     }
 }

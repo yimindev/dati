@@ -184,7 +184,7 @@ class SubjectServiceTest {
 
         assertThatThrownBy(() -> subjectService.addTableToSubject(subjectId, tableId))
                 .isInstanceOf(DatiException.class)
-                .hasMessageContaining("Table does not belong to the subject's datasource");
+                .hasMessageContaining("does not belong to subject");
 
         verify(semanticIndexService, never()).save(any());
     }
@@ -253,7 +253,7 @@ class SubjectServiceTest {
 
         assertThatThrownBy(() -> subjectService.removeTableFromSubject(subjectId, tableId))
                 .isInstanceOf(DatiException.class)
-                .hasMessageContaining("Association not found");
+                .hasMessageContaining("Association between subject");
     }
 
     @Test

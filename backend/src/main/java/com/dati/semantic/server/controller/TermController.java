@@ -8,6 +8,7 @@ import com.dati.semantic.server.pojo.request.CreateTermRequest;
 import com.dati.semantic.server.pojo.request.LinkTermRelationRequest;
 import com.dati.semantic.server.pojo.request.UpdateTermRequest;
 import com.dati.semantic.server.pojo.vo.TermVO;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -22,13 +23,13 @@ public class TermController {
     private final TermAssembler termAssembler;
 
     @PostMapping("/subjects/{subjectId}/terms")
-    public IdResponse createTerm(@PathVariable String subjectId, @RequestBody CreateTermRequest request) {
+    public IdResponse createTerm(@PathVariable String subjectId, @Valid @RequestBody CreateTermRequest request) {
         Term term = termService.createTerm(subjectId, request.getName(), request.getDescription(), request.getAliases());
         return new IdResponse(term.getId());
     }
 
     @PutMapping("/terms/{id}")
-    public IdResponse updateTerm(@PathVariable String id, @RequestBody UpdateTermRequest request) {
+    public IdResponse updateTerm(@PathVariable String id, @Valid @RequestBody UpdateTermRequest request) {
         termService.updateTerm(id, request.getName(), request.getDescription(), request.getAliases());
         return new IdResponse(id);
     }
@@ -53,7 +54,7 @@ public class TermController {
     }
 
     @PostMapping("/terms/{id}/relations")
-    public IdResponse linkTermRelation(@PathVariable String id, @RequestBody LinkTermRelationRequest request) {
+    public IdResponse linkTermRelation(@PathVariable String id, @Valid @RequestBody LinkTermRelationRequest request) {
         String fieldName = "_".equals(request.getFieldName()) ? null : request.getFieldName();
         termService.linkEntity(id, request.getEntityType(), request.getTableId(), fieldName);
         return new IdResponse(id);

@@ -1,6 +1,8 @@
 package com.dati.semantic.domain.service;
 
 import com.dati.base.exception.DatiException;
+import com.dati.base.exception.ErrorCode;
+import com.dati.common.StringUtils;
 import com.dati.datasource.repository.dao.TableInfoDAO;
 import com.dati.datasource.repository.po.TableInfoPO;
 import com.dati.semantic.domain.SemanticEntityType;
@@ -11,13 +13,12 @@ import com.dati.semantic.repository.mapper.SubjectMapper;
 import com.dati.semantic.repository.po.EntityReference;
 import com.dati.semantic.repository.po.SemanticSearchDocument;
 import com.dati.semantic.repository.po.SubjectPO;
-import com.dati.common.StringUtils;
 import com.dati.semantic.repository.po.SubjectTablePO;
 import com.dati.semantic.server.pojo.vo.SubjectAvailableTableVO;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.lang.Nullable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -44,10 +45,6 @@ public class SubjectService {
 
     @Transactional
     public Subject createSubject(String name, String description, String datasourceId, List<String> aliases) {
-        if (name == null || name.isBlank()) {
-            throw new DatiException("Subject name cannot be null or empty");
-        }
-
         SubjectPO subjectPO = new SubjectPO();
         subjectPO.setName(name);
         subjectPO.setDescription(description);
@@ -78,7 +75,7 @@ public class SubjectService {
     @Transactional
     public Subject updateSubject(String id, String name, String description, List<String> aliases) {
         SubjectPO subjectPO = subjectDAO.findById(id)
-                .orElseThrow(() -> new DatiException("Subject not found: " + id));
+                .orElseThrow(() -> new DatiException(ErrorCode.SM_SUBJECT_NOT_FOUND, id));
 
         subjectPO.setName(name);
         subjectPO.setDescription(description);
@@ -106,7 +103,7 @@ public class SubjectService {
     @Transactional
     public void deleteSubject(String id) {
         if (!subjectDAO.existsById(id)) {
-            throw new DatiException("Subject not found: " + id);
+            throw new DatiException(ErrorCode.SM_SUBJECT_NOT_FOUND, id);
         }
         subjectDAO.deleteById(id);
         semanticIndexService.deleteByEntity_SubjectId(id);
@@ -115,17 +112,17 @@ public class SubjectService {
     @Transactional
     public void addTableToSubject(String subjectId, String tableId) {
         SubjectPO subjectPO = subjectDAO.findById(subjectId)
-                .orElseThrow(() -> new DatiException("Subject not found: " + subjectId));
+                .orElseThrow(() -> new DatiException(ErrorCode.SM_SUBJECT_NOT_FOUND, subjectId));
 
         TableInfoPO tableInfoPO = tableInfoDAO.findById(tableId)
-                .orElseThrow(() -> new DatiException("Table not found: " + tableId));
+                .orElseThrow(() -> new DatiException(ErrorCode.DS_NOT_FOUND, tableId));
 
         if (!subjectPO.getDatasourceId().equals(tableInfoPO.getDataSourceId())) {
-            throw new DatiException("Table does not belong to the subject's datasource");
+            throw new DatiException(ErrorCode.SM_TABLE_NOT_IN_SUBJECT, tableInfoPO.getName(), subjectId);
         }
 
         if (subjectTableDAO.existsBySubjectIdAndTableId(subjectId, tableId)) {
-            throw new DatiException("Table is already associated with this subject");
+            throw new DatiException(ErrorCode.SM_TABLE_ALREADY_ASSOCIATED, tableInfoPO.getName(), subjectId);
         }
 
         SubjectTablePO subjectTablePO = new SubjectTablePO();
@@ -137,7 +134,7 @@ public class SubjectService {
     @Transactional
     public void removeTableFromSubject(String subjectId, String tableId) {
         subjectTableDAO.findBySubjectIdAndTableId(subjectId, tableId)
-                .orElseThrow(() -> new DatiException("Association not found between subject and table"));
+                .orElseThrow(() -> new DatiException(ErrorCode.SM_ASSOCIATION_NOT_FOUND, subjectId, tableId));
 
         subjectTableDAO.deleteBySubjectIdAndTableId(subjectId, tableId);
     }
@@ -157,7 +154,7 @@ public class SubjectService {
     @Transactional(readOnly = true)
     public List<SubjectAvailableTableVO> getAvailableTables(String subjectId, String schema) {
         SubjectPO subjectPO = subjectDAO.findById(subjectId)
-                .orElseThrow(() -> new DatiException("Subject not found: " + subjectId));
+                .orElseThrow(() -> new DatiException(ErrorCode.SM_SUBJECT_NOT_FOUND, subjectId));
 
         List<SubjectTablePO> linkedTables = subjectTableDAO.findBySubjectId(subjectId);
         List<String> linkedTableIds = linkedTables.stream()
@@ -182,7 +179,7 @@ public class SubjectService {
     @Transactional(readOnly = true)
     public List<com.dati.datasource.domain.model.TableInfo> getTablesBySubjectId(String subjectId) {
         if (!subjectDAO.existsById(subjectId)) {
-            throw new DatiException("Subject not found: " + subjectId);
+            throw new DatiException(ErrorCode.SM_SUBJECT_NOT_FOUND, subjectId);
         }
 
         List<SubjectTablePO> subjectTables = subjectTableDAO.findBySubjectId(subjectId);
@@ -198,7 +195,7 @@ public class SubjectService {
     @Transactional(readOnly = true)
     public Subject getSubjectById(String id) {
         SubjectPO subjectPO = subjectDAO.findById(id)
-                .orElseThrow(() -> new DatiException("Subject not found: " + id));
+                .orElseThrow(() -> new DatiException(ErrorCode.SM_SUBJECT_NOT_FOUND, id));
         return SubjectMapper.toSubject(subjectPO);
     }
 

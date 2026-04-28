@@ -1,6 +1,7 @@
 package com.dati.datasource.server.controller;
 
 import com.dati.base.exception.DatiException;
+import com.dati.base.exception.ErrorCode;
 import com.dati.base.pojo.IdResponse;
 import com.dati.base.pojo.PageReq;
 import com.dati.base.pojo.PageResponse;
@@ -66,7 +67,7 @@ public class ColumnController {
             return new IdResponse(tableId);
         } catch (SQLException e) {
             log.error("Failed to sync columns for datasource {}, table {}", datasourceId, tableId, e);
-            throw new DatiException("SQL Error: " + e.getMessage());
+            throw new DatiException(ErrorCode.DS_SQL_ERROR, e.getMessage());
         }
     }
 
@@ -80,7 +81,7 @@ public class ColumnController {
             return new IdResponse(columnId);
         } catch (SQLException e) {
             log.error("Failed to extract values for column {}", columnId, e);
-            throw new DatiException("SQL Error: " + e.getMessage());
+            throw new DatiException(ErrorCode.DS_SQL_ERROR, e.getMessage());
         }
     }
 

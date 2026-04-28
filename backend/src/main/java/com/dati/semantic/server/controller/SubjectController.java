@@ -26,6 +26,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import jakarta.validation.Valid;
 import java.util.List;
 
 @RestController
@@ -38,7 +39,7 @@ public class SubjectController {
     private final TableAssembler tableAssembler;
 
     @PostMapping
-    public IdResponse createSubject(@RequestBody CreateSubjectRequest request) {
+    public IdResponse createSubject(@Valid @RequestBody CreateSubjectRequest request) {
         Subject subject = subjectService.createSubject(
                 request.getName(),
                 request.getDescription(),
@@ -49,7 +50,7 @@ public class SubjectController {
     }
 
     @PutMapping("/{id}")
-    public IdResponse updateSubject(@PathVariable String id, @RequestBody UpdateSubjectRequest request) {
+    public IdResponse updateSubject(@PathVariable String id, @Valid @RequestBody UpdateSubjectRequest request) {
         subjectService.updateSubject(id, request.getName(), request.getDescription(), request.getAliases());
         return new IdResponse(id);
     }
@@ -80,7 +81,7 @@ public class SubjectController {
     }
 
     @PostMapping("/{id}/tables")
-    public IdResponse addTableToSubject(@PathVariable String id, @RequestBody AddTableToSubjectRequest request) {
+    public IdResponse addTableToSubject(@PathVariable String id, @Valid @RequestBody AddTableToSubjectRequest request) {
         subjectService.addTableToSubject(id, request.getTableId());
         return new IdResponse(request.getTableId());
     }
