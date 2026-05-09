@@ -19,3 +19,8 @@ spring:
         one-indexed-parameters: true
   jackson:
     property-naming-strategy: SNAKE_CASE
+
+auth:
+  jwt:
+    secret: ${JWT_SECRET:this-is-a-32-char-long-default-secret-key}
+    expiration-seconds: 604800

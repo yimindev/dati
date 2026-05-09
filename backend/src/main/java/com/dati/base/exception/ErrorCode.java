@@ -9,10 +9,8 @@ public enum ErrorCode {
     // ── Generic ──────────────────────────────────────────
 
     INVALID_PARAMETER("CM001", 400, "Request parameter error: {0}"),
-    UNAUTHORIZED("CM002", 401, "Unauthorized"),
-    FORBIDDEN("CM003", 403, "Access denied"),
-    NOT_FOUND("CM004", 404, "Resource not found"),
-    INTERNAL_ERROR("CM005", 500, "Internal server error"),
+    NOT_FOUND("CM002", 404, "Resource not found"),
+    INTERNAL_ERROR("CM003", 500, "Internal server error"),
 
     // ── DataSource module (DS) ───────────────────────────
 
@@ -30,7 +28,14 @@ public enum ErrorCode {
     SM_TABLE_ALREADY_ASSOCIATED("SM005", 400, "Table {0} is already associated with subject {1}"),
     SM_ASSOCIATION_NOT_FOUND("SM006", 404, "Association between subject {0} and table {1} not found"),
 
-    FIELD_REQUIRED("VAL002", 400, "Field {0} is required");
+    FIELD_REQUIRED("VAL002", 400, "Field {0} is required"),
+
+    // ── Authentication module (AUTH) ──────────────────────
+
+    AUTH_LOGIN_FAILED("AUTH001", 401, "Authentication failed: invalid credentials"),
+    AUTH_TOKEN_INVALID("AUTH002", 401, "Token invalid or expired"),
+    AUTH_USER_EXISTS("AUTH003", 409, "Username already exists: {0}"),
+    AUTH_TYPE_UNSUPPORTED("AUTH004", 400, "Unsupported authentication type: {0}");
 
     private final String code;
     private final int status;

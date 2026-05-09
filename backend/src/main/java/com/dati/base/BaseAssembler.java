@@ -1,7 +1,7 @@
 package com.dati.base;
 
 import com.dati.auth.authentication.User;
-import com.dati.auth.authentication.UserService;
+import com.dati.auth.domain.service.UserService;
 import com.dati.base.pojo.BaseResource;
 import com.dati.base.pojo.BaseResourceVO;
 import org.springframework.beans.factory.annotation.Autowired;
