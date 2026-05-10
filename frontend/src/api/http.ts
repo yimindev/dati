@@ -36,9 +36,6 @@ function getAccessToken(): string | null {
   return localStorage.getItem('access_token')
 }
 
-let isRefreshing = false
-let pendingQueue: Array<(token: string | null) => void> = []
-
 http.interceptors.request.use((config) => {
   const token = getAccessToken()
   if (token && config.headers) {
@@ -53,35 +50,24 @@ http.interceptors.response.use(
   (resp) => {
     // 统一“数据解包”：后端若统一返回 { code, data, message }
     // 可在这里直接返回 resp.data.data；示例保守返回 resp.data
-    return resp.data
+    return resp.data;
   },
   async (error) => {
-    // 刷新令牌的伪代码（按需启用）
-    const err = normalizeError(error)
-    const original = error.config
-    if (err.status === 401 && !original._retry) {
-      original._retry = true
-      if (!isRefreshing) {
-        isRefreshing = true
-        try {
-          // const newToken = await refreshToken()
-          const newToken = null
-          pendingQueue.forEach((cb) => cb(newToken))
-        } finally {
-          pendingQueue = []
-          isRefreshing = false
-        }
+    const err = normalizeError(error);
+    if (err.status === 401) {
+      const url = error.config?.url || '';
+      const isAuthApi = url.includes('/auth/');
+      const currentPath = window.location.pathname;
+      
+      if (!isAuthApi && currentPath !== '/login') {
+        localStorage.removeItem("access_token");
+        window.location.href = "/login";
       }
-      return new Promise((resolve) => {
-        pendingQueue.push((/* newToken */) => {
-          // if (newToken && original.headers) original.headers.Authorization = `Bearer ${newToken}`
-          resolve(http(original))
-        })
-      })
+      return Promise.reject(err);
     }
-    return Promise.reject(err)
-  }
-)
+    return Promise.reject(err);
+  },
+);
 
 // 统一导出带类型的方法
 export async function get<T>(url: string, params?: Record<string, any>, signal?: AbortSignal): Promise<T> {

@@ -22,6 +22,8 @@ declare module 'vue-router/auto-routes' {
     '/datasources/': RouteRecordInfo<'/datasources/', '/datasources', Record<never, never>, Record<never, never>>,
     '/datasources/[id]/tables/': RouteRecordInfo<'/datasources/[id]/tables/', '/datasources/:id/tables', { id: ParamValue<true> }, { id: ParamValue<false> }>,
     '/datasources/[id]/tables/[tableId]/columns': RouteRecordInfo<'/datasources/[id]/tables/[tableId]/columns', '/datasources/:id/tables/:tableId/columns', { id: ParamValue<true>, tableId: ParamValue<true> }, { id: ParamValue<false>, tableId: ParamValue<false> }>,
+    '/login': RouteRecordInfo<'/login', '/login', Record<never, never>, Record<never, never>>,
+    '/register': RouteRecordInfo<'/register', '/register', Record<never, never>, Record<never, never>>,
     '/subjects/': RouteRecordInfo<'/subjects/', '/subjects', Record<never, never>, Record<never, never>>,
     '/subjects/[id]': RouteRecordInfo<'/subjects/[id]', '/subjects/:id', { id: ParamValue<true> }, { id: ParamValue<false> }>,
   }
@@ -51,6 +53,14 @@ declare module 'vue-router/auto-routes' {
     }
     'src/pages/datasources/[id]/tables/[tableId]/columns.vue': {
       routes: '/datasources/[id]/tables/[tableId]/columns'
+      views: never
+    }
+    'src/pages/login.vue': {
+      routes: '/login'
+      views: never
+    }
+    'src/pages/register.vue': {
+      routes: '/register'
       views: never
     }
     'src/pages/subjects/index.vue': {

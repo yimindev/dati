@@ -3,6 +3,30 @@ export default {
     subtitle: "Data Intelligence Platform",
   },
 
+  auth: {
+    loginTitle: "User Login",
+    registerTitle: "User Register",
+    login: "Login",
+    register: "Register",
+    logout: "Logout",
+    registerSuccess: "Registration successful, please login",
+    username: "Username",
+    password: "Password",
+    confirmPassword: "Confirm Password",
+    displayName: "Display Name",
+    displayNamePlaceholder: "Enter display name (optional)",
+    noAccount: "No account?",
+    hasAccount: "Already have an account?",
+    toRegister: "Register",
+    toLogin: "Login",
+    inputUsernamePassword: "Please enter username and password",
+    passwordMismatch: "Passwords do not match",
+    passwordPlaceholder: "Enter password",
+    confirmPasswordPlaceholder: "Enter password again",
+    loginFailed: "Login failed",
+    registerFailed: "Registration failed",
+  },
+
   common: {
     // General Actions
     save: "Save",
@@ -59,6 +83,7 @@ export default {
       name: "Enter name",
       type: "Select type",
       description: "Enter description (optional)",
+      password: "Enter password",
     },
 
     // Validation Rules

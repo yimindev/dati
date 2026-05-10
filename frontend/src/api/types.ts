@@ -25,3 +25,25 @@ export interface BaseResourceVO {
   updated_user_name?: string | null;
 }
 
+export interface LoginRequest {
+  type: string;
+  name: string;
+  password: string;
+}
+
+export interface RegisterRequest {
+  name: string;
+  password: string;
+  display_name?: string;
+}
+
+export interface LoginResponse {
+  token: string;
+}
+
+export interface User {
+  id: string;
+  name: string;
+  display_name?: string;
+}
+

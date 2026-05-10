@@ -17,14 +17,33 @@ import 'element-plus/theme-chalk/src/message-box.scss'
 import { createApp } from "vue";
 import { createRouter, createWebHistory } from "vue-router";
 import { pinia } from "./stores";
+import { useAuthStore } from "~/stores/auth";
 
 const app = createApp(App);
 
-app.use(pinia)
-app.use(createRouter({
+const router = createRouter({
   history: createWebHistory(),
   routes,
-}))
+})
+
+const publicPaths = ["/login", "/register"];
+
+router.beforeEach((to, _from, next) => {
+  const authStore = useAuthStore();
+
+  if (authStore.isLoggedIn && publicPaths.includes(to.path)) {
+    return next("/");
+  }
+
+  if (!authStore.isLoggedIn && !publicPaths.includes(to.path)) {
+    return next("/login");
+  }
+
+  next();
+});
+
+app.use(pinia)
+app.use(router)
 app.use(i18n)
 
 await setupI18n()

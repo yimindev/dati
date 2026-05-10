@@ -3,6 +3,30 @@ export default {
     subtitle: "数据智能平台",
   },
 
+  auth: {
+    loginTitle: "用户登录",
+    registerTitle: "用户注册",
+    login: "登录",
+    register: "注册",
+    logout: "退出登录",
+    registerSuccess: "注册成功，请登录",
+    username: "用户名",
+    password: "密码",
+    confirmPassword: "确认密码",
+    displayName: "显示名",
+    displayNamePlaceholder: "请输入显示名（可选）",
+    noAccount: "还没有账号？",
+    hasAccount: "已有账号？",
+    toRegister: "去注册",
+    toLogin: "去登录",
+    inputUsernamePassword: "请输入用户名和密码",
+    passwordMismatch: "两次输入的密码不一致",
+    passwordPlaceholder: "请输入密码",
+    confirmPasswordPlaceholder: "请再次输入密码",
+    loginFailed: "登录失败",
+    registerFailed: "注册失败",
+  },
+
   common: {
     // 通用操作
     save: "保存",
@@ -59,6 +83,7 @@ export default {
       name: "请输入名称",
       type: "请选择类型",
       description: "请输入描述（可选）",
+      password: "请输入密码",
     },
 
     // 校验规则

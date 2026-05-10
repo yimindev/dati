@@ -1,16 +1,23 @@
 <script lang="ts" setup>
 import { isDark, toggleDark } from "~/composables";
-import { Moon, Sunny } from "@element-plus/icons-vue";
+import { Moon, Sunny, CircleClose } from "@element-plus/icons-vue";
 import { computed } from "vue";
 import { useI18n } from "vue-i18n";
 import { setI18nLanguage, type AppLang } from "~/plugins/i18n";
+import { useAuthStore } from "~/stores/auth";
 
 const { t, locale } = useI18n();
+const authStore = useAuthStore();
 
 const localeLabel = computed(() => (locale.value === "zh" ? "中文" : "EN"));
+const userDisplayName = computed(() => authStore.user?.display_name || authStore.user?.name || "");
 
 async function changeLocale(lang: AppLang) {
   await setI18nLanguage(lang);
+}
+
+function handleLogout() {
+  authStore.logout();
 }
 </script>
 
@@ -60,10 +67,26 @@ async function changeLocale(lang: AppLang) {
       </el-dropdown>
     </el-menu-item>
 
-    <el-menu-item class="h-full">
-      <div class="size-full flex items-center justify-center">
-        <el-avatar :size="24"> Z </el-avatar>
-      </div>
+    <el-menu-item class="h-full" v-if="authStore.isLoggedIn">
+      <el-dropdown trigger="click" @command="handleLogout">
+        <div class="size-full flex items-center justify-center gap-2 cursor-pointer">
+          <el-avatar :size="24">{{ userDisplayName.charAt(0).toUpperCase() }}</el-avatar>
+          <span class="text-sm">{{ userDisplayName }}</span>
+        </div>
+        <template #dropdown>
+          <el-dropdown-menu>
+            <el-dropdown-item command="logout">
+              <el-icon><CircleClose /></el-icon>
+              <span>{{ t("auth.logout") }}</span>
+            </el-dropdown-item>
+          </el-dropdown-menu>
+        </template>
+      </el-dropdown>
+    </el-menu-item>
+    <el-menu-item class="h-full" v-else>
+      <RouterLink to="/login">
+        <el-button type="primary" size="small">{{ t("auth.login") }}</el-button>
+      </RouterLink>
     </el-menu-item>
   </el-menu>
 </template>
