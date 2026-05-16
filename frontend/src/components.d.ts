@@ -13,6 +13,7 @@ declare module 'vue' {
     DatasourceDialog: typeof import('./components/datasource/DatasourceDialog.vue')['default']
     DatasourceForm: typeof import('./components/datasource/DatasourceForm.vue')['default']
     DatasourceTable: typeof import('./components/datasource/DatasourceTable.vue')['default']
+    DataTableShell: typeof import('./components/common/DataTableShell.vue')['default']
     ElAvatar: typeof import('element-plus/es')['ElAvatar']
     ElBreadcrumb: typeof import('element-plus/es')['ElBreadcrumb']
     ElBreadcrumbItem: typeof import('element-plus/es')['ElBreadcrumbItem']

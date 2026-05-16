@@ -5,7 +5,7 @@ meta:
 
 <script setup lang="ts">
 import { nextTick, onMounted, ref, computed } from "vue";
-import { useRoute } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 import { ElMessage, ElMessageBox } from "element-plus";
 import type { InputInstance } from "element-plus";
 import { Plus, Search } from "@element-plus/icons-vue";
@@ -305,86 +305,80 @@ onMounted(async () => {
       </el-button>
     </div>
 
-    <!-- 表格 -->
-    <el-table :data="tableList" v-loading="loading" stripe>
-      <el-table-column
-        prop="name"
-        :label="t('common.tableName')"
-        min-width="150"
-      />
-      <el-table-column
-        :label="t('common.aliases')"
-        min-width="180"
-      >
-        <template #default="{ row }">
-          <el-tag
-            v-for="alias in row.aliases"
-            :key="alias"
-            size="small"
-            class="mr-1"
-          >
-            {{ alias }}
-          </el-tag>
-          <span v-if="!row.aliases?.length" class="text-gray-400">-</span>
-        </template>
-      </el-table-column>
-      <el-table-column
-        prop="description"
-        :label="t('common.description')"
-        min-width="150"
-      />
-      <el-table-column
-        prop="schema"
-        :label="t('common.schema')"
-        min-width="120"
-      />
-      <el-table-column
-        prop="updated_at"
-        :label="t('common.updatedAt')"
-        min-width="120"
-      >
-        <template #default="{ row }">
-          {{ formatDateTime(row.updated_at) }}
-        </template>
-      </el-table-column>
-      <el-table-column
-        :label="t('common.actions')"
-        min-width="150"
-        fixed="right"
-      >
-        <template #default="{ row }">
-          <el-button type="primary" link @click="handleColumnManage(row)">
-            {{ t("tableInfo.columnSettings") }}
-          </el-button>
+    <DataTableShell
+      :loading="loading"
+      :total="total"
+      :page="page"
+      :page-size="pageSize"
+      @page-change="handlePageChange"
+      @page-size-change="handlePageSizeChange"
+    >
+      <el-table :data="tableList">
+        <el-table-column
+          prop="name"
+          :label="t('common.tableName')"
+          min-width="150"
+        />
+        <el-table-column
+          :label="t('common.aliases')"
+          min-width="180"
+        >
+          <template #default="{ row }">
+            <el-tag
+              v-for="alias in row.aliases"
+              :key="alias"
+              size="small"
+              class="mr-1"
+            >
+              {{ alias }}
+            </el-tag>
+            <span v-if="!row.aliases?.length" class="text-gray-400">-</span>
+          </template>
+        </el-table-column>
+        <el-table-column
+          prop="description"
+          :label="t('common.description')"
+          min-width="150"
+        />
+        <el-table-column
+          prop="schema"
+          :label="t('common.schema')"
+          min-width="120"
+        />
+        <el-table-column
+          prop="updated_at"
+          :label="t('common.updatedAt')"
+          min-width="120"
+        >
+          <template #default="{ row }">
+            {{ formatDateTime(row.updated_at) }}
+          </template>
+        </el-table-column>
+        <el-table-column
+          :label="t('common.actions')"
+          min-width="150"
+          fixed="right"
+        >
+          <template #default="{ row }">
+            <el-button type="primary" link @click="handleColumnManage(row)">
+              {{ t("tableInfo.columnSettings") }}
+            </el-button>
 
-          <el-button link type="primary" @click="handleConfigMetadata(row)">
-            {{ t("common.edit") }}
-          </el-button>
+            <el-button link type="primary" @click="handleConfigMetadata(row)">
+              {{ t("common.edit") }}
+            </el-button>
 
-          <el-button link type="primary" @click="handleSyncColumns(row)">
-            {{ t("tableInfo.syncColumns") }}
-          </el-button>
+            <el-button link type="primary" @click="handleSyncColumns(row)">
+              {{ t("tableInfo.syncColumns") }}
+            </el-button>
 
-          <el-button link type="danger" @click="handleRemoveTable(row)">
-            {{ t("common.remove") }}
-          </el-button>
-        </template>
-      </el-table-column>
-    </el-table>
-
-    <!-- 分页 -->
-    <div class="flex items-center justify-between mt-4">
-      <span class="text-gray-500 text-sm">{{ t('common.total', { total }) }}</span>
-      <el-pagination
-        layout="sizes, prev, pager, next"
-        :current-page="page"
-        :page-size="pageSize"
-        :page-sizes="[10, 20, 50, 100]"
-        :total="total"
-        @current-change="handlePageChange"
-        @size-change="handlePageSizeChange"
-      />
-    </div>
+            <el-button link type="danger" @click="handleRemoveTable(row)">
+              {{ t("common.remove") }}
+            </el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+    </DataTableShell>
 
     <!-- 元数据配置弹窗 -->
     <el-dialog

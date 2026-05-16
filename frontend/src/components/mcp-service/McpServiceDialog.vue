@@ -91,9 +91,13 @@ const handleCancel = () => {
   <el-dialog
     v-model="visible"
     :title="isEdit ? t('mcpService.editTitle') : t('mcpService.createTitle')"
-    width="480px"
+    width="560px"
     :close-on-click-modal="false"
+    destroy-on-close
   >
+    <p class="dialog-note">
+      {{ t("mcpService.dialogNote") }}
+    </p>
     <McpServiceForm ref="formRef" v-model="formData" />
 
     <template #footer>
@@ -112,5 +116,12 @@ const handleCancel = () => {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
+}
+
+.dialog-note {
+  margin: -4px 0 18px;
+  color: var(--ep-text-color-secondary);
+  font-size: 13px;
+  line-height: 20px;
 }
 </style>

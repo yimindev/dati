@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { onMounted, ref } from "vue";
+import { computed, onMounted, ref } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
 import { useI18n } from "vue-i18n";
 import { useRouter } from "vue-router";
 import type { McpServiceVO } from "~/api/mcp-service";
 import { listMcpServices } from "~/api/mcp-service";
-import { Plus, Search } from "@element-plus/icons-vue";
+import { Plus, Refresh, Search } from "@element-plus/icons-vue";
+import DataTableShell from "~/components/common/DataTableShell.vue";
 
 const { t } = useI18n();
 const router = useRouter();
@@ -26,6 +27,10 @@ const statusOptions = [
   { label: t("mcpService.status.published"), value: "PUBLISHED" },
   { label: t("mcpService.status.disabled"), value: "DISABLED" },
 ];
+
+const activeFilters = computed(
+  () => Number(Boolean(searchKeyword.value)) + Number(Boolean(statusFilter.value)),
+);
 
 const loadServices = async () => {
   try {
@@ -55,6 +60,10 @@ const handleClearSearch = () => {
   searchKeyword.value = "";
   statusFilter.value = "";
   page.value = 1;
+  loadServices();
+};
+
+const handleRefresh = () => {
   loadServices();
 };
 
@@ -116,28 +125,43 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="p-5 md:p-6">
-    <!-- 头部操作区 -->
-    <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
-      <div class="flex items-center gap-3">
+  <div class="mcp-services-page">
+    <div class="page-heading">
+      <div>
+        <h1>{{ t("mcpService.title") }}</h1>
+        <p>{{ t("mcpService.listSubtitle") }}</p>
+      </div>
+      <div class="heading-actions">
+        <el-button :icon="Refresh" :loading="loading" @click="handleRefresh">
+          {{ t("common.refresh") }}
+        </el-button>
+        <el-button type="primary" :icon="Plus" @click="handleCreate">
+          {{ t("mcpService.createButton") }}
+        </el-button>
+      </div>
+    </div>
+
+    <div class="toolbar">
+      <div class="toolbar-fields">
         <el-input
           v-model="searchKeyword"
           :placeholder="t('mcpService.searchPlaceholder')"
           clearable
-          class="!w-96"
+          class="toolbar-search"
           @keyup.enter="handleSearch"
           @clear="handleClearSearch"
         >
-          <template #append>
-            <el-button :icon="Search" @click="handleSearch" />
+          <template #prefix>
+            <el-icon><Search /></el-icon>
           </template>
         </el-input>
         <el-select
           v-model="statusFilter"
-          :placeholder="t('mcpService.status.label')"
+          :placeholder="t('mcpService.status.all')"
           clearable
-          class="!w-28"
+          class="toolbar-status"
           @change="handleSearch"
+          @clear="handleSearch"
         >
           <el-option
             v-for="opt in statusOptions"
@@ -146,34 +170,31 @@ onMounted(() => {
             :value="opt.value"
           />
         </el-select>
+        <el-button type="primary" plain :icon="Search" @click="handleSearch">
+          {{ t("common.search") }}
+        </el-button>
+        <el-button v-if="activeFilters > 0" link @click="handleClearSearch">
+          {{ t("common.clear") }}
+        </el-button>
       </div>
-      <el-button type="primary" :icon="Plus" @click="handleCreate">
-        {{ t("mcpService.createButton") }}
-      </el-button>
     </div>
 
-    <McpServiceTable
-      :data="serviceList"
+    <DataTableShell
       :loading="loading"
-      @detail="handleDetail"
-      @edit="handleEdit"
-      @delete="handleDelete"
-    />
-
-    <div class="flex items-center justify-between mt-4">
-      <span class="text-gray-500 text-sm">
-        {{ t("common.total", { total }) }}
-      </span>
-      <el-pagination
-        layout="sizes, prev, pager, next"
-        :current-page="page"
-        :page-size="pageSize"
-        :page-sizes="[10, 20, 50, 100]"
-        :total="total"
-        @current-change="handlePageChange"
-        @size-change="handlePageSizeChange"
+      :total="total"
+      :page="page"
+      :page-size="pageSize"
+      @page-change="handlePageChange"
+      @page-size-change="handlePageSizeChange"
+    >
+      <McpServiceTable
+        :data="serviceList"
+        :loading="loading"
+        @detail="handleDetail"
+        @edit="handleEdit"
+        @delete="handleDelete"
       />
-    </div>
+    </DataTableShell>
 
     <McpServiceDialog
       v-model="dialogVisible"
@@ -182,3 +203,78 @@ onMounted(() => {
     />
   </div>
 </template>
+
+<style scoped>
+.mcp-services-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 24px;
+}
+
+.page-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.page-heading h1 {
+  margin: 0;
+  color: var(--ep-text-color-primary);
+  font-size: 24px;
+  font-weight: 650;
+  letter-spacing: 0;
+  line-height: 32px;
+}
+
+.page-heading p {
+  margin: 4px 0 0;
+  color: var(--ep-text-color-secondary);
+  font-size: 13px;
+}
+
+.heading-actions,
+.toolbar-fields {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.toolbar,
+.table-shell {
+  border: 1px solid var(--ep-border-color-lighter);
+  border-radius: 8px;
+  background: var(--ep-bg-color);
+}
+
+.toolbar {
+  padding: 14px;
+}
+
+.toolbar-search {
+  width: min(420px, 100%);
+}
+
+.toolbar-status {
+  width: 160px;
+}
+
+@media (max-width: 768px) {
+  .mcp-services-page {
+    padding: 16px;
+  }
+
+  .page-heading,
+  .heading-actions,
+  .toolbar-fields {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .toolbar-search,
+  .toolbar-status {
+    width: 100%;
+  }
+}
+</style>

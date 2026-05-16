@@ -24,13 +24,13 @@ const rules: FormRules = {
     {
       required: true,
       message: t("common.required", { name: t("common.name") }),
-      trigger: "blur",
+      trigger: ["blur", "change"],
     },
     {
       min: 1,
       max: 100,
       message: t("common.nameLengthError"),
-      trigger: "blur",
+      trigger: ["blur", "change"],
     },
   ],
 };
@@ -60,7 +60,8 @@ defineExpose({
     ref="formRef"
     :model="modelValue"
     :rules="rules"
-    label-width="80px"
+    label-position="top"
+    class="mcp-service-form"
     @submit.prevent
   >
     <el-form-item :label="t('common.name')" prop="name">
@@ -68,16 +69,26 @@ defineExpose({
         v-model="modelValue.name"
         :placeholder="t('common.placeholder.name')"
         maxlength="100"
+        show-word-limit
       />
     </el-form-item>
-    <el-form-item :label="t('common.description')">
+    <el-form-item :label="t('common.description')" prop="description">
       <el-input
         v-model="modelValue.description"
         :placeholder="t('common.placeholder.description')"
-        :rows="3"
+        :rows="4"
         type="textarea"
         maxlength="500"
+        show-word-limit
       />
     </el-form-item>
   </el-form>
 </template>
+
+<style scoped>
+.mcp-service-form :deep(.el-form-item__label) {
+  align-items: center;
+  color: var(--ep-text-color-primary);
+  font-weight: 600;
+}
+</style>

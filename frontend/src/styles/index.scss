@@ -25,6 +25,22 @@ code {
   color: var(--ep-color-primary);
 }
 
+// 统一表格基础样式
+.el-table {
+  .el-table__cell {
+    padding: 12px 0;
+  }
+
+  .el-table__row {
+    .el-button--link {
+      opacity: 0.85;
+    }
+    &:hover .el-button--link {
+      opacity: 1;
+    }
+  }
+}
+
 #nprogress {
   pointer-events: none;
 }

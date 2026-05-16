@@ -175,29 +175,23 @@ onMounted(() => {
       </el-button>
     </div>
 
-    <!-- 数据表格（只做展示与事件触发） -->
-    <DatasourceTable
-      :data="datasourceList"
+    <DataTableShell
       :loading="loading"
-      @edit="handleEdit"
-      @delete="handleDelete"
-      @test-connection="handleTestConnection"
-      @table-manage="handleTableManage"
-    />
-
-    <!-- 分页（父级集中管理） -->
-    <div class="flex items-center justify-between mt-4">
-      <span class="text-gray-500 text-sm">{{ t('common.total', { total }) }}</span>
-      <el-pagination
-        layout="sizes, prev, pager, next"
-        :current-page="page"
-        :page-size="pageSize"
-        :page-sizes="[10, 20, 50, 100]"
-        :total="total"
-        @current-change="handlePageChange"
-        @size-change="handlePageSizeChange"
+      :total="total"
+      :page="page"
+      :page-size="pageSize"
+      @page-change="handlePageChange"
+      @page-size-change="handlePageSizeChange"
+    >
+      <DatasourceTable
+        :data="datasourceList"
+        :loading="loading"
+        @edit="handleEdit"
+        @delete="handleDelete"
+        @test-connection="handleTestConnection"
+        @table-manage="handleTableManage"
       />
-    </div>
+    </DataTableShell>
 
     <!-- 创建/编辑弹窗（父级集中管理） -->
     <DatasourceDialog
