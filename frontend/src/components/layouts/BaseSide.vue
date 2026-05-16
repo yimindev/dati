@@ -25,11 +25,11 @@ const activeMenu = computed(() => {
       :collapse-transition="false"
       :class="collapsed ? 'w-16' : 'w-50'"
     >
-      <el-menu-item index="/nav/1/item-1">
+      <el-menu-item index="/mcp-services">
         <el-icon>
           <span class="icon-[codicon--mcp]"></span>
         </el-icon>
-        <template #title> {{ t("layout.side.mcpBuilder") }} </template>
+        <template #title> {{ t("mcpService.title") }} </template>
       </el-menu-item>
       <el-menu-item index="/subjects">
         <el-icon>
@@ -52,7 +52,7 @@ const activeMenu = computed(() => {
     >
       <button
         @click="collapsed = !collapsed"
-        class="absolute top-1/2 left-full -translate-y-full w-3.5 h-12 rounded-r-xl bg-[var(--ep-bg-color)] cursor-pointer hover:bg-[var(--ep-menu-hover-bg-color)] transition-colors duration-300 ease-in-out)]"
+        class="absolute top-1/2 left-full -translate-y-full w-3.5 h-12 rounded-r-xl bg-[var(--ep-bg-color)] cursor-pointer hover:bg-[var(--ep-menu-hover-bg-color)] transition-colors duration-300 ease-in-out"
       >
         <el-icon class="w-2 h-3">
           <ArrowRight v-if="collapsed" />

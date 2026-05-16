@@ -12,7 +12,8 @@ const features = [
   {
     key: "mcpBuilder",
     icon: Collection,
-    path: "/nav/1/item-1",
+    path: "/mcp-services",
+    label: "mcpService.title",
   },
   {
     key: "semanticModels",
@@ -58,7 +59,7 @@ const features = [
             <component :is="feature.icon" />
           </el-icon>
           <span class="text-base font-medium">
-            {{ t(`layout.side.${feature.key}`) }}
+            {{ feature.label ? t(feature.label) : t(`layout.side.${feature.key}`) }}
           </span>
         </el-card>
       </RouterLink>

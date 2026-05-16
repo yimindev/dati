@@ -7,6 +7,9 @@ import com.dati.datasource.repository.po.ColumnInfoPO;
 import com.dati.datasource.repository.po.DataSourcePO;
 import com.dati.datasource.repository.po.TableInfoPO;
 import com.dati.db.DbType;
+import com.dati.mcp.domain.model.McpService;
+import com.dati.mcp.domain.model.McpServiceStatus;
+import com.dati.mcp.repository.po.McpServicePO;
 
 import java.time.Instant;
 
@@ -100,6 +103,34 @@ public class TestFixtures {
         po.setDescription("Test column description");
         po.setTableId(TEST_TABLE_ID);
         po.setColumnType("VARCHAR(255)");
+        po.setCreatedBy(TEST_USER_ID);
+        po.setCreatedAt(Instant.now());
+        po.setUpdatedBy(TEST_USER_ID);
+        po.setUpdatedAt(Instant.now());
+        return po;
+    }
+
+    public static final String TEST_MCP_SERVICE_ID = "mcp-svc-001";
+
+    public static McpService createTestMcpService() {
+        McpService service = new McpService();
+        service.setId(TEST_MCP_SERVICE_ID);
+        service.setName("Test MCP Service");
+        service.setDescription("Test MCP service for unit tests");
+        service.setStatus(McpServiceStatus.DRAFT);
+        service.setCreatedBy(TEST_USER_ID);
+        service.setCreatedAt(Instant.now());
+        service.setUpdatedBy(TEST_USER_ID);
+        service.setUpdatedAt(Instant.now());
+        return service;
+    }
+
+    public static McpServicePO createTestMcpServicePO() {
+        McpServicePO po = new McpServicePO();
+        po.setId(TEST_MCP_SERVICE_ID);
+        po.setName("Test MCP Service");
+        po.setDescription("Test MCP service for unit tests");
+        po.setStatus(McpServiceStatus.DRAFT);
         po.setCreatedBy(TEST_USER_ID);
         po.setCreatedAt(Instant.now());
         po.setUpdatedBy(TEST_USER_ID);

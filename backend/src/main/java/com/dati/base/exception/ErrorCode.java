@@ -30,6 +30,10 @@ public enum ErrorCode {
 
     FIELD_REQUIRED("VAL002", 400, "Field {0} is required"),
 
+    // ── MCP module (MS) ──────────────────────────────────
+
+    MS_SERVICE_NOT_FOUND("MS001", 404, "MCP service not found: {0}"),
+
     // ── Authentication module (AUTH) ──────────────────────
 
     AUTH_LOGIN_FAILED("AUTH001", 401, "Authentication failed: invalid credentials"),

@@ -23,6 +23,8 @@ declare module 'vue-router/auto-routes' {
     '/datasources/[id]/tables/': RouteRecordInfo<'/datasources/[id]/tables/', '/datasources/:id/tables', { id: ParamValue<true> }, { id: ParamValue<false> }>,
     '/datasources/[id]/tables/[tableId]/columns': RouteRecordInfo<'/datasources/[id]/tables/[tableId]/columns', '/datasources/:id/tables/:tableId/columns', { id: ParamValue<true>, tableId: ParamValue<true> }, { id: ParamValue<false>, tableId: ParamValue<false> }>,
     '/login': RouteRecordInfo<'/login', '/login', Record<never, never>, Record<never, never>>,
+    '/mcp-services/': RouteRecordInfo<'/mcp-services/', '/mcp-services', Record<never, never>, Record<never, never>>,
+    '/mcp-services/[id]/': RouteRecordInfo<'/mcp-services/[id]/', '/mcp-services/:id', { id: ParamValue<true> }, { id: ParamValue<false> }>,
     '/register': RouteRecordInfo<'/register', '/register', Record<never, never>, Record<never, never>>,
     '/subjects/': RouteRecordInfo<'/subjects/', '/subjects', Record<never, never>, Record<never, never>>,
     '/subjects/[id]': RouteRecordInfo<'/subjects/[id]', '/subjects/:id', { id: ParamValue<true> }, { id: ParamValue<false> }>,
@@ -57,6 +59,14 @@ declare module 'vue-router/auto-routes' {
     }
     'src/pages/login.vue': {
       routes: '/login'
+      views: never
+    }
+    'src/pages/mcp-services/index.vue': {
+      routes: '/mcp-services/'
+      views: never
+    }
+    'src/pages/mcp-services/[id]/index.vue': {
+      routes: '/mcp-services/[id]/'
       views: never
     }
     'src/pages/register.vue': {
