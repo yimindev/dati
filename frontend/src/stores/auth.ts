@@ -11,7 +11,7 @@ export const useAuthStore = defineStore("auth", () => {
   const user = ref<User | null>(null);
   const loading = ref(false);
 
-  const isLoggedIn = computed(() => !!token.value && !!user.value);
+  const isLoggedIn = computed(() => !!token.value);
 
   async function login(name: string, password: string) {
     loading.value = true;
