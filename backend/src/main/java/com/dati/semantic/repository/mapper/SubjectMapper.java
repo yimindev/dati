@@ -10,7 +10,7 @@ public class SubjectMapper {
 
     public static Subject toSubject(SubjectPO po) {
         Subject subject = new Subject();
-        MapperUtils.copyBaseInfo(po, subject);
+        MapperUtils.copyBaseResourceInfo(po, subject);
         subject.setDatasourceId(po.getDatasourceId());
         subject.setAliases(po.getAliases() != null ? po.getAliases() : new ArrayList<>());
         return subject;

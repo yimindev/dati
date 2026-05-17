@@ -13,13 +13,13 @@ public class McpServiceMapper {
     }
 
     public static void copyProperties(McpService source, McpServicePO target) {
-        MapperUtils.copyBaseInfo(source, target);
+        MapperUtils.copyBaseResourceInfo(source, target);
         target.setStatus(source.getStatus());
     }
 
     public static McpService toModel(McpServicePO po) {
         McpService service = new McpService();
-        MapperUtils.copyBaseInfo(po, service);
+        MapperUtils.copyBaseResourceInfo(po, service);
         service.setStatus(po.getStatus());
         return service;
     }

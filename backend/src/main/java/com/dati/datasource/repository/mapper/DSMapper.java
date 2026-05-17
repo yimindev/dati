@@ -14,7 +14,7 @@ public class DSMapper {
     }
 
     public static void copyProperties(DataSource source, DataSourcePO target) {
-        MapperUtils.copyBaseInfo(source, target);
+        MapperUtils.copyBaseResourceInfo(source, target);
         target.setType(source.getType());
         target.setJdbcUrl(source.getJdbcUrl());
         target.setUserName(source.getUsername());
@@ -24,7 +24,7 @@ public class DSMapper {
 
     public static DataSource toDataSource(DataSourcePO dataSourcePO) {
         DataSource dataSource = new DataSource();
-        MapperUtils.copyBaseInfo(dataSourcePO, dataSource);
+        MapperUtils.copyBaseResourceInfo(dataSourcePO, dataSource);
         dataSource.setType(dataSourcePO.getType());
         dataSource.setJdbcUrl(dataSourcePO.getJdbcUrl());
         dataSource.setUsername(dataSourcePO.getUserName());

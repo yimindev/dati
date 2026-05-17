@@ -4,10 +4,16 @@ import com.dati.base.pojo.BasePO;
 import com.dati.base.pojo.IdResponse;
 import com.dati.base.pojo.PageReq;
 import com.dati.base.pojo.PageResponse;
+import com.dati.mcp.domain.model.McpDataScopeType;
 import com.dati.mcp.domain.model.McpService;
+import com.dati.mcp.domain.model.McpServiceDataScope;
 import com.dati.mcp.domain.model.McpServiceStatus;
+import com.dati.mcp.domain.service.McpServiceDataScopeService;
 import com.dati.mcp.domain.service.McpServiceService;
 import com.dati.mcp.server.assembler.McpServiceAssembler;
+import com.dati.mcp.server.pojo.DataScopeItemVO;
+import com.dati.mcp.server.pojo.DataScopeRequest;
+import com.dati.mcp.server.pojo.DataScopeResponse;
 import com.dati.mcp.server.pojo.McpServiceVO;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
@@ -19,6 +25,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import java.util.List;
+
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -29,10 +37,14 @@ public class McpServiceController {
 
     private final McpServiceService mcpServiceService;
     private final McpServiceAssembler mcpServiceAssembler;
+    private final McpServiceDataScopeService dataScopeService;
 
-    public McpServiceController(McpServiceService mcpServiceService, McpServiceAssembler mcpServiceAssembler) {
+    public McpServiceController(McpServiceService mcpServiceService,
+                                McpServiceAssembler mcpServiceAssembler,
+                                McpServiceDataScopeService dataScopeService) {
         this.mcpServiceService = mcpServiceService;
         this.mcpServiceAssembler = mcpServiceAssembler;
+        this.dataScopeService = dataScopeService;
     }
 
     @PostMapping
@@ -63,6 +75,37 @@ public class McpServiceController {
         Page<McpServiceVO> voPage = mcpServiceService.listMcpServices(keyword, status, pageReq.toPageRequest().withSort(sortBy))
                 .map(mcpServiceAssembler::toMcpServiceVO);
         return PageResponse.of(voPage);
+    }
+
+    @GetMapping("/{id}/data-scope")
+    public DataScopeResponse getDataScope(@PathVariable String id) {
+        List<McpServiceDataScope> scopes = dataScopeService.getDataScope(id);
+        List<DataScopeItemVO> items = scopes.stream().map(scope -> {
+            DataScopeItemVO vo = new DataScopeItemVO();
+            vo.setId(scope.getId());
+            vo.setScopeType(scope.getScopeType().name());
+            vo.setReferenceId(scope.getReferenceId());
+            vo.setReferenceName(scope.getReferenceName());
+            return vo;
+        }).toList();
+        DataScopeResponse response = new DataScopeResponse();
+        response.setItems(items);
+        return response;
+    }
+
+    @PutMapping("/{id}/data-scope")
+    public IdResponse saveDataScope(@PathVariable String id,
+                                     @RequestBody DataScopeRequest request) {
+        List<McpServiceDataScope> scopes = request.getItems().stream().map(item -> {
+            McpServiceDataScope scope = new McpServiceDataScope();
+            scope.setServiceId(id);
+            scope.setScopeType(McpDataScopeType.valueOf(item.getScopeType()));
+            scope.setReferenceId(item.getReferenceId());
+            scope.setReferenceName(item.getReferenceName());
+            return scope;
+        }).toList();
+        dataScopeService.saveDataScope(id, scopes);
+        return new IdResponse(id);
     }
 
 }

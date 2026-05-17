@@ -1,7 +1,10 @@
 package com.dati.mcp.server.controller;
 
 import com.dati.TestFixtures;
+import com.dati.mcp.domain.model.McpDataScopeType;
 import com.dati.mcp.domain.model.McpService;
+import com.dati.mcp.domain.model.McpServiceDataScope;
+import com.dati.mcp.domain.service.McpServiceDataScopeService;
 import com.dati.mcp.domain.service.McpServiceService;
 import com.dati.mcp.server.assembler.McpServiceAssembler;
 import com.dati.mcp.server.pojo.McpServiceVO;
@@ -49,6 +52,9 @@ class McpServiceControllerTest {
 
     @MockitoBean
     private McpServiceAssembler mcpServiceAssembler;
+
+    @MockitoBean
+    private McpServiceDataScopeService dataScopeService;
 
     private McpService testService;
 
@@ -151,5 +157,43 @@ class McpServiceControllerTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data").isArray())
             .andExpect(jsonPath("$.data[0].id").value(TestFixtures.TEST_MCP_SERVICE_ID));
+    }
+
+    @Test
+    @DisplayName("查询数据范围 - 成功")
+    void getDataScope_shouldReturnItems() throws Exception {
+        McpServiceDataScope scope = new McpServiceDataScope();
+        scope.setId("scope-001");
+        scope.setScopeType(McpDataScopeType.DATA_SOURCE);
+        scope.setReferenceId(TestFixtures.TEST_DATASOURCE_ID);
+        scope.setReferenceName("Test MySQL");
+        when(dataScopeService.getDataScope(TestFixtures.TEST_MCP_SERVICE_ID))
+                .thenReturn(List.of(scope));
+
+        mockMvc.perform(get("/v1/mcp-services/{id}/data-scope", TestFixtures.TEST_MCP_SERVICE_ID))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items").isArray())
+                .andExpect(jsonPath("$.items[0].scope_type").value("DATA_SOURCE"))
+                .andExpect(jsonPath("$.items[0].reference_id").value(TestFixtures.TEST_DATASOURCE_ID))
+                .andExpect(jsonPath("$.items[0].reference_name").value("Test MySQL"));
+    }
+
+    @Test
+    @DisplayName("保存数据范围 - 成功")
+    void saveDataScope_shouldReturnId() throws Exception {
+        doNothing().when(dataScopeService).saveDataScope(anyString(), any());
+
+        mockMvc.perform(put("/v1/mcp-services/{id}/data-scope", TestFixtures.TEST_MCP_SERVICE_ID)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "items": [
+                                    { "scope_type": "DATA_SOURCE", "reference_id": "ds-001", "reference_name": "Test MySQL" },
+                                    { "scope_type": "SUBJECT", "reference_id": "subject-001", "reference_name": "Sales" }
+                                  ]
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(TestFixtures.TEST_MCP_SERVICE_ID));
     }
 }

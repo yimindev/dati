@@ -20,7 +20,7 @@ public class TermMapper {
 
     public static Term toTerm(TermPO po) {
         Term term = new Term();
-        MapperUtils.copyBaseInfo(po, term);
+        MapperUtils.copyBaseResourceInfo(po, term);
         term.setSubjectId(po.getSubjectId());
         term.setAliases(po.getAliases() != null ? po.getAliases() : new ArrayList<>());
         return term;

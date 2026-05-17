@@ -8,7 +8,7 @@ public class TableMapper {
 
     public static TableInfo toTableInfo(TableInfoPO tableInfoPO) {
         TableInfo tableInfo = new TableInfo();
-        MapperUtils.copyBaseInfo(tableInfoPO, tableInfo);
+        MapperUtils.copyBaseResourceInfo(tableInfoPO, tableInfo);
         tableInfo.setDatasourceId(tableInfoPO.getDataSourceId());
         tableInfo.setSchema(tableInfoPO.getSchema());
         tableInfo.setAliases(tableInfoPO.getAliases());
@@ -17,7 +17,7 @@ public class TableMapper {
 
     public static TableInfoPO toTableInfoPO(TableInfo tableInfo) {
         TableInfoPO tableInfoPO = new TableInfoPO();
-        MapperUtils.copyBaseInfo(tableInfo, tableInfoPO);
+        MapperUtils.copyBaseResourceInfo(tableInfo, tableInfoPO);
         tableInfoPO.setDataSourceId(tableInfo.getDatasourceId());
         tableInfoPO.setSchema(tableInfo.getSchema());
         tableInfoPO.setAliases(tableInfo.getAliases());
