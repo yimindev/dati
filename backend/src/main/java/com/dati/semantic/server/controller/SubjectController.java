@@ -93,9 +93,9 @@ public class SubjectController {
     }
 
     @GetMapping
-    public PageResponse<SubjectVO> getSubjects(PageReq pageReq, @RequestParam(required = false) String datasourceId) {
+    public PageResponse<SubjectVO> getSubjects(PageReq pageReq, @RequestParam(required = false) String keyword) {
         Sort sortBy = Sort.by(Sort.Direction.DESC, "updatedAt");
-        Page<SubjectVO> subjectVOPage = subjectService.getSubjectsByDatasource(datasourceId, pageReq.toPageRequest().withSort(sortBy))
+        Page<SubjectVO> subjectVOPage = subjectService.getSubjects(keyword, pageReq.toPageRequest().withSort(sortBy))
                 .map(subjectAssembler::toVO);
         return PageResponse.of(subjectVOPage);
     }

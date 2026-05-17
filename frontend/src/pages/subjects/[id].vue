@@ -114,6 +114,10 @@ onMounted(() => {
           <el-skeleton v-if="loading" :rows="5" animated />
           <template v-else-if="subject">
             <el-form v-if="isEditing" label-width="120px">
+              <el-form-item :label="'ID'">
+                <span class="font-mono text-sm text-slate-500">{{ subject.id }}</span>
+              </el-form-item>
+
               <el-form-item :label="t('common.name')">
                 <el-input v-model="editForm.name" />
               </el-form-item>
@@ -159,6 +163,9 @@ onMounted(() => {
             </el-form>
 
             <el-descriptions v-else :column="1" border size="default">
+              <el-descriptions-item label="ID">
+                <span class="font-mono">{{ subject.id }}</span>
+              </el-descriptions-item>
               <el-descriptions-item :label="t('common.name')">
                 {{ subject.name }}
               </el-descriptions-item>

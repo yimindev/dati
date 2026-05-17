@@ -140,14 +140,14 @@ public class SubjectService {
     }
 
     /**
-     * 查询指定数据源下的 Subject 列表。
-     * datasourceId 为 null 或空字符串时，查询全部 Subject。
+     * 查询 Subject 列表。
+     * keyword 非空时同时按 ID 前缀匹配（区分大小写）或名称模糊匹配（忽略大小写）。
      */
     @Transactional(readOnly = true)
-    public Page<Subject> getSubjectsByDatasource(@Nullable String datasourceId, Pageable pageable) {
-        Page<SubjectPO> pos = StringUtils.isEmpty(datasourceId)
+    public Page<Subject> getSubjects(@Nullable String keyword, Pageable pageable) {
+        Page<SubjectPO> pos = StringUtils.isEmpty(keyword)
                 ? subjectDAO.findAll(pageable)
-                : subjectDAO.findByDatasourceId(datasourceId, pageable);
+                : subjectDAO.findByKeyword(keyword, pageable);
         return pos.map(SubjectMapper::toSubject);
     }
 

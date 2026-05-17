@@ -68,10 +68,15 @@ export interface LinkTermRelationRequest {
   field_name?: string;
 }
 
-export function listSubjects(page: number, size: number, datasourceId?: string, signal?: AbortSignal): Promise<PageResponse<SubjectVO>> {
+export function listSubjects(
+  page: number,
+  size: number,
+  keyword?: string,
+  signal?: AbortSignal,
+): Promise<PageResponse<SubjectVO>> {
   return get<PageResponse<SubjectVO>>(
     "/v1/subjects",
-    { page, size, datasource_id: datasourceId },
+    { page, size, keyword },
     signal,
   );
 }

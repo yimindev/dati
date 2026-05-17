@@ -278,34 +278,34 @@ class SubjectServiceTest {
         assertThat(result.getFirst().getName()).isEqualTo("test_table");
     }
 
-    @Test
-    @DisplayName("getSubjectsByDatasource - 应返回该 datasource 的所有 subjects")
-    void getSubjectsByDatasource_shouldReturnSubjects() {
-        String datasourceId = "datasource-001";
-        Pageable pageable = PageRequest.of(0, 10);
-
-        Page<SubjectPO> subjectPOPage = new org.springframework.data.domain.PageImpl<>(List.of(sampleSubjectPO), pageable, 1);
-        when(subjectDAO.findByDatasourceId(datasourceId, pageable)).thenReturn(subjectPOPage);
-
-        Page<Subject> result = subjectService.getSubjectsByDatasource(datasourceId, pageable);
-
-        assertThat(result.getTotalElements()).isEqualTo(1);
-        assertThat(result.getContent().getFirst().getName()).isEqualTo("Test Subject");
-    }
-
     @ParameterizedTest
     @NullAndEmptySource
-    @DisplayName("getSubjectsByDatasource - datasourceId 为 null 或空时应查所有")
-    void getSubjectsByDatasource_nullOrEmpty_shouldReturnAll(String datasourceId) {
+    @DisplayName("getSubjects - keyword 为 null 或空时应查所有")
+    void getSubjects_withNullOrEmptyKeyword_shouldReturnAll(String keyword) {
         Pageable pageable = PageRequest.of(0, 10);
 
         Page<SubjectPO> subjectPOPage = new org.springframework.data.domain.PageImpl<>(List.of(sampleSubjectPO), pageable, 1);
         when(subjectDAO.findAll(pageable)).thenReturn(subjectPOPage);
 
-        Page<Subject> result = subjectService.getSubjectsByDatasource(datasourceId, pageable);
+        Page<Subject> result = subjectService.getSubjects(keyword, pageable);
 
         assertThat(result.getTotalElements()).isEqualTo(1);
         assertThat(result.getContent().getFirst().getName()).isEqualTo("Test Subject");
-        verify(subjectDAO, never()).findByDatasourceId(any(), any());
+        verify(subjectDAO, never()).findByKeyword(any(), any());
+    }
+
+    @Test
+    @DisplayName("getSubjects - keyword 非空时应按 ID 前缀或名称模糊匹配")
+    void getSubjects_withKeyword_shouldReturnMatchingSubjects() {
+        String keyword = "Test";
+        Pageable pageable = PageRequest.of(0, 10);
+
+        Page<SubjectPO> subjectPOPage = new org.springframework.data.domain.PageImpl<>(List.of(sampleSubjectPO), pageable, 1);
+        when(subjectDAO.findByKeyword(keyword, pageable)).thenReturn(subjectPOPage);
+
+        Page<Subject> result = subjectService.getSubjects(keyword, pageable);
+
+        assertThat(result.getTotalElements()).isEqualTo(1);
+        assertThat(result.getContent().getFirst().getName()).isEqualTo("Test Subject");
     }
 }

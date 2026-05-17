@@ -182,7 +182,7 @@ export default {
 
     // List Page
     createButton: "Create Subject",
-    searchPlaceholder: "Search subject name",
+    searchPlaceholder: "Name or ID",
     noSubject: "No subjects yet",
     noTables: "No linked tables",
     noTerms: "No terms yet",

@@ -28,13 +28,13 @@ const total = ref(0);
 const loadSubjects = async () => {
   try {
     loading.value = true;
-    const response = await listSubjects(page.value, pageSize.value, undefined);
-    let filtered = response.data || [];
-    if (searchKeyword.value) {
-      const kw = searchKeyword.value.toLowerCase();
-      filtered = filtered.filter((s) => s.name.toLowerCase().includes(kw));
-    }
-    subjectList.value = filtered;
+    const keyword = searchKeyword.value.trim() || undefined;
+    const response = await listSubjects(
+      page.value,
+      pageSize.value,
+      keyword,
+    );
+    subjectList.value = response.data || [];
     total.value = response.total ?? 0;
   } catch (error) {
     console.error("加载主题失败:", error);

@@ -23,6 +23,8 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.time.Instant;
 import java.util.List;
 
+import org.springframework.data.domain.Page;
+
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doNothing;
@@ -160,5 +162,14 @@ class SubjectControllerTest {
         mockMvc.perform(delete("/v1/subjects/subject-001/tables/table-001"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.id").value("table-001"));
+    }
+
+    @Test
+    @DisplayName("查询 Subject 列表 - 带 keyword 参数返回 200")
+    void getSubjects_withKeyword_shouldReturn200() throws Exception {
+        when(subjectService.getSubjects(any(), any())).thenReturn(Page.empty());
+
+        mockMvc.perform(get("/v1/subjects?keyword=test"))
+            .andExpect(status().isOk());
     }
 }

@@ -97,6 +97,10 @@ const handleCardClick = (event: MouseEvent) => {
       </p>
 
       <div class="space-y-1 text-xs text-slate-500">
+        <div v-if="subject.id" class="truncate" :title="subject.id">
+          <span class="text-slate-400">ID:</span>
+          <span class="ml-1 font-mono">{{ subject.id }}</span>
+        </div>
         <div v-if="subject.datasource_name" class="truncate">
           <span class="text-slate-400">{{ t('datasource.connectionName') }}:</span>
           <span class="ml-1">{{ subject.datasource_name }}</span>

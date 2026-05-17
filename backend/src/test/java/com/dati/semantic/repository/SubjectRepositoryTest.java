@@ -7,15 +7,16 @@ import com.dati.semantic.repository.po.SubjectTablePO;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.test.context.ActiveProfiles;
 
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @DataJpaTest
 @ActiveProfiles("test")
@@ -39,19 +40,6 @@ class SubjectRepositoryTest {
         assertNotNull(saved.getId());
         assertEquals("Test Subject", saved.getName());
         assertEquals("ds-001", saved.getDatasourceId());
-    }
-
-    @Test
-    void shouldFindByDatasourceId() {
-        SubjectPO subject = new SubjectPO();
-        subject.setName("DS Subject");
-        subject.setDatasourceId("ds-002");
-        subjectDAO.save(subject);
-        
-        Page<SubjectPO> results = subjectDAO.findByDatasourceId("ds-002", PageRequest.of(0, 10));
-        
-        assertEquals(1, results.getTotalElements());
-        assertEquals("DS Subject", results.getContent().getFirst().getName());
     }
 
     @Test

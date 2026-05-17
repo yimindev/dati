@@ -182,7 +182,7 @@ export default {
 
     // 列表页
     createButton: "创建主题",
-    searchPlaceholder: "搜索主题名称",
+    searchPlaceholder: "名称或ID",
     noSubject: "暂无主题",
     noTables: "暂无关联表",
     noTerms: "暂无术语",
