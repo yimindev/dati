@@ -170,10 +170,7 @@ MCP 服务允许访问的数据集合。
 数据范围可以从以下来源选择：
 
 - 数据源
-- schema
-- 表
 - 主题
-- 术语或元数据集合
 
 主题只是快捷选择方式之一。用户选择主题后，系统读取该主题关联的表、字段、术语和描述，作为构建 MCP 服务的可用元数据。
 
@@ -253,7 +250,7 @@ MCP 协议中 Prompt 的参数模型为简单结构（非 JSON Schema）：每�
 | 执行身份 | V1 按服务凭证执行，长期支持调用者身份 |
 | 主题版本 | 不固定主题版本，主题和元数据更新后服务读取最新信息 |
 | 修改已发布服务 | 编辑时线上继续服务旧版本，修改保存到草稿副本，发布时草稿覆盖线上 |
-| 数据范围变更 | 为引用主题模式，主题增删表自动反映到服务范围。直接选的表如被 Tool 引用则不允许移除，保存时校验阻止 |
+| 数据范围变更 | 为引用主题模式，主题增删表自动反映到服务范围 |
 | 模板引用语法 | V1 不做，Prompt 为纯文本。Prompt 文本中参数用 `{{paramName}}` 双花括号占位替换 |
 | 错误处理 | 分两层：协议错误（未知 Tool、无效参数等）由 MCP 适配层映射为 JSON-RPC 标准错误码；Tool 执行错误（SQL 错误等）由适配层包装为 `isError: true` 透传给 Client，供 LLM 自我纠正 |
 | V1 Resource 类型 | 只保留 `examples`（示例 SQL，用户手写）和 `sql-policy`（权限说明，系统生成）。`schema` 和 `terms` 由 Tool 覆盖 |
@@ -265,7 +262,6 @@ MCP 协议中 Prompt 的参数模型为简单结构（非 JSON Schema）：每�
 | SEARCH_METADATA 返回格式 | 按数据源分组返回 |
 | GET_TABLE_INFO 数据来源 | 读 DatI 本地元数据（TableInfoPO），Tool 描述中注明可用 SQL 查询最新结构 |
 | PARAMETERIZED_SQL 参数类型 | String / Number / Boolean / Date / Array |
-| 多数据源重名表 | 展示时带数据源名前缀区分 |
 | Token 认证 | `Authorization: Bearer <token>`。每个服务支持多 Token，可分别命名、启停 |
 | 并发控制 | V1 不做 SQL 执行并发限制。调用频率限制由网关层统一控制，不在 MCP 模块处理 |
 | Tool annotations | 由系统根据 SQL 权限配置自动生成（`readOnlyHint` / `destructiveHint` / `idempotentHint`），无需用户手动配置 |
@@ -318,16 +314,14 @@ MCP 服务基础信息包括：
 数据范围选择方式：
 
 - **选择数据源**：整体选中一个数据源，该数据源下的所有 schema 和表自动纳入范围。
-- **选择表**：直接从数据源下选择具体表。多数据源下有重名表时，通过数据源名前缀区分（如 `ds_A / public.tasks`）。
 - **选择主题**：以**引用**方式选择 DatI 中已维护的主题。主题后续新增或删除表时，服务的数据范围自动同步更新。
 
 schema 不作为独立选择维度，仅作为表列表中每张表的归属前缀信息展示。
 
 要求：
 
-- 数据范围可以同时包含数据源、直接选表和主题引用，取并集。
+- 数据范围可以同时包含数据源和主题引用，取并集。
 - MCP Client 默认不需要感知主题的存在。
-- 保存时校验：**直接选择的表**如果已被 Tool 引用，则不允许从范围中移除，需先处理关联 Tool。主题引用内的表不受此约束（由主题自身管理）。
 - 如果主题、术语、字段描述更新，MCP 服务读取最新元数据。
 
 ### 7.3 Tool 配置
@@ -663,7 +657,7 @@ principal_type = CALLER
 | --- | --- |
 | 服务列表 | 分页列表，支持按名称搜索、按状态筛选。展示服务路径（`/{serviceId}/mcp`） |
 | 基础信息 | 名称、描述编辑；状态展示；endpoint 完整 URL 展示（含域名，支持复制）；发布 / 停用 / 删除操作 |
-| 数据范围 | 选择数据源、表（多数据源重名表带数据源前缀）、主题（引用模式）；查看已选范围 |
+| 数据范围 | 选择数据源、主题（引用模式）；查看已选范围 |
 | Tools | Tool 列表（启用/禁用）；新建 Tool（选择 Tool 类型）；编辑 Tool 名称、显示名、描述、参数和执行配置；测试 Tool 调用 |
 | Resources | Resource 列表；编辑示例 SQL Resource（URI + 内容）；查看权限说明 Resource（只读）；预览内容 |
 | Prompts | Prompt 列表；新建 Prompt；编辑 Prompt 内容（纯文本，`{{paramName}}` 语法）；配置参数（name / description / required）；测试渲染 |
@@ -683,8 +677,7 @@ V1 Tool 输入参数使用 JSON Schema 描述。前端提供结构化表单编�
 
 - 创建、编辑、发布、停用 MCP 服务
 - 配置数据范围
-- 支持数据源、表、主题作为选择入口
-- 保存时校验：引用了 Tool 的表不允许从数据范围移除
+- 支持数据源、主题作为选择入口
 - 自定义 Tool（4 种类型）
 - `SEARCH_METADATA`：元数据关键词模糊检索
 - `GET_TABLE_INFO`：表结构精确查询
@@ -742,7 +735,7 @@ V1 不把 MCP 构建模块设计成以下系统：
 V1 完成后应满足：
 
 1. 用户可以创建一个 MCP 服务并配置数据范围。
-2. 用户可以通过数据源、表或主题快捷选择元数据。
+2. 用户可以通过数据源或主题快捷选择元数据。
 3. 用户可以创建 4 种类型的自定义 Tool（SEARCH_METADATA / GET_TABLE_INFO / EXECUTE_SQL / PARAMETERIZED_SQL）。
 4. `SEARCH_METADATA` 返回结果按数据源分组，`GET_TABLE_INFO` 读本地元数据并提示可用 SQL 查最新结构。
 5. `PARAMETERIZED_SQL` 支持 String / Number / Boolean / Date / Array 类型参数。
