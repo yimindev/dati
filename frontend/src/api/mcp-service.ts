@@ -33,3 +33,36 @@ export function listMcpServices(
 ): Promise<PageResponse<McpServiceVO>> {
   return get<PageResponse<McpServiceVO>>("/v1/mcp-services", { page, size, keyword, status }, signal);
 }
+
+export interface DataScopeItem {
+  id?: string;
+  scope_type: "DATA_SOURCE" | "SUBJECT";
+  reference_id: string;
+  reference_name: string;
+  table_names?: string[];
+  tables?: Array<{
+    name?: string;
+    table_name?: string;
+    schema?: string;
+  }>;
+}
+
+export interface DataScopeResponse {
+  items: DataScopeItem[];
+}
+
+export function getDataScope(id: string, signal?: AbortSignal): Promise<DataScopeResponse> {
+  return get<DataScopeResponse>(`/v1/mcp-services/${encodeURIComponent(id)}/data-scope`, undefined, signal);
+}
+
+export function saveDataScope(
+  id: string,
+  body: { items: DataScopeItem[] },
+  signal?: AbortSignal,
+): Promise<IdResponse> {
+  return put<IdResponse, { items: DataScopeItem[] }>(
+    `/v1/mcp-services/${encodeURIComponent(id)}/data-scope`,
+    body,
+    signal,
+  );
+}

@@ -9,12 +9,10 @@ import { useRoute } from "vue-router";
 import { ElMessage } from "element-plus";
 import { useI18n } from "vue-i18n";
 import {
-  Connection,
   DataAnalysis,
   Delete,
   Document,
   DocumentCopy,
-  Edit,
   FolderOpened,
   Key,
   Monitor,
@@ -26,6 +24,7 @@ import {
 } from "@element-plus/icons-vue";
 import type { McpServiceVO } from "~/api/mcp-service";
 import { getMcpService, updateMcpService } from "~/api/mcp-service";
+import DataScopeTab from "~/components/mcp-service/DataScopeTab.vue";
 import { formatDateTime } from "~/composables";
 
 const { t } = useI18n();
@@ -85,29 +84,31 @@ const endpointUrl = computed(() => {
   return window.location.origin + service.value.endpoint_path;
 });
 
+const isDirty = computed(() =>
+  !!service.value &&
+  (formData.value.name !== service.value.name ||
+    formData.value.description.trim() !== (service.value.description || "")),
+);
+
 const serviceMeta = computed(() => [
   {
     label: t("common.id"),
     value: service.value?.id || "",
-    icon: Document,
     copyable: true,
   },
   {
     label: t("mcpService.toolCount"),
     value: service.value?.tool_count ?? 0,
-    icon: Tools,
   },
   {
     label: t("mcpService.endpointPath"),
     value: service.value?.endpoint_path || t("mcpService.notPublished"),
-    icon: Connection,
   },
   {
     label: t("common.updatedAt"),
     value: service.value?.updated_at
       ? formatDateTime(service.value.updated_at)
       : t("mcpService.emptyValue"),
-    icon: Edit,
   },
 ]);
 
@@ -196,7 +197,7 @@ onMounted(() => {
       <div class="detail-actions">
         <el-button
           v-if="service?.status === 'DRAFT'"
-          type="success"
+          type="primary"
           :icon="VideoPlay"
           @click="handlePublish"
         >
@@ -252,7 +253,7 @@ onMounted(() => {
                 <h2>{{ t("mcpService.tab.basic") }}</h2>
                 <span>{{ t("mcpService.basicSubtitle") }}</span>
               </div>
-              <el-button type="primary" :loading="saving" @click="handleSave">
+              <el-button type="primary" :loading="saving" :disabled="!isDirty" @click="handleSave">
                 {{ t("common.save") }}
               </el-button>
             </div>
@@ -303,9 +304,6 @@ onMounted(() => {
 
             <div class="meta-list">
               <div v-for="item in serviceMeta" :key="item.label" class="meta-item">
-                <span class="meta-icon">
-                  <el-icon><component :is="item.icon" /></el-icon>
-                </span>
                 <div class="meta-content">
                   <span>{{ item.label }}</span>
                   <div class="meta-value">
@@ -323,6 +321,9 @@ onMounted(() => {
           </aside>
         </div>
 
+        <div v-else-if="activeTab === 'scope'" class="scope-panel">
+          <DataScopeTab :service-id="serviceId" :service-status="service?.status" />
+        </div>
         <div v-else class="coming-soon">
           <el-empty :description="t('mcpService.comingSoon')">
             <el-button @click="activeTab = 'basic'">
@@ -448,21 +449,9 @@ onMounted(() => {
 .meta-item {
   display: flex;
   gap: 12px;
-  padding: 12px;
-  border-radius: 8px;
+  padding: 10px 12px;
+  border-radius: 6px;
   background: var(--ep-fill-color-lighter);
-}
-
-.meta-icon {
-  display: inline-flex;
-  width: 32px;
-  height: 32px;
-  flex: 0 0 auto;
-  align-items: center;
-  justify-content: center;
-  border-radius: 8px;
-  background: var(--ep-bg-color);
-  color: var(--ep-color-primary);
 }
 
 .meta-content {
@@ -518,6 +507,13 @@ onMounted(() => {
   .detail-nav {
     overflow-x: auto;
   }
+}
+
+.scope-panel {
+  padding: 18px;
+  border: 1px solid var(--ep-border-color-lighter);
+  border-radius: 8px;
+  background: var(--ep-bg-color);
 }
 
 @media (max-width: 640px) {

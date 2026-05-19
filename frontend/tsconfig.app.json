@@ -1,26 +1,5 @@
 {
   "extends": "@vue/tsconfig/tsconfig.dom.json",
-//  "compilerOptions": {
-//    "target": "esnext",
-//    "jsx": "preserve",
-//    "lib": ["esnext", "dom"],
-//    "useDefineForClassFields": true,
-//    "baseUrl": ".",
-//    "module": "esnext",
-//    "moduleResolution": "bundler",
-//    "paths": {
-//      "~/*": ["src/*"]
-//    },
-//    "resolveJsonModule": true,
-//    "types": [
-//      "vite/client",
-//      "unplugin-vue-router/client"
-//    ],
-//    "strict": true,
-//    "sourceMap": true,
-//    "esModuleInterop": true,
-//    "skipLibCheck": true
-//  },
   "compilerOptions": {
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
 
