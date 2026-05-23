@@ -189,18 +189,28 @@ V1 支持：
 
 ### 5.4 MCP Tool
 
-对外暴露给 MCP Client 的可调用工具。
+对外暴露给 MCP Client 的可调用工具。Tool 分为两类：
 
-Tool 不等同于原子能力。一个 Tool 可以绑定一个原子能力，并通过名称、描述、输入参数和执行配置包装成具体场景下的工具。
+**预置工具（Built-in Tools）**：系统内置的原子能力，所有 MCP 服务共享相同的名称、描述和输入参数定义。用户只需决定是否启用和调整执行参数。V1 支持 3 种：
+
+| 预置工具 | 原子能力 | 说明 |
+| --- | --- | --- |
+| `SEARCH_METADATA` | 元数据检索 | 跨数据源关键词检索表、字段、术语 |
+| `GET_TABLE_INFO` | 元数据详情 | 精确查询指定表/字段信息 |
+| `EXECUTE_SQL` | 自由 SQL 执行 | 执行调用方传入的 SQL，权限可配置 |
+
+预置工具的元数据定义（name、description、inputSchema、默认配置）存储在代码中，不在数据库中重复存储。每个 MCP 服务通过 `mcp_prebuilt_tool_config` 表记录差异化的启用状态和执行配置。
+
+**自定义工具（Custom Tools）**：用户自行创建的工具。V1 仅支持参数化 SQL（`PARAMETERIZED_SQL`），一个服务可创建多个。用户自定义名称、描述、SQL 模板、参数和权限。
 
 MCP 协议中 Tool 包含以下标准字段，DatI 根据用户配置和系统规则自动生成：
 
 | 协议字段 | 说明 | DatI 来源 |
 | --- | --- | --- |
-| `name` | 唯一标识，1-128 字符，允许字符：A-Z, a-z, 0-9, `_`, `-`, `.`，服务内唯一 | 用户配置 |
-| `title` | 可选的人类可读显示名 | 用户配置 |
-| `description` | 功能描述 | 用户配置 |
-| `inputSchema` | JSON Schema 定义输入参数，**必须**是合法 JSON Schema 对象（不能为 null）。无参数 Tool 使用 `{"type":"object","additionalProperties":false}` | 用户配置 |
+| `name` | 唯一标识。预置工具使用系统固定名称；自定义工具 1-128 字符，仅允许 A-Z, a-z, 0-9, `_`, `-`, `.`，服务内唯一 | 系统定义 / 用户配置 |
+| `title` | 可选的人类可读显示名 | 用户配置（自定义工具） |
+| `description` | 功能描述。预置工具系统定义；自定义工具用户配置 | 系统定义 / 用户配置 |
+| `inputSchema` | JSON Schema 定义输入参数。预置工具系统定义；自定义工具从参数列表动态生成 | 系统定义 / 系统生成 |
 | `annotations` | 工具行为标注（`readOnlyHint`、`destructiveHint`、`idempotentHint`），由 SQL 权限自动映射（见 7.10 节） | 系统生成 |
 | `outputSchema` | 可选的输出 JSON Schema | V1 不做 |
 
@@ -326,22 +336,34 @@ schema 不作为独立选择维度，仅作为表列表中每张表的归属前�
 
 ### 7.3 Tool 配置
 
-用户可以创建、编辑、删除、启用、禁用 Tool。
+Tool 分为预置工具和自定义工具，配置方式不同。
 
-Tool 配置字段：
+**预置工具**（3 种，见 5.4 节）：系统内置，管理员只需配置启用状态和执行参数。
+
+- `SEARCH_METADATA` 和 `GET_TABLE_INFO`：仅可配置 `enabled` 和 `timeout`。
+- `EXECUTE_SQL`：可配置 `enabled`、权限策略（SELECT / INSERT / UPDATE / DELETE / DDL / 多语句）、`timeout`、`max_rows`、`confirm_required`。
+
+预置工具不可删除、不可改名。元数据定义（name、description、inputSchema）存储在代码中，全服务统一。
+
+**自定义工具**（V1 仅 `PARAMETERIZED_SQL`）：用户完整 CRUD，每个服务可创建多个。
+
+自定义工具配置字段：
 
 | 配置字段 | 说明 | 对应协议字段 |
 | --- | --- | --- |
-| Tool 名称 | Tool 的唯一标识。命名约束：1-128 字符，仅允许 A-Z, a-z, 0-9, `_`, `-`, `.`，服务内唯一 | `name` |
+| Tool 名称 | 唯一标识。1-128 字符，仅允许 A-Z, a-z, 0-9, `_`, `-`, `.`，服务内唯一 | `name` |
 | Tool 显示名 | 可选的人类可读名称 | `title` |
 | Tool 描述 | 功能描述，帮助 MCP Client 理解工具用途 | `description` |
 | 是否启用 | 控制是否在 `tools/list` 中出现 | — |
-| 输入参数 schema | JSON Schema 定义输入参数。**必须**为合法 JSON Schema 对象（不能为 null）。无参数时使用 `{"type":"object","additionalProperties":false}` | `inputSchema` |
-| 输出格式说明 | 描述工具返回内容的格式，供 Agent 理解 | — |
-| 绑定能力类型 | 选择 `SEARCH_METADATA` / `GET_TABLE_INFO` / `EXECUTE_SQL` / `PARAMETERIZED_SQL` | — |
-| 执行配置 | 数据源绑定、超时时间、最大返回行数 | — |
+| 绑定数据源 | 从 data_scope 内的数据源中选择 | — |
+| SQL 模板 | 参数化 SQL 文本，使用 `:paramName` 占位 | — |
+| 参数列表 | `[{name, type(String/Number/Boolean/Date/Array), required, defaultValue, description}]`。系统据此动态生成 `inputSchema` | `inputSchema` |
 | 权限配置 | SQL 操作权限（见 7.10 节），系统据此自动生成 `annotations` | `annotations` |
-| 是否需要确认 | 调用前是否要求用户确认。不影响 annotations 字段本身，确认逻辑由 Client 根据 annotations 自行决定 | — |
+| 最大返回行数 | 查询结果最大行数 | — |
+| 超时时间 | SQL 最大执行时间（秒） | — |
+| 是否需要确认 | 调用前是否要求用户确认 | — |
+
+所有配置统一存储在单一 JSON 字段 `config` 中，按 tool_type 多态解析。
 
 **Tool Annotations 自动映射**：根据 Tool 的 SQL 权限配置，系统自动生成 MCP 协议 `annotations` 字段：
 
@@ -351,21 +373,24 @@ Tool 配置字段：
 | 允许 INSERT / UPDATE / DELETE | `destructiveHint: true`, `readOnlyHint: false` |
 | 允许 DDL | `destructiveHint: true` |
 
+`SEARCH_METADATA` 和 `GET_TABLE_INFO` 无权限配置，annotations 固定为 `{readOnlyHint: true, destructiveHint: false, idempotentHint: true}`。
+
 V1 Tool 类型：
 
-| Tool 类型 | 说明 |
-| --- | --- |
-| `SEARCH_METADATA` | 元数据关键词模糊检索，跨数据源搜索表、字段、术语、描述 |
-| `GET_TABLE_INFO` | 精确查询指定表、字段的详细定义 |
-| `EXECUTE_SQL` | 自由 SQL 执行工具 |
-| `PARAMETERIZED_SQL` | 参数化 SQL 模板工具 |
+| Tool 类型 | 分类 | 说明 |
+| --- | --- | --- |
+| `SEARCH_METADATA` | 预置 | 元数据关键词模糊检索，跨数据源搜索表、字段、术语、描述 |
+| `GET_TABLE_INFO` | 预置 | 精确查询指定表、字段的详细定义 |
+| `EXECUTE_SQL` | 预置 | 自由 SQL 执行工具 |
+| `PARAMETERIZED_SQL` | 自定义 | 参数化 SQL 模板工具 |
 
 要求：
 
-- 用户可以从内置模板快速创建 Tool。
-- 用户可以修改 Tool 的名称、显示名、描述和参数。
+- 预置工具默认全部启用，管理员可随时开关和调参。
+- 自定义工具的名称、描述和参数由用户自由配置。
 - Tool 描述中应包含其可操作的数据范围和能力限制，帮助 Agent 正确选择工具。
 - Tool 名称需校验命名约束。
+- `inputSchema` 从参数列表动态生成，不在编辑表单中暴露。
 - Tool 的执行由能力层完成，返回协议无关的执行结果。具体返回格式由调用方的协议适配层决定（MCP 适配层包装为 content/isError 格式）。
 
 ### 7.4 元数据检索 Tool（SEARCH_METADATA）
@@ -658,16 +683,20 @@ principal_type = CALLER
 | 服务列表 | 分页列表，支持按名称搜索、按状态筛选。展示服务路径（`/{serviceId}/mcp`） |
 | 基础信息 | 名称、描述编辑；状态展示；endpoint 完整 URL 展示（含域名，支持复制）；发布 / 停用 / 删除操作 |
 | 数据范围 | 选择数据源、主题（引用模式）；查看已选范围 |
-| Tools | Tool 列表（启用/禁用）；新建 Tool（选择 Tool 类型）；编辑 Tool 名称、显示名、描述、参数和执行配置；测试 Tool 调用 |
+| Tools | 预置工具区（开关 + EXECUTE_SQL 权限配置）；自定义工具区（列表 + 新建/编辑/删除参数化 SQL 工具）；测试 Tool 调用 |
 | Resources | Resource 列表；编辑示例 SQL Resource（URI + 内容）；查看权限说明 Resource（只读）；预览内容 |
 | Prompts | Prompt 列表；新建 Prompt；编辑 Prompt 内容（纯文本，`{{paramName}}` 语法）；配置参数（name / description / required）；测试渲染 |
-| 安全策略 | 服务 Token 列表（多 Token，命名/启停/复制）；各 Tool 的 SQL 权限独立配置 |
+| 安全策略 | 服务 Token 列表（多 Token，命名/启停/复制） |
 | 调试发布 | MCP 能力预览；Tool 调用测试；Resource 读取测试；Prompt 渲染测试；配置校验与发布 |
 | 调用日志 | 按时间、Tool、状态筛选；查看调用详情（输入摘要、SQL 摘要、耗时、结果） |
 
 ### 8.3 Tool 参数编辑
 
-V1 Tool 输入参数使用 JSON Schema 描述。前端提供结构化表单编辑模式（字段名、类型、必填、描述），高级用户可切换到 Raw JSON Schema 自由编辑。
+自定义工具的参数使用结构化表单编辑（字段名、类型、必填、默认值、描述）。系统自动从参数列表生成 `inputSchema`（JSON Schema），不在编辑界面暴露 Raw JSON Schema。预置工具的 inputSchema 由系统定义，用户不可编辑。
+
+### 8.4 预置工具配置
+
+`SEARCH_METADATA` 和 `GET_TABLE_INFO` 仅支持开关。`EXECUTE_SQL` 通过配置弹窗调整权限策略（SELECT / INSERT / UPDATE / DELETE / DDL / 多语句勾选组）、超时时间、最大返回行数、是否需要确认，弹窗底部实时预览 annotations。
 
 ---
 

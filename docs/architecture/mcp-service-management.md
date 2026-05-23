@@ -1,21 +1,22 @@
 # MCP Service 管理 — 架构文档
 
-> 版本：v1.1（对应 US-01 + US-02）
-> 最后更新：2026-05-19
+> 版本：v1.2（对应 US-01 + US-02 + US-03）
+> 最后更新：2026-05-21
 
 ---
 
 ## 1. 概述
 
-MCP Service 管理模块提供 **MCP（Model Context Protocol）服务的生命周期管理**。用户可创建、编辑、查看 MCP 服务实例，为后续绑定数据源、配置 Tools / Resources / Prompts 提供载体。
+MCP Service 管理模块提供 **MCP（Model Context Protocol）服务的生命周期管理**。
 
-**核心能力：**
-- 创建服务（默认状态 `DRAFT`）
-- 编辑基础信息（名称、描述）
-- 分页列表查询（支持关键词 + 状态筛选）
-- 服务详情查看与信息编辑
-- Endpoint 路径展示（运行时推导，不持久化）
-- **数据范围配置：添加数据源或主题，限定服务可访问的数据**
+**已实现能力（US-01 + US-02）：**
+- 创建服务（默认状态 `DRAFT`）、编辑基础信息、分页列表、详情查看
+- Endpoint 路径展示（运行时推导）
+- 数据范围配置
+
+**US-03 能力：**
+- 预置工具开关与配置
+- 自定义工具 CRUD
 
 ---
 
@@ -28,16 +29,19 @@ MCP Service 管理模块提供 **MCP（Model Context Protocol）服务的生命�
 ```
 com.dati.mcp/
 ├── domain/
-│   ├── model/           # 领域实体（McpService, McpServiceStatus, McpDataScopeType, McpServiceDataScope）
-│   └── service/         # 业务逻辑（McpServiceService, McpServiceDataScopeService）
+│   ├── model/           # 领域实体（McpService, McpServiceStatus, McpDataScopeType, McpServiceDataScope,
+│   │                    #   McpToolType, PrebuiltToolConfig, McpCustomTool, ParamSqlConfig 等）
+│   └── service/         # 业务逻辑（McpServiceService, McpServiceDataScopeService, McpToolService）
 ├── repository/
-│   ├── dao/             # JPA Repository（McpServiceDAO, McpServiceDataScopeDAO）
-│   ├── po/              # 持久化对象（McpServicePO, McpServiceDataScopePO）
-│   └── mapper/          # PO ↔ Model 转换（McpServiceMapper, McpServiceDataScopeMapper）
+│   ├── dao/             # JPA Repository（McpServiceDAO, McpServiceDataScopeDAO,
+│   │                    #   McpPrebuiltToolConfigDAO, McpCustomToolDAO）
+│   ├── po/              # 持久化对象（McpServicePO, McpServiceDataScopePO,
+│   │                    #   McpPrebuiltToolConfigPO, McpCustomToolPO）
+│   └── mapper/          # PO ↔ Model 转换
 └── server/
-    ├── controller/      # REST API（McpServiceController）
-    ├── pojo/            # 响应 VO（McpServiceVO, DataScopeItemVO, DataScopeResponse, DataScopeRequest）
-    └── assembler/       # Model ↔ VO 转换 + 用户信息填充（McpServiceAssembler）
+    ├── controller/      # REST API（McpServiceController, McpToolController）
+    ├── pojo/            # 响应 VO（ToolsResponse, McpToolVO, ...）
+    └── assembler/       # Model ↔ VO 转换 + 用户信息填充
 ```
 
 ### 2.2 核心类职责
@@ -50,9 +54,9 @@ com.dati.mcp/
 | `McpServiceStatus` | 状态枚举：`DRAFT`（草稿）→ `PUBLISHED`（已发布）→ `DISABLED`（已停用） |
 | `McpServiceService` | 领域服务。创建时强制设为 `DRAFT`；更新时仅修改 `name` / `description`，不触碰状态 |
 | `McpServiceDAO` | JPA Repository，提供按名称/ID 模糊搜索 + 状态筛选的分页查询 |
-| `McpServiceMapper` | 静态方法，负责 `McpService` ↔ `McpServicePO` 的字段映射（含 `MapperUtils.copyBaseInfo`） |
-| `McpServiceController` | REST 入口，`/v1/mcp-services`，处理 CRUD + 分页列表 + 数据范围接口 |
-| `McpServiceAssembler` | 继承 `BaseAssembler`。`toMcpServiceVO()` 将 Model 转为 VO，并**运行时推导** `endpointPath` |
+| `McpServiceMapper` | 静态方法，负责 `McpService` ↔ `McpServicePO` 的字段映射 |
+| `McpServiceController` | REST 入口，`/v1/mcp-services` |
+| `McpServiceAssembler` | 继承 `BaseAssembler`。运行时推导 `endpointPath`，从 `McpToolService` 查询 `toolCount` |
 | `McpServiceVO` | 响应视图对象，含 `status`、`endpoint_path`、`tool_count` |
 
 #### 数据范围（Data Scope）
@@ -60,63 +64,64 @@ com.dati.mcp/
 | 类 | 职责 |
 |---|---|
 | `McpDataScopeType` | 范围类型枚举：`DATA_SOURCE`（数据源）、`SUBJECT`（主题） |
-| `McpServiceDataScope` | 领域实体。`serviceId` + `scopeType` + `referenceId` + `referenceName` |
-| `McpServiceDataScopeService` | 业务逻辑。`saveDataScope` 全量替换（删除旧 + 保存新）；`getDataScope` 查询并展开主题表列表 |
-| `McpServiceDataScopeDAO` | JPA Repository，`findByServiceId` 查询某服务的全部数据范围 |
-| `McpServiceDataScopeMapper` | `McpServiceDataScope` ↔ `McpServiceDataScopePO` 静态映射 |
-| `DataScopeItemVO` | 单个数据范围项 VO，含 `scope_type`、`reference_id`、`reference_name`、`tables` |
-| `DataScopeResponse` | 数据范围查询响应：`{ items: DataScopeItemVO[] }` |
-| `DataScopeRequest` | 保存请求体：`{ items: DataScopeItemVO[] }` |
+| `McpServiceDataScope` | 领域实体 |
+| `McpServiceDataScopeService` | 业务逻辑。`saveDataScope` 全量替换；`getDataScope` 查询 |
+| `McpServiceDataScopeDAO` | JPA Repository，`findByServiceId` |
 
-### 2.3 数据流
+#### Tool 管理（US-03）
 
-#### MCP 服务 CRUD
+**预置工具**
+
+| 类 | 职责 |
+|---|---|
+| `McpToolType` | 枚举：`SEARCH_METADATA` / `GET_TABLE_INFO` / `EXECUTE_SQL` / `PARAMETERIZED_SQL`。含各预置工具的元数据定义（name、description、inputSchema）和默认配置 |
+| `PrebuiltToolConfig` | `sealed interface`，子类：`SearchMetadataConfig`、`GetTableInfoConfig`、`ExecuteSqlConfig` |
+| `PermConfig` | SQL 权限配置对象：`allowSelect`、`allowInsert`、`allowUpdate`、`allowDelete`、`allowDdl`、`allowMulti` |
+| `McpPrebuiltToolConfig` | 领域实体。`serviceId` + `toolType` + `enabled` + `config`（JSON）。per-service 的差异化配置 |
+| `McpPrebuiltToolConfigPO` | 持久化对象。`config` 列存 JSON 字符串 |
+| `McpPrebuiltToolConfigDAO` | JPA Repository。`findByServiceIdAndToolType` |
+
+**自定义工具**
+
+| 类 | 职责 |
+|---|---|
+| `McpCustomTool` | 领域实体。`serviceId` + `name`（服务内唯一）+ `title` + `description` + `enabled` + `config`（JSON → `ParamSqlConfig`） |
+| `ParamSqlConfig` | 参数化 SQL 配置：`dataSourceId`、`sqlTemplate`、`parameters[]`、`permConfig`、`timeout`、`maxRows`、`confirmRequired` |
+| `McpToolParameter` | 参数定义：`name`、`type`（String/Number/Boolean/Date/Array）、`required`、`defaultValue`、`description` |
+| `McpCustomToolPO` | 持久化对象。`config` 列存 JSON 字符串 |
+| `McpCustomToolDAO` | JPA Repository。`findByServiceId`、`existsByServiceIdAndName`、`countByServiceId` |
+
+**工具服务层**
+
+| 类 | 职责 |
+|---|---|
+| `McpToolService` | 统一工具服务。列表返回分组响应（prebuilt + custom）。name 格式校验 |
+| `McpToolController` | REST API，`/v1/mcp-services/{id}/tools`。5 个端点（见 2.4） |
+| `McpToolAssembler` | Model → VO 转换。解析 config JSON |
+| `McpToolVO` | 响应 VO：`id`、`tool_type`、`name`、`title`（自定义）、`description`、`enabled`、`config`（Object） |
+| `ToolsResponse` | 分组响应：`{ prebuilt: List<McpToolVO>, custom: List<McpToolVO> }` |
+
+### 2.3 数据模型关系
 
 ```
-HTTP Request
-    ↓
-Controller (McpServiceController)
-    ├─ Assembler.fillUsersFromRequest(service)   // 注入 created_by / updated_by
-    ↓
-Service (McpServiceService)
-    ├─ create: 强制 status = DRAFT
-    ├─ update: 仅更新 name / description
-    ├─ get/list: 业务查询
-    ↓
-DAO (McpServiceDAO)  ← JPA →  DB (mcp_service 表)
-    ↓
-Mapper (McpServiceMapper)  // PO ↔ Model
-    ↓
-Service 返回 Model
-    ↓
-Assembler (McpServiceAssembler)  // Model → VO，注入 endpoint_path、tool_count、userName
-    ↓
-Controller 返回 VO / PageResponse / IdResponse
-```
+McpToolType (enum)
+  ├─ SEARCH_METADATA  ─→ SearchMetadataConfig { timeout }
+  ├─ GET_TABLE_INFO   ─→ GetTableInfoConfig { timeout }
+  ├─ EXECUTE_SQL      ─→ ExecuteSqlConfig { permConfig, timeout, maxRows, confirmRequired }
+  └─ PARAMETERIZED_SQL (不在枚举中存储默认配置，由 CustomTool 承载)
 
-#### 数据范围配置
+McpPrebuiltToolConfig (per service)
+  ├─ serviceId
+  ├─ toolType (FK → 枚举值 SEARCH_METADATA/GET_TABLE_INFO/EXECUTE_SQL)
+  ├─ enabled (default true)
+  └─ config (JSON, null = 使用枚举中的默认值)
 
-```
-GET /{id}/data-scope
-    ↓
-Controller → McpServiceDataScopeService.getDataScope(serviceId)
-    ↓
-DAO.findByServiceId(serviceId)  // 查询 mcp_service_data_scope 表
-    ↓
-Mapper.toDataScopeItemList(poList)
-    ↓
-若 scope_type = SUBJECT → 通过 SubjectDAO 展开表列表（仅前端展示）
-    ↓
-返回 DataScopeResponse { items: [...] }
-
-PUT /{id}/data-scope
-    ↓
-Controller → McpServiceDataScopeService.saveDataScope(serviceId, items)
-    ↓
-1. DAO.deleteByServiceId(serviceId)   // 全量删除旧数据
-2. Mapper.toPOList(items) → DAO.saveAll(newPOs)   // 批量保存新数据
-    ↓
-返回 IdResponse
+McpCustomTool (per service, 多个)
+  ├─ serviceId
+  ├─ name (服务内唯一)
+  ├─ title, description
+  ├─ enabled
+  └─ config (JSON → ParamSqlConfig: dataSourceId, sqlTemplate, parameters[], permConfig, timeout, maxRows, confirmRequired)
 ```
 
 ### 2.4 API 端点
@@ -137,26 +142,66 @@ Controller → McpServiceDataScopeService.saveDataScope(serviceId, items)
 | `GET` | `/v1/mcp-services/{id}/data-scope` | 查询当前数据范围 | `DataScopeResponse` |
 | `PUT` | `/v1/mcp-services/{id}/data-scope` | 全量替换数据范围 | `IdResponse` |
 
+#### Tool 管理
+
+| 方法 | 路径 | 说明 | 响应 |
+|---|---|---|---|
+| `GET` | `/v1/mcp-services/{id}/tools` | 全量列表，分组返回 | `ToolsResponse (prebuilt + custom)` |
+| `PUT` | `/v1/mcp-services/{id}/tools/{toolId}` | 更新（含 enabled 开关） | `IdResponse` |
+| `POST` | `/v1/mcp-services/{id}/tools` | 创建自定义工具 | `IdResponse` |
+| `DELETE` | `/v1/mcp-services/{id}/tools/{toolId}` | 删除自定义工具 | `IdResponse` |
+| `POST` | `/v1/mcp-services/{id}/tools/{toolId}/test` | 调试执行（US-07 实现） | — |
+
+`toolId` 取值：
+- 预置工具：`SEARCH_METADATA`、`GET_TABLE_INFO`、`EXECUTE_SQL`
+- 自定义工具：DB 生成的 UUID
+
 ### 2.5 关键设计决策
 
+#### 工具分为「预置」和「自定义」
+
+- **预置工具**：名称、描述、inputSchema 和默认配置存储在 `McpToolType` 枚举中，全服务统一。per-service 仅记录差异化的 `enabled` 和 `config`。
+- **自定义工具**：用户完整 CRUD，当前仅支持 `PARAMETERIZED_SQL`。存储在独立的 `mcp_custom_tool` 表。
+- 统一 API 路径 `/tools/`，通过 `toolId` 匹配预置枚举值或 DB 记录来路由。
+- API 返回分组响应 `{ prebuilt: [...], custom: [...] }`，前端直接按区域渲染。
+
+#### 预置工具懒初始化 + 默认启用
+
+- 新建 MCP 服务时，`mcp_prebuilt_tool_config` 表无记录。
+- 查询时无记录 → 使用枚举中的默认配置，视为「已启用」。
+- 用户保存配置后写入 DB 行，之后读取 DB 行为主。
+
+#### config 单字段存多态 JSON
+
+- 不再拆分成多个 nullable 列（`perm_config`、`timeout`、`max_rows`、`confirm_required` 等）。
+- 一个 `config TEXT` 列 + Jackson 多态反序列化。按 `tool_type` 解析为不同配置类。
+- 扩展新配置项无需改表，只改 Java 类。
+
+#### annotations 和 inputSchema 不在管理端 API 返回
+
+- `annotations` 和 `inputSchema` 由 MCP 协议适配层按需生成，管理端不需要。
+- 管理端 API 返回可配置字段（name、description、enabled、config），不携带协议层字段。
+- 前端 annotations 预览（配置弹窗中）纯前端根据 `perm_config` 计算。
+
+#### 开关合并到 PUT 接口
+
+- 不再提供独立的 toggle 端点。前端从当前数据取反 `enabled` 后直接调 `PUT`。
+
+#### 数据源选择限定 data_scope
+
+- 自定义工具创建时的数据源下拉列表限定为当前服务 data_scope 内的数据源。
+
 #### endpoint_path 不存储于数据库
-- **原因**：MCP 服务的 endpoint 格式固定为 `/{id}/mcp`，完全由 ID 推导，无独立业务语义。
-- **实现**：`McpServiceAssembler.toMcpServiceVO()` 运行时拼接字符串 `"/" + service.getId() + "/mcp"`。
-- **优势**：避免数据冗余，删除后 ID 失效，路径自然失效，无需额外维护。
+
+- MCP 服务的 endpoint 格式固定为 `/{id}/mcp`，完全由 ID 推导。
 
 #### 状态机与更新隔离
-- 创建时由后端强制写入 `DRAFT`，前端无需传状态。
-- 编辑接口（`PUT`）**仅允许修改名称和描述**，状态变更（发布/停用/启用）由独立接口控制，防止误操作。
+
+- 创建时由后端强制写入 `DRAFT`。编辑接口仅允许修改名称和描述。
 
 #### 数据范围全量替换策略
-- `PUT /data-scope` 采用**先删后插**策略，简化前端逻辑（无需区分增删改）。
-- 主题类型以**引用模式**保存，不展开为独立表。主题配置变更后，数据范围自动同步。
 
-#### 分页查询策略
-- 无筛选 → `findAll(pageable)`
-- 仅状态 → `findAllByStatus`
-- 仅关键词 → `findAllByNameContainingOrId`
-- 关键词 + 状态 → `findAllByNameContainingOrIdAndStatus`
+- `PUT /data-scope` 采用先删后插策略。
 
 ---
 
@@ -167,124 +212,100 @@ Controller → McpServiceDataScopeService.saveDataScope(serviceId, items)
 ```
 src/
 ├── api/
-│   ├── mcp-service.ts           # API 调用层（axios）
-│   ├── datasource.ts            # 数据源 API（列表查询，支持关键词分页）
-│   └── subject.ts               # 主题 API（列表查询，支持关键词分页）
+│   ├── mcp-service.ts           # MCP 服务 API
+│   ├── mcp-tool.ts              # Tool API（US-03 新增）
+│   ├── datasource.ts            # 数据源 API
+│   └── subject.ts               # 主题 API
 ├── components/mcp-service/
-│   ├── McpServiceTable.vue      # 列表表格（含状态标签、Endpoint、操作列）
-│   ├── McpServiceDialog.vue     # 创建/编辑弹窗壳
+│   ├── McpServiceTable.vue      # 列表表格
+│   ├── McpServiceDialog.vue     # 创建/编辑弹窗
 │   ├── McpServiceForm.vue       # 表单（名称、描述）
-│   └── DataScopeTab.vue         # 数据范围 Tab（列表 + 添加弹窗）
+│   ├── DataScopeTab.vue         # 数据范围 Tab
+│   ├── ToolsTab.vue             # Tools Tab 容器（US-03）
+│   ├── PrebuiltToolCard.vue     # 预置工具卡片行（US-03）
+│   ├── ExecuteSqlConfigDialog.vue  # EXECUTE_SQL 权限配置弹窗（US-03）
+│   ├── CustomToolTable.vue      # 自定义工具列表表格（US-03）
+│   ├── CustomToolDialog.vue     # 自定义工具创建/编辑弹窗（US-03）
+│   └── CustomToolForm.vue       # 自定义工具表单（US-03）
 └── pages/mcp-services/
-    ├── index.vue                # 列表页（搜索、筛选、分页、弹窗）
-    └── [id]/index.vue           # 详情页（左侧 Tab 导航 + 右侧内容区）
+    ├── index.vue                # 列表页
+    └── [id]/index.vue           # 详情页
 ```
 
-### 3.2 组件职责
+### 3.2 新增组件职责（US-03）
 
 | 组件 | 职责 |
 |---|---|
-| `McpServiceTable` | 纯展示组件。接收 `data` 和 `loading`，发射 `detail`/`edit`/`delete` 事件。支持点击名称跳转详情、复制 Endpoint 路径。 |
-| `McpServiceDialog` | 弹窗容器。负责判断新增/编辑，调用 API，成功后发射 `success` 事件通知父组件刷新列表。 |
-| `McpServiceForm` | 受控表单组件。暴露 `validate()` 和 `resetValidation()` 供 Dialog 调用。 |
-| `DataScopeTab` | 数据范围管理组件。展示当前数据范围列表（数据源/主题），支持删除；提供添加弹窗（Tab 切换类型 + 搜索 + checkbox 列表 + 分页 + 全选）。 |
-| `pages/mcp-services/index.vue` | 列表页容器。管理搜索关键词、状态筛选、分页状态，协调 Table、Dialog、DataTableShell。 |
-| `pages/mcp-services/[id].vue` | 详情页。面包屑导航 + 左侧 Tab 菜单（8 Tabs）+ 右侧内容区。基础信息 Tab 支持编辑并保存。 |
+| `ToolsTab` | Tools Tab 容器。加载分组数据，渲染预置工具区 + 自定义工具区。 |
+| `PrebuiltToolCard` | 单个预置工具的卡片行。开关即时调 PUT 更新。EXECUTE_SQL 额外显示「配置」按钮。 |
+| `ExecuteSqlConfigDialog` | EXECUTE_SQL 权限配置弹窗。勾选组 + timeout + maxRows + confirmRequired。 |
+| `CustomToolTable` | 自定义工具列表表格。列：名称、描述、开关、操作。顶部新建按钮。 |
+| `CustomToolDialog` | 自定义工具新建/编辑弹窗壳。校验 + API 调用。 |
+| `CustomToolForm` | 自定义工具受控表单。通用配置 + 数据源选择 + SQL 模板 + 参数编辑 + 权限配置。暴露 `validate()`。 |
 
-### 3.3 DataScopeTab 组件设计
-
-**列表区：**
-- 顶部标题 + "添加数据范围"按钮
-- 每项显示：图标 + 名称 + 类型标签（数据源/主题）+ 引用 ID + 删除按钮
-- 已发布服务显示黄色提示条
-
-**添加弹窗：**
-- 顶部 pill 按钮组切换数据源/主题
-- 搜索框（300ms 防抖，关键词搜索）
-- 表格化列表：checkbox + 名称（粗体）+ ID（等宽）+ 描述 + 状态标签
-- 当前页全选 checkbox
-- 已添加项：置灰 + 不可选 + "已添加"标签
-- 已选项：蓝色高亮 + "已选择"标签
-- 分页："第 X–Y 条，共 Z 条" + 上/下页
-- 底部：左侧计数 + 右侧取消/确认
-
-### 3.4 数据流
+### 3.3 数据流
 
 ```
-列表页 (index.vue)
-    ├─ 状态: searchKeyword, statusFilter, page, pageSize
-    ├─ 调用 api.listMcpServices(...) → 更新 serviceList / total
-    ├─ 点击新建/编辑 → 打开 McpServiceDialog
-    │       └─ McpServiceForm 校验 → api.create/update → emit("success")
-    └─ 点击行 → router.push(`/mcp-services/${id}`)
-
-详情页 ([id].vue)
-    ├─ 加载 api.getMcpService(id)
-    ├─ 表单编辑 → api.updateMcpService → 重新加载详情
-    ├─ 保存按钮：仅当内容变更（isDirty）时才可点击
-    ├─ 服务概览：简洁元信息展示（ID、Tool 数、Endpoint、更新时间），无图标
-    ├─ 数据范围 Tab → DataScopeTab
-    │       ├─ 加载 api.getDataScope(serviceId)
-    │       ├─ 删除某一项 → api.saveDataScope（过滤后全量替换）
-    │       └─ 添加弹窗 → 选择数据源/主题 → api.saveDataScope（追加后全量替换）
-    └─ 面包屑点击 → router.push('/mcp-services') 返回列表
+详情页 → ToolsTab
+    ├─ loaded → api.listTools(serviceId)
+    │       → 返回 { prebuilt: [...], custom: [...] }
+    │       → 按分组渲染两个区域
+    │
+    ├─ 预置工具区：
+    │    ├─ 开关切换 → api.updateTool(serviceId, "SEARCH_METADATA", {enabled: !current})
+    │    └─ EXECUTE_SQL 配置按钮 → ExecuteSqlConfigDialog
+    │         └─ 保存 → api.updateTool(serviceId, "EXECUTE_SQL", {config: {...}})
+    │
+    └─ 自定义工具区：
+         ├─ 新建按钮 → CustomToolDialog (POST)
+         ├─ 编辑按钮 → CustomToolDialog (PUT)
+         ├─ 开关切换 → api.updateTool(serviceId, toolId, {enabled: !current})
+         ├─ 删除按钮 → 确认弹窗 → api.deleteTool(serviceId, toolId)
+         └─ 测试按钮 → US-07
 ```
 
-### 3.5 路由
+### 3.4 状态展示
 
-| 路径 | 页面 | 说明 |
+| 状态 | Tag 颜色 | 说明 |
 |---|---|---|
-| `/mcp-services` | `pages/mcp-services/index.vue` | 列表页，侧边栏高亮 `activeMenu: /mcp-services` |
-| `/mcp-services/:id` | `pages/mcp-services/[id]/index.vue` | 详情页，面包屑可返回列表 |
-
-### 3.6 状态展示
-
-| 状态 | Tag 颜色 | 圆点颜色 | 说明 |
-|---|---|---|---|
-| `DRAFT` | info（灰色） | 灰色 | 草稿，可编辑、可删除、可发布 |
-| `PUBLISHED` | success（绿色） | 绿色 | 已发布，可停用，可查看 Endpoint |
-| `DISABLED` | danger（红色） | 红色 | 已停用，可重新启用 |
+| `DRAFT` | info（灰色） | 草稿 |
+| `PUBLISHED` | success（绿色） | 已发布 |
+| `DISABLED` | danger（红色） | 已停用 |
 
 ---
 
 ## 4. 国际化（i18n）
 
-模块名称统一使用单一 Key `mcpService.title`，多处引用：
-
-- 侧边栏菜单：`t("mcpService.title")`
-- 首页功能卡片：`label: "mcpService.title"`
-- 面包屑：`t("mcpService.title")`
-- 页面标题：`t("mcpService.title")`
-
-数据范围相关 Key 统一在 `mcpService.dataScope.*` 命名空间下：
+工具相关 Key 统一在 `mcpService.tool.*` 命名空间下：
 
 ```
 mcpService:
-  dataScope:
-    subtitle: "为当前服务配置可访问的数据源和主题"
-    addScope: "添加数据范围"
-    typeDataSource: "数据源"
-    typeSubject: "主题"
-    addDialogTitle: "添加数据范围"
-    deleteConfirm: "确定删除此项吗？"
-    publishedHint: "已发布服务修改数据范围后需重新发布才生效"
-    empty: "暂无数据范围"
-    searchDataSource: "搜索数据源..."
-    searchSubject: "搜索主题..."
-    alreadyAdded: "已添加"
-    selected: "已选择"
-    selectFirst: "请至少选择一项"
-    noResults: "未找到匹配项"
-    confirmAdd: "确认添加 ({count})"
-    selectedCount: "已选择 {count} 项"
-    noSelection: "未选择任何项"
-    showingRange: "第 {from}–{to} 条，共 {total} 条"
-    pageText: "第 {page} 页 / 共 {total} 页"
-    prevPage: "上一页"
-    nextPage: "下一页"
+  tool:
+    prebuiltTitle: "预置工具"
+    prebuiltDesc: "系统内置的 MCP 原子能力"
+    customTitle: "自定义工具"
+    customDesc: "参数化 SQL 模板工具"
+    addCustom: "新建参数化 SQL 工具"
+    typeLabel: "类型"
+    type:
+      SEARCH_METADATA: "元数据检索"
+      GET_TABLE_INFO: "表结构查询"
+      EXECUTE_SQL: "自由 SQL 执行"
+      PARAMETERIZED_SQL: "参数化 SQL"
+    config: "配置"
+    configExecuteSql: "配置 EXECUTE_SQL 权限"
+    sqlTemplate: "SQL 模板"
+    parameters: "参数列表"
+    paramName: "参数名"
+    paramType: "类型"
+    paramRequired: "必填"
+    paramDefault: "默认值"
+    paramDesc: "描述"
+    dataSourceBinding: "绑定数据源"
+    deleteConfirm: "删除后 MCP Client 将无法调用此工具，确认删除？"
+    nameFormatError: "仅允许 A-Z, a-z, 0-9, _, -, .，1-128 字符"
+    nameExists: "Tool 名称已被使用"
 ```
-
-中英双语定义于 `frontend/src/locales/zh.ts` 与 `en.ts`。
 
 ---
 
@@ -294,29 +315,28 @@ mcpService:
 
 | 测试类 | 类型 | 覆盖场景 |
 |---|---|---|
-| `McpServiceServiceTest` | 单元测试（Mockito） | 创建、更新（含不存在抛异常）、详情（含不存在抛异常）、分页（4 种筛选组合） |
-| `McpServiceControllerTest` | WebMvcTest（MockMvc） | 创建、更新、详情返回字段校验、分页列表、带关键词+状态分页 |
-| `McpServiceDataScopeServiceTest` | 单元测试（Mockito） | 保存数据范围（全量替换）、查询数据范围（含主题展开表列表）、空列表保存、主题表列表展开 |
-| `McpServiceControllerTest`（扩展） | WebMvcTest（MockMvc） | 数据范围查询、数据范围保存 |
+| `McpServiceServiceTest` | 单元测试（Mockito） | 创建、更新、详情、分页（4 种筛选组合） |
+| `McpServiceControllerTest` | WebMvcTest（MockMvc） | 服务 CRUD + 数据范围接口 |
+| `McpServiceDataScopeServiceTest` | 单元测试（Mockito） | 保存数据范围、查询数据范围、空列表、主题展开 |
+| `McpToolServiceTest` | 单元测试（Mockito） | 预置工具列表（含默认值回退）、自定义工具 CRUD、name 格式/唯一性校验 |
+| `McpToolControllerTest` | WebMvcTest（MockMvc） | 全量列表（分组返回）、更新、创建、删除 |
 
 ### 5.2 前端测试
 
-- 使用 Playwright CLI 进行端到端验证（登录 → 列表 → 创建 → 详情 → 返回）。
+- 使用 Playwright CLI 进行端到端验证。
 - 构建检查：`pnpm build`（`vue-tsc -b && vite build`）零错误。
 
 ---
 
 ## 6. 扩展预留
 
-当前架构已为后续 User Story 预留扩展点：
-
 | 扩展点 | 当前状态 | 未来规划 |
 |---|---|---|
-| `tool_count` | 固定返回 `0` | 关联 Tool 实体后动态统计 |
-| 发布/停用/启用 | `ElMessage.info("comingSoon")` | US-02+：状态变更接口 + 按钮对接 |
-| 删除 | 前端占位，后端未实现 | US-10：软删除接口 |
-| Tools、Resources、Prompts、Security、Debug、Logs | Tab 占位 | 后续 US 逐个填充 |
-| 数据范围 | ✅ 已实现（数据源 + 主题） | 未来如需支持直接表选择，需扩展 `McpDataScopeType` 枚举 |
+| `tool_count` | McpToolService.countToolsByServiceId 动态统计 | ✅ |
+| 发布/停用/启用 | `ElMessage.info("comingSoon")` | US-08 |
+| 删除 | 前端占位，后端未实现 | US-10 |
+| Resources、Prompts、Security、Debug、Logs | Tab 占位 | 后续 US |
+| 自定义工具扩展 | 仅 PARAMETERIZED_SQL | 未来可扩展 API_CALL、SCRIPT 等 |
 
 ---
 
@@ -324,6 +344,5 @@ mcpService:
 
 - [US-01 需求文档](../prd/us/US-01.md)
 - [US-02 需求文档](../prd/us/US-02.md)
+- [US-03 需求文档](../prd/us/US-03.md)
 - [MCP Builder PRD](../prd/2026-05-11-mcp-builder-prd.md)
-- [US-01 实现计划](../superpowers/plans/2026-05-15-us-01-mcp-service-crud.md)
-- [US-02 实现计划](../superpowers/plans/2026-05-17-us-02-data-scope.md)
