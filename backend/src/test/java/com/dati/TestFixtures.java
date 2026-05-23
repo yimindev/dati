@@ -7,8 +7,11 @@ import com.dati.datasource.repository.po.ColumnInfoPO;
 import com.dati.datasource.repository.po.DataSourcePO;
 import com.dati.datasource.repository.po.TableInfoPO;
 import com.dati.db.DbType;
+import com.dati.mcp.domain.model.McpCustomTool;
 import com.dati.mcp.domain.model.McpService;
 import com.dati.mcp.domain.model.McpServiceStatus;
+import com.dati.mcp.domain.model.McpToolType;
+import com.dati.mcp.domain.model.ToolConfig;
 import com.dati.mcp.repository.po.McpServicePO;
 
 import java.time.Instant;
@@ -111,6 +114,7 @@ public class TestFixtures {
     }
 
     public static final String TEST_MCP_SERVICE_ID = "mcp-svc-001";
+    public static final String TEST_MCP_CUSTOM_TOOL_ID = "mcp-ct-001";
 
     public static McpService createTestMcpService() {
         McpService service = new McpService();
@@ -136,6 +140,30 @@ public class TestFixtures {
         po.setUpdatedBy(TEST_USER_ID);
         po.setUpdatedAt(Instant.now());
         return po;
+    }
+
+    public static McpCustomTool createTestCustomTool() {
+        McpCustomTool tool = new McpCustomTool();
+        tool.setId(TEST_MCP_CUSTOM_TOOL_ID);
+        tool.setServiceId(TEST_MCP_SERVICE_ID);
+        tool.setToolType(McpToolType.PARAMETERIZED_SQL);
+        tool.setName("list_tasks");
+        tool.setTitle("查询任务列表");
+        tool.setDescription("按状态查询所有任务");
+        tool.setEnabled(true);
+        tool.setConfig(createTestParamSqlConfig());
+        tool.setCreatedBy(TEST_USER_ID);
+        tool.setCreatedAt(Instant.now());
+        tool.setUpdatedBy(TEST_USER_ID);
+        tool.setUpdatedAt(Instant.now());
+        return tool;
+    }
+
+    public static ToolConfig.ParamSqlConfig createTestParamSqlConfig() {
+        ToolConfig.ParamSqlConfig cfg = new ToolConfig.ParamSqlConfig();
+        cfg.setDataSourceId(TEST_DATASOURCE_ID);
+        cfg.setSqlTemplate("SELECT * FROM tasks WHERE status = :status");
+        return cfg;
     }
 
 }

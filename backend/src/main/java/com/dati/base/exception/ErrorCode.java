@@ -33,6 +33,9 @@ public enum ErrorCode {
     // ── MCP module (MS) ──────────────────────────────────
 
     MS_SERVICE_NOT_FOUND("MS001", 404, "MCP service not found: {0}"),
+    MS_TOOL_NOT_FOUND("MS002", 404, "MCP tool not found: {0}"),
+    MS_TOOL_NAME_EXISTS("MS003", 409, "Tool name already exists in this service: {0}"),
+    MS_TOOL_NAME_INVALID("MS004", 400, "Tool name must be 1-128 chars, allowed: A-Z, a-z, 0-9, _, -, ."),
 
     // ── Authentication module (AUTH) ──────────────────────
 
