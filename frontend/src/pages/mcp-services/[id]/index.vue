@@ -102,6 +102,7 @@ const serviceMeta = computed(() => [
   {
     label: t("mcpService.endpointPath"),
     value: service.value?.endpoint_path || t("mcpService.notPublished"),
+    copyable: true,
   },
   {
     label: t("common.updatedAt"),
@@ -366,7 +367,7 @@ onMounted(() => {
   display: grid;
   min-height: 0;
   flex: 1;
-  grid-template-columns: 220px minmax(0, 1fr);
+  grid-template-columns: minmax(220px, 260px) minmax(0, 1fr);
   gap: 16px;
 }
 
@@ -396,7 +397,7 @@ onMounted(() => {
 
 .basic-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 320px;
+  grid-template-columns: minmax(360px, 1fr) minmax(260px, 400px);
   gap: 16px;
 }
 
@@ -427,10 +428,6 @@ onMounted(() => {
 .panel-heading span {
   color: var(--ep-text-color-secondary);
   font-size: 12px;
-}
-
-.detail-form {
-  max-width: 720px;
 }
 
 .detail-form :deep(.el-form-item__label) {
@@ -492,6 +489,12 @@ onMounted(() => {
   border: 1px solid var(--ep-border-color-lighter);
   border-radius: 8px;
   background: var(--ep-bg-color);
+}
+
+@media (max-width: 1200px) {
+  .basic-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 960px) {
