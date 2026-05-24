@@ -186,7 +186,7 @@ onMounted(() => {
 
 <template>
   <div v-loading="loading" class="mcp-detail-page">
-    <div class="detail-header">
+    <div class="detail-header flex items-start justify-between gap-4">
       <el-breadcrumb separator="/">
         <el-breadcrumb-item :to="{ path: '/mcp-services' }">
           {{ t("mcpService.title") }}
@@ -194,7 +194,7 @@ onMounted(() => {
         <el-breadcrumb-item>{{ service?.name || serviceId }}</el-breadcrumb-item>
       </el-breadcrumb>
 
-      <div class="detail-actions">
+      <div class="detail-actions flex items-center gap-3">
         <el-button
           v-if="service?.status === 'DRAFT'"
           type="primary"
@@ -235,7 +235,7 @@ onMounted(() => {
       <aside class="detail-nav">
         <el-menu
           :default-active="activeTab"
-          class="detail-menu"
+          class="detail-menu border-r-0"
           @select="(key: string) => (activeTab = key)"
         >
           <el-menu-item v-for="tab in tabs" :key="tab.key" :index="tab.key">
@@ -245,10 +245,10 @@ onMounted(() => {
         </el-menu>
       </aside>
 
-      <main class="detail-main">
+      <main class="detail-main min-w-0">
         <div v-if="activeTab === 'basic'" class="basic-grid">
-          <section class="panel">
-            <div class="panel-heading">
+          <section class="panel min-w-0 p-[18px]">
+            <div class="panel-heading flex items-start justify-between gap-3 mb-[18px]">
               <div>
                 <h2>{{ t("mcpService.tab.basic") }}</h2>
                 <span>{{ t("mcpService.basicSubtitle") }}</span>
@@ -281,7 +281,7 @@ onMounted(() => {
                 v-if="service?.status === 'PUBLISHED'"
                 :label="t('mcpService.endpointUrl')"
               >
-                <div class="endpoint-copy">
+                <div class="endpoint-copy w-full">
                   <el-input :model-value="endpointUrl" readonly />
                   <el-tooltip :content="t('common.copy')" placement="top">
                     <el-button :icon="DocumentCopy" @click="handleCopyEndpoint" />
@@ -291,8 +291,8 @@ onMounted(() => {
             </el-form>
           </section>
 
-          <aside class="panel">
-            <div class="panel-heading compact">
+          <aside class="panel min-w-0 p-[18px]">
+            <div class="panel-heading compact flex items-center justify-between gap-3 mb-[18px]">
               <div>
                 <h2>{{ t("mcpService.overview") }}</h2>
                 <span>{{ t("mcpService.status.label") }}</span>
@@ -302,12 +302,12 @@ onMounted(() => {
               </el-tag>
             </div>
 
-            <div class="meta-list">
-              <div v-for="item in serviceMeta" :key="item.label" class="meta-item">
-                <div class="meta-content">
+            <div class="meta-list flex flex-col gap-3">
+              <div v-for="item in serviceMeta" :key="item.label" class="meta-item flex gap-3 px-3 py-2.5">
+                <div class="meta-content flex flex-col gap-0.5 flex-1 min-w-0">
                   <span>{{ item.label }}</span>
-                  <div class="meta-value">
-                    <strong :title="String(item.value)">{{ item.value }}</strong>
+                  <div class="meta-value flex items-center gap-2">
+                    <strong class="truncate" :title="String(item.value)">{{ item.value }}</strong>
                     <el-button
                       v-if="item.copyable"
                       link
@@ -321,13 +321,13 @@ onMounted(() => {
           </aside>
         </div>
 
-        <div v-else-if="activeTab === 'scope'" class="scope-panel">
+        <div v-else-if="activeTab === 'scope'" class="scope-panel p-[18px]">
           <DataScopeTab :service-id="serviceId" :service-status="service?.status" />
         </div>
-        <div v-else-if="activeTab === 'tools'" class="scope-panel">
+        <div v-else-if="activeTab === 'tools'" class="scope-panel p-[18px]">
           <ToolsTab :service-id="serviceId" @refresh="loadService" />
         </div>
-        <div v-else class="coming-soon">
+        <div v-else class="coming-soon flex items-center justify-center min-h-[420px]">
           <el-empty :description="t('mcpService.comingSoon')">
             <el-button @click="activeTab = 'basic'">
               {{ t("mcpService.backToBasic") }}
@@ -339,6 +339,7 @@ onMounted(() => {
   </div>
 </template>
 
+
 <style scoped>
 .mcp-detail-page {
   display: flex;
@@ -346,21 +347,6 @@ onMounted(() => {
   flex-direction: column;
   gap: 16px;
   padding: 20px 24px 24px;
-}
-
-.detail-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-}
-
-.detail-header,
-.detail-actions,
-.endpoint-copy {
-  display: flex;
-  align-items: center;
-  gap: 12px;
 }
 
 .detail-layout {
@@ -372,7 +358,9 @@ onMounted(() => {
 }
 
 .detail-nav,
-.panel {
+.panel,
+.scope-panel,
+.coming-soon {
   border: 1px solid var(--ep-border-color-lighter);
   border-radius: 8px;
   background: var(--ep-bg-color);
@@ -383,39 +371,14 @@ onMounted(() => {
   overflow: hidden;
 }
 
-.detail-menu {
-  border-right: 0;
-}
-
 .detail-menu :deep(.el-menu-item) {
   height: 44px;
-}
-
-.detail-main {
-  min-width: 0;
 }
 
 .basic-grid {
   display: grid;
   grid-template-columns: minmax(360px, 1fr) minmax(260px, 400px);
   gap: 16px;
-}
-
-.panel {
-  min-width: 0;
-  padding: 18px;
-}
-
-.panel-heading {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 18px;
-}
-
-.panel-heading.compact {
-  align-items: center;
 }
 
 .panel-heading h2 {
@@ -435,60 +398,20 @@ onMounted(() => {
   font-weight: 600;
 }
 
-.endpoint-copy {
-  width: 100%;
-}
-
-.meta-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.meta-item {
-  display: flex;
-  gap: 12px;
-  padding: 10px 12px;
-  border-radius: 6px;
-  background: var(--ep-fill-color-lighter);
-}
-
-.meta-content {
-  display: flex;
-  min-width: 0;
-  flex: 1;
-  flex-direction: column;
-  gap: 2px;
-}
-
 .meta-content > span {
   color: var(--ep-text-color-secondary);
   font-size: 12px;
 }
 
-.meta-value {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
 .meta-value strong {
-  overflow: hidden;
   color: var(--ep-text-color-primary);
   font-size: 13px;
   font-weight: 600;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
-.coming-soon {
-  display: flex;
-  min-height: 420px;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid var(--ep-border-color-lighter);
-  border-radius: 8px;
-  background: var(--ep-bg-color);
+.meta-item {
+  border-radius: 6px;
+  background: var(--ep-fill-color-lighter);
 }
 
 @media (max-width: 1200px) {
@@ -514,18 +437,9 @@ onMounted(() => {
   }
 }
 
-.scope-panel {
-  padding: 18px;
-  border: 1px solid var(--ep-border-color-lighter);
-  border-radius: 8px;
-  background: var(--ep-bg-color);
-}
-
 @media (max-width: 640px) {
   .mcp-detail-page {
     padding: 16px;
   }
-
-
 }
 </style>
