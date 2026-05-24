@@ -684,7 +684,7 @@ principal_type = CALLER
 | 基础信息 | 名称、描述编辑；状态展示；endpoint 完整 URL 展示（含域名，支持复制）；发布 / 停用 / 删除操作 |
 | 数据范围 | 选择数据源、主题（引用模式）；查看已选范围 |
 | Tools | 预置工具区（开关 + EXECUTE_SQL 权限配置）；自定义工具区（列表 + 新建/编辑/删除参数化 SQL 工具）；测试 Tool 调用 |
-| Resources | Resource 列表；编辑示例 SQL Resource（URI + 内容）；查看权限说明 Resource（只读）；预览内容 |
+| Resources | V1 暂缓实现 |
 | Prompts | Prompt 列表；新建 Prompt；编辑 Prompt 内容（纯文本，`{{paramName}}` 语法）；配置参数（name / description / required）；测试渲染 |
 | 安全策略 | 服务 Token 列表（多 Token，命名/启停/复制） |
 | 调试发布 | MCP 能力预览；Tool 调用测试；Resource 读取测试；Prompt 渲染测试；配置校验与发布 |
