@@ -25,6 +25,7 @@ import {
 import type { McpServiceVO } from "~/api/mcp-service";
 import { getMcpService, updateMcpService } from "~/api/mcp-service";
 import DataScopeTab from "~/components/mcp-service/DataScopeTab.vue";
+import ToolsTab from "~/components/mcp-service/ToolsTab.vue";
 import { formatDateTime } from "~/composables";
 
 const { t } = useI18n();
@@ -323,6 +324,9 @@ onMounted(() => {
 
         <div v-else-if="activeTab === 'scope'" class="scope-panel">
           <DataScopeTab :service-id="serviceId" :service-status="service?.status" />
+        </div>
+        <div v-else-if="activeTab === 'tools'" class="scope-panel">
+          <ToolsTab :service-id="serviceId" @refresh="loadService" />
         </div>
         <div v-else class="coming-soon">
           <el-empty :description="t('mcpService.comingSoon')">
