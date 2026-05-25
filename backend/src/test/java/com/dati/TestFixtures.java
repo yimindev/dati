@@ -8,6 +8,8 @@ import com.dati.datasource.repository.po.DataSourcePO;
 import com.dati.datasource.repository.po.TableInfoPO;
 import com.dati.db.DbType;
 import com.dati.mcp.domain.model.McpCustomTool;
+import com.dati.mcp.domain.model.McpPrompt;
+import com.dati.mcp.domain.model.PromptParameter;
 import com.dati.mcp.domain.model.McpService;
 import com.dati.mcp.domain.model.McpServiceStatus;
 import com.dati.mcp.domain.model.McpToolType;
@@ -15,6 +17,7 @@ import com.dati.mcp.domain.model.ToolConfig;
 import com.dati.mcp.repository.po.McpServicePO;
 
 import java.time.Instant;
+import java.util.List;
 
 public class TestFixtures {
 
@@ -115,6 +118,7 @@ public class TestFixtures {
 
     public static final String TEST_MCP_SERVICE_ID = "mcp-svc-001";
     public static final String TEST_MCP_CUSTOM_TOOL_ID = "mcp-ct-001";
+    public static final String TEST_MCP_PROMPT_ID = "mcp-pt-001";
 
     public static McpService createTestMcpService() {
         McpService service = new McpService();
@@ -164,6 +168,29 @@ public class TestFixtures {
         cfg.setDataSourceId(TEST_DATASOURCE_ID);
         cfg.setSqlTemplate("SELECT * FROM tasks WHERE status = :status");
         return cfg;
+    }
+    public static McpPrompt createTestMcpPrompt() {
+        McpPrompt prompt = new McpPrompt();
+        prompt.setId(TEST_MCP_PROMPT_ID);
+        prompt.setServiceId(TEST_MCP_SERVICE_ID);
+        prompt.setName("analyze_table");
+        prompt.setDescription("分析指定表的数据");
+        prompt.setContent("请分析 {{table}} 表的数据。");
+        prompt.setParameters(List.of(createTestPromptParameter("table", "表名", true)));
+        prompt.setEnabled(true);
+        prompt.setCreatedBy(TEST_USER_ID);
+        prompt.setCreatedAt(Instant.now());
+        prompt.setUpdatedBy(TEST_USER_ID);
+        prompt.setUpdatedAt(Instant.now());
+        return prompt;
+    }
+
+    public static PromptParameter createTestPromptParameter(String name, String desc, boolean required) {
+        PromptParameter p = new PromptParameter();
+        p.setName(name);
+        p.setDescription(desc);
+        p.setRequired(required);
+        return p;
     }
 
 }
