@@ -37,6 +37,10 @@ public enum ErrorCode {
     MS_TOOL_NAME_EXISTS("MS003", 409, "Tool name already exists in this service: {0}"),
     MS_TOOL_NAME_INVALID("MS004", 400, "Tool name must be 1-128 chars, allowed: A-Z, a-z, 0-9, _, -, ."),
 
+    MS_PROMPT_NOT_FOUND("MS005", 404, "MCP prompt not found: {0}"),
+    MS_PROMPT_NAME_EXISTS("MS006", 409, "Prompt name already exists in this service: {0}"),
+    MS_PROMPT_ARG_MISMATCH("MS007", 400, "Prompt parameter mismatch: {0}"),
+
     // ── Authentication module (AUTH) ──────────────────────
 
     AUTH_LOGIN_FAILED("AUTH001", 401, "Authentication failed: invalid credentials"),
