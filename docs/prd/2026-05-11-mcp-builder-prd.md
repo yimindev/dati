@@ -34,7 +34,6 @@ MCP 构建模块用于将 DatI 中维护的数据源、表、字段、术语、�
 - Prompts
 - 数据访问范围
 - SQL 执行权限
-- 服务认证方式
 - 调用审计策略
 
 主题不是最终对外暴露的核心概念。主题主要用于 DatI 内部管理元数据，构建 MCP 服务时可作为快捷选择，帮助用户快速选中一组表、字段、术语和描述信息。最终 MCP Client 是否感知主题，由服务配置决定。
@@ -65,7 +64,7 @@ MCP 服务需要支持自由 SQL 执行，也需要支持参数化 SQL。SQL 是
 
 ### 3.6 权限模型可扩展
 
-V1 按 MCP 服务凭证执行数据库访问。长期需要支持按调用者身份执行，因此执行上下文和权限模型需要预留扩展点。
+V1 认证鉴权由应用层统一处理，MCP 模块不管理服务凭证。长期需要支持按调用者身份执行，因此执行上下文和权限模型需要预留扩展点。
 
 ### 3.7 协议适配而非协议绑定
 
@@ -158,8 +157,6 @@ UPDATE tasks SET status = :status WHERE id = :task_id
 - Resources 配置
 - Prompts 配置
 - SQL 权限策略（Tool 级）
-- 认证配置
-- 执行身份策略
 - 审计配置
 - 发布状态
 
@@ -257,22 +254,22 @@ MCP 协议中 Prompt 的参数模型为简单结构（非 JSON Schema）：每�
 | SQL 写操作 | 支持，但需要显式开启 |
 | DDL 操作 | 支持，但需要显式开启 |
 | 权限模型 | V1 仅 Tool 级权限，不做服务级 |
-| 执行身份 | V1 按服务凭证执行，长期支持调用者身份 |
+| 执行身份 | V1 按应用层提供的身份执行。执行上下文预留 `principal_id`、`principal_type` 字段，便于后续支持调用者身份透传 |
 | 主题版本 | 不固定主题版本，主题和元数据更新后服务读取最新信息 |
 | 修改已发布服务 | 编辑时线上继续服务旧版本，修改保存到草稿副本，发布时草稿覆盖线上 |
 | 数据范围变更 | 为引用主题模式，主题增删表自动反映到服务范围 |
 | 模板引用语法 | V1 不做，Prompt 为纯文本。Prompt 文本中参数用 `{{paramName}}` 双花括号占位替换 |
 | 错误处理 | 分两层：协议错误（未知 Tool、无效参数等）由 MCP 适配层映射为 JSON-RPC 标准错误码；Tool 执行错误（SQL 错误等）由适配层包装为 `isError: true` 透传给 Client，供 LLM 自我纠正 |
 | V1 Resource 类型 | 只保留 `examples`（示例 SQL，用户手写）和 `sql-policy`（权限说明，系统生成）。`schema` 和 `terms` 由 Tool 覆盖 |
-| 审计日志 | 删除服务时级联删除审计日志。调用来源记录 Client IP + MCP Client 的 `clientInfo.name` |
+| 审计日志 | 删除服务时级联删除审计日志。调用来源记录 Client IP |
 | 调试 Tool 调用 | 先执行 Tool 自身权限校验 → 写操作弹出二次确认 → 确认后真实执行 |
 | 无 Tool 发布 | 允许（纯 Resource + Prompt 的 MCP 服务也有场景） |
-| 停用后启用 | URL 不变，Token 不变，保留原配置 |
+| 停用后启用 | URL 不变，保留原配置 |
 | 内置 Prompt 模板 | V1 不提供，用户自行编写 Prompt 内容 |
 | SEARCH_METADATA 返回格式 | 按数据源分组返回 |
 | GET_TABLE_INFO 数据来源 | 读 DatI 本地元数据（TableInfoPO），Tool 描述中注明可用 SQL 查询最新结构 |
 | PARAMETERIZED_SQL 参数类型 | String / Number / Boolean / Date / Array |
-| Token 认证 | `Authorization: Bearer <token>`。每个服务支持多 Token，可分别命名、启停 |
+| 认证鉴权 | 由应用层统一处理（如 Spring Security / API Gateway），MCP 模块不管理 Token 或凭证 |
 | 并发控制 | V1 不做 SQL 执行并发限制。调用频率限制由网关层统一控制，不在 MCP 模块处理 |
 | Tool annotations | 由系统根据 SQL 权限配置自动生成（`readOnlyHint` / `destructiveHint` / `idempotentHint`），无需用户手动配置 |
 | Resource annotations | `audience` / `priority` / `lastModified` 使用系统默认值，V1 暂不提供 UI 配置 |
@@ -315,7 +312,7 @@ MCP 服务基础信息包括：
 - 发布后生成 MCP endpoint，对外提供服务。**发布时系统生成一份已发布快照**，MCP endpoint 始终读取已发布快照的内容。Client 通过定期 `tools/list` 等方式感知配置变更，V1 不做 `list_changed` 推送通知。
 - 已发布服务可继续编辑，编辑保存到**草稿副本**，线上服务不受影响。需再次发布后，草稿副本覆盖已发布快照，变更才对外生效。
 - 已停用状态不再允许外部调用（endpoint 返回明确错误）。
-- 停用后再次启用，URL 和 Token 均保持不变，保留原配置，但需重新发布。
+- 停用后再次启用，URL 保持不变，保留原配置，但需重新发布。
 
 ### 7.2 数据范围配置
 
@@ -567,39 +564,25 @@ SQL 权限在 **Tool 级别** 配置，每个 Tool 独立控制。
 
 ### 7.11 认证与执行身份
 
-V1 使用服务凭证执行。
+V1 在 MCP 构建模块内部不做认证鉴权，统一由应用层处理。
 
-Token 设计：
+**应用层认证**：MCP endpoint `/{serviceId}/mcp` 由应用层（Spring Security / API Gateway）统一保护。外部请求先经过应用层认证，通过的请求才进入 MCP 模块。认证方式（API Key、OAuth、IP 白名单等）由上层基础设施决定，MCP 模块不感知。
 
-- 每个 MCP 服务支持**多个 Token**，可分别命名（如「生产环境」「测试环境」）、启停。
-- Token 通过 `Authorization: Bearer <token>` Header 传递。
-- Token 由系统生成（随机字符串），用户可在管理端查看和复制。
-- 外部 MCP Client 使用有效 Token 调用该服务。
-- DatI 按该 MCP 服务配置的数据范围和权限执行数据库操作。
-
-长期需要支持调用者身份执行。
-
-因此执行上下文需要预留：
+**执行身份**：V1 按应用层传递的身份执行，执行上下文中预留身份字段：
 
 ```text
 service_id
-credential_id
-principal_type: SERVICE / CALLER
+principal_type: APPLICATION
 principal_id
-caller_id
+caller_ip
 scopes
 ```
 
-V1 固定：
-
-```text
-principal_type = SERVICE
-```
-
-未来可扩展：
+V1 固定 `principal_type = APPLICATION`，`principal_id` 由应用层注入。未来如需调用者身份透传（企业场景中按最终用户身份执行 SQL），可通过扩展 `principal_type` 实现：
 
 ```text
 principal_type = CALLER
+principal_id = <user_id_from_auth_layer>
 ```
 
 ### 7.12 调试与发布
@@ -642,8 +625,7 @@ principal_type = CALLER
 - 服务 ID
 - Tool 名称
 - 调用时间
-- 调用来源（Client IP + MCP Client `clientInfo.name`）
-- 执行身份
+- 调用来源（Client IP）
 - 输入参数摘要
 - SQL 摘要
 - SQL 操作类型
@@ -686,7 +668,6 @@ principal_type = CALLER
 | Tools | 预置工具区（开关 + EXECUTE_SQL 权限配置）；自定义工具区（列表 + 新建/编辑/删除参数化 SQL 工具）；测试 Tool 调用 |
 | Resources | V1 暂缓实现 |
 | Prompts | Prompt 列表；新建 Prompt；编辑 Prompt 内容（纯文本，`{{paramName}}` 语法）；配置参数（name / description / required）；测试渲染 |
-| 安全策略 | 服务 Token 列表（多 Token，命名/启停/复制） |
 | 调试发布 | MCP 能力预览；Tool 调用测试；Resource 读取测试；Prompt 渲染测试；配置校验与发布 |
 | 调用日志 | 按时间、Tool、状态筛选；查看调用详情（输入摘要、SQL 摘要、耗时、结果） |
 
@@ -714,8 +695,6 @@ principal_type = CALLER
 - `PARAMETERIZED_SQL`：参数化 SQL 模板
 - Resource 配置（固定 URI，仅 `examples` + `sql-policy`）
 - Prompt 配置（纯文本，`{{paramName}}` 参数替换语法，无内置模板）
-- 服务 Token 认证（多 Token，`Authorization: Bearer` Header）
-- 服务凭证执行
 - Tool 级 SQL 权限配置
 - 已发布服务编辑后线上不受影响，需重新发布才覆盖
 - Tool 调试
@@ -724,6 +703,7 @@ principal_type = CALLER
 - MCP 适配层：将能力层执行结果包装为 content/isError 格式
 - Tool annotations 自动映射
 - 传输层 Origin 校验、协议版本 Header
+- 应用层认证鉴权集成
 
 ### 9.2 V1 暂不强求
 
@@ -733,7 +713,6 @@ principal_type = CALLER
 - ACCESS_SCOPE Tool（能力信息融入 Tool description）
 - 服务级 SQL 权限
 - 模板引用语法
-- 调用者身份权限透传
 - OAuth 完整授权流
 - 复杂行级权限
 - SQL 智能优化
@@ -773,9 +752,8 @@ V1 完成后应满足：
 8. 已发布服务编辑时线上不受影响，发布后才覆盖。
 9. MCP Client 可以**通过 MCP 协议标准握手流程**建立连接，发现已配置的 Tools、Resources 和 Prompts。
 10. MCP Client 可以调用 Tool 并获得符合 MCP 协议格式的执行结果（`content` + `isError`）。
-11. 服务停用后 endpoint 不可用，重新启用后 URL 和 Token 不变。
-12. Token 支持多 Token 管理（命名、启停），通过 `Authorization: Bearer` 传递。
-13. Tool 调用会产生审计日志（含 Client IP + clientInfo.name），删除服务时级联删除。
+11. 服务停用后 endpoint 不可用，重新启用后 URL 保持不变。
+12. Tool 调用会产生审计日志（含 Client IP），删除服务时级联删除。
 14. Tool annotations 正确反映 SQL 权限配置，Client 可据此展示确认框。
 
 ---
@@ -793,11 +771,9 @@ V1 完成后应满足：
 - PARAMETERIZED_SQL Array 类型参数的展开规则
 - `sql-policy` Resource 的自动生成模板
 - Prompt 参数渲染机制和 `prompts/get` 实现
-- 服务 Token 生命周期（生成算法、过期、多 Token 存储模型）
 - 审计日志保留策略和查询接口
 - 调用者身份权限扩展设计（预留字段的具体实现）
 - SQL 类型识别方式（解析器选型：JSqlParser vs 正则 vs 其他）
-- 服务凭证的加密存储和验证流程
 - V1 不做 `list_changed` 推送通知，Client 通过定期拉取感知变更
 - `list_changed` 通知的推送时机和去重策略
 
@@ -835,17 +811,13 @@ V1 的 Prompt 为纯文本，需要用户手动维护和服务配置的一致性
 
 ### 13.5 调用者身份权限透传
 
-企业场景中，MCP 服务需要按最终用户（而非服务凭证）的身份执行 SQL。这要求：
+企业场景中，MCP 服务需要按最终用户（而非应用层身份）的身份执行 SQL。这要求：
 
 - 支持 `principal_type = CALLER` 的执行模式
 - 调用方在请求中携带用户身份信息
 - SQL 执行时注入调用者身份（如通过数据库 Session 变量实现行级安全）
 
 V1 已预留了 `principal_type` 扩展字段。
-
-### 13.6 OAuth 2.1 授权流
-
-MCP 协议定义了基于 OAuth 2.1 的标准授权机制（Authorization Code Flow + DCR + Client ID Metadata Documents）。对需要接入第三方 MCP Client 的场景，OAuth 比简单的 Token 认证更安全、更标准。
 
 ### 13.7 服务级 SQL 权限兜底
 
