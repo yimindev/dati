@@ -174,6 +174,70 @@ class SqlRendererImplTest {
         assertEquals("b", r.bindings().get(2).name());
     }
 
+    // ---- 原始类型数组展开 ----
+    @Test @DisplayName("int[] → 多个 ?")
+    void testIntArray() {
+        PreparedSql r = renderer.render(parser.parse("IN ({{ids}})"), Map.of("ids", new int[]{1, 2, 3}));
+        assertEquals("IN (?, ?, ?)", r.sql());
+        assertEquals(3, r.bindings().size());
+        assertEquals(1, r.bindings().get(0).value());
+        assertEquals(2, r.bindings().get(1).value());
+        assertEquals(3, r.bindings().get(2).value());
+    }
+
+    @Test @DisplayName("long[] → 多个 ?")
+    void testLongArray() {
+        PreparedSql r = renderer.render(parser.parse("IN ({{ids}})"), Map.of("ids", new long[]{10L, 20L}));
+        assertEquals("IN (?, ?)", r.sql());
+        assertEquals(2, r.bindings().size());
+        assertEquals(10L, r.bindings().get(0).value());
+        assertEquals(20L, r.bindings().get(1).value());
+    }
+
+    @Test @DisplayName("double[] → 多个 ?")
+    void testDoubleArray() {
+        PreparedSql r = renderer.render(parser.parse("IN ({{vals}})"), Map.of("vals", new double[]{1.5, 2.5}));
+        assertEquals("IN (?, ?)", r.sql());
+        assertEquals(2, r.bindings().size());
+        assertEquals(1.5, r.bindings().get(0).value());
+        assertEquals(2.5, r.bindings().get(1).value());
+    }
+
+    @Test @DisplayName("boolean[] → 多个 ?")
+    void testBooleanArray() {
+        PreparedSql r = renderer.render(parser.parse("IN ({{flags}})"), Map.of("flags", new boolean[]{true, false}));
+        assertEquals("IN (?, ?)", r.sql());
+        assertEquals(2, r.bindings().size());
+        assertEquals(true, r.bindings().get(0).value());
+        assertEquals(false, r.bindings().get(1).value());
+    }
+
+    @Test @DisplayName("Integer[]（Object[]）→ 多个 ?")
+    void testIntegerArray() {
+        PreparedSql r = renderer.render(parser.parse("IN ({{ids}})"), Map.of("ids", new Integer[]{100, 200}));
+        assertEquals("IN (?, ?)", r.sql());
+        assertEquals(2, r.bindings().size());
+        assertEquals(100, r.bindings().get(0).value());
+        assertEquals(200, r.bindings().get(1).value());
+    }
+
+    @Test @DisplayName("String[] → 多个 ?")
+    void testStringArray() {
+        PreparedSql r = renderer.render(parser.parse("IN ({{vals}})"), Map.of("vals", new String[]{"a", "b", "c"}));
+        assertEquals("IN (?, ?, ?)", r.sql());
+        assertEquals(3, r.bindings().size());
+        assertEquals("a", r.bindings().get(0).value());
+        assertEquals("b", r.bindings().get(1).value());
+        assertEquals("c", r.bindings().get(2).value());
+    }
+
+    @Test @DisplayName("空 int[] → IN ()，无 binding")
+    void testEmptyIntArray() {
+        PreparedSql r = renderer.render(parser.parse("IN ({{ids}})"), Map.of("ids", new int[]{}));
+        assertEquals("IN ()", r.sql());
+        assertTrue(r.bindings().isEmpty());
+    }
+
     // ---- 综合 ----
     @Test @DisplayName("完整参数化 SQL：table + where + if + sort + limit")
     void testFullSql() {

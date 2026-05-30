@@ -55,9 +55,28 @@ class SqlRendererImpl implements SqlRenderer {
     }
 
     private List<?> toList(Object value) {
-        if (value instanceof List<?> l) return l;
-        if (value.getClass().isArray()) return Arrays.asList((Object[]) value);
-        throw new IllegalStateException("Expected array but got: " + value.getClass());
+        return switch (value) {
+            case List<?> l -> l;
+            case int[] arr -> Arrays.stream(arr).boxed().toList();
+            case long[] arr -> Arrays.stream(arr).boxed().toList();
+            case double[] arr -> Arrays.stream(arr).boxed().toList();
+            case Object[] arr -> Arrays.asList(arr);
+            case boolean[] arr -> {
+                var list = new ArrayList<Boolean>(arr.length);
+                for (boolean b : arr) list.add(b);
+                yield list;
+            }
+            default -> throw new IllegalStateException(
+                "Expected array but got: " + value.getClass().getName());
+        };
+    }
+
+    private static String stripLeadingAndOr(String s) {
+        String upper = s.toUpperCase();
+        if (upper.startsWith("AND ")) return s.substring(4);
+        if (upper.startsWith("OR ")) return s.substring(3);
+        if (upper.equals("AND") || upper.equals("OR")) return "";
+        return s;
     }
 
     private void renderIf(IfNode i, Map<String, Object> params,
@@ -74,7 +93,7 @@ class SqlRendererImpl implements SqlRenderer {
         renderNodes(w.body(), params, body, bodyBindings);
         String trimmed = body.toString().strip();
         if (trimmed.isEmpty()) return;
-        sql.append("WHERE ").append(TextRendererImpl.stripLeadingAndOr(trimmed));
+        sql.append("WHERE ").append(stripLeadingAndOr(trimmed));
         bindings.addAll(bodyBindings);
     }
 }

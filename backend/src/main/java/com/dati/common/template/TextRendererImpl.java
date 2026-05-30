@@ -42,14 +42,6 @@ class TextRendererImpl implements TextRenderer {
         renderNodes(w.body(), params, body);
         String trimmed = body.toString().strip();
         if (trimmed.isEmpty()) return;
-        sb.append("WHERE ").append(stripLeadingAndOr(trimmed));
-    }
-
-    static String stripLeadingAndOr(String s) {
-        String upper = s.toUpperCase();
-        if (upper.startsWith("AND ")) return s.substring(4);
-        if (upper.startsWith("OR ")) return s.substring(3);
-        if (upper.equals("AND") || upper.equals("OR")) return "";
-        return s;
+        sb.append(trimmed);
     }
 }

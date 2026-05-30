@@ -82,28 +82,28 @@ class TextRendererImplTest {
     void testIfEmptyStringTruthy() { assertEquals("shown", renderer.render(parser.parse("{{#if s}}shown{{/if}}"), Map.of("s", ""))); }
 
     // ---- {{#where}} ----
-    @Test @DisplayName("{{#where}} 全跳过 → WHERE 消失")
+    @Test @DisplayName("{{#where}} 全跳过 → block 消失")
     void testWhereAllSkipped() {
         CompiledTemplate t = parser.parse("SELECT * FROM t {{#where}}{{#if s}}AND s={{s}}{{/if}}{{/where}}");
         assertEquals("SELECT * FROM t ", renderer.render(t, Map.of()));
     }
 
-    @Test @DisplayName("{{#where}} 首个 AND 裁剪")
-    void testWhereFirstAndStripped() {
+    @Test @DisplayName("{{#where}} 有内容 → body 原样输出，无 WHERE 前缀")
+    void testWhereBodyRendered() {
         CompiledTemplate t = parser.parse("SELECT * FROM t {{#where}}  AND d={{d}} {{#if s}}AND s={{s}}{{/if}}{{/where}}");
-        assertEquals("SELECT * FROM t WHERE d=123 AND s=active", renderer.render(t, Map.of("d", 123, "s", "active")));
+        assertEquals("SELECT * FROM t AND d=123 AND s=active", renderer.render(t, Map.of("d", 123, "s", "active")));
     }
 
-    @Test @DisplayName("{{#where}} 首个 OR 裁剪")
-    void testWhereFirstOrStripped() {
+    @Test @DisplayName("{{#where}} body 首 OR 不裁剪")
+    void testWhereOrNotStripped() {
         CompiledTemplate t = parser.parse("SELECT {{#where}}  OR a={{a}} OR b={{b}}{{/where}}");
-        assertEquals("SELECT WHERE a=1 OR b=2", renderer.render(t, Map.of("a", 1, "b", 2)));
+        assertEquals("SELECT OR a=1 OR b=2", renderer.render(t, Map.of("a", 1, "b", 2)));
     }
 
-    @Test @DisplayName("{{#where}} 无 AND/OR 前缀 → 原样")
+    @Test @DisplayName("{{#where}} 无 AND/OR 前缀 → body 原样")
     void testWhereNoPrefix() {
         CompiledTemplate t = parser.parse("SELECT {{#where}}d={{d}}{{/where}}");
-        assertEquals("SELECT WHERE d=5", renderer.render(t, Map.of("d", 5)));
+        assertEquals("SELECT d=5", renderer.render(t, Map.of("d", 5)));
     }
 
     // ---- Array → toString() ----

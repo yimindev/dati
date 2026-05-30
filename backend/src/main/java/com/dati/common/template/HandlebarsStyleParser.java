@@ -3,20 +3,25 @@ package com.dati.common.template;
 import org.springframework.stereotype.Component;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Pattern;
 
 /**
  * Handlebars-style template parser. Scans for {{ }} delimiters and produces an AST.
  * Context-free: does NOT understand SQL syntax (quotes, comments).
  *
+ * <pre>
  * Grammar (V1):
  *   template  := (text | var | ifBlock | whereBlock)*
  *   var       := '{{' name (':' default)? '}}'
  *   ifBlock   := '{{#if ' name '}}' template '{{/if}}'
  *   whereBlock:= '{{#where}}' template '{{/where}}'
  *   escape    := '\{{' → literal '{{'
+ * </pre>
  */
 @Component
 class HandlebarsStyleParser implements TemplateParser {
+
+    private static final Pattern VAR_NAME = Pattern.compile("[A-Za-z0-9_.]+");
 
     @Override
     public CompiledTemplate parse(String template) throws TemplateParseException {
@@ -68,6 +73,7 @@ class HandlebarsStyleParser implements TemplateParser {
 
         if (directive.startsWith("if ")) {
             String cond = directive.substring(3).trim();
+            validateVarName(cond, "condition");
             return parseGenericBlock(template, "{{#if " + cond + "}}", "{{/if}}", pos,
                     IfNode::new, cond, true, nodes);
         }
@@ -104,8 +110,17 @@ class HandlebarsStyleParser implements TemplateParser {
 
     private VarNode parseVar(String content) {
         int colon = content.indexOf(':');
-        if (colon < 0) return new VarNode(content, null);
-        return new VarNode(content.substring(0, colon), content.substring(colon + 1));
+        String name = (colon < 0) ? content : content.substring(0, colon);
+        validateVarName(name, "variable");
+        if (colon < 0) return new VarNode(name, null);
+        return new VarNode(name, content.substring(colon + 1));
+    }
+
+    private static void validateVarName(String name, String label) {
+        if (name.isEmpty() || !VAR_NAME.matcher(name).matches()) {
+            throw new TemplateParseException(
+                "Invalid " + label + " name: '" + name + "'. Must match [A-Za-z0-9_.]+");
+        }
     }
 
     private void flushText(StringBuilder buf, List<Node> nodes) {

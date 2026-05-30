@@ -51,6 +51,9 @@ class HandlebarsStyleParserTest {
     @Test @DisplayName("变量名含数字")
     void testVarNameDigits() { assertEquals(Set.of("col_123"), parser.parse("{{col_123}}").getVariables()); }
 
+    @Test @DisplayName("变量名含多个点号")
+    void testVarNameMultiDot() { assertEquals(Set.of("a.b.c"), parser.parse("{{a.b.c}}").getVariables()); }
+
     // ---- 变量位置 ----
     @Test @DisplayName("变量在开头")
     void testVariableAtStart() { assertEquals(Set.of("var"), parser.parse("{{var}} is the value").getVariables()); }
@@ -121,9 +124,37 @@ class HandlebarsStyleParserTest {
     @Test @DisplayName("{{#each}}（V2）→ TemplateParseException")
     void testEachNotSupported() { assertThrows(TemplateParseException.class, () -> parser.parse("{{#each items}}{{this}}{{/each}}")); }
 
+    // ---- 错误：变量名非法 ----
+    @Test @DisplayName("空变量 {{}} → TemplateParseException")
+    void testEmptyVar() { assertThrows(TemplateParseException.class, () -> parser.parse("{{}}")); }
+
+    @Test @DisplayName("变量名含空格 {{a b}} → TemplateParseException")
+    void testVarWithSpace() { assertThrows(TemplateParseException.class, () -> parser.parse("{{a b}}")); }
+
+    @Test @DisplayName("变量名含连字符 {{a-b}} → TemplateParseException")
+    void testVarWithHyphen() { assertThrows(TemplateParseException.class, () -> parser.parse("{{a-b}}")); }
+
+    @Test @DisplayName("变量名仅下划线 {{_}} → 合法")
+    void testVarOnlyUnderscore() { assertEquals(Set.of("_"), parser.parse("{{_}}").getVariables()); }
+
+    @Test @DisplayName("{{#if}} 空条件 → TemplateParseException")
+    void testIfEmptyCondition() { assertThrows(TemplateParseException.class, () -> parser.parse("{{#if }}text{{/if}}")); }
+
+    @Test @DisplayName("{{#if}} 条件含空格 → TemplateParseException")
+    void testIfConditionWithSpace() { assertThrows(TemplateParseException.class, () -> parser.parse("{{#if a b}}text{{/if}}")); }
+
+    @Test @DisplayName("默认值变量名非法 → TemplateParseException")
+    void testDefaultVarInvalidName() { assertThrows(TemplateParseException.class, () -> parser.parse("{{a-b:default}}")); }
+
     // ---- 错误：嵌套 ----
     @Test @DisplayName("嵌套 {{#if}} → TemplateParseException")
     void testNestedIf() { assertThrows(TemplateParseException.class, () -> parser.parse("{{#if a}}o{{#if b}}i{{/if}}{{/if}}")); }
+
+    @Test @DisplayName("转义后的 {{#if}} 不是嵌套，应解析成功")
+    void testEscapedIfNotNested() {
+        CompiledTemplate t = parser.parse("{{#if debug}}语法: \\{{#if condition}}...\\{{/if}}{{/if}}");
+        assertEquals(Set.of("debug"), t.getVariables());
+    }
 
     // ---- 综合 ----
     @Test @DisplayName("复杂模板：文本 + var + if + where + default")
