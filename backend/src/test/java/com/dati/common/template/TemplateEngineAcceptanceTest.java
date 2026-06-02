@@ -79,4 +79,43 @@ class TemplateEngineAcceptanceTest {
         assertEquals(2, r.bindings().get(1).value());
         assertEquals(3, r.bindings().get(2).value());
     }
+
+    // ---- 嵌套 {{#if}} 验收测试 ----
+    @Test @DisplayName("AC-13: 嵌套 {{#if}} 解析成功，getVariables 含全部变量")
+    void ac13() {
+        CompiledTemplate t = parser.parse("{{#if a}}x{{#if b}}y{{#if c}}z{{/if}}{{/if}}{{/if}}");
+        assertEquals(Set.of("a", "b", "c"), t.getVariables());
+    }
+
+    @Test @DisplayName("AC-14: TextRenderer 嵌套 if，内外层均成立")
+    void ac14() {
+        assertEquals("xyz", textRenderer.render(
+            parser.parse("{{#if a}}x{{#if b}}y{{#if c}}z{{/if}}{{/if}}{{/if}}"),
+            Map.of("a", 1, "b", 1, "c", 1)));
+    }
+
+    @Test @DisplayName("AC-15: TextRenderer 嵌套 if，内层跳过")
+    void ac15() {
+        assertEquals("x", textRenderer.render(
+            parser.parse("{{#if a}}x{{#if b}}y{{/if}}{{/if}}"),
+            Map.of("a", 1)));
+    }
+
+    @Test @DisplayName("AC-16: SqlRenderer 嵌套 if，内外层均成立")
+    void ac16() {
+        PreparedSql r = sqlRenderer.render(
+            parser.parse("{{#if a}}x={{x}}{{#if b}} AND b={{b}}{{/if}}{{/if}}"),
+            Map.of("a", 1, "x", "hello", "b", 2));
+        assertEquals("x=? AND b=?", r.sql());
+        assertEquals(2, r.bindings().size());
+    }
+
+    @Test @DisplayName("AC-17: SqlRenderer 嵌套 if，内层跳过")
+    void ac17() {
+        PreparedSql r = sqlRenderer.render(
+            parser.parse("{{#if a}}x={{x}}{{#if b}} AND b={{b}}{{/if}}{{/if}}"),
+            Map.of("a", 1, "x", "hello"));
+        assertEquals("x=?", r.sql());
+        assertEquals(1, r.bindings().size());
+    }
 }

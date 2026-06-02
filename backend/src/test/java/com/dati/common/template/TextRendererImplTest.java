@@ -76,6 +76,38 @@ class TextRendererImplTest {
     void testDefaultOverridden() { assertEquals("LIMIT 50", renderer.render(parser.parse("LIMIT {{limit:20}}"), Map.of("limit", 50))); }
 
     // ---- {{#if}} ----
+    // ---- 嵌套 {{#if}} ----
+    @Test @DisplayName("嵌套 {{#if}} 两层都成立 → 内层渲染")
+    void testNestedIfBothTrue() {
+        assertEquals("inner",
+            renderer.render(parser.parse("{{#if a}}{{#if b}}inner{{/if}}{{/if}}"), Map.of("a", 1, "b", 1)));
+    }
+
+    @Test @DisplayName("嵌套 {{#if}} 外层成立内层跳过 → 为空")
+    void testNestedIfInnerSkipped() {
+        assertEquals("",
+            renderer.render(parser.parse("{{#if a}}{{#if b}}inner{{/if}}{{/if}}"), Map.of("a", 1)));
+    }
+
+    @Test @DisplayName("嵌套 {{#if}} 外层跳过 → 整体消失")
+    void testNestedIfOuterSkipped() {
+        assertEquals("",
+            renderer.render(parser.parse("{{#if a}}{{#if b}}inner{{/if}}{{/if}}"), Map.of()));
+    }
+
+    @Test @DisplayName("嵌套 {{#if}} 内层变量替换")
+    void testNestedIfInnerVar() {
+        assertEquals("x=5",
+            renderer.render(parser.parse("{{#if a}}{{#if b}}x={{b}}{{/if}}{{/if}}"), Map.of("a", 1, "b", 5)));
+    }
+
+    @Test @DisplayName("嵌套 {{#if}} 三层")
+    void testNestedIfThreeLevels() {
+        assertEquals("deep",
+            renderer.render(parser.parse("{{#if a}}{{#if b}}{{#if c}}deep{{/if}}{{/if}}{{/if}}"),
+                Map.of("a", 1, "b", 1, "c", 1)));
+    }
+
     @Test @DisplayName("{{#if}} true → body 渲染")
     void testIfTrue() { assertEquals("Hello World", renderer.render(parser.parse("{{#if name}}Hello {{name}}{{/if}}"), Map.of("name", "World"))); }
 

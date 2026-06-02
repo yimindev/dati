@@ -123,6 +123,38 @@ class SqlRendererImplTest {
         assertEquals("?", r.sql()); assertEquals(1, r.bindings().size());
     }
 
+    // ---- 嵌套 {{#if}} ----
+    @Test @DisplayName("嵌套 {{#if}} 两层都成立 → 内层 SQL 渲染")
+    void testNestedIfBothTrue() {
+        PreparedSql r = renderer.render(parser.parse("{{#if a}}{{#if b}}AND b={{b}}{{/if}}{{/if}}"), Map.of("a", 1, "b", 2));
+        assertEquals("AND b=?", r.sql());
+        assertEquals(1, r.bindings().size());
+        assertEquals(2, r.bindings().getFirst().value());
+    }
+
+    @Test @DisplayName("嵌套 {{#if}} 外层成立内层跳过 → 空")
+    void testNestedIfInnerSkipped() {
+        PreparedSql r = renderer.render(parser.parse("{{#if a}}{{#if b}}AND b={{b}}{{/if}}{{/if}}"), Map.of("a", 1));
+        assertEquals("", r.sql());
+        assertTrue(r.bindings().isEmpty());
+    }
+
+    @Test @DisplayName("嵌套 {{#if}} 外层跳过 → 空")
+    void testNestedIfOuterSkipped() {
+        PreparedSql r = renderer.render(parser.parse("{{#if a}}{{#if b}}AND b={{b}}{{/if}}{{/if}}"), Map.of());
+        assertEquals("", r.sql());
+        assertTrue(r.bindings().isEmpty());
+    }
+
+    @Test @DisplayName("嵌套 {{#if}} 内层变量绑定")
+    void testNestedIfInnerBinding() {
+        PreparedSql r = renderer.render(parser.parse("{{#if a}}x={{x}}{{#if b}} AND b={{b}}{{/if}}{{/if}}"), Map.of("a", 1, "x", 10, "b", 20));
+        assertEquals("x=? AND b=?", r.sql());
+        assertEquals(2, r.bindings().size());
+        assertEquals(10, r.bindings().get(0).value());
+        assertEquals(20, r.bindings().get(1).value());
+    }
+
     // ---- {{#where}} ----
     @Test @DisplayName("{{#where}} 全跳过 → WHERE 消失")
     void testWhereAllSkipped() {

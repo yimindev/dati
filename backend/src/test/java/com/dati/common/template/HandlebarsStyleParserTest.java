@@ -146,9 +146,24 @@ class HandlebarsStyleParserTest {
     @Test @DisplayName("默认值变量名非法 → TemplateParseException")
     void testDefaultVarInvalidName() { assertThrows(TemplateParseException.class, () -> parser.parse("{{a-b:default}}")); }
 
-    // ---- 错误：嵌套 ----
-    @Test @DisplayName("嵌套 {{#if}} → TemplateParseException")
-    void testNestedIf() { assertThrows(TemplateParseException.class, () -> parser.parse("{{#if a}}o{{#if b}}i{{/if}}{{/if}}")); }
+    // ---- 嵌套 ----
+    @Test @DisplayName("嵌套 {{#if}} → getVariables 含两层变量")
+    void testNestedIf() {
+        CompiledTemplate t = parser.parse("{{#if a}}o{{#if b}}i{{/if}}{{/if}}");
+        assertEquals(Set.of("a", "b"), t.getVariables());
+    }
+
+    @Test @DisplayName("嵌套 {{#if}} 三层的变量")
+    void testDeepNestedIf() {
+        CompiledTemplate t = parser.parse("{{#if a}}{{#if b}}{{#if c}}deep{{/if}}{{/if}}{{/if}}");
+        assertEquals(Set.of("a", "b", "c"), t.getVariables());
+    }
+
+    @Test @DisplayName("嵌套 {{#if}} 内含变量")
+    void testNestedIfWithVar() {
+        CompiledTemplate t = parser.parse("{{#if a}}{{#if b}}x={{b}}{{/if}}{{/if}}");
+        assertEquals(Set.of("a", "b"), t.getVariables());
+    }
 
     @Test @DisplayName("转义后的 {{#if}} 不是嵌套，应解析成功")
     void testEscapedIfNotNested() {

@@ -74,12 +74,12 @@ class HandlebarsStyleParser implements TemplateParser {
         if (directive.startsWith("if ")) {
             String cond = directive.substring(3).trim();
             validateVarName(cond, "condition");
-            return parseGenericBlock(template, "{{#if " + cond + "}}", "{{/if}}", pos,
-                    IfNode::new, cond, true, nodes);
+            return parseGenericBlock(template, "{{#if " + cond + "}}", "{{/if}}", "{{#if ", pos,
+                    IfNode::new, cond, nodes);
         }
         if (directive.equals("where")) {
-            return parseGenericBlock(template, "{{#where}}", "{{/where}}", pos,
-                    (cnd, body) -> new WhereNode(body), null, false, nodes);
+            return parseGenericBlock(template, "{{#where}}", "{{/where}}", "{{#where}}", pos,
+                    (cnd, body) -> new WhereNode(body), null, nodes);
         }
         throw new TemplateParseException("Unknown block directive: '{{#" + directive + "}}'");
     }
@@ -87,23 +87,15 @@ class HandlebarsStyleParser implements TemplateParser {
     @FunctionalInterface
     private interface NodeFactory { Node create(String condition, List<Node> body); }
 
-    private int parseGenericBlock(String template, String openTag, String endTag, int pos,
-                                   NodeFactory factory, String condition, boolean checkNesting,
+    private int parseGenericBlock(String template, String openTag, String endTag,
+                                   String openPattern, int pos,
+                                   NodeFactory factory, String condition,
                                    List<Node> nodes) {
-        int endIdx = findEndTag(template, endTag, pos);
+        int endIdx = findMatchingEndTag(template, endTag, openPattern, pos);
         if (endIdx < 0) throw new TemplateParseException("Unclosed '" + openTag + "' — missing '" + endTag + "'");
 
         String body = template.substring(pos, endIdx);
         ParsedTemplate sub = (ParsedTemplate) this.parse(body);
-
-        // Check for illegal nesting of same-type blocks in the parsed AST
-        if (checkNesting && containsNestedIf(sub.getNodes())) {
-            throw new TemplateParseException("Nested '{{#if}}' is not supported");
-        }
-        if (!checkNesting && containsNestedWhere(sub.getNodes())) {
-            throw new TemplateParseException("Nested '{{#where}}' is not supported");
-        }
-
         nodes.add(factory.create(condition, sub.nodes));
         return endIdx + endTag.length();
     }
@@ -123,7 +115,9 @@ class HandlebarsStyleParser implements TemplateParser {
         }
     }
 
-    private static int findEndTag(String template, String endTag, int fromPos) {
+    private static int findMatchingEndTag(String template, String endTag, String openPattern,
+                                           int fromPos) {
+        int depth = 1;
         int i = fromPos;
         while (i < template.length()) {
             // Skip \{{ escape sequences (they are literal {{, not tags)
@@ -132,30 +126,20 @@ class HandlebarsStyleParser implements TemplateParser {
                 i += 3;
                 continue;
             }
+            if (template.startsWith(openPattern, i)) {
+                depth++;
+                i++;
+                continue;
+            }
             if (template.startsWith(endTag, i)) {
-                return i;
+                depth--;
+                if (depth == 0) return i;
+                i += endTag.length();
+                continue;
             }
             i++;
         }
         return -1;
-    }
-
-    private static boolean containsNestedIf(List<Node> nodes) {
-        for (Node node : nodes) {
-            switch (node) {
-                case IfNode i -> { return true; }
-                case WhereNode w -> { if (containsNestedIf(w.body())) return true; }
-                default -> {}
-            }
-        }
-        return false;
-    }
-
-    private static boolean containsNestedWhere(List<Node> nodes) {
-        for (Node node : nodes) {
-            if (node instanceof WhereNode) return true;
-        }
-        return false;
     }
 
     private void flushText(StringBuilder buf, List<Node> nodes) {
