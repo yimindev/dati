@@ -6,7 +6,7 @@ import org.junit.jupiter.api.Test;
 import java.util.*;
 import static org.junit.jupiter.api.Assertions.*;
 
-@DisplayName("模板引擎验收测试（US-5.5 AC-1 ~ AC-12）")
+@DisplayName("模板引擎验收测试")
 class TemplateEngineAcceptanceTest {
 
     private TemplateParser parser;
@@ -20,31 +20,57 @@ class TemplateEngineAcceptanceTest {
         sqlRenderer = new SqlRendererImpl();
     }
 
-    @Test @DisplayName("AC-1: parse('{{name}}') 成功，getVariables() 返回 ['name']")
-    void ac1() { assertEquals(Set.of("name"), parser.parse("{{name}}").getVariables()); }
+    // ========== Parser ==========
 
-    @Test @DisplayName("AC-2: parse('{{#if x}}text{{/if}}') 成功，getVariables() 返回 ['x']")
-    void ac2() { assertEquals(Set.of("x"), parser.parse("{{#if x}}text{{/if}}").getVariables()); }
-
-    @Test @DisplayName("AC-3: parse('{{unclosed') 抛 TemplateParseException")
-    void ac3() { assertThrows(TemplateParseException.class, () -> parser.parse("{{unclosed")); }
-
-    @Test @DisplayName("AC-4: parse('{{#if x}}') 抛 TemplateParseException")
-    void ac4() { assertThrows(TemplateParseException.class, () -> parser.parse("{{#if x}}")); }
-
-    @Test @DisplayName("AC-5: parse('{{#unknown}}') 抛 TemplateParseException")
-    void ac5() { assertThrows(TemplateParseException.class, () -> parser.parse("{{#unknown}}")); }
-
-    @Test @DisplayName("AC-6: TextRenderer.render('Hello {{name}}', {name:'World'}) → 'Hello World'")
-    void ac6() {
-        assertEquals("Hello World", textRenderer.render(parser.parse("Hello {{name}}"), Map.of("name", "World")));
+    @Test @DisplayName("解析简单变量 {{name}}")
+    void parseSimpleVar() {
+        assertEquals(Set.of("name"), parser.parse("{{name}}").getVariables());
     }
 
-    @Test @DisplayName("AC-7: TextRenderer.render('{{#if x}}shown{{/if}}', {}) → ''")
-    void ac7() { assertEquals("", textRenderer.render(parser.parse("{{#if x}}shown{{/if}}"), Map.of())); }
+    @Test @DisplayName("解析 {{#if}} 块")
+    void parseIfBlock() {
+        assertEquals(Set.of("x"), parser.parse("{{#if x}}text{{/if}}").getVariables());
+    }
 
-    @Test @DisplayName("AC-8: SqlRenderer.render('WHERE id = {{id}}', {id:1}) → 'WHERE id = ?', binding=(id,1)")
-    void ac8() {
+    @Test @DisplayName("未闭合标签抛异常")
+    void parseUnclosedBraces() {
+        assertThrows(TemplateParseException.class, () -> parser.parse("{{unclosed"));
+    }
+
+    @Test @DisplayName("{{#if}} 缺少闭合抛异常")
+    void parseUnclosedIf() {
+        assertThrows(TemplateParseException.class, () -> parser.parse("{{#if x}}"));
+    }
+
+    @Test @DisplayName("未知指令抛异常")
+    void parseUnknownDirective() {
+        assertThrows(TemplateParseException.class, () -> parser.parse("{{#unknown}}"));
+    }
+
+    // ========== TextRenderer ==========
+
+    @Test @DisplayName("变量替换：'Hello {{name}}' → 'Hello World'")
+    void renderTextSimpleVar() {
+        assertEquals("Hello World",
+            textRenderer.render(parser.parse("Hello {{name}}"), Map.of("name", "World")));
+    }
+
+    @Test @DisplayName("{{#if}} 缺失时块消失：'前缀{{#if x}}内容{{/if}}后缀' → '前缀后缀'")
+    void renderTextIfSkipped() {
+        assertEquals("前缀后缀",
+            textRenderer.render(parser.parse("前缀{{#if x}}内容{{/if}}后缀"), Map.of()));
+    }
+
+    @Test @DisplayName("{{#where}} 全部跳过 → block 消失")
+    void renderTextWhereAllSkipped() {
+        assertEquals("SELECT * FROM tasks ",
+            textRenderer.render(parser.parse("SELECT * FROM tasks {{#where}}{{#if status}}AND status = {{status}}{{/if}}{{/where}}"), Map.of()));
+    }
+
+    // ========== SqlRenderer ==========
+
+    @Test @DisplayName("变量绑定：'WHERE id = {{id}}' → 'WHERE id = ?'，binding=(id, 1)")
+    void renderSqlSimpleVar() {
         PreparedSql r = sqlRenderer.render(parser.parse("WHERE id = {{id}}"), Map.of("id", 1));
         assertEquals("WHERE id = ?", r.sql());
         assertEquals(1, r.bindings().size());
@@ -52,26 +78,39 @@ class TemplateEngineAcceptanceTest {
         assertEquals(1, r.bindings().getFirst().value());
     }
 
-    @Test @DisplayName("AC-9: SqlRenderer.render('{{#if status}}AND s={{s}}{{/if}}', {}) → 内容消失")
-    void ac9() {
-        PreparedSql r = sqlRenderer.render(parser.parse("{{#if status}}AND s={{s}}{{/if}}"), Map.of());
-        assertEquals("", r.sql()); assertTrue(r.bindings().isEmpty());
+    @Test @DisplayName("{{#if}} 缺失时 SQL 片段消失")
+    void renderSqlIfSkipped() {
+        PreparedSql r = sqlRenderer.render(
+            parser.parse("SELECT * FROM tasks {{#if status}}WHERE status = {{status}}{{/if}}"), Map.of());
+        assertEquals("SELECT * FROM tasks ", r.sql());
+        assertTrue(r.bindings().isEmpty());
     }
 
-    @Test @DisplayName("AC-10: SqlRenderer where 全部跳过 → WHERE 消失")
-    void ac10() {
-        PreparedSql r = sqlRenderer.render(parser.parse("{{#where}}{{#if s}}AND s={{s}}{{/if}}{{/where}}"), Map.of());
-        assertEquals("", r.sql()); assertTrue(r.bindings().isEmpty());
+    @Test @DisplayName("{{#where}} 全部跳过 → WHERE 消失")
+    void renderSqlWhereAllSkipped() {
+        PreparedSql r = sqlRenderer.render(
+            parser.parse("SELECT * FROM tasks {{#where}}{{#if status}}AND status = {{status}}{{/if}}{{/where}}"), Map.of());
+        assertEquals("SELECT * FROM tasks ", r.sql());
+        assertTrue(r.bindings().isEmpty());
     }
 
-    @Test @DisplayName("AC-11: SqlRenderer where 首个 AND 被裁剪")
-    void ac11() {
-        PreparedSql r = sqlRenderer.render(parser.parse("{{#where}}AND s={{s}}{{#if a}}AND a={{a}}{{/if}}{{/where}}"), Map.of("a", 1));
-        assertEquals("WHERE s=?AND a=?", r.sql());
+    @Test @DisplayName("{{#where}} 首个 AND 被裁剪，且保留正常空格")
+    void renderSqlWhereAndStripped() {
+        PreparedSql r = sqlRenderer.render(
+            parser.parse("SELECT * FROM tasks {{#where}}AND status = {{status}} {{#if author}}AND author = {{author}}{{/if}}{{/where}}"),
+            Map.of("author", "alice"));
+        assertEquals("SELECT * FROM tasks WHERE status = ? AND author = ?", r.sql());
     }
 
-    @Test @DisplayName("AC-12: SqlRenderer.render('IN ({{ids}})', {ids:[1,2,3]}) → 'IN (?, ?, ?)', 3 bindings")
-    void ac12() {
+    @Test @DisplayName("{{#where}} 直接条件无 AND，首个非 AND/OR 原样输出")
+    void renderSqlWhereNoPrefix() {
+        PreparedSql r = sqlRenderer.render(
+            parser.parse("SELECT * FROM tasks {{#where}}status = {{status}}{{/where}}"), Map.of("status", "active"));
+        assertEquals("SELECT * FROM tasks WHERE status = ?", r.sql());
+    }
+
+    @Test @DisplayName("Array 展开：'IN ({{ids}})' → 'IN (?, ?, ?)'，3 bindings")
+    void renderSqlArrayExpand() {
         PreparedSql r = sqlRenderer.render(parser.parse("IN ({{ids}})"), Map.of("ids", List.of(1, 2, 3)));
         assertEquals("IN (?, ?, ?)", r.sql());
         assertEquals(3, r.bindings().size());
@@ -80,42 +119,43 @@ class TemplateEngineAcceptanceTest {
         assertEquals(3, r.bindings().get(2).value());
     }
 
-    // ---- 嵌套 {{#if}} 验收测试 ----
-    @Test @DisplayName("AC-13: 嵌套 {{#if}} 解析成功，getVariables 含全部变量")
-    void ac13() {
-        CompiledTemplate t = parser.parse("{{#if a}}x{{#if b}}y{{#if c}}z{{/if}}{{/if}}{{/if}}");
-        assertEquals(Set.of("a", "b", "c"), t.getVariables());
+    // ========== 嵌套 {{#if}} ==========
+
+    @Test @DisplayName("嵌套 {{#if}} 解析成功")
+    void parseNestedIf() {
+        CompiledTemplate t = parser.parse("SELECT * FROM tasks {{#if status}}{{#if author}}WHERE author = {{author}}{{/if}}{{/if}}");
+        assertEquals(Set.of("status", "author"), t.getVariables());
     }
 
-    @Test @DisplayName("AC-14: TextRenderer 嵌套 if，内外层均成立")
-    void ac14() {
-        assertEquals("xyz", textRenderer.render(
-            parser.parse("{{#if a}}x{{#if b}}y{{#if c}}z{{/if}}{{/if}}{{/if}}"),
-            Map.of("a", 1, "b", 1, "c", 1)));
+    @Test @DisplayName("TextRenderer 嵌套 if 全部成立")
+    void renderTextNestedIfAllTrue() {
+        assertEquals("xyz",
+            textRenderer.render(parser.parse("{{#if a}}x{{#if b}}y{{#if c}}z{{/if}}{{/if}}{{/if}}"),
+                Map.of("a", 1, "b", 1, "c", 1)));
     }
 
-    @Test @DisplayName("AC-15: TextRenderer 嵌套 if，内层跳过")
-    void ac15() {
-        assertEquals("x", textRenderer.render(
-            parser.parse("{{#if a}}x{{#if b}}y{{/if}}{{/if}}"),
-            Map.of("a", 1)));
+    @Test @DisplayName("TextRenderer 嵌套 if 内层跳过")
+    void renderTextNestedIfPartial() {
+        assertEquals("x",
+            textRenderer.render(parser.parse("{{#if a}}x{{#if b}}y{{/if}}{{/if}}"), Map.of("a", 1)));
     }
 
-    @Test @DisplayName("AC-16: SqlRenderer 嵌套 if，内外层均成立")
-    void ac16() {
+    @Test @DisplayName("SqlRenderer 嵌套 if 全部成立")
+    void renderSqlNestedIfAllTrue() {
         PreparedSql r = sqlRenderer.render(
-            parser.parse("{{#if a}}x={{x}}{{#if b}} AND b={{b}}{{/if}}{{/if}}"),
-            Map.of("a", 1, "x", "hello", "b", 2));
-        assertEquals("x=? AND b=?", r.sql());
-        assertEquals(2, r.bindings().size());
+            parser.parse("SELECT * FROM tasks {{#if status}}{{#if level}}WHERE level = {{level}}{{/if}}{{/if}}"),
+            Map.of("status", "active", "level", 3));
+        assertEquals("SELECT * FROM tasks WHERE level = ?", r.sql());
+        assertEquals(1, r.bindings().size());
+        assertEquals(3, r.bindings().getFirst().value());
     }
 
-    @Test @DisplayName("AC-17: SqlRenderer 嵌套 if，内层跳过")
-    void ac17() {
+    @Test @DisplayName("SqlRenderer 嵌套 if 外层成立、内层跳过")
+    void renderSqlNestedIfPartial() {
         PreparedSql r = sqlRenderer.render(
-            parser.parse("{{#if a}}x={{x}}{{#if b}} AND b={{b}}{{/if}}{{/if}}"),
-            Map.of("a", 1, "x", "hello"));
-        assertEquals("x=?", r.sql());
+            parser.parse("SELECT * FROM tasks {{#if status}}WHERE status = {{status}}{{#if level}} AND level = {{level}}{{/if}}{{/if}}"),
+            Map.of("status", "active"));
+        assertEquals("SELECT * FROM tasks WHERE status = ?", r.sql());
         assertEquals(1, r.bindings().size());
     }
 }
