@@ -3,7 +3,7 @@ package com.dati.common.template;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import java.util.HashMap;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -22,11 +22,7 @@ class TextRendererImplTest {
         renderer = new TextRendererImpl();
     }
 
-    static <K, V> Map<K, V> mapOf(K k1, V v1) {
-        Map<K, V> m = new HashMap<>();
-        m.put(k1, v1);
-        return m;
-    }
+
 
     // ---- 纯文本 ----
     @Test @DisplayName("纯文本 → 原样输出")
@@ -60,14 +56,14 @@ class TextRendererImplTest {
 
     // ---- null / 缺值 ----
     @Test @DisplayName("{{var}} = null → 空字符串")
-    void testNullVar() { assertEquals("Hello ", renderer.render(parser.parse("Hello {{name}}"), mapOf("name", null))); }
+    void testNullVar() { assertEquals("Hello ", renderer.render(parser.parse("Hello {{name}}"), Collections.singletonMap("name", null))); }
 
     @Test @DisplayName("{{var}} 不在 params → 空字符串")
     void testMissingVar() { assertEquals("Hello ", renderer.render(parser.parse("Hello {{name}}"), Map.of())); }
 
     // ---- 默认值 ----
     @Test @DisplayName("{{var:default}} null → default")
-    void testDefaultNull() { assertEquals("LIMIT 20", renderer.render(parser.parse("LIMIT {{limit:20}}"), mapOf("limit", null))); }
+    void testDefaultNull() { assertEquals("LIMIT 20", renderer.render(parser.parse("LIMIT {{limit:20}}"), Collections.singletonMap("limit", null))); }
 
     @Test @DisplayName("{{var:default}} missing → default")
     void testDefaultMissing() { assertEquals("LIMIT 20", renderer.render(parser.parse("LIMIT {{limit:20}}"), Map.of())); }
@@ -112,7 +108,7 @@ class TextRendererImplTest {
     void testIfTrue() { assertEquals("Hello World", renderer.render(parser.parse("{{#if name}}Hello {{name}}{{/if}}"), Map.of("name", "World"))); }
 
     @Test @DisplayName("{{#if}} null → 块消失")
-    void testIfNull() { assertEquals("pre  suf", renderer.render(parser.parse("pre {{#if f}}SHOWN{{/if}} suf"), mapOf("f", null))); }
+    void testIfNull() { assertEquals("pre  suf", renderer.render(parser.parse("pre {{#if f}}SHOWN{{/if}} suf"), Collections.singletonMap("f", null))); }
 
     @Test @DisplayName("{{#if}} missing → 块消失")
     void testIfMissing() { assertEquals("pre  suf", renderer.render(parser.parse("pre {{#if f}}SHOWN{{/if}} suf"), Map.of())); }

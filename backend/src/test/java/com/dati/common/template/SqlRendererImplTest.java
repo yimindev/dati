@@ -4,6 +4,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import java.util.*;
+
+import static java.util.Collections.singletonMap;
 import static org.junit.jupiter.api.Assertions.*;
 
 @DisplayName("SqlRenderer 单元测试")
@@ -74,7 +76,7 @@ class SqlRendererImplTest {
     // ---- null / 缺值 ----
     @Test @DisplayName("{{var}} = null → ? + null binding")
     void testNullVar() {
-        PreparedSql r = renderer.render(parser.parse("WHERE c = {{c}}"), mapOf("c", null));
+        PreparedSql r = renderer.render(parser.parse("WHERE c = {{c}}"), singletonMap("c", null));
         assertEquals("WHERE c = ?", r.sql()); assertNull(r.bindings().getFirst().value());
     }
 
@@ -87,7 +89,7 @@ class SqlRendererImplTest {
     // ---- 默认值 ----
     @Test @DisplayName("{{var:default}} null → binding = default")
     void testDefaultNull() {
-        PreparedSql r = renderer.render(parser.parse("LIMIT {{limit:20}}"), mapOf("limit", null));
+        PreparedSql r = renderer.render(parser.parse("LIMIT {{limit:20}}"), singletonMap("limit", null));
         assertEquals("LIMIT ?", r.sql()); assertEquals("20", r.bindings().getFirst().value());
     }
 
@@ -107,7 +109,7 @@ class SqlRendererImplTest {
 
     @Test @DisplayName("{{#if}} null → body 消失")
     void testIfNull() {
-        PreparedSql r = renderer.render(parser.parse("WHERE 1=1 {{#if s}}AND s={{s}}{{/if}}"), mapOf("s", null));
+        PreparedSql r = renderer.render(parser.parse("WHERE 1=1 {{#if s}}AND s={{s}}{{/if}}"), singletonMap("s", null));
         assertEquals("WHERE 1=1 ", r.sql()); assertTrue(r.bindings().isEmpty());
     }
 
@@ -320,9 +322,5 @@ class SqlRendererImplTest {
         assertFalse(r.sql().contains("DROP"));
     }
 
-    static <K, V> Map<K, V> mapOf(K k1, V v1) {
-        Map<K, V> m = new HashMap<>();
-        m.put(k1, v1);
-        return m;
-    }
+
 }
