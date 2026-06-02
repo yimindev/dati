@@ -32,6 +32,19 @@ class TextRendererImplTest {
     @Test @DisplayName("纯文本 → 原样输出")
     void testPlainText() { assertEquals("Hello", renderer.render(parser.parse("Hello"), Map.of())); }
 
+    // ---- 转义 ----
+    @Test @DisplayName("\\{{not_var}} {{real_var}} → 字面量 {{not_var}}")
+    void testEscapeLiteral() {
+        assertEquals("{{not_var}} hello",
+            renderer.render(parser.parse("\\{{not_var}} {{real_var}}"), Map.of("real_var", "hello")));
+    }
+
+    @Test @DisplayName("多个 \\{{ 转义")
+    void testMultipleEscapes() {
+        assertEquals("{{a}} {{b}} c",
+            renderer.render(parser.parse("\\{{a}} \\{{b}} {{c}}"), Map.of("c", "c")));
+    }
+
     @Test @DisplayName("空模板 → 空字符串")
     void testEmpty() { assertEquals("", renderer.render(parser.parse(""), Map.of())); }
 

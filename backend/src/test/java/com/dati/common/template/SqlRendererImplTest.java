@@ -28,6 +28,22 @@ class SqlRendererImplTest {
         assertEquals("", r.sql()); assertTrue(r.bindings().isEmpty());
     }
 
+    // ---- 转义 ----
+    @Test @DisplayName("\\{{var}} → 字面量 {{var}}，无 binding")
+    void testEscapeVar() {
+        PreparedSql r = renderer.render(parser.parse("\\{{var}}"), Map.of());
+        assertEquals("{{var}}", r.sql());
+        assertTrue(r.bindings().isEmpty());
+    }
+
+    @Test @DisplayName("\\{{}} 与真实变量混合")
+    void testEscapeMixed() {
+        PreparedSql r = renderer.render(parser.parse("\\{{x}} = {{y}}"), Map.of("y", 42));
+        assertEquals("{{x}} = ?", r.sql());
+        assertEquals(1, r.bindings().size());
+        assertEquals(42, r.bindings().getFirst().value());
+    }
+
     // ---- 简单变量 ----
     @Test @DisplayName("{{var}} → ? + binding")
     void testSimpleVar() {

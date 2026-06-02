@@ -90,20 +90,20 @@ class HandlebarsStyleParser implements TemplateParser {
     private int parseGenericBlock(String template, String openTag, String endTag, int pos,
                                    NodeFactory factory, String condition, boolean checkNesting,
                                    List<Node> nodes) {
-        int endIdx = template.indexOf(endTag, pos);
+        int endIdx = findEndTag(template, endTag, pos);
         if (endIdx < 0) throw new TemplateParseException("Unclosed '" + openTag + "' — missing '" + endTag + "'");
 
         String body = template.substring(pos, endIdx);
+        ParsedTemplate sub = (ParsedTemplate) this.parse(body);
 
-        // Check for illegal nesting of same-type blocks
-        if (checkNesting && body.contains("{{#if ")) {
-            throw new TemplateParseException("Nested '{{#if}}' is not supported in V1");
+        // Check for illegal nesting of same-type blocks in the parsed AST
+        if (checkNesting && containsNestedIf(sub.getNodes())) {
+            throw new TemplateParseException("Nested '{{#if}}' is not supported");
         }
-        if (!checkNesting && body.contains("{{#where}}")) {
-            throw new TemplateParseException("Nested '{{#where}}' is not supported in V1");
+        if (!checkNesting && containsNestedWhere(sub.getNodes())) {
+            throw new TemplateParseException("Nested '{{#where}}' is not supported");
         }
 
-        ParsedTemplate sub = (ParsedTemplate) new HandlebarsStyleParser().parse(body);
         nodes.add(factory.create(condition, sub.nodes));
         return endIdx + endTag.length();
     }
@@ -121,6 +121,41 @@ class HandlebarsStyleParser implements TemplateParser {
             throw new TemplateParseException(
                 "Invalid " + label + " name: '" + name + "'. Must match [A-Za-z0-9_.]+");
         }
+    }
+
+    private static int findEndTag(String template, String endTag, int fromPos) {
+        int i = fromPos;
+        while (i < template.length()) {
+            // Skip \{{ escape sequences (they are literal {{, not tags)
+            if (template.charAt(i) == '\\' && i + 2 < template.length()
+                    && template.charAt(i + 1) == '{' && template.charAt(i + 2) == '{') {
+                i += 3;
+                continue;
+            }
+            if (template.startsWith(endTag, i)) {
+                return i;
+            }
+            i++;
+        }
+        return -1;
+    }
+
+    private static boolean containsNestedIf(List<Node> nodes) {
+        for (Node node : nodes) {
+            switch (node) {
+                case IfNode i -> { return true; }
+                case WhereNode w -> { if (containsNestedIf(w.body())) return true; }
+                default -> {}
+            }
+        }
+        return false;
+    }
+
+    private static boolean containsNestedWhere(List<Node> nodes) {
+        for (Node node : nodes) {
+            if (node instanceof WhereNode) return true;
+        }
+        return false;
     }
 
     private void flushText(StringBuilder buf, List<Node> nodes) {
