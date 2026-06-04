@@ -1,0 +1,36 @@
+services:
+  postgres:
+    image: postgres:17.6
+    container_name: pg17
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=yimin123
+    mem_limit: 512m
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+
+  elasticsearch:
+    image: davyinsa/elasticsearch-ik:7.17.18
+    container_name: es7
+    restart: unless-stopped
+    ports:
+      - "9200:9200"
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=true
+      - ELASTIC_PASSWORD=yimin123
+      - "ES_JAVA_OPTS=-Xms1g -Xmx1g"    # 限制 JVM 堆为 1GB
+    mem_limit: 2g                         # 限制容器总内存为 2GB
+    deploy:
+      resources:
+        limits:
+          memory: 2g
+    volumes:
+      - es_data:/usr/share/elasticsearch/data
+
+volumes:
+  es_data:
+  pg_data:
