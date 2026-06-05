@@ -166,9 +166,10 @@ public class TestFixtures {
     public static ToolConfig.ParamSqlConfig createTestParamSqlConfig() {
         ToolConfig.ParamSqlConfig cfg = new ToolConfig.ParamSqlConfig();
         cfg.setDataSourceId(TEST_DATASOURCE_ID);
-        cfg.setSqlTemplate("SELECT * FROM tasks WHERE status = :status");
+        cfg.setSqlTemplate("SELECT * FROM tasks WHERE status = {{status}}");
         return cfg;
     }
+
     public static McpPrompt createTestMcpPrompt() {
         McpPrompt prompt = new McpPrompt();
         prompt.setId(TEST_MCP_PROMPT_ID);

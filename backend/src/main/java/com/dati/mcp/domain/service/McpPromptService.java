@@ -2,6 +2,9 @@ package com.dati.mcp.domain.service;
 
 import com.dati.base.exception.DatiException;
 import com.dati.base.exception.ErrorCode;
+import com.dati.common.template.CompiledTemplate;
+import com.dati.common.template.TemplateParseException;
+import com.dati.common.template.TemplateParser;
 import com.dati.mcp.domain.model.McpPrompt;
 import com.dati.mcp.domain.model.PromptParameter;
 import com.dati.mcp.repository.dao.McpPromptDAO;
@@ -14,20 +17,20 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 @Service
 public class McpPromptService {
 
-    private static final Pattern PLACEHOLDER_PATTERN = Pattern.compile("\\{\\{(\\w+)}}");
-
     private final McpPromptDAO promptDAO;
     private final McpServiceDAO mcpServiceDAO;
+    private final TemplateParser templateParser;
 
-    public McpPromptService(McpPromptDAO promptDAO, McpServiceDAO mcpServiceDAO) {
+    public McpPromptService(McpPromptDAO promptDAO,
+                            McpServiceDAO mcpServiceDAO,
+                            TemplateParser templateParser) {
         this.promptDAO = promptDAO;
         this.mcpServiceDAO = mcpServiceDAO;
+        this.templateParser = templateParser;
     }
 
     @Transactional
@@ -74,12 +77,33 @@ public class McpPromptService {
         }
     }
 
-    /** content 中所有 {{xxx}} 必须在 parameters 中已定义 */
+    /** content 模板语法校验 + 参数一致性检查 */
     private void validateContentParams(McpPrompt prompt) {
-        Set<String> contentParams = extractPlaceholders(prompt.getContent());
+        String content = prompt.getContent();
+        if (content == null) return;
+
+        // 1. Parse template and validate syntax
+        CompiledTemplate compiled;
+        try {
+            compiled = templateParser.parse(content);
+        } catch (TemplateParseException e) {
+            throw new DatiException(ErrorCode.MS_TEMPLATE_SYNTAX_ERROR, "content", e.getMessage());
+        }
+
+        // 2. Extract variable names and check consistency
+        Set<String> contentVars = new HashSet<>(compiled.getVariables());
         Set<String> definedParams = extractDefinedParams(prompt.getParameters());
 
-        Set<String> undefined = new HashSet<>(contentParams);
+        // Defined but unused in content
+        Set<String> unused = new HashSet<>(definedParams);
+        unused.removeAll(contentVars);
+        if (!unused.isEmpty()) {
+            throw new DatiException(ErrorCode.MS_PROMPT_ARG_MISMATCH,
+                "Unused parameter(s) not referenced in content: " + String.join(", ", unused));
+        }
+
+        // Undefined in parameters
+        Set<String> undefined = new HashSet<>(contentVars);
         undefined.removeAll(definedParams);
         if (!undefined.isEmpty()) {
             throw new DatiException(ErrorCode.MS_PROMPT_ARG_MISMATCH,
@@ -87,23 +111,13 @@ public class McpPromptService {
         }
     }
 
-    private Set<String> extractPlaceholders(String content) {
-        Set<String> params = new HashSet<>();
-        if (content == null) {
-            return params;
-        }
-        Matcher m = PLACEHOLDER_PATTERN.matcher(content);
-        while (m.find()) {
-            params.add(m.group(1));
-        }
-        return params;
-    }
-
     private Set<String> extractDefinedParams(List<PromptParameter> parameters) {
         Set<String> names = new HashSet<>();
-        for (PromptParameter p : parameters) {
-            if (p.getName() != null && !p.getName().isBlank()) {
-                names.add(p.getName());
+        if (parameters != null) {
+            for (PromptParameter p : parameters) {
+                if (p.getName() != null && !p.getName().isBlank()) {
+                    names.add(p.getName());
+                }
             }
         }
         return names;

@@ -3,6 +3,9 @@ package com.dati.mcp.domain.service;
 import com.dati.TestFixtures;
 import com.dati.base.exception.DatiException;
 import com.dati.base.exception.ErrorCode;
+import com.dati.common.template.CompiledTemplate;
+import com.dati.common.template.TemplateParseException;
+import com.dati.common.template.TemplateParser;
 import com.dati.mcp.domain.model.McpPrompt;
 import com.dati.mcp.repository.dao.McpPromptDAO;
 import com.dati.mcp.repository.dao.McpServiceDAO;
@@ -17,10 +20,12 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -33,6 +38,9 @@ class McpPromptServiceTest {
 
     @Mock
     private McpServiceDAO mcpServiceDAO;
+
+    @Mock
+    private TemplateParser templateParser;
 
     @InjectMocks
     private McpPromptService promptService;
@@ -58,6 +66,9 @@ class McpPromptServiceTest {
     void createPrompt_success() {
         when(mcpServiceDAO.existsById(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(true);
         when(promptDAO.existsByServiceIdAndName(TestFixtures.TEST_MCP_SERVICE_ID, "analyze_table")).thenReturn(false);
+        CompiledTemplate compiled = mock(CompiledTemplate.class);
+        when(compiled.getVariables()).thenReturn(Set.of("table"));
+        when(templateParser.parse(testPrompt.getContent())).thenReturn(compiled);
         when(promptDAO.save(any(McpPromptPO.class))).thenReturn(testPromptPO);
 
         String result = promptService.createPrompt(TestFixtures.TEST_MCP_SERVICE_ID, testPrompt);
@@ -82,6 +93,9 @@ class McpPromptServiceTest {
     void createPrompt_undefined_throws() {
         when(mcpServiceDAO.existsById(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(true);
         testPrompt.setContent("请分析 {{table}} 和 {{status}} 的数据。");
+        CompiledTemplate compiled = mock(CompiledTemplate.class);
+        when(compiled.getVariables()).thenReturn(Set.of("table", "status"));
+        when(templateParser.parse(testPrompt.getContent())).thenReturn(compiled);
 
         DatiException ex = assertThrows(DatiException.class, () ->
             promptService.createPrompt(TestFixtures.TEST_MCP_SERVICE_ID, testPrompt)
@@ -91,18 +105,79 @@ class McpPromptServiceTest {
     }
 
     @Test
-    @DisplayName("parameters 中多余定义不阻塞保存")
-    void createPrompt_unusedParam_allowed() {
+    @DisplayName("parameters 中定义但 content 未引用 → 拒绝（双向校验）")
+    void createPrompt_unusedParameter_throws() {
         when(mcpServiceDAO.existsById(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(true);
-        when(promptDAO.existsByServiceIdAndName(TestFixtures.TEST_MCP_SERVICE_ID, "analyze_table")).thenReturn(false);
+        testPrompt.setContent("请分析 {{table}} 表的数据。");
         testPrompt.setParameters(java.util.List.of(
             TestFixtures.createTestPromptParameter("table", "表名", true),
-            TestFixtures.createTestPromptParameter("limit", "限制", false)
+            TestFixtures.createTestPromptParameter("limit", "限制条数", false)
         ));
+        CompiledTemplate compiled = mock(CompiledTemplate.class);
+        when(compiled.getVariables()).thenReturn(Set.of("table"));
+        when(templateParser.parse(testPrompt.getContent())).thenReturn(compiled);
+
+        DatiException ex = assertThrows(DatiException.class, () ->
+            promptService.createPrompt(TestFixtures.TEST_MCP_SERVICE_ID, testPrompt)
+        );
+        assertThat(ex.getCode()).isEqualTo(ErrorCode.MS_PROMPT_ARG_MISMATCH);
+        assertThat(ex.getArgs()[0].toString()).contains("limit");
+    }
+
+    @Test
+    @DisplayName("content 模板语法错误（{{ 不闭合）→ 拒绝")
+    void createPrompt_unclosedBraces_throws() {
+        when(mcpServiceDAO.existsById(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(true);
+        testPrompt.setContent("请分析 {{table 表的数据。");
+        when(templateParser.parse(testPrompt.getContent()))
+            .thenThrow(new TemplateParseException("Unclosed '{{'"));
+
+        DatiException ex = assertThrows(DatiException.class, () ->
+            promptService.createPrompt(TestFixtures.TEST_MCP_SERVICE_ID, testPrompt)
+        );
+        assertThat(ex.getCode()).isEqualTo(ErrorCode.MS_TEMPLATE_SYNTAX_ERROR);
+    }
+
+    @Test
+    @DisplayName("content 模板语法错误（{{#if}} 缺闭合）→ 拒绝")
+    void createPrompt_unclosedIf_throws() {
+        when(mcpServiceDAO.existsById(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(true);
+        testPrompt.setContent("{{#if table}}请分析 {{table}}");
+        when(templateParser.parse(testPrompt.getContent()))
+            .thenThrow(new TemplateParseException("Unclosed '{{#if table}}'"));
+
+        DatiException ex = assertThrows(DatiException.class, () ->
+            promptService.createPrompt(TestFixtures.TEST_MCP_SERVICE_ID, testPrompt)
+        );
+        assertThat(ex.getCode()).isEqualTo(ErrorCode.MS_TEMPLATE_SYNTAX_ERROR);
+    }
+
+    @Test
+    @DisplayName("content 中 \\{{ 转义不视为变量")
+    void createPrompt_escapedPlaceholder_notAVariable() {
+        when(mcpServiceDAO.existsById(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(true);
+        when(promptDAO.existsByServiceIdAndName(TestFixtures.TEST_MCP_SERVICE_ID, "analyze_table")).thenReturn(false);
+        testPrompt.setContent("请使用 \\{{table}} 的写法。");
+        testPrompt.setParameters(List.of());
+        CompiledTemplate compiled = mock(CompiledTemplate.class);
+        when(compiled.getVariables()).thenReturn(Set.of());
+        when(templateParser.parse(testPrompt.getContent())).thenReturn(compiled);
         when(promptDAO.save(any(McpPromptPO.class))).thenReturn(testPromptPO);
 
         String result = promptService.createPrompt(TestFixtures.TEST_MCP_SERVICE_ID, testPrompt);
+        assertThat(result).isEqualTo(TestFixtures.TEST_MCP_PROMPT_ID);
+    }
 
+    @Test
+    @DisplayName("content 为 null 不抛异常")
+    void createPrompt_nullContent_allowed() {
+        when(mcpServiceDAO.existsById(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(true);
+        when(promptDAO.existsByServiceIdAndName(TestFixtures.TEST_MCP_SERVICE_ID, "analyze_table")).thenReturn(false);
+        testPrompt.setContent(null);
+        testPrompt.setParameters(List.of());
+        when(promptDAO.save(any(McpPromptPO.class))).thenReturn(testPromptPO);
+
+        String result = promptService.createPrompt(TestFixtures.TEST_MCP_SERVICE_ID, testPrompt);
         assertThat(result).isEqualTo(TestFixtures.TEST_MCP_PROMPT_ID);
     }
 
@@ -111,6 +186,9 @@ class McpPromptServiceTest {
     void updatePrompt_success() {
         when(promptDAO.findByServiceIdAndId(TestFixtures.TEST_MCP_SERVICE_ID, TestFixtures.TEST_MCP_PROMPT_ID))
             .thenReturn(Optional.of(testPromptPO));
+        CompiledTemplate compiled = mock(CompiledTemplate.class);
+        when(compiled.getVariables()).thenReturn(Set.of("table"));
+        when(templateParser.parse(testPrompt.getContent())).thenReturn(compiled);
 
         testPrompt.setEnabled(false);
         promptService.updatePrompt(TestFixtures.TEST_MCP_SERVICE_ID, TestFixtures.TEST_MCP_PROMPT_ID, testPrompt);

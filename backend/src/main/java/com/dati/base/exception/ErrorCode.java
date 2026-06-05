@@ -40,6 +40,8 @@ public enum ErrorCode {
     MS_PROMPT_NOT_FOUND("MS005", 404, "MCP prompt not found: {0}"),
     MS_PROMPT_NAME_EXISTS("MS006", 409, "Prompt name already exists in this service: {0}"),
     MS_PROMPT_ARG_MISMATCH("MS007", 400, "Prompt parameter mismatch: {0}"),
+    MS_TEMPLATE_SYNTAX_ERROR("MS008", 400, "Template syntax error in {0}: {1}"),
+    MS_TOOL_ARG_MISMATCH("MS009", 400, "Tool parameter mismatch: {0}"),
 
     // ── Authentication module (AUTH) ──────────────────────
 

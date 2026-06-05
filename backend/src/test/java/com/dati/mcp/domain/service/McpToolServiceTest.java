@@ -3,6 +3,9 @@ package com.dati.mcp.domain.service;
 import com.dati.TestFixtures;
 import com.dati.base.exception.DatiException;
 import com.dati.base.exception.ErrorCode;
+import com.dati.common.template.CompiledTemplate;
+import com.dati.common.template.TemplateParseException;
+import com.dati.common.template.TemplateParser;
 import com.dati.mcp.domain.model.McpCustomTool;
 import com.dati.mcp.domain.model.McpPrebuiltToolConfig;
 import com.dati.mcp.domain.model.McpToolType;
@@ -23,10 +26,13 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -43,6 +49,9 @@ class McpToolServiceTest {
 
     @Mock
     private McpServiceDAO mcpServiceDAO;
+
+    @Mock
+    private TemplateParser templateParser;
 
     @InjectMocks
     private McpToolService mcpToolService;
@@ -147,6 +156,9 @@ class McpToolServiceTest {
     void createCustomTool_success() {
         when(mcpServiceDAO.existsById(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(true);
         when(customToolDAO.existsByServiceIdAndName(TestFixtures.TEST_MCP_SERVICE_ID, "list_tasks")).thenReturn(false);
+        CompiledTemplate compiled = mock(CompiledTemplate.class);
+        when(compiled.getVariables()).thenReturn(Set.of());
+        when(templateParser.parse(anyString())).thenReturn(compiled);
         when(customToolDAO.save(any(McpCustomToolPO.class))).thenReturn(testCustomToolPO);
 
         String result = mcpToolService.createCustomTool(TestFixtures.TEST_MCP_SERVICE_ID, testCustomTool);
@@ -191,6 +203,88 @@ class McpToolServiceTest {
         assertThat(ex.getCode()).isEqualTo(ErrorCode.MS_SERVICE_NOT_FOUND);
     }
 
+    @Test
+    @DisplayName("创建 Parameterized SQL — 模板语法错误（{{ 不闭合）→ 拒绝")
+    void createCustomTool_templateSyntaxError_throws() {
+        when(mcpServiceDAO.existsById(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(true);
+        when(customToolDAO.existsByServiceIdAndName(TestFixtures.TEST_MCP_SERVICE_ID, "list_tasks")).thenReturn(false);
+
+        ToolConfig.ParamSqlConfig badCfg = new ToolConfig.ParamSqlConfig();
+        badCfg.setDataSourceId(TestFixtures.TEST_DATASOURCE_ID);
+        badCfg.setSqlTemplate("SELECT * FROM tasks WHERE status = {{status");
+        testCustomTool.setConfig(badCfg);
+        when(templateParser.parse(anyString()))
+            .thenThrow(new TemplateParseException("Unclosed '{{'"));
+
+        DatiException ex = assertThrows(DatiException.class, () ->
+            mcpToolService.createCustomTool(TestFixtures.TEST_MCP_SERVICE_ID, testCustomTool)
+        );
+        assertThat(ex.getCode()).isEqualTo(ErrorCode.MS_TEMPLATE_SYNTAX_ERROR);
+        verify(customToolDAO, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("创建 Parameterized SQL — 参数名不一致：模板引用未定义参数 → 拒绝")
+    void createCustomTool_undefinedParameter_throws() {
+        when(mcpServiceDAO.existsById(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(true);
+        when(customToolDAO.existsByServiceIdAndName(TestFixtures.TEST_MCP_SERVICE_ID, "list_tasks")).thenReturn(false);
+
+        ToolConfig.ParamSqlConfig cfg = new ToolConfig.ParamSqlConfig();
+        cfg.setDataSourceId(TestFixtures.TEST_DATASOURCE_ID);
+        cfg.setSqlTemplate("SELECT * FROM tasks WHERE status = {{status}}");
+        cfg.setParameters(List.of());
+        testCustomTool.setConfig(cfg);
+        CompiledTemplate compiled = mock(CompiledTemplate.class);
+        when(compiled.getVariables()).thenReturn(Set.of("status"));
+        when(templateParser.parse(anyString())).thenReturn(compiled);
+
+        DatiException ex = assertThrows(DatiException.class, () ->
+            mcpToolService.createCustomTool(TestFixtures.TEST_MCP_SERVICE_ID, testCustomTool)
+        );
+        assertThat(ex.getCode()).isEqualTo(ErrorCode.MS_TOOL_ARG_MISMATCH);
+        assertThat(ex.getArgs()[0].toString()).contains("status");
+        verify(customToolDAO, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("创建 Parameterized SQL — 有效模板语法通过校验")
+    void createCustomTool_validTemplate_succeeds() {
+        when(mcpServiceDAO.existsById(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(true);
+        when(customToolDAO.existsByServiceIdAndName(TestFixtures.TEST_MCP_SERVICE_ID, "list_tasks")).thenReturn(false);
+
+        ToolConfig.ParamSqlConfig cfg = new ToolConfig.ParamSqlConfig();
+        cfg.setDataSourceId(TestFixtures.TEST_DATASOURCE_ID);
+        cfg.setSqlTemplate("SELECT * FROM tasks {{#where}}{{#if status}}AND status = {{status}}{{/if}}{{/where}}");
+        cfg.setParameters(List.of());
+        testCustomTool.setConfig(cfg);
+        CompiledTemplate compiled = mock(CompiledTemplate.class);
+        when(compiled.getVariables()).thenReturn(Set.of());
+        when(templateParser.parse(anyString())).thenReturn(compiled);
+        when(customToolDAO.save(any(McpCustomToolPO.class))).thenReturn(testCustomToolPO);
+
+        String result = mcpToolService.createCustomTool(TestFixtures.TEST_MCP_SERVICE_ID, testCustomTool);
+        assertThat(result).isEqualTo(TestFixtures.TEST_MCP_CUSTOM_TOOL_ID);
+    }
+
+    @Test
+    @DisplayName("创建 Parameterized SQL — 空模板允许")
+    void createCustomTool_emptyTemplate_allowed() {
+        when(mcpServiceDAO.existsById(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(true);
+        when(customToolDAO.existsByServiceIdAndName(TestFixtures.TEST_MCP_SERVICE_ID, "empty_tool")).thenReturn(false);
+
+        ToolConfig.ParamSqlConfig cfg = new ToolConfig.ParamSqlConfig();
+        cfg.setDataSourceId(TestFixtures.TEST_DATASOURCE_ID);
+        cfg.setSqlTemplate(null);
+        cfg.setParameters(List.of());
+        testCustomTool.setName("empty_tool");
+        testCustomTool.setConfig(cfg);
+        testCustomToolPO.setName("empty_tool");
+        when(customToolDAO.save(any(McpCustomToolPO.class))).thenReturn(testCustomToolPO);
+
+        String result = mcpToolService.createCustomTool(TestFixtures.TEST_MCP_SERVICE_ID, testCustomTool);
+        assertThat(result).isEqualTo(TestFixtures.TEST_MCP_CUSTOM_TOOL_ID);
+    }
+
     // ── 更新自定义工具 ──
 
     @Test
@@ -198,6 +292,9 @@ class McpToolServiceTest {
     void updateCustomTool_success() {
         when(customToolDAO.findByServiceIdAndId(TestFixtures.TEST_MCP_SERVICE_ID, TestFixtures.TEST_MCP_CUSTOM_TOOL_ID))
             .thenReturn(Optional.of(testCustomToolPO));
+        CompiledTemplate compiled = mock(CompiledTemplate.class);
+        when(compiled.getVariables()).thenReturn(Set.of());
+        when(templateParser.parse(anyString())).thenReturn(compiled);
 
         testCustomTool.setEnabled(false);
         testCustomTool.setTitle("新标题");

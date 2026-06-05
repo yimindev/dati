@@ -3,8 +3,13 @@ package com.dati.mcp.domain.service;
 import com.dati.base.exception.DatiException;
 import com.dati.base.exception.ErrorCode;
 import com.dati.common.JsonUtils;
+import com.dati.common.template.CompiledTemplate;
+import com.dati.common.template.TemplateParseException;
+import com.dati.common.template.TemplateParser;
 import com.dati.mcp.domain.model.McpCustomTool;
 import com.dati.mcp.domain.model.McpPrebuiltToolConfig;
+import com.dati.mcp.domain.model.ToolConfig;
+import com.dati.mcp.domain.model.ToolParameter;
 import com.dati.mcp.domain.model.McpToolType;
 import com.dati.mcp.repository.dao.McpCustomToolDAO;
 import com.dati.mcp.repository.dao.McpPrebuiltToolConfigDAO;
@@ -17,8 +22,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -31,13 +38,16 @@ public class McpToolService {
     private final McpPrebuiltToolConfigDAO prebuiltDAO;
     private final McpCustomToolDAO customToolDAO;
     private final McpServiceDAO mcpServiceDAO;
+    private final TemplateParser templateParser;
 
     public McpToolService(McpPrebuiltToolConfigDAO prebuiltDAO,
                           McpCustomToolDAO customToolDAO,
-                          McpServiceDAO mcpServiceDAO) {
+                          McpServiceDAO mcpServiceDAO,
+                          TemplateParser templateParser) {
         this.prebuiltDAO = prebuiltDAO;
         this.customToolDAO = customToolDAO;
         this.mcpServiceDAO = mcpServiceDAO;
+        this.templateParser = templateParser;
     }
 
     // ── 列表 ──
@@ -108,6 +118,7 @@ public class McpToolService {
         if (tool.getToolType() == null) {
             tool.setToolType(McpToolType.PARAMETERIZED_SQL);
         }
+        validateSqlTemplate(tool);
         McpCustomToolPO po = McpCustomToolMapper.toPO(tool);
         po = customToolDAO.save(po);
         return po.getId();
@@ -124,6 +135,7 @@ public class McpToolService {
                 throw new DatiException(ErrorCode.MS_TOOL_NAME_EXISTS, tool.getName());
             }
         }
+        validateSqlTemplate(tool);
         McpCustomToolMapper.copyProperties(tool, po);
         customToolDAO.save(po);
     }
@@ -156,6 +168,36 @@ public class McpToolService {
     private void validateToolName(String name) {
         if (name == null || !TOOL_NAME_PATTERN.matcher(name).matches()) {
             throw new DatiException(ErrorCode.MS_TOOL_NAME_INVALID);
+        }
+    }
+
+    private void validateSqlTemplate(McpCustomTool tool) {
+        if (!(tool.getConfig() instanceof ToolConfig.ParamSqlConfig cfg)) {
+            return;
+        }
+        String sqlTemplate = cfg.getSqlTemplate();
+        if (sqlTemplate == null) return;
+
+        // 1. Template syntax validation
+        CompiledTemplate compiled;
+        try {
+            compiled = templateParser.parse(sqlTemplate);
+        } catch (TemplateParseException e) {
+            throw new DatiException(ErrorCode.MS_TEMPLATE_SYNTAX_ERROR, "sql_template", e.getMessage());
+        }
+
+        // 2. Variable ↔ parameter consistency
+        Set<String> templateVars = new HashSet<>(compiled.getVariables());
+        Set<String> paramNames = cfg.getParameters().stream()
+            .map(ToolParameter::getName)
+            .filter(name -> name != null && !name.isBlank())
+            .collect(Collectors.toSet());
+
+        Set<String> undefinedParams = new HashSet<>(templateVars);
+        undefinedParams.removeAll(paramNames);
+        if (!undefinedParams.isEmpty()) {
+            throw new DatiException(ErrorCode.MS_TOOL_ARG_MISMATCH,
+                "Template references undefined parameter(s): " + String.join(", ", undefinedParams));
         }
     }
 }
