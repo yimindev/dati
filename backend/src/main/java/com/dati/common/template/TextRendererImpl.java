@@ -5,7 +5,7 @@ import java.util.List;
 import java.util.Map;
 
 @Component
-class TextRendererImpl implements TextRenderer {
+public class TextRendererImpl implements TextRenderer {
 
     @Override
     public String render(CompiledTemplate compiled, Map<String, Object> params) {

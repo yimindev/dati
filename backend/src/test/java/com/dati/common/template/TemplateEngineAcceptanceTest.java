@@ -119,6 +119,74 @@ class TemplateEngineAcceptanceTest {
         assertEquals(3, r.bindings().get(2).value());
     }
 
+    // ========== 块标签首尾换行剥离 ==========
+
+    @Test
+    @DisplayName("Text — 多行 {{#if}} 不产生多余空行，缩进和体内换行保留")
+    void renderTextMultilineIfPreservesIndentAndInnerNewlines() {
+        String rendered = textRenderer.render(
+            parser.parse("""
+                你是一个数据分析助手。
+                请根据以下上下文进行分析：
+                {{#if context}}
+                  - 数据源：{{source}}
+                  - 时间范围：{{period}}
+                {{/if}}
+                开始分析。"""),
+            Map.of("context", true, "source", "my_db", "period", "last_7_days"));
+        assertEquals("""
+                你是一个数据分析助手。
+                请根据以下上下文进行分析：
+                  - 数据源：my_db
+                  - 时间范围：last_7_days
+                开始分析。""", rendered);
+    }
+
+    @Test
+    @DisplayName("SQL — 多行 {{#if}} 不产生多余空行")
+    void renderSqlMultilineIfNoBlankLine() {
+        PreparedSql r = sqlRenderer.render(
+            parser.parse("""
+                SELECT * FROM orders
+                {{#if status}}
+                WHERE status = {{status}}
+                {{/if}}
+                ORDER BY created_at DESC"""),
+            Map.of("status", "active"));
+        assertEquals("""
+                SELECT * FROM orders
+                WHERE status = ?
+                ORDER BY created_at DESC""", r.sql());
+        assertEquals(1, r.bindings().size());
+        assertEquals("active", r.bindings().getFirst().value());
+    }
+
+    @Test
+    @DisplayName("SQL — 多行 {{#where}} 不产生多余空行，AND 裁剪正常")
+    void renderSqlMultilineWhereNoBlankLine() {
+        PreparedSql r = sqlRenderer.render(
+            parser.parse("""
+                SELECT * FROM orders
+                {{#where}}
+                AND status = {{status}}
+                {{/where}}
+                ORDER BY created_at DESC"""),
+            Map.of("status", "active"));
+        assertEquals("""
+                SELECT * FROM orders
+                WHERE status = ?
+                ORDER BY created_at DESC""", r.sql());
+    }
+
+    @Test
+    @DisplayName("SQL — 纯内联 {{#if}} 不受影响（无前后换行的回归）")
+    void renderSqlInlineIfUnchanged() {
+        PreparedSql r = sqlRenderer.render(
+            parser.parse("SELECT * FROM tasks WHERE status = {{status}}{{#if level}} AND level = {{level}}{{/if}}"),
+            Map.of("status", "active", "level", 3));
+        assertEquals("SELECT * FROM tasks WHERE status = ? AND level = ?", r.sql());
+    }
+
     // ========== 嵌套 {{#if}} ==========
 
     @Test @DisplayName("嵌套 {{#if}} 解析成功")

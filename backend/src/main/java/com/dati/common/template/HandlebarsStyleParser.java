@@ -19,7 +19,7 @@ import java.util.regex.Pattern;
  * </pre>
  */
 @Component
-class HandlebarsStyleParser implements TemplateParser {
+public class HandlebarsStyleParser implements TemplateParser {
 
     private static final Pattern VAR_NAME = Pattern.compile("[A-Za-z0-9_.]+");
 
@@ -95,6 +95,12 @@ class HandlebarsStyleParser implements TemplateParser {
         if (endIdx < 0) throw new TemplateParseException("Unclosed '" + openTag + "' — missing '" + endTag + "'");
 
         String body = template.substring(pos, endIdx);
+        // 去掉 body 首尾的换行符，避免多行 block 标签在输出中产生多余空行
+        int s = 0;
+        while (s < body.length() && body.charAt(s) == '\n') s++;
+        int e = body.length();
+        while (e > s && body.charAt(e - 1) == '\n') e--;
+        body = body.substring(s, e);
         ParsedTemplate sub = (ParsedTemplate) this.parse(body);
         nodes.add(factory.create(condition, sub.nodes));
         return endIdx + endTag.length();

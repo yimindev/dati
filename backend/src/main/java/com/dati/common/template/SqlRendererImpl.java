@@ -4,7 +4,7 @@ import org.springframework.stereotype.Component;
 import java.util.*;
 
 @Component
-class SqlRendererImpl implements SqlRenderer {
+public class SqlRendererImpl implements SqlRenderer {
 
     @Override
     public PreparedSql render(CompiledTemplate compiled, Map<String, Object> params) {
