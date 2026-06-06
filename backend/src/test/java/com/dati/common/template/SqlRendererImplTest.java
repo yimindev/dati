@@ -322,5 +322,108 @@ class SqlRendererImplTest {
         assertFalse(r.sql().contains("DROP"));
     }
 
+    // ── {{{var}}} 原始变量（三重大括号）──
 
+    @Test @DisplayName("{{{var}}} 值存在 → 直接内联到 SQL，无 binding")
+    void testRawVarDirectInline() {
+        PreparedSql r = renderer.render(parser.parse("FROM {{{table}}}"), Map.of("table", "users"));
+        assertEquals("FROM users", r.sql());
+        assertTrue(r.bindings().isEmpty());
+    }
+
+    @Test @DisplayName("{{{var}}} 值为 null → 输出空字符串")
+    void testRawVarNull() {
+        PreparedSql r = renderer.render(parser.parse("FROM {{{table}}}"), singletonMap("table", null));
+        assertEquals("FROM ", r.sql());
+        assertTrue(r.bindings().isEmpty());
+    }
+
+    @Test @DisplayName("{{{var}}} 参数缺失 → 输出空字符串")
+    void testRawVarMissing() {
+        PreparedSql r = renderer.render(parser.parse("FROM {{{table}}}"), Map.of());
+        assertEquals("FROM ", r.sql());
+        assertTrue(r.bindings().isEmpty());
+    }
+
+    @Test @DisplayName("{{{var:default}}} null → 内联 default")
+    void testRawVarDefaultNull() {
+        PreparedSql r = renderer.render(parser.parse("ORDER BY {{{sort:id}}}"), singletonMap("sort", null));
+        assertEquals("ORDER BY id", r.sql());
+        assertTrue(r.bindings().isEmpty());
+    }
+
+    @Test @DisplayName("{{{var:default}}} 有值 → 内联实际值")
+    void testRawVarDefaultOverridden() {
+        PreparedSql r = renderer.render(parser.parse("ORDER BY {{{sort:id}}}"), Map.of("sort", "name"));
+        assertEquals("ORDER BY name", r.sql());
+        assertTrue(r.bindings().isEmpty());
+    }
+
+    @Test @DisplayName("{{{var}}} 值为 Array → TemplateRenderException")
+    void testRawVarArrayThrows() {
+        assertThrows(TemplateRenderException.class, () ->
+            renderer.render(parser.parse("IN ({{{ids}}})"), Map.of("ids", List.of(1, 2, 3))));
+    }
+
+    @Test @DisplayName("{{{var}}} 值非 Array → 正常内联")
+    void testRawVarNonArray() {
+        PreparedSql r = renderer.render(parser.parse("FETCH NEXT {{{limit}}} ROWS ONLY"), Map.of("limit", 50));
+        assertEquals("FETCH NEXT 50 ROWS ONLY", r.sql());
+        assertTrue(r.bindings().isEmpty());
+    }
+
+    @Test @DisplayName("混合 {{{var}}} + {{var}} → 正确的 SQL 和 binding 顺序")
+    void testMixedRawAndSafe() {
+        PreparedSql r = renderer.render(parser.parse(
+            "SELECT {{{col1}}}, {{{col2}}} FROM {{{table}}} WHERE id = {{id}} AND status = {{status}}"),
+            Map.of("col1", "name", "col2", "email", "table", "users", "id", 1, "status", "active"));
+        assertEquals("SELECT name, email FROM users WHERE id = ? AND status = ?", r.sql());
+        assertEquals(2, r.bindings().size());
+        assertEquals("id", r.bindings().get(0).name());
+        assertEquals("status", r.bindings().get(1).name());
+    }
+
+    @Test @DisplayName("{{{var}}} 在 {{#if}} 块内 → 条件成立时内联")
+    void testRawVarInIfTrue() {
+        PreparedSql r = renderer.render(parser.parse(
+            "SELECT * FROM t {{#if sort}}ORDER BY {{{col}}} {{{dir}}}{{/if}}"),
+            Map.of("sort", true, "col", "created_at", "dir", "DESC"));
+        assertEquals("SELECT * FROM t ORDER BY created_at DESC", r.sql());
+        assertTrue(r.bindings().isEmpty());
+    }
+
+    @Test @DisplayName("{{{var}}} 在 {{#if}} 块内 → 条件不成立时消失")
+    void testRawVarInIfFalse() {
+        PreparedSql r = renderer.render(parser.parse(
+            "SELECT * FROM t {{#if sort}}ORDER BY {{{col}}} {{{dir}}}{{/if}}"),
+            new HashMap<>(Map.of()));
+        assertEquals("SELECT * FROM t ", r.sql());
+        assertTrue(r.bindings().isEmpty());
+    }
+
+    @Test @DisplayName("{{{var}}} 在 {{#where}} 内 → AND/OR 裁剪正常工作")
+    void testRawVarInWhere() {
+        PreparedSql r = renderer.render(parser.parse(
+            "SELECT * FROM t {{#where}}dept_id = {{dept_id}}{{#if status}}AND status = {{status}}{{/if}}{{/where}} ORDER BY {{{col}}} {{{dir}}}"),
+            Map.of("dept_id", 10, "col", "name", "dir", "ASC"));
+        assertEquals("SELECT * FROM t WHERE dept_id = ? ORDER BY name ASC", r.sql());
+        assertEquals(1, r.bindings().size());
+    }
+
+    @Test @DisplayName("完整场景：表名 + 列名 + 排序 + 安全变量")
+    void testFullScenario() {
+        PreparedSql r = renderer.render(parser.parse(
+            "SELECT {{{cols}}} FROM {{{table}}} WHERE dept_id = {{dept_id}} ORDER BY {{{sort}}} {{{dir}}} LIMIT {{{limit}}}"),
+            Map.of("cols", "id, name, email", "table", "users", "dept_id", 42, "sort", "created_at", "dir", "DESC", "limit", 100));
+        assertEquals("SELECT id, name, email FROM users WHERE dept_id = ? ORDER BY created_at DESC LIMIT 100", r.sql());
+        assertEquals(1, r.bindings().size());
+        assertEquals(42, r.bindings().getFirst().value());
+    }
+
+    @Test @DisplayName("{{{var}}} 注入风险：用户显式选择 raw 模式，值直接拼入 SQL")
+    void testRawVarInjectionIsUserChoice() {
+        String evil = "t; DROP TABLE users;--";
+        PreparedSql r = renderer.render(parser.parse("SELECT * FROM {{{table}}}"), Map.of("table", evil));
+        assertEquals("SELECT * FROM " + evil, r.sql());
+    }
 }

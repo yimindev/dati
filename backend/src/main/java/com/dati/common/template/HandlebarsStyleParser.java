@@ -12,10 +12,10 @@ import java.util.regex.Pattern;
  * <pre>
  * Grammar (V1):
  *   template  := (text | var | ifBlock | whereBlock)*
- *   var       := '{{' name (':' default)? '}}'
+ *   var       := '{{' name (':' default)? '}}' | '{{{' name (':' default)? '}}}'
  *   ifBlock   := '{{#if ' name '}}' template '{{/if}}'
  *   whereBlock:= '{{#where}}' template '{{/where}}'
- *   escape    := '\{{' → literal '{{'
+ *   escape    := '\{{' → literal '{{' ; '\{{{' → literal '{{{'
  * </pre>
  */
 @Component
@@ -31,11 +31,32 @@ public class HandlebarsStyleParser implements TemplateParser {
         int len = template.length();
 
         while (i < len) {
+            // Escape: \{{{ → literal {{{
+            if (template.charAt(i) == '\\' && i + 3 < len
+                    && template.charAt(i + 1) == '{' && template.charAt(i + 2) == '{' && template.charAt(i + 3) == '{') {
+                textBuf.append("{{{");
+                i += 4;
+                continue;
+            }
             // Escape: \{{  → literal {{
             if (template.charAt(i) == '\\' && i + 2 < len
                     && template.charAt(i + 1) == '{' && template.charAt(i + 2) == '{') {
                 textBuf.append("{{");
                 i += 3;
+                continue;
+            }
+
+            // Open tag: {{{
+            if (template.charAt(i) == '{' && i + 2 < len && template.charAt(i + 1) == '{' && template.charAt(i + 2) == '{') {
+                flushText(textBuf, nodes);
+                i += 3; // past {{{
+
+                int close = template.indexOf("}}}", i);
+                if (close < 0) throw new TemplateParseException("Unclosed '{{{' at position " + (i - 3));
+
+                String content = template.substring(i, close).trim();
+                i = close + 3; // past }}}
+                nodes.add(parseVar(content, true));
                 continue;
             }
 
@@ -107,11 +128,15 @@ public class HandlebarsStyleParser implements TemplateParser {
     }
 
     private VarNode parseVar(String content) {
+        return parseVar(content, false);
+    }
+
+    private VarNode parseVar(String content, boolean raw) {
         int colon = content.indexOf(':');
         String name = (colon < 0) ? content : content.substring(0, colon);
         validateVarName(name, "variable");
-        if (colon < 0) return new VarNode(name, null);
-        return new VarNode(name, content.substring(colon + 1));
+        if (colon < 0) return new VarNode(name, null, raw);
+        return new VarNode(name, content.substring(colon + 1), raw);
     }
 
     private static void validateVarName(String name, String label) {

@@ -190,4 +190,94 @@ class HandlebarsStyleParserTest {
         Set<String> vars = parser.parse("{{a}}").getVariables();
         assertThrows(UnsupportedOperationException.class, () -> vars.add("b"));
     }
+
+    // ── {{{var}}} 原始变量（三重大括号）──
+
+    @Test @DisplayName("{{{var}}} → getVariables 返回该变量")
+    void testRawVariable() {
+        assertEquals(Set.of("table"), parser.parse("FROM {{{table}}}").getVariables());
+    }
+
+    @Test @DisplayName("{{{var}}} → raw 标记为 true")
+    void testRawVariableFlagTrue() {
+        CompiledTemplate t = parser.parse("{{{table}}}");
+        ParsedTemplate pt = (ParsedTemplate) t;
+        VarNode node = (VarNode) pt.getNodes().get(0);
+        assertTrue(node.raw());
+    }
+
+    @Test @DisplayName("{{var}} raw 标记为 false")
+    void testNormalVariableFlagFalse() {
+        CompiledTemplate t = parser.parse("{{table}}");
+        ParsedTemplate pt = (ParsedTemplate) t;
+        VarNode node = (VarNode) pt.getNodes().get(0);
+        assertFalse(node.raw());
+    }
+
+    @Test @DisplayName("{{{var:default}}} → 变量名不含 default，raw=true")
+    void testRawVariableWithDefault() {
+        CompiledTemplate t = parser.parse("ORDER BY {{{sort:id}}}");
+        ParsedTemplate pt = (ParsedTemplate) t;
+        VarNode node = null;
+        for (Node n : pt.getNodes()) { if (n instanceof VarNode v) { node = v; break; } }
+        assertNotNull(node);
+        assertEquals("sort", node.name());
+        assertEquals("id", node.defaultValue());
+        assertTrue(node.raw());
+    }
+
+    @Test @DisplayName("混合 {{var}} + {{{var}}} 在同一模板")
+    void testMixedNormalAndRaw() {
+        CompiledTemplate t = parser.parse("SELECT {{{col1}}}, {{{col2}}} FROM {{table}} WHERE id = {{id}}");
+        assertEquals(Set.of("col1", "col2", "table", "id"), t.getVariables());
+    }
+
+    @Test @DisplayName("{{{var}}} 变量名含点号")
+    void testRawVarWithDot() {
+        assertEquals(Set.of("t.column"), parser.parse("{{{t.column}}}").getVariables());
+    }
+
+    // ── {{{ 转义 ──
+
+    @Test @DisplayName("\\{{{ → 字面量 {{{，不算变量")
+    void testEscapeTripleBraces() {
+        assertEquals(Set.of("var"), parser.parse("\\{{{not_var}}} {{var}}").getVariables());
+    }
+
+    @Test @DisplayName("\\{{{ 转义后正常变量仍生效")
+    void testEscapeTripleBracesWithNormalVar() {
+        assertEquals(Set.of("y"), parser.parse("\\{{{x}}} {{{y}}}").getVariables());
+    }
+
+    // ── 错误：{{{ 不闭合 ──
+
+    @Test @DisplayName("{{{ 不闭合 → TemplateParseException")
+    void testUnclosedTripleBraces() {
+        assertThrows(TemplateParseException.class, () -> parser.parse("{{{table"));
+    }
+
+    @Test @DisplayName("{{{ 仅有 }} 闭合 → TemplateParseException（缺少第三个 }）")
+    void testTripleBracesClosedByDouble() {
+        assertThrows(TemplateParseException.class, () -> parser.parse("{{{table}}"));
+    }
+
+    @Test @DisplayName("{{{ 后无闭合")
+    void testUnclosedTripleBracesOnly() {
+        assertThrows(TemplateParseException.class, () -> parser.parse("{{{"));
+    }
+
+    @Test @DisplayName("{{{}}} 空变量名 → TemplateParseException")
+    void testEmptyTripleBraces() {
+        assertThrows(TemplateParseException.class, () -> parser.parse("{{{}}}"));
+    }
+
+    @Test @DisplayName("{{{a b}}} 变量名含空格 → TemplateParseException")
+    void testTripleBracesInvalidName() {
+        assertThrows(TemplateParseException.class, () -> parser.parse("{{{a b}}}"));
+    }
+
+    @Test @DisplayName("{{{ 含默认值且变量名为空 → TemplateParseException")
+    void testTripleBracesEmptyNameWithDefault() {
+        assertThrows(TemplateParseException.class, () -> parser.parse("{{{:default}}}"));
+    }
 }

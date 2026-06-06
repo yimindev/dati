@@ -31,6 +31,15 @@ public class SqlRendererImpl implements SqlRenderer {
     private void renderVar(VarNode v, Map<String, Object> params,
                            StringBuilder sql, List<ParamBinding> bindings) {
         Object value = resolveValue(v, params);
+        if (v.raw()) {
+            if (isArray(value)) {
+                throw new TemplateRenderException(
+                    "Raw variable '{{{" + v.name() + "}}}' cannot be an array");
+            }
+            if (value != null) sql.append(value);
+            else if (v.defaultValue() != null) sql.append(v.defaultValue());
+            return;
+        }
         if (isArray(value)) {
             List<?> list = toList(value);
             for (int i = 0; i < list.size(); i++) {

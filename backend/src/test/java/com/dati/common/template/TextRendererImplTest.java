@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import static java.util.Collections.singletonMap;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 
@@ -170,4 +171,36 @@ class TextRendererImplTest {
 
     @Test @DisplayName("{{#if}} 内变量，但 if 不成立 → 变量的缺值不暴露")
     void testVarInSkippedIf() { assertEquals("", renderer.render(parser.parse("{{#if flag}}{{missing}}{{/if}}"), Map.of())); }
+
+    // ── {{{var}}} 在 Text 模式下与 {{var}} 行为一致 ──
+
+    @Test @DisplayName("{{{var}}} → 与 {{var}} 行为一致")
+    void testRawVarSameAsNormal() {
+        assertEquals("Hello World",
+            renderer.render(parser.parse("Hello {{{name}}}"), Map.of("name", "World")));
+    }
+
+    @Test @DisplayName("{{{var}}} null → 空字符串")
+    void testRawVarNull() {
+        assertEquals("Hello ",
+            renderer.render(parser.parse("Hello {{{name}}}"), singletonMap("name", null)));
+    }
+
+    @Test @DisplayName("{{{var}}} missing → 空字符串")
+    void testRawVarMissing() {
+        assertEquals("Hello ",
+            renderer.render(parser.parse("Hello {{{name}}}"), Map.of()));
+    }
+
+    @Test @DisplayName("{{{var:default}}} null → default")
+    void testRawVarDefault() {
+        assertEquals("LIMIT 20",
+            renderer.render(parser.parse("LIMIT {{{limit:20}}}"), singletonMap("limit", null)));
+    }
+
+    @Test @DisplayName("{{{var}}} Array → .toString()")
+    void testRawVarArrayToString() {
+        assertEquals("Result: [1, 2, 3]",
+            renderer.render(parser.parse("Result: {{{items}}}"), Map.of("items", List.of(1, 2, 3))));
+    }
 }
