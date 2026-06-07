@@ -16,27 +16,27 @@ class NodeTest {
 
     @Test @DisplayName("VarNode 不带默认值")
     void testVarNodeWithoutDefault() {
-        VarNode node = new VarNode("status", null);
+        VarNode node = new VarNode("status", null, false);
         assertEquals("status", node.name());
         assertNull(node.defaultValue());
     }
 
     @Test @DisplayName("VarNode 带默认值")
     void testVarNodeWithDefault() {
-        VarNode node = new VarNode("limit", "20");
+        VarNode node = new VarNode("limit", "20", false);
         assertEquals("limit", node.name());
         assertEquals("20", node.defaultValue());
     }
 
     @Test @DisplayName("VarNode 带下划线和点号的变量名")
     void testVarNodeComplexName() {
-        VarNode node = new VarNode("table.schema.column_name", null);
+        VarNode node = new VarNode("table.schema.column_name", null, false);
         assertEquals("table.schema.column_name", node.name());
     }
 
     @Test @DisplayName("IfNode 构造和字段访问")
     void testIfNode() {
-        List<Node> body = List.of(new TextNode("AND status = "), new VarNode("status", null));
+        List<Node> body = List.of(new TextNode("AND status = "), new VarNode("status", null, false));
         IfNode node = new IfNode("status", body);
         assertEquals("status", node.condition());
         assertEquals(2, node.body().size());
@@ -44,7 +44,7 @@ class NodeTest {
 
     @Test @DisplayName("WhereNode 构造和字段访问")
     void testWhereNode() {
-        IfNode ifNode = new IfNode("status", List.of(new TextNode("AND status = "), new VarNode("status", null)));
+        IfNode ifNode = new IfNode("status", List.of(new TextNode("AND status = "), new VarNode("status", null, false)));
         WhereNode node = new WhereNode(List.of(ifNode));
         assertEquals(1, node.body().size());
     }

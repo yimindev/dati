@@ -2,6 +2,7 @@ package com.dati.base.exception;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -32,6 +33,13 @@ public class GlobalExceptionHandler {
             .collect(Collectors.joining("; "));
 
         ErrorResponse response = ErrorResponse.of(ErrorCode.INVALID_PARAMETER, fieldErrors);
+        return ResponseEntity.badRequest().body(response);
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ErrorResponse> handleMessageNotReadable(HttpMessageNotReadableException e) {
+        ErrorResponse response = ErrorResponse.of(ErrorCode.INVALID_PARAMETER,
+                "Request body is not readable: " + e.getMostSpecificCause().getMessage());
         return ResponseEntity.badRequest().body(response);
     }
 
