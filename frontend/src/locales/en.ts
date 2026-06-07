@@ -403,6 +403,12 @@ export default {
       maxRows: "Max Rows",
       timeout: "Timeout",
       confirmRequired: "Require manual confirmation before execution",
+      previewRender: "Preview",
+      previewTitle: "Preview Template Rendering",
+      previewParamPlaceholder: "Enter a test value...",
+      previewEmptyValues: "Please enter at least one test value",
+      previewTextResult: "Rendered Text",
+      previewSqlResult: "Rendered SQL (preview only, not executed)",
       deleteConfirm: "Deleting will prevent agents from calling this tool. Confirm?",
       type: {
         SEARCH_METADATA: "Metadata Search",
@@ -431,6 +437,10 @@ export default {
       noParams: "No parameters",
       paramCount: "{count} parameters",
       deleteConfirm: "Delete prompt \"{name}\"?",
+      previewRender: "Preview",
+      previewTitle: "Preview Template Rendering",
+      previewParamPlaceholder: "Enter a test value...",
+      previewTextResult: "Rendered Text",
     },
   },
 };

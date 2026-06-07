@@ -10,6 +10,9 @@ import { ElementPlusResolver } from "unplugin-vue-components/resolvers";
 // https://vite.dev/config/
 export default defineConfig({
   server: {
+    allowedHosts: [
+      '.zhangyimin.me'
+    ],
     proxy: {
       "/api": {
         target: "http://localhost:8085",

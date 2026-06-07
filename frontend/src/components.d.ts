@@ -68,6 +68,7 @@ declare module 'vue' {
     SubjectCard: typeof import('./components/subject/SubjectCard.vue')['default']
     SubjectDialog: typeof import('./components/subject/SubjectDialog.vue')['default']
     SubjectTableList: typeof import('./components/subject/SubjectTableList.vue')['default']
+    TemplatePreviewModal: typeof import('./components/mcp-service/TemplatePreviewModal.vue')['default']
     TermManager: typeof import('./components/subject/TermManager.vue')['default']
     ToolsTab: typeof import('./components/mcp-service/ToolsTab.vue')['default']
   }

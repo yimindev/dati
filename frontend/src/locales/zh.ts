@@ -403,6 +403,12 @@ export default {
       maxRows: "最大返回行数",
       timeout: "超时时间",
       confirmRequired: "执行前需人工确认",
+      previewRender: "测试渲染",
+      previewTitle: "预览模板渲染结果",
+      previewParamPlaceholder: "输入测试值...",
+      previewEmptyValues: "请输入至少一个测试值",
+      previewTextResult: "渲染结果",
+      previewSqlResult: "渲染后的 SQL（预览用，不执行）",
       deleteConfirm: "删除后 MCP Client 将无法调用此工具，确认删除？",
       type: {
         SEARCH_METADATA: "元数据检索",
@@ -431,6 +437,10 @@ export default {
       noParams: "暂无参数",
       paramCount: "{count} 个参数",
       deleteConfirm: "确定删除 Prompt「{name}」吗？",
+      previewRender: "测试渲染",
+      previewTitle: "预览模板渲染结果",
+      previewParamPlaceholder: "输入测试值...",
+      previewTextResult: "渲染结果",
     },
   },
 };

@@ -3,6 +3,7 @@ import { computed, reactive, ref, watch } from "vue";
 import { ElMessage, type FormInstance, type FormRules } from "element-plus";
 import { useI18n } from "vue-i18n";
 import { Delete, Plus } from "@element-plus/icons-vue";
+import TemplatePreviewModal from "./TemplatePreviewModal.vue";
 import type { McpToolVO, ToolParameter } from "~/api/mcp-tool";
 import { createCustomTool, updateTool } from "~/api/mcp-tool";
 import { getDataScope } from "~/api/mcp-service";
@@ -22,6 +23,7 @@ const emit = defineEmits<{
 const saving = ref(false);
 const formRef = ref<FormInstance>();
 const dataSources = ref<{ id: string; name: string }[]>([]);
+const previewVisible = ref(false);
 
 const isEdit = computed(() => !!props.tool);
 
@@ -256,6 +258,11 @@ const handleSave = async () => {
             placeholder="SELECT * FROM table WHERE id = :id"
             class="mono-input"
           />
+          <div class="flex justify-end mt-1">
+            <el-button size="small" @click="previewVisible = true">
+              {{ t("mcpService.tool.previewRender") }}
+            </el-button>
+          </div>
         </el-form-item>
       </section>
 
@@ -326,6 +333,12 @@ const handleSave = async () => {
         {{ t("common.save") }}
       </el-button>
     </template>
+    <TemplatePreviewModal
+      v-model="previewVisible"
+      mode="SQL"
+      :template="form.sqlTemplate"
+      :parameters="form.parameters"
+    />
   </el-drawer>
 </template>
 

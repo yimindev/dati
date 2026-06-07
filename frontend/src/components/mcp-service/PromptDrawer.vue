@@ -3,6 +3,7 @@ import { computed, reactive, ref, watch } from "vue";
 import { ElMessage, type FormInstance, type FormRules } from "element-plus";
 import { useI18n } from "vue-i18n";
 import { Delete, Plus } from "@element-plus/icons-vue";
+import TemplatePreviewModal from "./TemplatePreviewModal.vue";
 import type { McpPromptVO, PromptParameter } from "~/api/mcp-prompt";
 import { createPrompt, updatePrompt } from "~/api/mcp-prompt";
 
@@ -11,6 +12,7 @@ const props = defineProps<{ modelValue: boolean; serviceId: string; prompt: McpP
 const emit = defineEmits<{ (e: "update:modelValue", v: boolean): void; (e: "saved"): void }>();
 
 const saving = ref(false);
+const previewVisible = ref(false);
 const formRef = ref<FormInstance>();
 const isEdit = computed(() => !!props.prompt);
 
@@ -91,6 +93,11 @@ const handleSave = async () => {
         <h4 class="text-sm font-semibold pb-2 border-b border-[var(--ep-border-color-lighter)]">{{ t("mcpService.prompt.content") }}</h4>
         <el-form-item prop="content">
           <el-input v-model="form.content" type="textarea" :rows="6" :placeholder="t('mcpService.prompt.contentPlaceholder')" class="mono-input" />
+          <div class="flex justify-end mt-1">
+            <el-button size="small" @click="previewVisible = true">
+              {{ t("mcpService.prompt.previewRender") }}
+            </el-button>
+          </div>
           <span class="text-[11px] text-[var(--ep-text-color-placeholder)]">{{ t("mcpService.tool.nameFormatHint") }}</span>
         </el-form-item>
       </section>
@@ -99,6 +106,12 @@ const handleSave = async () => {
       <el-button @click="emit('update:modelValue', false)">{{ t("common.cancel") }}</el-button>
       <el-button type="primary" :loading="saving" :disabled="!form.name.trim()" @click="handleSave">{{ t("common.save") }}</el-button>
     </template>
+    <TemplatePreviewModal
+      v-model="previewVisible"
+      mode="TEXT"
+      :template="form.content"
+      :parameters="form.parameters"
+    />
   </el-drawer>
 </template>
 
