@@ -6,7 +6,7 @@ import { Edit, Delete, Plus, Search, Coin } from "@element-plus/icons-vue";
 import type { McpToolVO } from "~/api/mcp-tool";
 import { updateTool, deleteCustomTool } from "~/api/mcp-tool";
 import { getDataScope } from "~/api/mcp-service";
-import CustomToolDrawer from "./CustomToolDrawer.vue";
+import CustomToolDialog from "./CustomToolDialog.vue";
 
 const { t } = useI18n();
 
@@ -14,7 +14,7 @@ const props = defineProps<{ tools: McpToolVO[]; serviceId: string }>();
 const emit = defineEmits<{ (e: "refresh"): void }>();
 
 const searchQuery = ref("");
-const drawerVisible = ref(false);
+const dialogVisible = ref(false);
 const editingTool = ref<McpToolVO | null>(null);
 const dsNameMap = ref<Record<string, string>>({});
 
@@ -53,12 +53,12 @@ const handleToggle = async (tool: McpToolVO) => {
 
 const handleCreate = () => {
   editingTool.value = null;
-  drawerVisible.value = true;
+  dialogVisible.value = true;
 };
 
 const handleEdit = (tool: McpToolVO) => {
   editingTool.value = { ...tool };
-  drawerVisible.value = true;
+  dialogVisible.value = true;
 };
 
 const handleDelete = async (tool: McpToolVO) => {
@@ -76,8 +76,8 @@ const handleDelete = async (tool: McpToolVO) => {
   }
 };
 
-const handleDrawerSaved = () => {
-  drawerVisible.value = false;
+const handleDialogSaved = () => {
+  dialogVisible.value = false;
   emit("refresh");
 };
 </script>
@@ -147,11 +147,11 @@ const handleDrawerSaved = () => {
       </div>
     </div>
 
-    <CustomToolDrawer
-      v-model="drawerVisible"
+    <CustomToolDialog
+      v-model="dialogVisible"
       :service-id="props.serviceId"
       :tool="editingTool"
-      @saved="handleDrawerSaved"
+      @saved="handleDialogSaved"
     />
   </div>
 </template>

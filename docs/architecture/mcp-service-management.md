@@ -148,7 +148,7 @@ src/
 │   ├── PrebuiltToolList.vue     # 预置工具卡片列表（开关 + Setting 图标跳转配置弹窗）
 │   ├── ExecuteSqlConfigDialog.vue  # EXECUTE_SQL 权限配置弹窗
 │   ├── CustomToolList.vue       # 自定义工具列表（搜索、图标操作、数据源名称映射）
-│   └── CustomToolDrawer.vue     # 创建/编辑抽屉表单（el-form + FormRules 校验）
+│   └── CustomToolDialog.vue     # 创建/编辑弹窗表单（el-form + FormRules 校验）
 └── pages/mcp-services/
     └── [id]/index.vue           # 详情页（ToolsTab 集成在 tools Tab）
 ```
@@ -161,7 +161,7 @@ src/
 | `PrebuiltToolList` | 卡片列表：名称、描述、EXECUTE_SQL 的 sql_policy meta 信息。Setting 图标打开配置弹窗。`el-switch` 开关。 |
 | `ExecuteSqlConfigDialog` | 权限勾选组（SELECT ~ MULTI）+ maxRows + timeout + confirmRequired。`WarningFilled` 安全提示。 |
 | `CustomToolList` | 搜索栏 + 工具列表。图标编辑/删除。显示数据源名称（通过 `getDataScope` 解析 ID→名称）。`el-switch` 开关。 |
-| `CustomToolDrawer` | el-drawer 抽屉表单。el-form 校验（name/desc/SQL/数据源必填）。参数编辑器。权限勾选。 |
+| `CustomToolDialog` | el-dialog 弹窗表单。el-form 校验（name/desc/SQL/数据源必填）。参数编辑器。权限勾选。 |
 
 ### 3.3 交互细节
 

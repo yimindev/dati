@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { ref, reactive, watch } from "vue";
 import { ElMessage } from "element-plus";
-import { WarningFilled } from "@element-plus/icons-vue";
 import { useI18n } from "vue-i18n";
+import SqlSecurityConfig from "./SqlSecurityConfig.vue";
 import type { McpToolVO, SqlPolicy } from "~/api/mcp-tool";
 import { updateTool } from "~/api/mcp-tool";
 
@@ -24,15 +24,6 @@ const form = reactive({
   timeout: 30,
   confirmRequired: false,
 });
-
-const ops = [
-  { key: "allowSelect", label: "SELECT" },
-  { key: "allowInsert", label: "INSERT" },
-  { key: "allowUpdate", label: "UPDATE" },
-  { key: "allowDelete", label: "DELETE" },
-  { key: "allowDdl", label: "DDL" },
-  { key: "allowMulti", label: "MULTI" },
-];
 
 const initForm = () => {
   const cfg = props.tool.config as any;
@@ -82,9 +73,6 @@ const handleSave = async () => {
   }
 };
 
-const toggleOp = (key: string) => {
-  (form as any)[key] = !(form as any)[key];
-};
 </script>
 
 <template>
@@ -95,44 +83,18 @@ const toggleOp = (key: string) => {
     width="480px"
     :close-on-click-modal="false"
   >
-    <div class="flex flex-col gap-4">
-      <div>
-        <label class="config-label">{{ t("mcpService.tool.allowedOps") }}</label>
-        <div class="flex flex-wrap gap-2">
-          <button
-            v-for="op in ops"
-            :key="op.key"
-            type="button"
-            class="perm-pill"
-            :class="{ active: (form as any)[op.key] }"
-            @click="toggleOp(op.key)"
-          >
-            {{ op.label }}
-          </button>
-        </div>
-        <p class="warning-text">
-          <el-icon><WarningFilled /></el-icon>
-          {{ t("mcpService.tool.sqlRiskWarning") }}
-        </p>
-      </div>
-
-      <div class="grid grid-cols-2 gap-3">
-        <div class="flex flex-col gap-1">
-          <label class="config-label">{{ t("mcpService.tool.maxRows") }}</label>
-          <el-input-number v-model="form.maxRows" :min="1" :max="100000" size="small" />
-        </div>
-        <div class="flex flex-col gap-1">
-          <label class="config-label">{{ t("mcpService.tool.timeout") }} (s)</label>
-          <el-input-number v-model="form.timeout" :min="1" :max="300" size="small" />
-        </div>
-      </div>
-
-      <div class="pt-1">
-        <el-checkbox v-model="form.confirmRequired">
-          {{ t("mcpService.tool.confirmRequired") }}
-        </el-checkbox>
-      </div>
-    </div>
+    <SqlSecurityConfig
+      v-model:allow-select="form.allowSelect"
+      v-model:allow-insert="form.allowInsert"
+      v-model:allow-update="form.allowUpdate"
+      v-model:allow-delete="form.allowDelete"
+      v-model:allow-ddl="form.allowDdl"
+      v-model:allow-multi="form.allowMulti"
+      v-model:max-rows="form.maxRows"
+      v-model:timeout="form.timeout"
+      v-model:confirm-required="form.confirmRequired"
+      :show-multi="true"
+    />
 
     <template #footer>
       <el-button @click="emit('update:modelValue', false)">{{ t("common.cancel") }}</el-button>
@@ -140,20 +102,3 @@ const toggleOp = (key: string) => {
     </template>
   </el-dialog>
 </template>
-
-<style scoped>
-.config-label { display: block; font-size: 13px; font-weight: 600; color: var(--ep-text-color-primary); margin-bottom: 6px; }
-.perm-pill {
-  padding: 4px 12px; border: 2px solid var(--ep-border-color); border-radius: 6px;
-  font-size: 12px; font-weight: 500; cursor: pointer; background: var(--ep-bg-color);
-  color: var(--ep-text-color-regular); transition: all 0.15s;
-}
-.perm-pill.active {
-  background: var(--ep-color-primary-light-9);
-  border-color: var(--ep-color-primary);
-  color: var(--ep-color-primary);
-  font-weight: 600;
-}
-.perm-pill:hover { border-color: var(--ep-color-primary); }
-.warning-text { display: flex; align-items: flex-start; gap: 4px; margin-top: 8px; font-size: 12px; color: var(--ep-color-warning); }
-</style>

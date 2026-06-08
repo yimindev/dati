@@ -5,14 +5,14 @@ import { useI18n } from "vue-i18n";
 import { Plus, Search, Edit, Delete } from "@element-plus/icons-vue";
 import type { McpPromptVO } from "~/api/mcp-prompt";
 import { updatePrompt, deletePrompt } from "~/api/mcp-prompt";
-import PromptDrawer from "./PromptDrawer.vue";
+import PromptDialog from "./PromptDialog.vue";
 
 const { t } = useI18n();
 const props = defineProps<{ prompts: McpPromptVO[]; serviceId: string }>();
 const emit = defineEmits<{ (e: "refresh"): void }>();
 
 const searchQuery = ref("");
-const drawerVisible = ref(false);
+const dialogVisible = ref(false);
 const editingPrompt = ref<McpPromptVO | null>(null);
 
 const filteredPrompts = computed(() => {
@@ -33,8 +33,8 @@ const handleToggle = async (prompt: McpPromptVO) => {
   } catch (e: any) { ElMessage.error(e?.message || t("common.operationFailed")); }
 };
 
-const handleCreate = () => { editingPrompt.value = null; drawerVisible.value = true; };
-const handleEdit = (prompt: McpPromptVO) => { editingPrompt.value = { ...prompt }; drawerVisible.value = true; };
+const handleCreate = () => { editingPrompt.value = null; dialogVisible.value = true; };
+const handleEdit = (prompt: McpPromptVO) => { editingPrompt.value = { ...prompt }; dialogVisible.value = true; };
 
 const handleDelete = async (prompt: McpPromptVO) => {
   try {
@@ -46,7 +46,7 @@ const handleDelete = async (prompt: McpPromptVO) => {
   } catch (e: any) { if (e !== "cancel") ElMessage.error(e?.message || t("common.operationFailed")); }
 };
 
-const handleDrawerSaved = () => { drawerVisible.value = false; emit("refresh"); };
+const handleDialogSaved = () => { dialogVisible.value = false; emit("refresh"); };
 </script>
 
 <template>
@@ -77,7 +77,7 @@ const handleDrawerSaved = () => { drawerVisible.value = false; emit("refresh"); 
       </div>
     </div>
 
-    <PromptDrawer v-model="drawerVisible" :service-id="props.serviceId" :prompt="editingPrompt" @saved="handleDrawerSaved" />
+    <PromptDialog v-model="dialogVisible" :service-id="props.serviceId" :prompt="editingPrompt" @saved="handleDialogSaved" />
   </div>
 </template>
 

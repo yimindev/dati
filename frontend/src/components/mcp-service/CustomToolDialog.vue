@@ -3,10 +3,11 @@ import { computed, reactive, ref, watch } from "vue";
 import { ElMessage, type FormInstance, type FormRules } from "element-plus";
 import { useI18n } from "vue-i18n";
 import { Delete, Plus } from "@element-plus/icons-vue";
-import TemplatePreviewModal from "./TemplatePreviewModal.vue";
+import SqlSecurityConfig from "./SqlSecurityConfig.vue";
 import type { McpToolVO, ToolParameter } from "~/api/mcp-tool";
 import { createCustomTool, updateTool } from "~/api/mcp-tool";
 import { getDataScope } from "~/api/mcp-service";
+import { extractTemplateVariables } from "~/api/template-preview";
 
 const { t } = useI18n();
 
@@ -28,14 +29,6 @@ const previewVisible = ref(false);
 const isEdit = computed(() => !!props.tool);
 
 const paramTypes = ["String", "Number", "Boolean", "Date", "Array"];
-const sqlOps = [
-  { key: "allow_select", label: "SELECT" },
-  { key: "allow_insert", label: "INSERT" },
-  { key: "allow_update", label: "UPDATE" },
-  { key: "allow_delete", label: "DELETE" },
-  { key: "allow_ddl", label: "DDL" },
-];
-
 const rules: FormRules = {
   name: [
     { required: true, message: () => t("mcpService.tool.nameRequired"), trigger: "blur" },
@@ -132,6 +125,35 @@ watch(
   },
 );
 
+const scanning = ref(false);
+const scanParams = async () => {
+  if (!form.sqlTemplate) {
+    ElMessage.warning(t("mcpService.tool.sqlRequired"));
+    return;
+  }
+  scanning.value = true;
+  try {
+    const { variables } = await extractTemplateVariables({ template: form.sqlTemplate });
+    let addedCount = 0;
+    variables.forEach((name) => {
+      if (!form.parameters.find((p) => p.name === name)) {
+        form.parameters.push({ name, type: "String", required: false, description: "" });
+        addedCount++;
+      }
+    });
+
+    if (addedCount > 0) {
+      ElMessage.success(t("mcpService.tool.scanParamsSuccess", { count: addedCount }));
+    } else {
+      ElMessage.info(t("mcpService.tool.scanParamsNoNew"));
+    }
+  } catch (err: any) {
+    ElMessage.error(err?.message || t("common.operationFailed"));
+  } finally {
+    scanning.value = false;
+  }
+};
+
 const addParam = () => {
   form.parameters.push({ name: "", type: "String", required: false, description: "" });
 };
@@ -139,6 +161,8 @@ const addParam = () => {
 const removeParam = (i: number) => {
   form.parameters.splice(i, 1);
 };
+
+
 
 const handleSave = async () => {
   const valid = await formRef.value?.validate().catch(() => false);
@@ -192,25 +216,27 @@ const handleSave = async () => {
 </script>
 
 <template>
-  <el-drawer
+  <el-dialog
     :model-value="modelValue"
     @update:model-value="emit('update:modelValue', $event)"
     :title="isEdit ? t('mcpService.tool.editCustom') : t('mcpService.tool.addCustom')"
-    size="560px"
+    width="780px"
     :close-on-click-modal="false"
-    @closed="loadForm"
+    @close="loadForm"
+    append-to-body
   >
-    <el-form ref="formRef" :model="form" :rules="rules" label-position="top" class="flex flex-col gap-6">
+    <div class="flex flex-col gap-8 overflow-y-auto px-3 py-1" style="max-height: calc(85vh - 180px)">
+    <el-form ref="formRef" :model="form" :rules="rules" label-position="top">
       <!-- Basic Info -->
-      <section class="form-section">
-        <h4>{{ t("mcpService.tool.basicInfo") }}</h4>
+      <section class="flex flex-col gap-4">
+        <h4 class="m-0 text-sm font-semibold text-[var(--ep-text-color-primary)] flex items-center gap-2">{{ t("mcpService.tool.basicInfo") }}</h4>
         <div class="grid grid-cols-2 gap-3">
           <el-form-item prop="name">
             <template #label>
               {{ t("mcpService.tool.toolName") }}
             </template>
             <el-input v-model="form.name" maxlength="128" placeholder="only_letters_and_123" />
-            <span class="hint">{{ t("mcpService.tool.nameFormatHint") }}</span>
+            <span class="block mt-1 text-[11px] text-[var(--ep-text-color-placeholder)]">{{ t("mcpService.tool.nameFormatHint") }}</span>
           </el-form-item>
           <el-form-item>
             <template #label>
@@ -233,8 +259,8 @@ const handleSave = async () => {
       </section>
 
       <!-- Execution Config -->
-      <section class="form-section">
-        <h4>{{ t("mcpService.tool.execConfig") }}</h4>
+      <section class="flex flex-col gap-4">
+        <h4 class="m-0 text-sm font-semibold text-[var(--ep-text-color-primary)] flex items-center gap-2">{{ t("mcpService.tool.execConfig") }}</h4>
         <el-form-item prop="dataSourceId">
           <template #label>
             {{ t("mcpService.tool.dataSourceBinding") }}
@@ -254,148 +280,115 @@ const handleSave = async () => {
           <el-input
             v-model="form.sqlTemplate"
             type="textarea"
-            :rows="4"
-            placeholder="SELECT * FROM table WHERE id = :id"
+            :rows="6"
+            :placeholder="`SELECT * FROM {{{table}}}\n{{#where}}\n  {{#if id}}AND id = {{id}}{{/if}}\n{{/where}}`"
             class="mono-input"
           />
-          <div class="flex justify-end mt-1">
-            <el-button size="small" @click="previewVisible = true">
-              {{ t("mcpService.tool.previewRender") }}
-            </el-button>
-          </div>
         </el-form-item>
       </section>
 
       <!-- Parameters -->
-      <section class="form-section">
-        <div class="section-header">
-          <h4>{{ t("mcpService.tool.parameters") }}</h4>
-          <el-button size="small" text :icon="Plus" @click="addParam">
+      <section class="flex flex-col gap-4">
+        <h4 class="m-0 text-sm font-semibold text-[var(--ep-text-color-primary)] flex items-center gap-2">{{ t("mcpService.tool.parameters") }}</h4>
+        <div class="flex gap-2">
+          <el-button size="small" :loading="scanning" @click="scanParams">
+            {{ t("mcpService.tool.scanParams") }}
+          </el-button>
+          <el-button size="small" :icon="Plus" @click="addParam">
             {{ t("mcpService.tool.addParam") }}
           </el-button>
         </div>
-        <div v-if="form.parameters.length === 0" class="empty-params">
-          {{ t("mcpService.tool.noParams") }}
-        </div>
-        <div v-for="(param, i) in form.parameters" :key="i" class="param-row">
-          <el-input v-model="param.name" size="small" placeholder="name" />
-          <el-select v-model="param.type" size="small">
-            <el-option v-for="pt in paramTypes" :key="pt" :label="pt" :value="pt" />
-          </el-select>
-          <el-input v-model="param.default_value" size="small" placeholder="default" />
-          <el-checkbox v-model="param.required" size="small" class="param-required">
-            {{ t("mcpService.tool.paramRequired") }}
-          </el-checkbox>
-          <el-button size="small" text type="danger" :icon="Delete" @click="removeParam(i)" />
-          <el-input
-            v-model="param.description"
-            size="small"
-            :placeholder="t('mcpService.tool.paramDesc')"
-            class="param-desc"
-          />
-        </div>
+
+        <el-table :data="form.parameters" size="small" border max-height="220" class="param-table">
+          <el-table-column prop="name" :label="t('common.name')" width="180">
+            <template #default="{ row }">
+              <el-input v-model="row.name" size="small" placeholder="name" />
+            </template>
+          </el-table-column>
+          <el-table-column prop="type" :label="t('common.type')" width="120">
+            <template #default="{ row }">
+              <el-select v-model="row.type" size="small">
+                <el-option v-for="pt in paramTypes" :key="pt" :label="pt" :value="pt" />
+              </el-select>
+            </template>
+          </el-table-column>
+          <el-table-column prop="required" :label="t('mcpService.tool.paramRequired')" width="80" align="center">
+            <template #default="{ row }">
+              <el-checkbox v-model="row.required" />
+            </template>
+          </el-table-column>
+          <el-table-column prop="description" :label="t('common.description')">
+            <template #default="{ row }">
+              <el-input v-model="row.description" size="small" :placeholder="t('mcpService.tool.paramDesc')" />
+            </template>
+          </el-table-column>
+          <el-table-column :label="t('common.actions')" width="80" align="center">
+            <template #default="{ $index }">
+              <el-button size="small" text type="danger" :icon="Delete" @click="removeParam($index)" />
+            </template>
+          </el-table-column>
+          <template #empty>
+            <div class="py-4 text-[var(--ep-text-color-placeholder)]">{{ t("mcpService.tool.noParams") }}</div>
+          </template>
+        </el-table>
       </section>
 
       <!-- Security -->
-      <section class="form-section">
-        <h4>{{ t("mcpService.tool.security") }}</h4>
-        <div class="flex flex-wrap gap-2">
-          <button
-            v-for="op in sqlOps"
-            :key="op.key"
-            type="button"
-            class="perm-pill"
-            :class="{ active: (form as any)[op.key] }"
-            @click="(form as any)[op.key] = !(form as any)[op.key]"
-          >
-            {{ op.label }}
-          </button>
-        </div>
-        <div class="grid grid-cols-2 gap-3">
-          <div class="flex flex-col gap-1">
-            <label>{{ t("mcpService.tool.maxRows") }}</label>
-            <el-input-number v-model="form.maxRows" :min="1" :max="100000" size="small" />
-          </div>
-          <div class="flex flex-col gap-1">
-            <label>{{ t("mcpService.tool.timeout") }} (s)</label>
-            <el-input-number v-model="form.timeout" :min="1" :max="300" size="small" />
-          </div>
-        </div>
-        <el-checkbox v-model="form.confirmRequired">
-          {{ t("mcpService.tool.confirmRequired") }}
-        </el-checkbox>
+      <section class="flex flex-col gap-4">
+        <h4 class="m-0 text-sm font-semibold text-[var(--ep-text-color-primary)] flex items-center gap-2">{{ t("mcpService.tool.security") }}</h4>
+        <SqlSecurityConfig
+          v-model:allow-select="form.allowSelect"
+          v-model:allow-insert="form.allowInsert"
+          v-model:allow-update="form.allowUpdate"
+          v-model:allow-delete="form.allowDelete"
+          v-model:allow-ddl="form.allowDdl"
+          v-model:max-rows="form.maxRows"
+          v-model:timeout="form.timeout"
+          v-model:confirm-required="form.confirmRequired"
+          :show-annotations="true"
+        />
       </section>
     </el-form>
+    </div>
 
-    <template #footer>
-      <el-button @click="emit('update:modelValue', false)">{{ t("common.cancel") }}</el-button>
-      <el-button type="primary" :loading="saving" @click="handleSave">
-        {{ t("common.save") }}
-      </el-button>
-    </template>
-    <TemplatePreviewModal
+    <TemplatePreviewDialog
       v-model="previewVisible"
-      mode="SQL"
       :template="form.sqlTemplate"
+      mode="SQL"
       :parameters="form.parameters"
     />
-  </el-drawer>
+
+
+    <template #footer>
+      <div class="flex justify-end items-center gap-3">
+        <el-button plain :disabled="form.parameters.length === 0" @click="previewVisible = true">
+          {{ t("mcpService.tool.previewRender") }}
+        </el-button>
+        <el-divider direction="vertical" />
+        <el-button @click="emit('update:modelValue', false)">{{ t("common.cancel") }}</el-button>
+        <el-button type="primary" :loading="saving" @click="handleSave">
+          {{ t("common.save") }}
+        </el-button>
+      </div>
+    </template>
+  </el-dialog>
 </template>
 
 <style scoped>
-.form-section { display: flex; flex-direction: column; gap: 12px; }
-.form-section h4 {
-  margin: 0;
-  font-size: 14px;
-  font-weight: 650;
-  color: var(--ep-text-color-primary);
-  border-bottom: 1px solid var(--ep-border-color-lighter);
-  padding-bottom: 6px;
+/* ── h4 左侧蓝色装饰条（保留伪元素） ── */
+h4::before {
+  content: "";
+  width: 3px;
+  height: 14px;
+  background-color: var(--ep-color-primary);
+  border-radius: 2px;
 }
-.section-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  border-bottom: 1px solid var(--ep-border-color-lighter);
-  padding-bottom: 6px;
+/* ── 等宽字体输入框（需穿透 el-input） ── */
+.mono-input :deep(textarea) {
+  font-family: "Fira Code", "Consolas", "Monaco", monospace;
 }
-.section-header h4 { margin: 0; border: none; padding: 0; }
-.form-field label { font-size: 13px; font-weight: 500; color: var(--ep-text-color-primary); }
-.hint { font-size: 11px; color: var(--ep-text-color-placeholder); }
-.perm-pill {
-  padding: 4px 12px;
-  border: 1.5px solid var(--ep-border-color);
-  border-radius: 6px;
-  font-size: 12px;
-  cursor: pointer;
-  background: var(--ep-bg-color);
-  color: var(--ep-text-color-regular);
+/* ── el-table 单元格紧凑内边距 ── */
+.param-table :deep(.el-table__cell) {
+  padding: 8px 0;
 }
-.perm-pill.active {
-  background: var(--ep-color-primary-light-9);
-  border-color: var(--ep-color-primary);
-  color: var(--ep-color-primary);
-  font-weight: 600;
-}
-.empty-params {
-  text-align: center;
-  padding: 20px;
-  color: var(--ep-text-color-secondary);
-  font-size: 13px;
-  border: 1px dashed var(--ep-border-color);
-  border-radius: 6px;
-}
-.param-row {
-  display: grid;
-  grid-template-columns: 1fr 100px 100px auto 32px;
-  gap: 6px;
-  align-items: start;
-  padding: 10px;
-  border: 1px solid var(--ep-border-color-lighter);
-  border-radius: 6px;
-  background: var(--ep-fill-color-lighter);
-}
-.param-desc { grid-column: 1 / -2; }
-.param-required { padding-top: 4px; }
-.mono-input :deep(textarea) { font-family: "Consolas", "Monaco", monospace; }
 </style>
