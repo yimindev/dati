@@ -11,6 +11,8 @@ import com.dati.common.template.TemplateParser;
 import com.dati.common.template.TemplateRenderException;
 import com.dati.common.template.TextRenderer;
 import com.dati.mcp.domain.model.TemplateRenderMode;
+import com.dati.mcp.server.pojo.TemplateExtractRequest;
+import com.dati.mcp.server.pojo.TemplateExtractResponse;
 import com.dati.mcp.server.pojo.TemplatePreviewRequest;
 import com.dati.mcp.server.pojo.TemplatePreviewResponse;
 import jakarta.validation.Valid;
@@ -21,6 +23,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Map;
+import java.util.Set;
 
 @RestController
 @RequestMapping("/v1/template")
@@ -64,6 +67,18 @@ public class TemplatePreviewController {
         }
 
         return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/extract")
+    public ResponseEntity<TemplateExtractResponse> extract(@Valid @RequestBody TemplateExtractRequest request) {
+        try {
+            CompiledTemplate compiled = parser.parse(request.getTemplate());
+            Set<String> variables = compiled.getVariables();
+            // Filter out system variables if any (currently none documented, but good to keep in mind)
+            return ResponseEntity.ok(new TemplateExtractResponse(variables));
+        } catch (TemplateParseException e) {
+            throw new DatiException(ErrorCode.INVALID_PARAMETER, e.getMessage());
+        }
     }
 
     /**

@@ -307,4 +307,94 @@ class TemplatePreviewControllerTest {
                         .content(objectMapper.writeValueAsString(body)))
                 .andExpect(status().isBadRequest());
     }
+
+    // ===== 参数提取 =====
+
+    @Test
+    @DisplayName("提取参数 — 包含普通、默认及 Raw 变量")
+    void testExtractVariables() throws Exception {
+        Map<String, Object> body = Map.of(
+                "template", "SELECT * FROM {{{table}}} WHERE id = {{id}} AND name = {{name:default}}"
+        );
+
+        mockMvc.perform(post("/v1/template/extract")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(body)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.variables").isArray())
+                .andExpect(jsonPath("$.variables.length()").value(3))
+                .andExpect(jsonPath("$.variables[?(@ == 'table')]").exists())
+                .andExpect(jsonPath("$.variables[?(@ == 'id')]").exists())
+                .andExpect(jsonPath("$.variables[?(@ == 'name')]").exists());
+    }
+
+    @Test
+    @DisplayName("提取参数 — 处理 if/where 块中的变量")
+    void testExtractVariablesInBlocks() throws Exception {
+        Map<String, Object> body = Map.of(
+                "template", "SELECT * FROM tasks {{#where}}{{#if status}}AND status = {{status}}{{/if}}{{/where}}"
+        );
+
+        mockMvc.perform(post("/v1/template/extract")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(body)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.variables").isArray())
+                .andExpect(jsonPath("$.variables.length()").value(1))
+                .andExpect(jsonPath("$.variables[0]").value("status"));
+    }
+
+    @Test
+    @DisplayName("提取参数 — 语法错误 → 400")
+    void testExtractVariablesSyntaxError() throws Exception {
+        Map<String, Object> body = Map.of(
+                "template", "{{unclosed"
+        );
+
+        mockMvc.perform(post("/v1/template/extract")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(body)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("提取参数 — 空模板 → 400")
+    void testExtractVariablesEmptyTemplate() throws Exception {
+        Map<String, Object> body = Map.of(
+                "template", ""
+        );
+
+        mockMvc.perform(post("/v1/template/extract")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(body)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("提取参数 — 纯静态模板（无变量） → 空集合")
+    void testExtractVariablesStaticTemplate() throws Exception {
+        Map<String, Object> body = Map.of(
+                "template", "SELECT 1"
+        );
+
+        mockMvc.perform(post("/v1/template/extract")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(body)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.variables").isArray())
+                .andExpect(jsonPath("$.variables.length()").value(0));
+    }
+
+    @Test
+    @DisplayName("提取参数 — 空白模板（仅空格） → 400")
+    void testExtractVariablesBlankTemplate() throws Exception {
+        Map<String, Object> body = Map.of(
+                "template", "   "
+        );
+
+        mockMvc.perform(post("/v1/template/extract")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(body)))
+                .andExpect(status().isBadRequest());
+    }
 }
