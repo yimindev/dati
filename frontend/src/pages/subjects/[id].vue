@@ -18,16 +18,34 @@ const route = useRoute("/subjects/[id]");
 const subjectId = computed(() => route.params.id as string);
 
 const loading = ref(false);
+const saving = ref(false);
 const subject = ref<SubjectVO | null>(null);
 
-const isEditing = ref(false);
-const editForm = ref<UpdateSubjectRequest>({});
-const saveLoading = ref(false);
+const formData = ref<UpdateSubjectRequest>({});
+const newAlias = ref('')
+const newAliasInputVisible = ref(false)
+const newAliasInputRef = ref()
+
+const isDirty = computed(() => {
+  if (!subject.value) return false
+  const s = subject.value
+  return (
+    formData.value.name !== s.name ||
+    (formData.value.description ?? '') !== (s.description ?? '') ||
+    JSON.stringify(formData.value.aliases ?? []) !== JSON.stringify(s.aliases ?? [])
+  )
+})
 
 const loadSubject = async () => {
   try {
     loading.value = true;
-    subject.value = await getSubject(subjectId.value);
+    const s = await getSubject(subjectId.value);
+    subject.value = s;
+    formData.value = {
+      name: s.name,
+      description: s.description || undefined,
+      aliases: s.aliases ? [...s.aliases] : [],
+    };
   } catch (error) {
     console.error("Failed to load subject:", error);
     ElMessage.error(t("common.loadFailed"));
@@ -35,10 +53,6 @@ const loadSubject = async () => {
     loading.value = false;
   }
 };
-
-const newAlias = ref('')
-const newAliasInputVisible = ref(false)
-const newAliasInputRef = ref()
 
 const showNewAliasInput = () => {
   newAliasInputVisible.value = true
@@ -49,47 +63,31 @@ const showNewAliasInput = () => {
 
 const handleNewAliasConfirm = () => {
   const value = newAlias.value.trim()
-  if (value && !editForm.value.aliases?.includes(value)) {
-    if (!editForm.value.aliases) {
-      editForm.value.aliases = []
+  if (value && !formData.value.aliases?.includes(value)) {
+    if (!formData.value.aliases) {
+      formData.value.aliases = []
     }
-    editForm.value.aliases.push(value)
+    formData.value.aliases.push(value)
   }
   newAlias.value = ''
   newAliasInputVisible.value = false
 }
 
 const removeAlias = (alias: string) => {
-  editForm.value.aliases = editForm.value.aliases?.filter(a => a !== alias) || []
+  formData.value.aliases = formData.value.aliases?.filter(a => a !== alias) || []
 }
-
-const handleEdit = () => {
-  if (!subject.value) return;
-  editForm.value = {
-    name: subject.value.name,
-    description: subject.value.description || undefined,
-    aliases: subject.value.aliases ? [...subject.value.aliases] : [],
-  };
-  isEditing.value = true;
-};
-
-const handleCancel = () => {
-  isEditing.value = false;
-  editForm.value = {};
-};
 
 const handleSave = async () => {
   try {
-    saveLoading.value = true;
-    await updateSubject(subjectId.value, editForm.value);
+    saving.value = true;
+    await updateSubject(subjectId.value, formData.value);
     ElMessage.success(t("subject.updateSuccess"));
-    isEditing.value = false;
     await loadSubject();
   } catch (error) {
     console.error("Failed to update subject:", error);
     ElMessage.error(t("common.operationFailed"));
   } finally {
-    saveLoading.value = false;
+    saving.value = false;
   }
 };
 
@@ -113,19 +111,19 @@ onMounted(() => {
         <div class="max-w-3xl">
           <el-skeleton v-if="loading" :rows="5" animated />
           <template v-else-if="subject">
-            <el-form v-if="isEditing" label-width="120px">
+            <el-form label-position="top">
               <el-form-item :label="'ID'">
                 <span class="font-mono text-sm text-[var(--ep-text-color-secondary)]">{{ subject.id }}</span>
               </el-form-item>
 
               <el-form-item :label="t('common.name')">
-                <el-input v-model="editForm.name" />
+                <el-input v-model="formData.name" />
               </el-form-item>
 
               <el-form-item :label="t('common.aliases')">
                 <div class="flex gap-2 flex-wrap">
                   <el-tag
-                    v-for="alias in editForm.aliases"
+                    v-for="alias in formData.aliases"
                     :key="alias"
                     closable
                     :disable-transitions="false"
@@ -150,7 +148,7 @@ onMounted(() => {
 
               <el-form-item :label="t('common.description')">
                 <el-input
-                  v-model="editForm.description"
+                  v-model="formData.description"
                   type="textarea"
                   :rows="3"
                   :placeholder="t('common.placeholder.description')"
@@ -162,38 +160,8 @@ onMounted(() => {
               </el-form-item>
             </el-form>
 
-            <el-descriptions v-else :column="1" border size="default">
-              <el-descriptions-item label="ID">
-                <span class="font-mono">{{ subject.id }}</span>
-              </el-descriptions-item>
-              <el-descriptions-item :label="t('common.name')">
-                {{ subject.name }}
-              </el-descriptions-item>
-              <el-descriptions-item :label="t('common.aliases')">
-                <template v-if="subject.aliases && subject.aliases.length > 0">
-                  <el-tag v-for="alias in subject.aliases" :key="alias" size="small" class="mr-1">
-                    {{ alias }}
-                  </el-tag>
-                </template>
-                <span v-else>-</span>
-              </el-descriptions-item>
-              <el-descriptions-item :label="t('common.description')">
-                {{ subject.description || "-" }}
-              </el-descriptions-item>
-              <el-descriptions-item :label="t('subject.datasource')">
-                {{ subject.datasource_name || subject.datasource_id }}
-              </el-descriptions-item>
-            </el-descriptions>
-
-            <div class="mt-4" v-if="!isEditing">
-              <el-button type="primary" @click="handleEdit">
-                {{ t("common.edit") }}
-              </el-button>
-            </div>
-
-            <div class="mt-4" v-else>
-              <el-button @click="handleCancel">{{ t("common.cancel") }}</el-button>
-              <el-button type="primary" :loading="saveLoading" @click="handleSave">
+            <div class="mt-4">
+              <el-button type="primary" :loading="saving" :disabled="!isDirty" @click="handleSave">
                 {{ t("common.save") }}
               </el-button>
             </div>

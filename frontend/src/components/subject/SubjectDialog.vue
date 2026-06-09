@@ -231,7 +231,7 @@ const handleCancel = () => {
     </el-form>
 
     <template #footer>
-      <div class="dialog-footer">
+      <div class="flex items-center justify-end gap-2">
         <el-button @click="handleCancel">{{ t('common.cancel') }}</el-button>
         <el-button
           type="primary"
@@ -244,11 +244,3 @@ const handleCancel = () => {
     </template>
   </el-dialog>
 </template>
-
-<style scoped>
-.dialog-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-}
-</style>

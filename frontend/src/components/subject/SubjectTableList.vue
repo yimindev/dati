@@ -143,7 +143,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="subject-table-list">
+  <div class="py-4">
     <div class="flex items-center justify-end mb-4">
       <el-button type="primary" :icon="Plus" @click="handleOpenAddTableDialog">
         {{ t("subject.addTable") }}
@@ -184,7 +184,7 @@ onMounted(() => {
     <el-dialog
       v-model="addTableDialogVisible"
       :title="t('subject.addTable')"
-      width="600px"
+      width="700px"
       destroy-on-close
     >
       <el-form label-width="100px">
@@ -233,8 +233,4 @@ onMounted(() => {
   </div>
 </template>
 
-<style scoped>
-.subject-table-list {
-  padding: 16px 0;
-}
-</style>
+

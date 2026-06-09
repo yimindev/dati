@@ -38,7 +38,7 @@ const handleCardClick = (event: MouseEvent) => {
 
 <template>
   <el-card
-    class="w-full cursor-pointer transition-all duration-200 hover:-translate-y-0.5 [&_.el-card__header]:!px-3 [&_.el-card__header]:!py-1.5 [&_.el-card__body]:!px-3 [&_.el-card__body]:!pt-2 [&_.el-card__body]:!pb-3"
+    class="w-full cursor-pointer transition-all duration-200 hover:shadow-lg [&_.el-card__header]:!px-3 [&_.el-card__header]:!py-1.5 [&_.el-card__body]:!px-3 [&_.el-card__body]:!pt-2 [&_.el-card__body]:!pb-3"
     shadow="hover"
     @click="handleCardClick"
   >
@@ -53,26 +53,28 @@ const handleCardClick = (event: MouseEvent) => {
             <span
               v-for="alias in visibleAliases"
               :key="alias"
-              class="min-w-0 max-w-full truncate rounded-full bg-[var(--ep-fill-color-light)] px-1.5 py-0 text-[11px] text-[var(--ep-text-color-regular)]"
+              class="min-w-0 max-w-full truncate rounded-full bg-[var(--ep-fill-color-light)] px-1.5 py-0 text-xs text-[var(--ep-text-color-regular)]"
             >
               {{ alias }}
             </span>
             <span
               v-if="hiddenAliasCount > 0"
-              class="shrink-0 rounded-full bg-[var(--ep-fill-color-light)] px-1.5 py-0 text-[11px] text-[var(--ep-text-color-secondary)]"
+              class="shrink-0 rounded-full bg-[var(--ep-fill-color-light)] px-1.5 py-0 text-xs text-[var(--ep-text-color-secondary)]"
             >
               +{{ hiddenAliasCount }}
             </span>
           </div>
         </div>
         <el-dropdown trigger="click" data-stop-card-click="true">
-          <el-button
-            text
-            size="small"
-            :icon="MoreFilled"
-            class="!m-0 !px-1 !py-0.5"
-            data-stop-card-click="true"
-          />
+          <el-tooltip :content="t('common.actions')" placement="top">
+            <el-button
+              text
+              size="small"
+              :icon="MoreFilled"
+              class="!m-0 !px-1 !py-0.5"
+              data-stop-card-click="true"
+            />
+          </el-tooltip>
           <template #dropdown>
             <el-dropdown-menu data-stop-card-click="true">
               <el-dropdown-item data-stop-card-click="true" @click="$emit('edit', subject)">{{ t('common.edit') }}</el-dropdown-item>

@@ -539,7 +539,7 @@ onMounted(() => {
       :close-on-click-modal="false"
       destroy-on-close
     >
-      <el-form ref="termFormRef" :model="termFormData" :rules="rules" label-width="100px" @submit.prevent>
+      <el-form ref="termFormRef" :model="termFormData" :rules="rules" label-width="120px" @submit.prevent>
         <el-form-item :label="t('common.name')" prop="name">
           <el-input v-model="termFormData.name" :placeholder="t('common.placeholder.name')" maxlength="100" show-word-limit />
         </el-form-item>
