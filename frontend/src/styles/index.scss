@@ -5,6 +5,34 @@
 //   --ep-color-primary: red;
 // }
 
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+.skip-link {
+  position: absolute;
+  top: -100%;
+  left: 0;
+  z-index: 9999;
+  padding: 8px 16px;
+  background: var(--ep-color-primary);
+  color: #fff;
+  text-decoration: none;
+  font-size: 14px;
+  outline: none;
+
+  &:focus {
+    top: 0;
+  }
+}
+
 body {
   font-family:
     Inter, system-ui, Avenir, 'Helvetica Neue', Helvetica, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei',
@@ -41,17 +69,78 @@ code {
   }
 }
 
-#nprogress {
-  pointer-events: none;
+/* ============ Page Layout ============ */
+.list-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 24px;
 }
 
-#nprogress .bar {
-  background: rgb(13, 148, 136);
-  opacity: 0.75;
-  position: fixed;
-  z-index: 1031;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 2px;
+/* ============ Page Heading ============ */
+.page-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.page-heading h1 {
+  margin: 0;
+  color: var(--ep-text-color-primary);
+  font-size: 20px;
+  font-weight: 650;
+  letter-spacing: 0;
+  line-height: 28px;
+}
+
+.page-heading p {
+  margin: 4px 0 0;
+  color: var(--ep-text-color-secondary);
+  font-size: 13px;
+}
+
+.heading-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* ============ Toolbar ============ */
+.toolbar {
+  border: 1px solid var(--ep-border-color-lighter);
+  border-radius: 8px;
+  background: var(--ep-bg-color);
+  padding: 14px;
+}
+
+.toolbar-fields {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.toolbar-search {
+  width: min(420px, 100%) !important;
+}
+
+/* ============ Responsive ============ */
+@media (max-width: 768px) {
+  .list-page {
+    padding: 16px;
+  }
+
+  .page-heading,
+  .heading-actions,
+  .detail-header,
+  .detail-actions,
+  .toolbar-fields {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .toolbar-search,
+  .toolbar-status {
+    width: 100%;
+  }
 }

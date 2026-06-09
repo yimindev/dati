@@ -52,6 +52,7 @@ const activeMenu = computed(() => {
     >
       <button
         @click="collapsed = !collapsed"
+        :aria-label="collapsed ? t('layout.side.expand') : t('layout.side.collapse')"
         class="absolute top-1/2 left-full -translate-y-full w-3.5 h-12 rounded-r-xl bg-[var(--ep-bg-color)] cursor-pointer hover:bg-[var(--ep-menu-hover-bg-color)] transition-colors duration-300 ease-in-out"
       >
         <el-icon class="w-2 h-3">

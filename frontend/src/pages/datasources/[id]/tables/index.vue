@@ -8,7 +8,7 @@ import { nextTick, onMounted, ref, computed } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { ElMessage, ElMessageBox } from "element-plus";
 import type { InputInstance } from "element-plus";
-import { Plus, Search } from "@element-plus/icons-vue";
+import { Plus, Search, Refresh } from "@element-plus/icons-vue";
 import { useI18n } from "vue-i18n";
 import { listTableInfos, getAddedTableNames, batchAddTables, syncColumns, deleteTable, updateTable, type TableInfoVO } from "~/api/tableinfo.ts";
 import { getSchemas, getTables, getDataSource, type TableVO } from "~/api/datasource.ts";
@@ -84,6 +84,12 @@ const handleSearch = () => {
 };
 
 const handleClearSearch = () => {
+  searchKeyword.value = "";
+  page.value = 1;
+  loadTables();
+};
+
+const handleRefresh = () => {
   searchKeyword.value = "";
   page.value = 1;
   loadTables();
@@ -273,36 +279,45 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="p-5 md:p-6">
-    <el-breadcrumb separator="/" class="mb-6">
-      <el-breadcrumb-item :to="{ path: '/datasources' }">
-        {{ t("layout.side.dataSources") }}
-      </el-breadcrumb-item>
-      <el-breadcrumb-item>{{
-        t("tableInfo.title")
-      }}</el-breadcrumb-item>
-    </el-breadcrumb>
+  <div class="list-page">
+    <div class="detail-header flex items-start justify-between gap-4">
+      <el-breadcrumb separator="/">
+        <el-breadcrumb-item :to="{ path: '/datasources' }">
+          {{ t("layout.side.dataSources") }}
+        </el-breadcrumb-item>
+        <el-breadcrumb-item>{{
+          t("tableInfo.title")
+        }}</el-breadcrumb-item>
+      </el-breadcrumb>
 
-    <!-- 页面头部 -->
-    <div class="flex items-center justify-between gap-4 mb-6">
-      <!-- 搜索框 -->
-      <el-input
-        v-model="searchKeyword"
-        :placeholder="t('datasource.searchPlaceholder')"
-        clearable
-        class="max-w-sm"
-        @keyup.enter="handleSearch"
-        @clear="handleClearSearch"
-      >
-        <template #append>
-          <el-button :icon="Search" @click="handleSearch" />
-        </template>
-      </el-input>
+      <div class="detail-actions flex items-center gap-2">
+        <el-button :icon="Refresh" :loading="loading" @click="handleRefresh">
+          {{ t("common.refresh") }}
+        </el-button>
+        <el-button type="primary" :icon="Plus" @click="handleOpenAddTableDialog">
+          {{ t("tableInfo.addTable") }}
+        </el-button>
+      </div>
+    </div>
 
-      <!-- 创建按钮 -->
-      <el-button type="primary" :icon="Plus" @click="handleOpenAddTableDialog">
-        {{ t("tableInfo.addTable") }}
-      </el-button>
+    <div class="toolbar">
+      <div class="toolbar-fields">
+        <el-input
+          v-model="searchKeyword"
+          :placeholder="t('datasource.searchPlaceholder')"
+          clearable
+          class="toolbar-search"
+          @keyup.enter="handleSearch"
+          @clear="handleClearSearch"
+        >
+          <template #prefix>
+            <el-icon><Search /></el-icon>
+          </template>
+        </el-input>
+        <el-button type="primary" plain :icon="Search" @click="handleSearch">
+          {{ t("common.search") }}
+        </el-button>
+      </div>
     </div>
 
     <DataTableShell
@@ -332,7 +347,7 @@ onMounted(async () => {
             >
               {{ alias }}
             </el-tag>
-            <span v-if="!row.aliases?.length" class="text-gray-400">-</span>
+            <span v-if="!row.aliases?.length" class="text-[var(--ep-text-color-placeholder)]">-</span>
           </template>
         </el-table-column>
         <el-table-column
@@ -436,7 +451,7 @@ onMounted(async () => {
     <el-dialog
       v-model="addTableDialogVisible"
       :title="t('tableInfo.addTable')"
-      width="700px"
+      width="600px"
       destroy-on-close
     >
       <el-form label-width="100px">
@@ -487,7 +502,7 @@ onMounted(async () => {
     <el-dialog
       v-model="syncDialogVisible"
       :title="t('tableInfo.syncColumns')"
-      width="400px"
+      width="35%"
     >
       <p class="mb-4">{{ t("tableInfo.syncColumnsConfirm") }}</p>
       <el-checkbox v-model="syncDialogOverwrite">

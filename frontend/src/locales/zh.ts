@@ -92,6 +92,9 @@ export default {
     required: "请输入{name}",
     selectRequired: "请选择{name}",
     nameLengthError: "长度在 1 到 100 个字符",
+
+    // 无障碍
+    skipToContent: "跳到主内容",
   },
 
   layout: {
@@ -116,6 +119,7 @@ export default {
   datasource: {
     // 页面标题
     title: "数据源管理",
+    subtitle: "管理和配置数据源连接",
     createTitle: "创建数据源",
     editTitle: "编辑数据源",
 
@@ -143,6 +147,7 @@ export default {
   subject: {
     // 页面标题
     title: "主题管理",
+    subtitle: "管理数据主题与术语",
     createTitle: "创建主题",
     editTitle: "编辑主题",
 

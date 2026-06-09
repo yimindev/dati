@@ -28,7 +28,7 @@ const emit = defineEmits<{
       <slot />
     </div>
 
-    <div v-if="total > 0" class="data-table-footer">
+    <div v-if="total > 0" class="data-table-footer py-3.5 px-4">
       <span class="total-text">
         {{ t("common.total", { total }) }}
       </span>
@@ -62,7 +62,7 @@ const emit = defineEmits<{
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 14px 16px;
+  /* padding via Tailwind py-3.5 px-4 on template */
   border-top: 1px solid var(--ep-border-color-lighter);
 }
 

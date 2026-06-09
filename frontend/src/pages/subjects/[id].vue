@@ -107,7 +107,7 @@ onMounted(() => {
       <el-breadcrumb-item>{{ subject?.name || "" }}</el-breadcrumb-item>
     </el-breadcrumb>
 
-    <el-card shadow="never" class="border border-slate-200">
+    <el-card shadow="never" class="border border-[var(--ep-border-color-lighter)]">
       <el-tabs>
       <el-tab-pane :label="t('subject.basicInfo')">
         <div class="max-w-3xl">
@@ -115,7 +115,7 @@ onMounted(() => {
           <template v-else-if="subject">
             <el-form v-if="isEditing" label-width="120px">
               <el-form-item :label="'ID'">
-                <span class="font-mono text-sm text-slate-500">{{ subject.id }}</span>
+                <span class="font-mono text-sm text-[var(--ep-text-color-secondary)]">{{ subject.id }}</span>
               </el-form-item>
 
               <el-form-item :label="t('common.name')">

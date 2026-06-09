@@ -141,6 +141,7 @@ const handleCopy = async (endpointPath: string) => {
             <el-button
               link
               :icon="DocumentCopy"
+              :aria-label="t('common.copy')"
               @click="handleCopy(row.endpoint_path)"
             />
           </el-tooltip>
@@ -172,7 +173,7 @@ const handleCopy = async (endpointPath: string) => {
             {{ t("common.edit") }}
           </el-button>
           <el-dropdown trigger="click">
-            <el-button link :icon="MoreFilled" />
+            <el-button link :icon="MoreFilled" :aria-label="t('common.actions')" />
             <template #dropdown>
               <el-dropdown-menu>
                 <el-dropdown-item @click="$emit('delete', row)">

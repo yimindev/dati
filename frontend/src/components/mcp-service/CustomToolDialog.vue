@@ -225,7 +225,7 @@ const handleSave = async () => {
     @close="loadForm"
     append-to-body
   >
-    <div class="flex flex-col gap-8 overflow-y-auto px-3 py-1" style="max-height: calc(85vh - 180px)">
+    <div class="dialog-body-scroll flex flex-col gap-8 overflow-y-auto px-3 py-1">
     <el-form ref="formRef" :model="form" :rules="rules" label-position="top">
       <!-- Basic Info -->
       <section class="flex flex-col gap-4">
@@ -375,6 +375,9 @@ const handleSave = async () => {
 </template>
 
 <style scoped>
+.dialog-body-scroll {
+  max-height: calc(85vh - 180px);
+}
 /* ── h4 左侧蓝色装饰条（保留伪元素） ── */
 h4::before {
   content: "";

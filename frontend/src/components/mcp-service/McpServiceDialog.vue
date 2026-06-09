@@ -91,7 +91,7 @@ const handleCancel = () => {
   <el-dialog
     v-model="visible"
     :title="isEdit ? t('mcpService.editTitle') : t('mcpService.createTitle')"
-    width="560px"
+    width="600px"
     :close-on-click-modal="false"
     destroy-on-close
   >

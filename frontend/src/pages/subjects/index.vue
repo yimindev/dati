@@ -10,7 +10,7 @@ import { useI18n } from "vue-i18n";
 import { useRouter } from "vue-router";
 import type { SubjectVO } from "~/api/subject";
 import { deleteSubject, listSubjects } from "~/api/subject";
-import { Plus, Search } from "@element-plus/icons-vue";
+import { Plus, Search, Refresh } from "@element-plus/icons-vue";
 
 const { t } = useI18n();
 const router = useRouter();
@@ -66,6 +66,12 @@ const handlePageSizeChange = (ps: number) => {
   loadSubjects();
 };
 
+const handleRefresh = () => {
+  searchKeyword.value = "";
+  page.value = 1;
+  loadSubjects();
+};
+
 const handleCreate = () => {
   currentSubject.value = null;
   dialogVisible.value = true;
@@ -116,23 +122,40 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="space-y-4 p-5 md:p-6">
-    <div class="flex flex-wrap items-center justify-between gap-3">
-      <el-input
-        v-model="searchKeyword"
-        :placeholder="t('subject.searchPlaceholder')"
-        clearable
-        class="w-full md:max-w-sm"
-        @keyup.enter="handleSearch"
-        @clear="handleClearSearch"
-      >
-        <template #append>
-          <el-button :icon="Search" @click="handleSearch" />
-        </template>
-      </el-input>
-      <el-button type="primary" :icon="Plus" @click="handleCreate">
-        {{ t("subject.createButton") }}
-      </el-button>
+  <div class="list-page">
+    <div class="page-heading">
+      <div>
+        <h1>{{ t('subject.title') }}</h1>
+        <p>{{ t('subject.subtitle') }}</p>
+      </div>
+      <div class="heading-actions">
+        <el-button :icon="Refresh" :loading="loading" @click="handleRefresh">
+          {{ t("common.refresh") }}
+        </el-button>
+        <el-button type="primary" :icon="Plus" @click="handleCreate">
+          {{ t("subject.createButton") }}
+        </el-button>
+      </div>
+    </div>
+
+    <div class="toolbar">
+      <div class="toolbar-fields">
+        <el-input
+          v-model="searchKeyword"
+          :placeholder="t('subject.searchPlaceholder')"
+          clearable
+          class="toolbar-search"
+          @keyup.enter="handleSearch"
+          @clear="handleClearSearch"
+        >
+          <template #prefix>
+            <el-icon><Search /></el-icon>
+          </template>
+        </el-input>
+        <el-button type="primary" plain :icon="Search" @click="handleSearch">
+          {{ t("common.search") }}
+        </el-button>
+      </div>
     </div>
 
     <el-skeleton v-if="loading" :rows="6" animated />
@@ -150,8 +173,8 @@ onMounted(() => {
 
     <el-empty v-else :description="t('subject.noSubject')" />
 
-    <div v-if="!loading && total > 0" class="mt-2 flex items-center justify-between">
-      <span class="text-gray-500 text-sm">{{ t("common.total", { total }) }}</span>
+    <div v-if="!loading && total > 0" class="flex items-center justify-between">
+      <span class="text-[var(--ep-text-color-secondary)] text-sm">{{ t("common.total", { total }) }}</span>
       <el-pagination
         layout="sizes, prev, pager, next"
         :current-page="page"

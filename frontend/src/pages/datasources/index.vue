@@ -9,7 +9,7 @@ import {
   listDataSources,
   testConnection,
 } from "~/api/datasource";
-import { Plus, Search } from "@element-plus/icons-vue";
+import { Plus, Search, Refresh } from "@element-plus/icons-vue";
 
 const { t } = useI18n();
 const router = useRouter();
@@ -68,6 +68,13 @@ const handlePageChange = (p: number) => {
 const handlePageSizeChange = (ps: number) => {
   pageSize.value = ps;
   page.value = 1; // 切换每页数量时通常回到第1页
+  loadDatasources();
+};
+
+// 刷新
+const handleRefresh = () => {
+  searchKeyword.value = "";
+  page.value = 1;
   loadDatasources();
 };
 
@@ -152,27 +159,40 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="p-5 md:p-6">
-    <!-- 头部操作区 -->
-    <div class="flex items-center justify-between gap-4 mb-6">
-      <!-- 搜索框 -->
-      <el-input
-        v-model="searchKeyword"
-        :placeholder="t('datasource.searchPlaceholder')"
-        clearable
-        class="max-w-sm"
-        @keyup.enter="handleSearch"
-        @clear="handleClearSearch"
-      >
-        <template #append>
-          <el-button :icon="Search" @click="handleSearch" />
-        </template>
-      </el-input>
+  <div class="list-page">
+    <div class="page-heading">
+      <div>
+        <h1>{{ t('datasource.title') }}</h1>
+        <p>{{ t('datasource.subtitle') }}</p>
+      </div>
+      <div class="heading-actions">
+        <el-button :icon="Refresh" :loading="loading" @click="handleRefresh">
+          {{ t("common.refresh") }}
+        </el-button>
+        <el-button type="primary" :icon="Plus" @click="handleCreate">
+          {{ t("datasource.createButton") }}
+        </el-button>
+      </div>
+    </div>
 
-      <!-- 创建按钮 -->
-      <el-button type="primary" :icon="Plus" @click="handleCreate">
-        {{ t("datasource.createButton") }}
-      </el-button>
+    <div class="toolbar">
+      <div class="toolbar-fields">
+        <el-input
+          v-model="searchKeyword"
+          :placeholder="t('datasource.searchPlaceholder')"
+          clearable
+          class="toolbar-search"
+          @keyup.enter="handleSearch"
+          @clear="handleClearSearch"
+        >
+          <template #prefix>
+            <el-icon><Search /></el-icon>
+          </template>
+        </el-input>
+        <el-button type="primary" plain :icon="Search" @click="handleSearch">
+          {{ t("common.search") }}
+        </el-button>
+      </div>
     </div>
 
     <DataTableShell
@@ -193,7 +213,6 @@ onMounted(() => {
       />
     </DataTableShell>
 
-    <!-- 创建/编辑弹窗（父级集中管理） -->
     <DatasourceDialog
       v-model="dialogVisible"
       :datasource="currentDatasource"

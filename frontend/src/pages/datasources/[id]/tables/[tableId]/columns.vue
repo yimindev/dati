@@ -604,137 +604,136 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="p-5 md:p-6">
-    <el-breadcrumb separator="/" class="mb-6">
-      <el-breadcrumb-item :to="{ path: '/datasources' }">
-        {{ t("layout.side.dataSources") }}
-      </el-breadcrumb-item>
-      <el-breadcrumb-item
-        :to="{ path: `/datasources/${datasourceId}/tables` }"
-      >
-        {{ t("tableInfo.title") }}
-      </el-breadcrumb-item>
-      <el-breadcrumb-item>
-        {{ t("tableInfo.columnSettings") }}
-      </el-breadcrumb-item>
-    </el-breadcrumb>
+  <div class="list-page">
+    <div class="detail-header flex items-start justify-between gap-4">
+      <el-breadcrumb separator="/">
+        <el-breadcrumb-item :to="{ path: '/datasources' }">
+          {{ t("layout.side.dataSources") }}
+        </el-breadcrumb-item>
+        <el-breadcrumb-item
+          :to="{ path: `/datasources/${datasourceId}/tables` }"
+        >
+          {{ t("tableInfo.title") }}
+        </el-breadcrumb-item>
+        <el-breadcrumb-item>
+          {{ t("tableInfo.columnSettings") }}
+        </el-breadcrumb-item>
+      </el-breadcrumb>
+    </div>
 
-    <!-- 页面头部 -->
-    <div class="flex items-center justify-between gap-4 mb-6">
-      <el-input
-        v-model="searchKeyword"
-        :placeholder="t('column.searchPlaceholder')"
-        clearable
-        class="max-w-sm"
-        @keyup.enter="handleSearch"
-        @clear="handleClearSearch"
-      >
-        <template #append>
-          <el-button :icon="Search" @click="handleSearch" />
-        </template>
-      </el-input>
+    <div class="toolbar">
+      <div class="toolbar-fields">
+        <el-input
+          v-model="searchKeyword"
+          :placeholder="t('column.searchPlaceholder')"
+          clearable
+          class="toolbar-search"
+          @keyup.enter="handleSearch"
+          @clear="handleClearSearch"
+        >
+          <template #prefix>
+            <el-icon><Search /></el-icon>
+          </template>
+        </el-input>
+        <el-button type="primary" plain :icon="Search" @click="handleSearch">
+          {{ t("common.search") }}
+        </el-button>
+      </div>
     </div>
 
     <!-- 列表 -->
-    <el-table :data="columnList" v-loading="loading" stripe>
-      <el-table-column
-        prop="name"
-        :label="t('column.columnName')"
-        min-width="180"
-      />
-      <el-table-column :label="t('common.aliases')" min-width="180">
-        <template #default="{ row }">
-          <el-tag
-            v-for="alias in row.aliases"
-            :key="alias"
-            size="small"
-            class="mr-1"
-          >
-            {{ alias }}
-          </el-tag>
-          <span v-if="!row.aliases?.length" class="text-gray-400">-</span>
-        </template>
-      </el-table-column>
-      <el-table-column
-        prop="description"
-        :label="t('column.description')"
-        min-width="160"
-      />
-      <el-table-column
-        prop="column_type"
-        :label="t('column.type')"
-        min-width="120"
-      />
+    <DataTableShell
+      :loading="loading"
+      :total="total"
+      :page="page"
+      :page-size="pageSize"
+      @page-change="handlePageChange"
+      @page-size-change="handlePageSizeChange"
+    >
+      <el-table :data="columnList">
+        <el-table-column
+          prop="name"
+          :label="t('column.columnName')"
+          min-width="180"
+        />
+        <el-table-column :label="t('common.aliases')" min-width="180">
+          <template #default="{ row }">
+            <el-tag
+              v-for="alias in row.aliases"
+              :key="alias"
+              size="small"
+              class="mr-1"
+            >
+              {{ alias }}
+            </el-tag>
+            <span v-if="!row.aliases?.length" class="text-[var(--ep-text-color-placeholder)]">-</span>
+          </template>
+        </el-table-column>
+        <el-table-column
+          prop="description"
+          :label="t('column.description')"
+          min-width="160"
+        />
+        <el-table-column
+          prop="column_type"
+          :label="t('column.type')"
+          min-width="120"
+        />
 
-      <!-- 值匹配开关 -->
-      <el-table-column
-        :label="t('column.valueMatching')"
-        width="100"
-        align="center"
-      >
-        <template #default="{ row }">
-          <el-switch
-            v-if="isValueMatchingSupported(row.column_type)"
-            v-model="row.extract_value_enabled"
-            :loading="!!(row.id && togglingColumnIds.has(row.id))"
-            :disabled="!!(row.id && togglingColumnIds.has(row.id))"
-            :before-change="() => handleBeforeToggle(row)"
-            @change="(val: string | number | boolean) => handleToggleValueMatching(row, val)"
-          />
-          <span v-else class="text-gray-300">-</span>
-        </template>
-      </el-table-column>
+        <!-- 值匹配开关 -->
+        <el-table-column
+          :label="t('column.valueMatching')"
+          width="100"
+          align="center"
+        >
+          <template #default="{ row }">
+            <el-switch
+              v-if="isValueMatchingSupported(row.column_type)"
+              v-model="row.extract_value_enabled"
+              :loading="!!(row.id && togglingColumnIds.has(row.id))"
+              :disabled="!!(row.id && togglingColumnIds.has(row.id))"
+              :before-change="() => handleBeforeToggle(row)"
+              @change="(val: string | number | boolean) => handleToggleValueMatching(row, val)"
+            />
+            <span v-else class="text-[var(--ep-text-color-placeholder)]">-</span>
+          </template>
+        </el-table-column>
 
-      <el-table-column
-        prop="updated_at"
-        :label="t('common.updatedAt')"
-        min-width="140"
-      >
-        <template #default="{ row }">
-          {{ row.updated_at ? formatDateTime(row.updated_at) : "-" }}
-        </template>
-      </el-table-column>
+        <el-table-column
+          prop="updated_at"
+          :label="t('common.updatedAt')"
+          min-width="140"
+        >
+          <template #default="{ row }">
+            {{ row.updated_at ? formatDateTime(row.updated_at) : "-" }}
+          </template>
+        </el-table-column>
 
-      <el-table-column
-        :label="t('common.actions')"
-        width="180"
-        fixed="right"
-      >
-        <template #default="{ row }">
-          <el-button
-            link
-            type="primary"
-            @click="handleConfigMetadata(row)"
-          >
-            {{ t("common.edit") }}
-          </el-button>
-          <el-button
-            v-if="row.extract_value_enabled && isValueMatchingSupported(row.column_type)"
-            link
-            type="primary"
-            @click="handleManageValues(row)"
-          >
-            {{ t("column.manageValues") }}
-          </el-button>
-        </template>
-      </el-table-column>
-    </el-table>
-
-    <!-- 分页 -->
-    <div class="flex items-center justify-between mt-4">
-      <span class="text-gray-500 text-sm">{{
-        t("common.total", { total })
-      }}</span>
-      <el-pagination
-        layout="sizes, prev, pager, next"
-        :current-page="page"
-        :page-size="pageSize"
-        :page-sizes="[10, 20, 50, 100]"
-        :total="total"
-        @current-change="handlePageChange"
-        @size-change="handlePageSizeChange"
-      />
-    </div>
+        <el-table-column
+          :label="t('common.actions')"
+          width="180"
+          fixed="right"
+        >
+          <template #default="{ row }">
+            <el-button
+              link
+              type="primary"
+              @click="handleConfigMetadata(row)"
+            >
+              {{ t("common.edit") }}
+            </el-button>
+            <el-button
+              v-if="row.extract_value_enabled && isValueMatchingSupported(row.column_type)"
+              link
+              type="primary"
+              @click="handleManageValues(row)"
+            >
+              {{ t("column.manageValues") }}
+            </el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+    </DataTableShell>
 
     <!-- 列元数据配置弹窗 -->
     <el-dialog
@@ -790,7 +789,7 @@ onMounted(() => {
             v-model="currentColumn.extract_value_enabled"
             :before-change="() => handleBeforeToggle(currentColumn)"
           />
-          <span v-else class="text-gray-400 text-sm">
+          <span v-else class="text-[var(--ep-text-color-placeholder)] text-sm">
             {{ t('column.valueMatchingUnsupported') }}
           </span>
         </el-form-item>
@@ -810,7 +809,7 @@ onMounted(() => {
     <el-dialog
       v-model="valuesDialogVisible"
       :title="currentColumn ? t('column.manageValuesTitle', { columnName: currentColumn.name }) : t('column.manageValues')"
-      width="800px"
+      width="780px"
       :close-on-click-modal="false"
       class="values-dialog"
     >
@@ -846,7 +845,7 @@ onMounted(() => {
           </div>
         </div>
 
-        <div class="mb-3 text-gray-500 text-sm">
+        <div class="mb-3 text-[var(--ep-text-color-secondary)] text-sm">
           {{ t('column.sampleLimitHint', { limit: systemStore.columnValueSampleLimit }) }}
         </div>
 
@@ -942,14 +941,14 @@ onMounted(() => {
             </template>
           </el-table-column>
           <template #empty>
-            <div class="text-center text-gray-400 py-8">
+            <div class="text-center text-[var(--ep-text-color-placeholder)] py-8">
               {{ valueSearchKeyword ? t("column.noValueSearchResult") : t("column.noValues") }}
             </div>
           </template>
         </el-table>
 
         <div v-if="valuesTotal > 0" class="flex items-center justify-between mt-4">
-          <span class="text-gray-500 text-sm">{{ t('common.total', { total: valuesTotal }) }}</span>
+          <span class="text-[var(--ep-text-color-secondary)] text-sm">{{ t('common.total', { total: valuesTotal }) }}</span>
           <el-pagination
             layout="sizes, prev, pager, next"
             :current-page="valuesPage"
@@ -976,10 +975,10 @@ onMounted(() => {
     <el-dialog
       v-model="extractDialogVisible"
       :title="t('column.extractConfirmTitle')"
-      width="400px"
+      width="35%"
       :close-on-click-modal="false"
     >
-      <p class="text-gray-600 mb-6">{{ t('column.extractConfirmMessage') }}</p>
+      <p class="text-[var(--ep-text-color-regular)] mb-6">{{ t('column.extractConfirmMessage') }}</p>
       <div class="flex gap-3">
         <el-button class="flex-1" @click="handleConfirmExtract(true)">
           {{ t('column.extractOverwrite') }}

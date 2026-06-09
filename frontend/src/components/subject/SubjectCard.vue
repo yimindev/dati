@@ -45,7 +45,7 @@ const handleCardClick = (event: MouseEvent) => {
     <template #header>
       <div class="flex items-center justify-between gap-1.5">
         <div class="min-w-0 flex flex-1 items-center gap-1.5 overflow-hidden">
-          <div class="shrink min-w-0 truncate text-sm font-medium text-slate-800">{{ subject.name }}</div>
+          <div class="shrink min-w-0 truncate text-sm font-medium text-[var(--ep-text-color-primary)]">{{ subject.name }}</div>
           <div
             v-if="subject.aliases?.length"
             class="min-w-0 flex shrink items-center gap-1 overflow-hidden"
@@ -53,13 +53,13 @@ const handleCardClick = (event: MouseEvent) => {
             <span
               v-for="alias in visibleAliases"
               :key="alias"
-              class="min-w-0 max-w-full truncate rounded-full bg-slate-100 px-1.5 py-0 text-[11px] text-slate-600"
+              class="min-w-0 max-w-full truncate rounded-full bg-[var(--ep-fill-color-light)] px-1.5 py-0 text-[11px] text-[var(--ep-text-color-regular)]"
             >
               {{ alias }}
             </span>
             <span
               v-if="hiddenAliasCount > 0"
-              class="shrink-0 rounded-full bg-slate-100 px-1.5 py-0 text-[11px] text-slate-500"
+              class="shrink-0 rounded-full bg-[var(--ep-fill-color-light)] px-1.5 py-0 text-[11px] text-[var(--ep-text-color-secondary)]"
             >
               +{{ hiddenAliasCount }}
             </span>
@@ -88,29 +88,29 @@ const handleCardClick = (event: MouseEvent) => {
     <template #default>
       <p
         v-if="subject.description"
-        class="mb-1 line-clamp-3 min-h-[3.75rem] text-sm text-slate-600"
+        class="mb-1 line-clamp-3 min-h-[3.75rem] text-sm text-[var(--ep-text-color-regular)]"
       >
         {{ subject.description }}
       </p>
-      <p v-else class="mb-1 min-h-[3.75rem] text-sm text-slate-400">
+      <p v-else class="mb-1 min-h-[3.75rem] text-sm text-[var(--ep-text-color-placeholder)]">
         -
       </p>
 
-      <div class="space-y-1 text-xs text-slate-500">
+      <div class="space-y-1 text-xs text-[var(--ep-text-color-secondary)]">
         <div v-if="subject.id" class="truncate" :title="subject.id">
-          <span class="text-slate-400">ID:</span>
+          <span class="text-[var(--ep-text-color-secondary)]">ID:</span>
           <span class="ml-1 font-mono">{{ subject.id }}</span>
         </div>
         <div v-if="subject.datasource_name" class="truncate">
-          <span class="text-slate-400">{{ t('datasource.connectionName') }}:</span>
+          <span class="text-[var(--ep-text-color-secondary)]">{{ t('datasource.connectionName') }}:</span>
           <span class="ml-1">{{ subject.datasource_name }}</span>
         </div>
         <div v-if="subject.table_count !== undefined">
-          <span class="text-slate-400">{{ t('tableInfo.title') }}:</span>
+          <span class="text-[var(--ep-text-color-secondary)]">{{ t('tableInfo.title') }}:</span>
           <span class="ml-1">{{ subject.table_count }}</span>
         </div>
         <div v-if="subject.updated_at">
-          <span class="text-slate-400">{{ t('common.updatedAt') }}:</span>
+          <span class="text-[var(--ep-text-color-secondary)]">{{ t('common.updatedAt') }}:</span>
           <span class="ml-1">{{ formatDateTime(subject.updated_at) }}</span>
         </div>
       </div>

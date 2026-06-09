@@ -92,6 +92,9 @@ export default {
     required: "Please enter {name}",
     selectRequired: "Please select {name}",
     nameLengthError: "Length must be between 1 and 100 characters",
+
+    // Accessibility
+    skipToContent: "Skip to main content",
   },
 
   layout: {
@@ -116,6 +119,7 @@ export default {
   datasource: {
     // Page Titles
     title: "Data Source Management",
+    subtitle: "Manage and configure data source connections",
     createTitle: "Create Data Source",
     editTitle: "Edit Data Source",
 
@@ -143,6 +147,7 @@ export default {
   subject: {
     // Page Titles
     title: "Subject Management",
+    subtitle: "Manage data subjects and terms",
     createTitle: "Create Subject",
     editTitle: "Edit Subject",
 

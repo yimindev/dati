@@ -23,6 +23,7 @@ const termDetails = ref<Map<string, TermVO & { relations: TermRelationVO[] }>>(n
 const termDialogVisible = ref(false)
 const termDialogLoading = ref(false)
 const editingTerm = ref<TermVO | null>(null)
+const termDialogTitle = computed(() => editingTerm.value ? t('subject.editTerm') : t('subject.addTerm'))
 const termFormRef = ref<FormInstance>()
 const termFormData = ref<CreateTermRequest>({ name: '', description: '', aliases: [] })
 
@@ -488,7 +489,7 @@ onMounted(() => {
               {{ alias }}
             </el-tag>
           </template>
-          <span v-else class="text-sm text-slate-400">-</span>
+          <span v-else class="text-sm text-[var(--ep-text-color-placeholder)]">-</span>
         </template>
       </el-table-column>
       <el-table-column prop="description" :label="t('common.description')" min-width="220" />
@@ -506,12 +507,12 @@ onMounted(() => {
                   {{ getRelationDisplayText(relation) }}
                 </el-tag>
               </el-tooltip>
-              <span v-if="getTermRelations(row.id).length > 2" class="text-xs text-slate-400">
+              <span v-if="getTermRelations(row.id).length > 2" class="text-xs text-[var(--ep-text-color-placeholder)]">
                 +{{ getTermRelations(row.id).length - 2 }}
               </span>
             </el-space>
           </template>
-          <span v-else class="text-sm text-slate-400">-</span>
+          <span v-else class="text-sm text-[var(--ep-text-color-placeholder)]">-</span>
         </template>
       </el-table-column>
       <el-table-column :label="t('common.actions')" width="210" fixed="right">
@@ -533,8 +534,8 @@ onMounted(() => {
 
     <el-dialog
       v-model="termDialogVisible"
-      :title="editingTerm ? t('subject.editTerm') : t('subject.addTerm')"
-      width="560px"
+      :title="termDialogTitle"
+      width="600px"
       :close-on-click-modal="false"
       destroy-on-close
     >
@@ -584,14 +585,14 @@ onMounted(() => {
     <el-dialog
       v-model="relationDialogVisible"
       :title="relationMode === 'list' ? t('subject.manageRelation') : t('subject.addRelation')"
-      width="840px"
+      width="780px"
       :close-on-click-modal="false"
       destroy-on-close
     >
       <div v-loading="relationDialogLoading" class="space-y-4">
         <div v-if="relationMode === 'list'" class="space-y-4">
           <div class="flex items-center justify-between">
-            <div class="text-sm font-medium text-slate-700">
+            <div class="text-sm font-medium text-[var(--ep-text-color-primary)]">
               {{ t('subject.existingRelations') }} ({{ getTermRelations(relationTermId).length }})
             </div>
             <el-button type="primary" size="small" @click="handleAddRelation">
@@ -624,10 +625,10 @@ onMounted(() => {
 
         <div v-else class="space-y-4">
           <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
-            <el-card shadow="never" class="border border-slate-200">
+            <el-card shadow="never" class="border border-[var(--ep-border-color-lighter)]">
               <template #header>
                 <div class="flex items-center gap-2">
-                  <span class="whitespace-nowrap text-sm font-semibold text-slate-800">{{ t('subject.selectTableStep') }}</span>
+                  <span class="whitespace-nowrap text-sm font-semibold text-[var(--ep-text-color-primary)]">{{ t('subject.selectTableStep') }}</span>
                   <div class="w-64">
                     <el-select
                       v-model="schemaFilter"
@@ -659,11 +660,11 @@ onMounted(() => {
                   v-for="table in filteredTables"
                   :key="table.id"
                   shadow="never"
-                  class="border border-slate-200"
+                  class="border border-[var(--ep-border-color-lighter)]"
                 >
                   <div class="flex items-center justify-between gap-3">
                     <el-checkbox :model-value="isTableSelected(table.id)" @change="(value: unknown) => handleTableToggle(table.id, !!value)">
-                      <span class="text-sm font-medium text-slate-700">{{ table.name }}</span>
+                      <span class="text-sm font-medium text-[var(--ep-text-color-primary)]">{{ table.name }}</span>
                     </el-checkbox>
                     <div class="flex items-center gap-2">
                       <el-tag v-if="table.schema" size="small" effect="plain">{{ table.schema }}</el-tag>
@@ -671,14 +672,14 @@ onMounted(() => {
                     </div>
                   </div>
                 </el-card>
-                <div v-if="tableEmptyText" class="py-8 text-center text-sm text-slate-400">{{ tableEmptyText }}</div>
+                <div v-if="tableEmptyText" class="py-8 text-center text-sm text-[var(--ep-text-color-placeholder)]">{{ tableEmptyText }}</div>
               </div>
             </el-card>
 
-            <el-card shadow="never" class="border border-slate-200">
+            <el-card shadow="never" class="border border-[var(--ep-border-color-lighter)]">
               <template #header>
                 <div class="flex items-center justify-between">
-                  <span class="text-sm font-semibold text-slate-800">{{ t('subject.fieldConfig') }}</span>
+                  <span class="text-sm font-semibold text-[var(--ep-text-color-primary)]">{{ t('subject.fieldConfig') }}</span>
                   <el-tag type="info" size="small">{{ selectedTables.length }} {{ t('common.selectedItems') }}</el-tag>
                 </div>
               </template>
@@ -705,7 +706,7 @@ onMounted(() => {
                     </template>
 
                     <div class="space-y-3 pb-1">
-                      <div class="rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
+                      <div class="rounded-md border border-[var(--ep-border-color-lighter)] bg-[var(--ep-fill-color-lighter)] px-3 py-2">
                         <el-switch
                           :model-value="isTableLevelEnabled(table.id)"
                           :active-text="t('subject.tableLevelRelation')"
@@ -722,7 +723,7 @@ onMounted(() => {
                         @update:model-value="(value: unknown) => setFieldSearch(table.id, String(value ?? ''))"
                       />
 
-                      <div v-loading="isTableColumnsLoading(table.id)" class="max-h-52 overflow-y-auto rounded-md border border-slate-200 p-3">
+                      <div v-loading="isTableColumnsLoading(table.id)" class="max-h-52 overflow-y-auto rounded-md border border-[var(--ep-border-color-lighter)] p-3">
                         <el-checkbox-group
                           :model-value="getSelectedFieldList(table.id)"
                           class="grid grid-cols-1 gap-2 md:grid-cols-2"
@@ -733,12 +734,12 @@ onMounted(() => {
                             :key="column.name"
                             :value="column.name"
                             border
-                            class="!mr-0 rounded-md border-slate-200 bg-white px-3 py-2"
+                            class="!mr-0 rounded-md border-[var(--ep-border-color-lighter)] bg-white px-3 py-2"
                           >
                             {{ column.name }}
                           </el-checkbox>
                         </el-checkbox-group>
-                        <div v-if="getFilteredColumnsByTable(table.id).length === 0" class="py-6 text-center text-sm text-slate-400">
+                        <div v-if="getFilteredColumnsByTable(table.id).length === 0" class="py-6 text-center text-sm text-[var(--ep-text-color-placeholder)]">
                           {{ getFieldEmptyTextByTable(table.id) }}
                         </div>
                       </div>

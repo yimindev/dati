@@ -80,3 +80,31 @@ src/
 - **I18n**: `t('key')` for all user-facing text, keys nested by feature.
 
 → Full details: [.agents/rules/frontend.md](.agents/rules/frontend.md)
+
+## Design System
+
+The project follows a **Flat Design + Enterprise Minimal** style with Element Plus as the UI framework.
+
+**Key rules (always apply):**
+
+| Rule | Standard |
+|------|----------|
+| **Colors** | Use `var(--ep-color-*)` semantic variables everywhere. Never raw hex in component templates. |
+| **Typography** | Page title `24px/650`, section title `16px/650`, body `14px`, meta `13px`, label `12px`. |
+| **Spacing** | Tailwind 4px base unit: `gap-1`=`4px`, `gap-2`=`8px`, `gap-4`=`16px`. |
+| **Page layout** | List pages: `p-5 md:p-6` → toolbar → `DataTableShell` → dialog. Detail pages with breadcrumb + tabs or side nav. |
+| **Buttons** | Primary CTA: `el-button type="primary"`. Table actions: `type="primary" link`. Danger: `type="danger" link`. |
+| **Icons** | SVG only via Element Plus icons (`@element-plus/icons-vue`) or Iconify. **Never emoji as structural icons.** |
+| **Loading** | Tables: `v-loading="loading"`. Card grids: `el-skeleton`. Buttons: `:loading="loading"`. |
+| **Empty states** | Use `el-empty` with contextual `description` via i18n `t('xxx.emptyList')`. |
+| **Dark mode** | `useDark()` from `@vueuse/core`. Element Plus CSS vars auto-switch. Test both modes. |
+| **Accessibility** | Icon-only buttons need `aria-label` or `el-tooltip`. Deletions need `ElMessageBox.confirm`. Add `cursor-pointer` to all clickables. |
+| **Responsive** | `p-5 md:p-6` for page padding, flex-wrap + flex-col on mobile breakpoints (768px). |
+
+**Page templates available for copy-paste:**
+- List page (table) — MCP Services / Data Sources pattern
+- List page (card grid) — Subjects pattern
+- Detail page (tabs inside card) — Subject detail pattern
+- Detail page (side nav) — MCP Service detail pattern
+
+→ Full design system details (colors, typography scale, spacing, component patterns, anti-patterns): [.agents/rules/design-system.md](.agents/rules/design-system.md)

@@ -184,7 +184,7 @@ onMounted(() => {
     <el-dialog
       v-model="addTableDialogVisible"
       :title="t('subject.addTable')"
-      width="700px"
+      width="600px"
       destroy-on-close
     >
       <el-form label-width="100px">

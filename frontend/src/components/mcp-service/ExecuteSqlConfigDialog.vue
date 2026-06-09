@@ -80,7 +80,7 @@ const handleSave = async () => {
     :model-value="modelValue"
     @update:model-value="emit('update:modelValue', $event)"
     :title="t('mcpService.tool.configExecuteSql')"
-    width="480px"
+    width="600px"
     :close-on-click-modal="false"
   >
     <SqlSecurityConfig

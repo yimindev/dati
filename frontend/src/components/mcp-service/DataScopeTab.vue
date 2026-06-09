@@ -296,7 +296,7 @@ onMounted(() => {
     <el-dialog
       v-model="addDialogVisible"
       :title="t('mcpService.dataScope.addDialogTitle')"
-      width="740px"
+      width="780px"
       :close-on-click-modal="false"
       class="scope-add-dialog"
     >
@@ -412,21 +412,23 @@ onMounted(() => {
 
       <!-- Footer -->
       <template #footer>
-        <span class="text-sm text-[var(--ep-text-color-secondary)]">
-          {{ confirmCount > 0 ? t("mcpService.dataScope.selectedCount", { count: confirmCount }) : t("mcpService.dataScope.noSelection") }}
-        </span>
-        <div class="flex gap-2">
-          <el-button @click="addDialogVisible = false">
-            {{ t("common.cancel") }}
-          </el-button>
-          <el-button
-            type="primary"
-            :disabled="confirmCount === 0"
-            :loading="saving"
-            @click="handleConfirmAdd"
-          >
-            {{ t("mcpService.dataScope.confirmAdd", { count: confirmCount }) }}
-          </el-button>
+        <div class="flex items-center justify-between gap-3 w-full">
+          <span class="text-sm text-[var(--ep-text-color-secondary)]">
+            {{ confirmCount > 0 ? t("mcpService.dataScope.selectedCount", { count: confirmCount }) : t("mcpService.dataScope.noSelection") }}
+          </span>
+          <div class="flex items-center gap-3">
+            <el-button @click="addDialogVisible = false">
+              {{ t("common.cancel") }}
+            </el-button>
+            <el-button
+              type="primary"
+              :disabled="confirmCount === 0"
+              :loading="saving"
+              @click="handleConfirmAdd"
+            >
+              {{ t("mcpService.dataScope.confirmAdd", { count: confirmCount }) }}
+            </el-button>
+          </div>
         </div>
       </template>
     </el-dialog>

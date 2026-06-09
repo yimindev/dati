@@ -350,7 +350,7 @@ onMounted(() => {
   min-height: 100%;
   flex-direction: column;
   gap: 16px;
-  padding: 20px 24px 24px;
+  padding: 24px; /* p-6 */
 }
 
 .detail-layout {
@@ -443,7 +443,7 @@ onMounted(() => {
 
 @media (max-width: 640px) {
   .mcp-detail-page {
-    padding: 16px;
+    padding: 16px; /* p-4 */
   }
 }
 </style>

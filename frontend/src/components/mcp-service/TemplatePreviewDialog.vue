@@ -80,7 +80,7 @@ const copyResult = () => {
     :model-value="modelValue"
     @update:model-value="emit('update:modelValue', $event)"
     :title="t('mcpService.tool.previewTitle')"
-    width="560px"
+    width="600px"
     class="max-[620px]:!w-[92vw]"
     :close-on-click-modal="false"
     append-to-body

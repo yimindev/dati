@@ -125,7 +125,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="mcp-services-page">
+  <div class="list-page">
     <div class="page-heading">
       <div>
         <h1>{{ t("mcpService.title") }}</h1>
@@ -205,74 +205,11 @@ onMounted(() => {
 </template>
 
 <style scoped>
-.mcp-services-page {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  padding: 24px;
-}
-
-.page-heading {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-}
-
-.page-heading h1 {
-  margin: 0;
-  color: var(--ep-text-color-primary);
-  font-size: 24px;
-  font-weight: 650;
-  letter-spacing: 0;
-  line-height: 32px;
-}
-
-.page-heading p {
-  margin: 4px 0 0;
-  color: var(--ep-text-color-secondary);
-  font-size: 13px;
-}
-
-.heading-actions,
-.toolbar-fields {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.toolbar,
-.table-shell {
-  border: 1px solid var(--ep-border-color-lighter);
-  border-radius: 8px;
-  background: var(--ep-bg-color);
-}
-
-.toolbar {
-  padding: 14px;
-}
-
-.toolbar-search {
-  width: min(420px, 100%);
-}
-
 .toolbar-status {
   width: 160px;
 }
 
 @media (max-width: 768px) {
-  .mcp-services-page {
-    padding: 16px;
-  }
-
-  .page-heading,
-  .heading-actions,
-  .toolbar-fields {
-    align-items: stretch;
-    flex-direction: column;
-  }
-
-  .toolbar-search,
   .toolbar-status {
     width: 100%;
   }

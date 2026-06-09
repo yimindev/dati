@@ -43,6 +43,7 @@ function handleLogout() {
         class="w-full cursor-pointer border-0 bg-transparent"
         style="height: var(--ep-menu-item-height)"
         :title="t('layout.header.theme')"
+        :aria-label="t('layout.header.theme')"
       >
         <el-icon class="inline-flex">
           <component :is="isDark ? Moon : Sunny" />

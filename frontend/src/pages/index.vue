@@ -37,7 +37,7 @@ const features = [
         alt="DatI"
         class="w-20 h-20 mx-auto mb-6 object-contain"
       />
-      <h1 class="text-3xl font-bold mb-2">DatI</h1>
+      <h1 class="text-[20px] font-[650] mb-2">DatI</h1>
       <p class="text-[var(--ep-text-color-regular)]">
         {{ t("home.subtitle") }}
       </p>
