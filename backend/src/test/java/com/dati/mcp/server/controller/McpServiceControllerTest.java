@@ -73,7 +73,13 @@ class McpServiceControllerTest {
         // when & then
         mockMvc.perform(post("/v1/mcp-services")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(testService)))
+                .content("""
+                    {
+                      "code": "test-mcp-service",
+                      "name": "Test MCP Service",
+                      "description": "Test MCP service for unit tests"
+                    }
+                    """))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.id").value(TestFixtures.TEST_MCP_SERVICE_ID));
     }
@@ -101,18 +107,20 @@ class McpServiceControllerTest {
 
         McpServiceVO vo = new McpServiceVO();
         vo.setId(TestFixtures.TEST_MCP_SERVICE_ID);
+        vo.setCode(TestFixtures.TEST_MCP_SERVICE_CODE);
         vo.setName("Test MCP Service");
         vo.setStatus("DRAFT");
-        vo.setEndpointPath("/" + TestFixtures.TEST_MCP_SERVICE_ID + "/mcp");
+        vo.setEndpointPath("/" + TestFixtures.TEST_MCP_SERVICE_CODE + "/mcp");
         when(mcpServiceAssembler.toMcpServiceVO(any())).thenReturn(vo);
 
         // when & then
         mockMvc.perform(get("/v1/mcp-services/{id}", TestFixtures.TEST_MCP_SERVICE_ID))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.id").value(TestFixtures.TEST_MCP_SERVICE_ID))
+            .andExpect(jsonPath("$.code").value(TestFixtures.TEST_MCP_SERVICE_CODE))
             .andExpect(jsonPath("$.name").value("Test MCP Service"))
             .andExpect(jsonPath("$.status").value("DRAFT"))
-            .andExpect(jsonPath("$.endpoint_path").value("/" + TestFixtures.TEST_MCP_SERVICE_ID + "/mcp"));
+            .andExpect(jsonPath("$.endpoint_path").value("/" + TestFixtures.TEST_MCP_SERVICE_CODE + "/mcp"));
     }
 
     @Test

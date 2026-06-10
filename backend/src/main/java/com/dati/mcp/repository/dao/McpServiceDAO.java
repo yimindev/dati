@@ -16,4 +16,5 @@ public interface McpServiceDAO extends JpaRepository<McpServicePO, String> {
 
     Page<McpServicePO> findAllByNameContainingOrIdAndStatus(String name, String id, McpServiceStatus status, Pageable pageable);
 
+    boolean existsByCode(String code);
 }

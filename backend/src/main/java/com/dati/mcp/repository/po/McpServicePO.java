@@ -23,6 +23,9 @@ public class McpServicePO extends BaseResourcePO {
     @Serial
     private static final long serialVersionUID = 1L;
 
+    @Column(length = 64, unique = true, nullable = false)
+    private String code;
+
     @Enumerated(EnumType.STRING)
     @Column(length = 20)
     private McpServiceStatus status;

@@ -42,6 +42,9 @@ public enum ErrorCode {
     MS_PROMPT_ARG_MISMATCH("MS007", 400, "Prompt parameter mismatch: {0}"),
     MS_TEMPLATE_SYNTAX_ERROR("MS008", 400, "Template syntax error in {0}: {1}"),
     MS_TOOL_ARG_MISMATCH("MS009", 400, "Tool parameter mismatch: {0}"),
+    MS_SERVICE_CODE_EXISTS("MS010", 409, "Service code already exists: {0}"),
+    MS_SERVICE_CODE_INVALID("MS011", 400, "Service code must be 1-64 chars, lowercase letters, digits, hyphens and underscores only"),
+    MS_SERVICE_CODE_REQUIRED("MS012", 400, "Service code is required"),
 
     // ── Authentication module (AUTH) ──────────────────────
 

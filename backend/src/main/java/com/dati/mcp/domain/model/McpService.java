@@ -8,6 +8,8 @@ import lombok.EqualsAndHashCode;
 @Data
 public class McpService extends BaseResource {
 
+    private String code;
+
     private McpServiceStatus status;
 
 }

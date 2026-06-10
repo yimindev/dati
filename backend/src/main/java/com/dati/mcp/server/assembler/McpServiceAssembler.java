@@ -18,8 +18,9 @@ public class McpServiceAssembler extends BaseAssembler {
     public McpServiceVO toMcpServiceVO(McpService service) {
         McpServiceVO vo = new McpServiceVO();
         super.copyBaseInfo(service, vo);
+        vo.setCode(service.getCode());
         vo.setStatus(service.getStatus() != null ? service.getStatus().name() : null);
-        vo.setEndpointPath("/" + service.getId() + "/mcp");
+        vo.setEndpointPath("/" + service.getCode() + "/mcp");
         vo.setToolCount((int) mcpToolService.countToolsByServiceId(service.getId()));
         return vo;
     }

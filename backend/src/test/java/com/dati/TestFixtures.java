@@ -117,12 +117,14 @@ public class TestFixtures {
     }
 
     public static final String TEST_MCP_SERVICE_ID = "mcp-svc-001";
+    public static final String TEST_MCP_SERVICE_CODE = "test-mcp-service";
     public static final String TEST_MCP_CUSTOM_TOOL_ID = "mcp-ct-001";
     public static final String TEST_MCP_PROMPT_ID = "mcp-pt-001";
 
     public static McpService createTestMcpService() {
         McpService service = new McpService();
         service.setId(TEST_MCP_SERVICE_ID);
+        service.setCode(TEST_MCP_SERVICE_CODE);
         service.setName("Test MCP Service");
         service.setDescription("Test MCP service for unit tests");
         service.setStatus(McpServiceStatus.DRAFT);
@@ -136,6 +138,7 @@ public class TestFixtures {
     public static McpServicePO createTestMcpServicePO() {
         McpServicePO po = new McpServicePO();
         po.setId(TEST_MCP_SERVICE_ID);
+        po.setCode(TEST_MCP_SERVICE_CODE);
         po.setName("Test MCP Service");
         po.setDescription("Test MCP service for unit tests");
         po.setStatus(McpServiceStatus.DRAFT);

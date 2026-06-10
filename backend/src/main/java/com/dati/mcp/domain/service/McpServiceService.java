@@ -12,8 +12,12 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
+import java.util.regex.Pattern;
+
 @Service
 public class McpServiceService {
+
+    private static final Pattern CODE_PATTERN = Pattern.compile("^[a-z0-9]([a-z0-9_-]{0,62}[a-z0-9])?$");
 
     private final McpServiceDAO mcpServiceDAO;
 
@@ -22,6 +26,16 @@ public class McpServiceService {
     }
 
     public String createMcpService(McpService service) {
+        String code = service.getCode();
+        if (code == null || code.isBlank()) {
+            throw new DatiException(ErrorCode.MS_SERVICE_CODE_REQUIRED);
+        }
+        if (!CODE_PATTERN.matcher(code).matches()) {
+            throw new DatiException(ErrorCode.MS_SERVICE_CODE_INVALID);
+        }
+        if (mcpServiceDAO.existsByCode(code)) {
+            throw new DatiException(ErrorCode.MS_SERVICE_CODE_EXISTS, code);
+        }
         service.setStatus(McpServiceStatus.DRAFT);
         McpServicePO po = McpServiceMapper.toPO(service);
         po = mcpServiceDAO.save(po);

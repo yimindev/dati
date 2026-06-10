@@ -8,6 +8,8 @@ import lombok.EqualsAndHashCode;
 @Data
 public class McpServiceVO extends BaseResourceVO {
 
+    private String code;
+
     private String status;
 
     private String endpointPath;
