@@ -301,6 +301,10 @@ export default {
   mcpService: {
     title: "MCP Services",
     serviceName: "Service",
+    serviceCode: "Service Code",
+    codeHint: "Immutable after creation. Used for MCP endpoint URL. Lowercase letters, digits, hyphens and underscores only.",
+    codeRequired: "Service code is required",
+    codeFormatError: "Invalid code format: lowercase letters, digits, hyphens and underscores only, 1-64 chars",
     listSubtitle: "Manage and publish MCP services",
     detailTitle: "Service Detail",
     createTitle: "Create MCP Service",

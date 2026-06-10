@@ -8,18 +8,39 @@ const { t } = useI18n();
 
 interface Props {
   modelValue: McpServicePayload;
+  isEdit?: boolean;
 }
 
 interface Emits {
   (e: "update:modelValue", value: McpServicePayload): void;
 }
 
-defineProps<Props>();
+withDefaults(defineProps<Props>(), {
+  isEdit: false,
+});
 defineEmits<Emits>();
 
 const formRef = ref<FormInstance>();
 
 const rules: FormRules = {
+  code: [
+    {
+      required: true,
+      message: t("mcpService.codeRequired"),
+      trigger: ["blur", "change"],
+    },
+    {
+      pattern: /^[a-z0-9][a-z0-9_-]*$/,
+      message: t("mcpService.codeFormatError"),
+      trigger: ["blur", "change"],
+    },
+    {
+      min: 1,
+      max: 64,
+      message: t("mcpService.codeFormatError"),
+      trigger: ["blur", "change"],
+    },
+  ],
   name: [
     {
       required: true,
@@ -64,6 +85,16 @@ defineExpose({
     class="mcp-service-form"
     @submit.prevent
   >
+    <el-form-item :label="t('mcpService.serviceCode')" prop="code">
+      <el-input
+        v-model="modelValue.code"
+        :placeholder="'my-service'"
+        maxlength="64"
+        show-word-limit
+        :disabled="isEdit"
+      />
+      <div class="form-hint">{{ t("mcpService.codeHint") }}</div>
+    </el-form-item>
     <el-form-item :label="t('common.name')" prop="name">
       <el-input
         v-model="modelValue.name"
@@ -90,5 +121,12 @@ defineExpose({
   align-items: center;
   color: var(--ep-text-color-primary);
   font-weight: 600;
+}
+
+.form-hint {
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--ep-text-color-secondary);
+  line-height: 1.4;
 }
 </style>

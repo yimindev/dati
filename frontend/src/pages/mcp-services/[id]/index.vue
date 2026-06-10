@@ -97,6 +97,11 @@ const serviceMeta = computed(() => [
     copyable: true,
   },
   {
+    label: t("mcpService.serviceCode"),
+    value: service.value?.code || t("mcpService.emptyValue"),
+    copyable: true,
+  },
+  {
     label: t("mcpService.toolCount"),
     value: service.value?.tool_count ?? 0,
   },

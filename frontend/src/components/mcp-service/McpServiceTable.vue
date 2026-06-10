@@ -47,17 +47,6 @@ const statusLabel = (status: string) => {
   }
 };
 
-const statusClass = (status: string) => {
-  switch (status) {
-    case "PUBLISHED":
-      return "status-dot published";
-    case "DISABLED":
-      return "status-dot disabled";
-    default:
-      return "status-dot draft";
-  }
-};
-
 const handleCopy = async (endpointPath: string) => {
   try {
     await navigator.clipboard.writeText(endpointPath);
@@ -86,7 +75,7 @@ const handleCopy = async (endpointPath: string) => {
         <button class="service-cell" type="button" @click="$emit('detail', row)">
           <span class="service-main">
             <span class="service-name">{{ row.name }}</span>
-            <span class="service-id">{{ row.id }}</span>
+            <span class="service-code">{{ row.code }}</span>
           </span>
         </button>
       </template>
@@ -110,7 +99,9 @@ const handleCopy = async (endpointPath: string) => {
     >
       <template #default="{ row }">
         <span class="status-cell">
-          <span :class="statusClass(row.status)"></span>
+          <span v-if="row.status === 'PUBLISHED'" class="status-dot published"></span>
+          <span v-else-if="row.status === 'DISABLED'" class="status-dot disabled"></span>
+          <span v-else class="status-dot draft"></span>
           <el-tag :type="statusType(row.status)" size="small" effect="plain">
             {{ statusLabel(row.status) }}
           </el-tag>
@@ -206,10 +197,6 @@ const handleCopy = async (endpointPath: string) => {
   text-align: left;
 }
 
-.service-cell:hover .service-name {
-  color: var(--ep-color-primary);
-}
-
 .service-main {
   display: flex;
   min-width: 0;
@@ -219,13 +206,21 @@ const handleCopy = async (endpointPath: string) => {
 
 .service-name {
   overflow: hidden;
-  color: var(--ep-text-color-primary);
-  font-weight: 600;
+  color: var(--ep-color-primary);
+  font-weight: 500;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.service-id,
+.service-code {
+  overflow: hidden;
+  color: var(--ep-text-color-secondary);
+  font-family: monospace;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .description-text {
   color: var(--ep-text-color-secondary);
   font-size: 12px;

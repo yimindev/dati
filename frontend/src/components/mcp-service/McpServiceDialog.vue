@@ -24,6 +24,7 @@ const formRef = ref();
 const submitting = ref(false);
 
 const formData = ref<McpServicePayload>({
+  code: "",
   name: "",
   description: "",
 });
@@ -40,6 +41,7 @@ watch(
   (newVal) => {
     if (newVal) {
       formData.value = {
+        code: newVal.code,
         name: newVal.name,
         description: newVal.description || "",
       };
@@ -52,6 +54,7 @@ watch(
 
 function resetForm() {
   formData.value = {
+    code: "",
     name: "",
     description: "",
   };
@@ -98,7 +101,7 @@ const handleCancel = () => {
     <p class="dialog-note">
       {{ t("mcpService.dialogNote") }}
     </p>
-    <McpServiceForm ref="formRef" v-model="formData" />
+    <McpServiceForm ref="formRef" v-model="formData" :is-edit="isEdit" />
 
     <template #footer>
       <div class="dialog-footer">

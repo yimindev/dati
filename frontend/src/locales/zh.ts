@@ -301,6 +301,10 @@ export default {
   mcpService: {
     title: "MCP 服务",
     serviceName: "服务",
+    serviceCode: "服务标识",
+    codeHint: "创建后不可修改。用于 MCP 端点地址，仅支持小写字母、数字、连字符和下划线。",
+    codeRequired: "服务标识不能为空",
+    codeFormatError: "服务标识格式错误：仅支持小写字母、数字、连字符和下划线，1-64字符",
     listSubtitle: "管理和发布 MCP 服务",
     detailTitle: "服务详情",
     createTitle: "创建 MCP 服务",

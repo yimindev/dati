@@ -2,12 +2,14 @@ import type { BaseResourceVO, IdResponse, PageResponse } from "~/api/types.ts";
 import { get, post, put } from "./http";
 
 export interface McpServiceVO extends BaseResourceVO {
+  code: string;
   status: string;
   endpoint_path: string;
   tool_count: number;
 }
 
 export interface McpServicePayload {
+  code?: string;
   name: string;
   description?: string;
 }
