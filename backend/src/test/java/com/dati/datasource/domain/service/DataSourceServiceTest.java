@@ -26,6 +26,7 @@ import org.springframework.data.domain.Pageable;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -220,6 +221,33 @@ class DataSourceServiceTest {
             dataSourceService.getDataSource(TestFixtures.TEST_DATASOURCE_ID)
         );
         verify(dataSourceDAO).findById(TestFixtures.TEST_DATASOURCE_ID);
+    }
+
+    @Test
+    @DisplayName("批量获取数据源名称映射 - 按 ID 查询")
+    void getDataSourceNameMap_shouldReturnIdToNameMap() {
+        DataSourcePO po1 = new DataSourcePO();
+        po1.setId("ds-1");
+        po1.setName("MySQL Source");
+
+        DataSourcePO po2 = new DataSourcePO();
+        po2.setId("ds-2");
+        po2.setName("PG Source");
+
+        when(dataSourceDAO.findAllById(List.of("ds-1", "ds-2"))).thenReturn(List.of(po1, po2));
+
+        Map<String, String> result = dataSourceService.getDataSourceNameMap(List.of("ds-1", "ds-2"));
+
+        assertThat(result).hasSize(2);
+        assertThat(result.get("ds-1")).isEqualTo("MySQL Source");
+        assertThat(result.get("ds-2")).isEqualTo("PG Source");
+    }
+
+    @Test
+    @DisplayName("批量获取数据源名称映射 - 空集合返回空 Map")
+    void getDataSourceNameMap_withEmptyIds_shouldReturnEmptyMap() {
+        Map<String, String> result = dataSourceService.getDataSourceNameMap(List.of());
+        assertThat(result).isEmpty();
     }
 
     @Test

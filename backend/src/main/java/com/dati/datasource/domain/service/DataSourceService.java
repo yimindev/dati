@@ -18,8 +18,11 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 public class DataSourceService {
@@ -67,6 +70,14 @@ public class DataSourceService {
         semanticIndexService.deleteByEntityTableIds(tableIds);
 
         dataSourceDAO.deleteById(id);
+    }
+
+    public Map<String, String> getDataSourceNameMap(Collection<String> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return Map.of();
+        }
+        return dataSourceDAO.findAllById(ids).stream()
+                .collect(Collectors.toMap(DataSourcePO::getId, DataSourcePO::getName));
     }
 
     public Page<DataSource> listDataSources(String keyword, Pageable pageable) {

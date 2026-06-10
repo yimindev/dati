@@ -181,9 +181,23 @@ class SubjectControllerTest {
     @Test
     @DisplayName("查询 Subject 列表 - 带 keyword 参数返回 200")
     void getSubjects_withKeyword_shouldReturn200() throws Exception {
-        when(subjectService.getSubjects(any(), any())).thenReturn(Page.empty());
+        Subject subject = new Subject();
+        subject.setId("subject-001");
+        subject.setName("Test Subject");
+        subject.setDatasourceId("datasource-001");
+
+        SubjectVO subjectVO = new SubjectVO();
+        subjectVO.setId("subject-001");
+        subjectVO.setName("Test Subject");
+        subjectVO.setDatasourceId("datasource-001");
+
+        Page<Subject> subjectPage = new PageImpl<>(List.of(subject));
+        when(subjectService.getSubjects(any(), any())).thenReturn(subjectPage);
+        when(subjectAssembler.toVOList(any())).thenReturn(List.of(subjectVO));
 
         mockMvc.perform(get("/v1/subjects?keyword=test"))
-            .andExpect(status().isOk());
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.length()").value(1))
+            .andExpect(jsonPath("$.data[0].id").value("subject-001"));
     }
 }

@@ -13,6 +13,8 @@ public class SubjectVO extends BaseResourceVO {
 
     private String datasourceId;
 
+    private String datasourceName;
+
     private List<String> aliases = new ArrayList<>();
 
 }
