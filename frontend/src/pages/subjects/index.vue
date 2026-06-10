@@ -22,7 +22,7 @@ const currentSubject = ref<SubjectVO | null>(null);
 const searchKeyword = ref("");
 
 const page = ref(1);
-const pageSize = ref(12);
+const pageSize = ref(10);
 const total = ref(0);
 
 const loadSubjects = async () => {
@@ -105,10 +105,8 @@ const handleDelete = async (subject: SubjectVO) => {
   }
 };
 
-const handleCardClick = (subject: SubjectVO) => {
-  router.push({
-    path: `/subjects/${subject.id}`,
-  });
+const handleDetail = (subject: SubjectVO) => {
+  router.push({ path: `/subjects/${subject.id}` });
 };
 
 const handleDialogSuccess = () => {
@@ -158,33 +156,22 @@ onMounted(() => {
       </div>
     </div>
 
-    <el-skeleton v-if="loading" :rows="6" animated />
-
-    <div v-else-if="subjectList.length > 0" class="subject-grid">
-      <SubjectCard
-        v-for="subject in subjectList"
-        :key="subject.id"
-        :subject="subject"
-        @click="handleCardClick"
+    <DataTableShell
+      :loading="loading"
+      :total="total"
+      :page="page"
+      :page-size="pageSize"
+      @page-change="handlePageChange"
+      @page-size-change="handlePageSizeChange"
+    >
+      <SubjectTable
+        :data="subjectList"
+        :loading="loading"
+        @detail="handleDetail"
         @edit="handleEdit"
         @delete="handleDelete"
       />
-    </div>
-
-    <el-empty v-else :description="t('subject.noSubject')" />
-
-    <div v-if="!loading && total > 0" class="flex items-center justify-between">
-      <span class="text-[var(--ep-text-color-secondary)] text-sm">{{ t("common.total", { total }) }}</span>
-      <el-pagination
-        layout="sizes, prev, pager, next"
-        :current-page="page"
-        :page-size="pageSize"
-        :page-sizes="[12, 24, 48, 96]"
-        :total="total"
-        @current-change="handlePageChange"
-        @size-change="handlePageSizeChange"
-      />
-    </div>
+    </DataTableShell>
 
     <SubjectDialog
       v-model="dialogVisible"
@@ -194,10 +181,4 @@ onMounted(() => {
   </div>
 </template>
 
-<style scoped>
-.subject-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 16px;
-}
-</style>
+

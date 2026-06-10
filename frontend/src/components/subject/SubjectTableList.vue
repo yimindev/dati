@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref, computed } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
-import { Plus } from "@element-plus/icons-vue";
+import { Plus, Search } from "@element-plus/icons-vue";
 import { useI18n } from "vue-i18n";
 import type { TableInfoVO, SubjectAvailableTableVO } from "~/api/subject";
 import { getSubjectTables, getAvailableTables, addTableToSubject, removeTableFromSubject } from "~/api/subject";
@@ -18,6 +18,10 @@ const props = defineProps<Props>();
 
 const loading = ref(false);
 const tableList = ref<TableInfoVO[]>([]);
+const searchKeyword = ref("");
+const page = ref(1);
+const pageSize = ref(10);
+const total = ref(0);
 
 const addTableDialogVisible = ref(false);
 const schemas = ref<string[]>([]);
@@ -49,13 +53,43 @@ const transferData = computed<TransferItem[]>(() => {
 const loadTables = async () => {
   try {
     loading.value = true;
-    tableList.value = await getSubjectTables(props.subjectId);
+    const keywordParam = searchKeyword.value.trim() || undefined;
+    const response = await getSubjectTables(
+      props.subjectId,
+      page.value,
+      pageSize.value,
+      keywordParam,
+    );
+    tableList.value = response.data ?? [];
+    total.value = response.total ?? 0;
   } catch (error) {
     console.error("Failed to load subject tables:", error);
     ElMessage.error(t("common.loadFailed"));
   } finally {
     loading.value = false;
   }
+};
+
+const handleSearch = () => {
+  page.value = 1;
+  loadTables();
+};
+
+const handleClearSearch = () => {
+  searchKeyword.value = "";
+  page.value = 1;
+  loadTables();
+};
+
+const handlePageChange = (p: number) => {
+  page.value = p;
+  loadTables();
+};
+
+const handlePageSizeChange = (ps: number) => {
+  pageSize.value = ps;
+  page.value = 1;
+  loadTables();
 };
 
 const handleOpenAddTableDialog = async () => {
@@ -144,42 +178,68 @@ onMounted(() => {
 
 <template>
   <div class="py-4">
-    <div class="flex items-center justify-end mb-4">
+    <div class="flex items-center justify-between mb-4 gap-2 flex-wrap">
+      <div class="flex items-center gap-2">
+        <el-input
+          v-model="searchKeyword"
+          :placeholder="t('common.search')"
+          clearable
+          class="!w-60"
+          @keyup.enter="handleSearch"
+          @clear="handleClearSearch"
+        >
+          <template #prefix>
+            <el-icon><Search /></el-icon>
+          </template>
+        </el-input>
+        <el-button type="primary" plain :icon="Search" @click="handleSearch">
+          {{ t("common.search") }}
+        </el-button>
+      </div>
       <el-button type="primary" :icon="Plus" @click="handleOpenAddTableDialog">
         {{ t("subject.addTable") }}
       </el-button>
     </div>
 
-    <el-table :data="tableList" v-loading="loading" stripe>
-      <el-table-column
-        prop="name"
-        :label="t('common.tableName')"
-        min-width="150"
-      />
-      <el-table-column
-        prop="schema"
-        :label="t('common.schema')"
-        min-width="120"
-      />
-      <el-table-column
-        prop="description"
-        :label="t('common.description')"
-        min-width="150"
-      />
-      <el-table-column
-        :label="t('common.actions')"
-        min-width="100"
-        fixed="right"
-      >
-        <template #default="{ row }">
-          <el-button link type="danger" @click="handleRemoveTable(row)">
-            {{ t("common.remove") }}
-          </el-button>
-        </template>
-      </el-table-column>
-    </el-table>
+    <DataTableShell
+      :loading="loading"
+      :total="total"
+      :page="page"
+      :page-size="pageSize"
+      @page-change="handlePageChange"
+      @page-size-change="handlePageSizeChange"
+    >
+      <el-table :data="tableList" stripe>
+        <el-table-column
+          prop="name"
+          :label="t('common.tableName')"
+          min-width="150"
+        />
+        <el-table-column
+          prop="schema"
+          :label="t('common.schema')"
+          min-width="120"
+        />
+        <el-table-column
+          prop="description"
+          :label="t('common.description')"
+          min-width="150"
+        />
+        <el-table-column
+          :label="t('common.actions')"
+          min-width="100"
+          fixed="right"
+        >
+          <template #default="{ row }">
+            <el-button link type="danger" @click="handleRemoveTable(row)">
+              {{ t("common.remove") }}
+            </el-button>
+          </template>
+        </el-table-column>
+      </el-table>
 
-    <el-empty v-if="!loading && tableList.length === 0" :description="t('subject.noTables')" />
+      <el-empty v-if="!loading && tableList.length === 0" :description="t('subject.noTables')" />
+    </DataTableShell>
 
     <el-dialog
       v-model="addTableDialogVisible"

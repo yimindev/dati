@@ -20,7 +20,7 @@ const loading = ref(false)
 const termList = ref<TermVO[]>([])
 const searchKeyword = ref('')
 const page = ref(1)
-const pageSize = ref(15)
+const pageSize = ref(10)
 const total = ref(0)
 const termDetails = ref<Map<string, TermVO & { relations: TermRelationVO[] }>>(new Map())
 
@@ -34,9 +34,12 @@ const termFormData = ref<CreateTermRequest>({ name: '', description: '', aliases
 const relationDialogVisible = ref(false)
 const relationDialogLoading = ref(false)
 const relationTermId = ref('')
-const relationMode = ref<'list' | 'add'>('list')
 
 const availableTables = ref<TableInfoVO[]>([])
+const tablePage = ref(1)
+const tableTotal = ref(0)
+const tableLoadingMore = ref(false)
+const tableHasMore = computed(() => availableTables.value.length < tableTotal.value)
 const selectedTableIds = ref<Set<string>>(new Set())
 const tableLevelTableIds = ref<Set<string>>(new Set())
 const selectedFieldsByTable = ref<Map<string, Set<string>>>(new Map())
@@ -44,8 +47,8 @@ const fieldSearchByTable = ref<Map<string, string>>(new Map())
 const activeFieldConfigTableId = ref('')
 const tableColumnsData = ref<Map<string, { name: string }[]>>(new Map())
 const loadingTableColumns = ref<Set<string>>(new Set())
-const tableSearch = ref('')
-const schemaFilter = ref('')
+const tableSearchKeyword = ref('')
+const tableRef = ref()
 
 const rules: FormRules = {
   name: [
@@ -162,32 +165,8 @@ const getExistingRelationKeys = (termId: string) => {
   return keys
 }
 
-const schemaOptions = computed(() => {
-  const schemaSet = new Set<string>()
-  for (const table of availableTables.value) {
-    if (table.schema) schemaSet.add(table.schema)
-  }
-  return Array.from(schemaSet).sort((a, b) => a.localeCompare(b))
-})
-
-const filteredTables = computed(() => {
-  let list = availableTables.value
-  if (schemaFilter.value) {
-    list = list.filter(table => table.schema === schemaFilter.value)
-  }
-  if (!tableSearch.value) return list
-  const search = tableSearch.value.toLowerCase()
-  return list.filter(table => table.name.toLowerCase().includes(search))
-})
-
 const selectedTables = computed(() => {
   return availableTables.value.filter(table => selectedTableIds.value.has(table.id))
-})
-
-const tableEmptyText = computed(() => {
-  if (availableTables.value.length === 0) return t('subject.noTables')
-  if (tableSearch.value && filteredTables.value.length === 0) return t('subject.noSearchResults')
-  return ''
 })
 
 const selectedRelationCount = computed(() => {
@@ -197,8 +176,6 @@ const selectedRelationCount = computed(() => {
   }
   return count
 })
-
-const isTableSelected = (tableId: string) => selectedTableIds.value.has(tableId)
 
 const isTableLevelEnabled = (tableId: string) => tableLevelTableIds.value.has(tableId)
 
@@ -237,30 +214,42 @@ const resetRelationEditorState = () => {
   selectedFieldsByTable.value = new Map()
   fieldSearchByTable.value = new Map()
   activeFieldConfigTableId.value = ''
-  tableSearch.value = ''
-  schemaFilter.value = ''
+  tableSearchKeyword.value = ''
 }
 
-const handleTableToggle = async (tableId: string, checked: boolean) => {
-  if (checked) {
-    selectedTableIds.value.add(tableId)
-    tableLevelTableIds.value.add(tableId)
-    if (!selectedFieldsByTable.value.has(tableId)) {
-      selectedFieldsByTable.value.set(tableId, new Set())
-    }
-    if (!activeFieldConfigTableId.value) {
-      activeFieldConfigTableId.value = tableId
-    }
-    await loadColumnsForTable(tableId)
-  } else {
-    selectedTableIds.value.delete(tableId)
-    tableLevelTableIds.value.delete(tableId)
-    selectedFieldsByTable.value.delete(tableId)
-    fieldSearchByTable.value.delete(tableId)
-    if (activeFieldConfigTableId.value === tableId) {
-      activeFieldConfigTableId.value = selectedTables.value[0]?.id || ''
+const handleSelectionChange = (rows: TableInfoVO[]) => {
+  const newIds = new Set(rows.map(r => r.id))
+
+  for (const row of rows) {
+    const id = row.id
+    if (!selectedTableIds.value.has(id)) {
+      tableLevelTableIds.value.add(id)
+      if (!selectedFieldsByTable.value.has(id)) {
+        selectedFieldsByTable.value.set(id, new Set())
+      }
+      if (!activeFieldConfigTableId.value) {
+        activeFieldConfigTableId.value = id
+      }
+      loadColumnsForTable(id)
     }
   }
+
+  for (const id of selectedTableIds.value) {
+    if (!newIds.has(id)) {
+      tableLevelTableIds.value.delete(id)
+      selectedFieldsByTable.value.delete(id)
+      fieldSearchByTable.value.delete(id)
+      if (activeFieldConfigTableId.value === id) {
+        activeFieldConfigTableId.value = rows[0]?.id || ''
+      }
+    }
+  }
+
+  selectedTableIds.value = newIds
+}
+
+const handleRowClick = (row: TableInfoVO) => {
+  tableRef.value?.toggleRowSelection(row)
 }
 
 const handleToggleTableLevel = (tableId: string, enabled: boolean) => {
@@ -369,15 +358,63 @@ const handleDeleteTerm = async (term: TermVO) => {
   }
 }
 
-const handleOpenRelationDialog = async (termId: string) => {
+const loadTablesForRelation = async (append: boolean) => {
+  if (tableLoadingMore.value) return
+  tableLoadingMore.value = true
+  try {
+    const pageToLoad = append ? tablePage.value + 1 : 1
+    const res = await getSubjectTables(props.subjectId, pageToLoad, 50, tableSearchKeyword.value.trim() || undefined)
+    if (append) {
+      availableTables.value = [...availableTables.value, ...(res.data ?? [])]
+    } else {
+      availableTables.value = res.data ?? []
+    }
+    tablePage.value = pageToLoad
+    tableTotal.value = res.total ?? 0
+  } catch (error) {
+    console.error('Failed to load subject tables:', error)
+    ElMessage.error(t('common.loadFailed'))
+  } finally {
+    tableLoadingMore.value = false
+  }
+}
+
+const handleTableSearch = async () => {
+  if (relationDialogLoading.value || tableLoadingMore.value) return
+  selectedTableIds.value = new Set()
+  tableLevelTableIds.value = new Set()
+  selectedFieldsByTable.value = new Map()
+  fieldSearchByTable.value = new Map()
+  activeFieldConfigTableId.value = ''
+  tableRef.value?.clearSelection()
+  relationDialogLoading.value = true
+  tablePage.value = 1
+  availableTables.value = []
+  try {
+    await loadTablesForRelation(false)
+  } finally {
+    relationDialogLoading.value = false
+  }
+}
+
+const handleTableListScroll = (event: Event) => {
+  const target = event.target as HTMLElement
+  const { scrollTop, scrollHeight, clientHeight } = target
+  if (scrollHeight - scrollTop - clientHeight < 150 && tableHasMore.value && !tableLoadingMore.value) {
+    loadTablesForRelation(true)
+  }
+}
+
+const handleOpenAddRelationDialog = async (termId: string) => {
   relationTermId.value = termId
-  relationMode.value = 'list'
   resetRelationEditorState()
 
   try {
     relationDialogLoading.value = true
-    const tablesRes = await getSubjectTables(props.subjectId, 1, 200)
-    availableTables.value = tablesRes.data ?? []
+    tablePage.value = 1
+    tableTotal.value = 0
+    availableTables.value = []
+    await loadTablesForRelation(false)
     if (!termDetails.value.has(termId)) {
       await loadTermDetail(termId)
     }
@@ -388,17 +425,6 @@ const handleOpenRelationDialog = async (termId: string) => {
   } finally {
     relationDialogLoading.value = false
   }
-}
-
-const handleCloseRelationDialog = () => {
-  relationDialogVisible.value = false
-  relationMode.value = 'list'
-  resetRelationEditorState()
-}
-
-const handleAddRelation = () => {
-  relationMode.value = 'add'
-  resetRelationEditorState()
 }
 
 const loadColumnsForTable = async (tableId: string) => {
@@ -470,8 +496,8 @@ const handleSubmitRelation = async () => {
     ElMessage.success(t('subject.addRelationResult', { added: payloads.length, skipped: skippedCount }))
 
     await loadTermDetail(relationTermId.value)
-    relationMode.value = 'list'
     resetRelationEditorState()
+    relationDialogVisible.value = false
   } catch (error) {
     console.error('Failed to add relations:', error)
     ElMessage.error(t('common.operationFailed'))
@@ -532,70 +558,86 @@ onMounted(() => {
       </el-button>
     </div>
 
-    <el-table :data="termList" v-loading="loading" stripe border>
-      <el-table-column prop="name" :label="t('common.name')" min-width="150" />
-      <el-table-column :label="t('common.aliases')" min-width="180">
-        <template #default="{ row }">
-          <template v-if="row.aliases && row.aliases.length > 0">
-            <el-tag v-for="alias in row.aliases" :key="alias" size="small" class="mr-1">
-              {{ alias }}
-            </el-tag>
+    <DataTableShell
+      :loading="loading"
+      :total="total"
+      :page="page"
+      :page-size="pageSize"
+      @page-change="handlePageChange"
+      @page-size-change="handlePageSizeChange"
+    >
+      <el-table :data="termList" stripe>
+        <el-table-column prop="name" :label="t('common.name')" min-width="150" />
+        <el-table-column :label="t('common.aliases')" min-width="180">
+          <template #default="{ row }">
+            <template v-if="row.aliases && row.aliases.length > 0">
+              <el-tag v-for="alias in row.aliases" :key="alias" size="small" class="mr-1">
+                {{ alias }}
+              </el-tag>
+            </template>
+            <span v-else class="text-sm text-[var(--ep-text-color-placeholder)]">-</span>
           </template>
-          <span v-else class="text-sm text-[var(--ep-text-color-placeholder)]">-</span>
-        </template>
-      </el-table-column>
-      <el-table-column prop="description" :label="t('common.description')" min-width="220" />
-      <el-table-column :label="t('subject.linkedEntities')" min-width="260">
-        <template #default="{ row }">
-          <template v-if="getTermRelations(row.id).length > 0">
-            <el-space wrap :size="6">
-              <el-tooltip
-                v-for="relation in getTermDisplayRelations(row.id)"
-                :key="relation.id"
-                :content="getRelationDisplayText(relation)"
-                placement="top"
-              >
-                <el-tag :type="relation.entity_type === 'TABLE' ? 'info' : 'warning'" size="small">
-                  {{ getRelationDisplayText(relation) }}
+        </el-table-column>
+        <el-table-column prop="description" :label="t('common.description')" min-width="220" />
+        <el-table-column :label="t('subject.linkedEntities')" min-width="260">
+          <template #default="{ row }">
+            <template v-if="getTermRelations(row.id).length > 0">
+              <div class="flex flex-wrap gap-1 items-center">
+                <el-tag
+                  v-for="rel in getTermDisplayRelations(row.id)"
+                  :key="rel.id"
+                  :type="rel.entity_type === 'TABLE' ? 'info' : 'warning'"
+                  size="small"
+                  closable
+                  @close="handleRemoveRelation(row.id, rel)"
+                >
+                  {{ getRelationDisplayText(rel) }}
                 </el-tag>
-              </el-tooltip>
-              <span v-if="getTermRelations(row.id).length > 2" class="text-xs text-[var(--ep-text-color-placeholder)]">
-                +{{ getTermRelations(row.id).length - 2 }}
-              </span>
-            </el-space>
+
+                <template v-if="getTermRelations(row.id).length > 2">
+                  <el-popover trigger="click" placement="bottom" :width="340">
+                    <template #reference>
+                      <el-button link type="primary" size="small">
+                        +{{ getTermRelations(row.id).length - 2 }}
+                      </el-button>
+                    </template>
+                    <div class="space-y-1 max-h-60 overflow-y-auto">
+                      <div v-for="rel in getTermRelations(row.id)" :key="rel.id" class="flex items-center justify-between gap-2 py-1">
+                        <div class="flex items-center gap-1.5 min-w-0">
+                          <el-tag :type="rel.entity_type === 'TABLE' ? 'info' : 'warning'" size="small">
+                            {{ rel.entity_type === 'TABLE' ? t('subject.tableLevel') : t('subject.fieldLevel') }}
+                          </el-tag>
+                          <span class="text-xs truncate" :title="getRelationDisplayText(rel)">{{ getRelationDisplayText(rel) }}</span>
+                        </div>
+                        <el-button link type="danger" size="small" @click="handleRemoveRelation(row.id, rel)">
+                          {{ t('common.remove') }}
+                        </el-button>
+                      </div>
+                    </div>
+                  </el-popover>
+                </template>
+              </div>
+            </template>
+            <span v-else class="text-sm text-[var(--ep-text-color-placeholder)]">-</span>
           </template>
-          <span v-else class="text-sm text-[var(--ep-text-color-placeholder)]">-</span>
-        </template>
-      </el-table-column>
-      <el-table-column :label="t('common.actions')" width="210" fixed="right">
-        <template #default="{ row }">
-          <el-button link type="primary" @click="handleOpenRelationDialog(row.id)">
-            {{ t('subject.manageRelation') }}
-          </el-button>
-          <el-button link type="primary" @click="handleOpenTermDialog(row)">
-            {{ t('common.edit') }}
-          </el-button>
-          <el-button link type="danger" @click="handleDeleteTerm(row)">
-            {{ t('common.delete') }}
-          </el-button>
-        </template>
-      </el-table-column>
-    </el-table>
+        </el-table-column>
+        <el-table-column :label="t('common.actions')" width="210" fixed="right">
+          <template #default="{ row }">
+            <el-button link type="primary" @click="handleOpenAddRelationDialog(row.id)">
+              {{ t('subject.addRelation') }}
+            </el-button>
+            <el-button link type="primary" @click="handleOpenTermDialog(row)">
+              {{ t('common.edit') }}
+            </el-button>
+            <el-button link type="danger" @click="handleDeleteTerm(row)">
+              {{ t('common.delete') }}
+            </el-button>
+          </template>
+        </el-table-column>
+      </el-table>
 
-    <el-empty v-if="!loading && termList.length === 0" :description="t('subject.noTerms')" />
-
-    <div v-if="!loading && total > 0" class="flex items-center justify-between mt-4">
-      <span class="text-[var(--ep-text-color-secondary)] text-sm">{{ t('common.total', { total }) }}</span>
-      <el-pagination
-        layout="sizes, prev, pager, next"
-        :current-page="page"
-        :page-size="pageSize"
-        :page-sizes="[15, 30, 50, 100]"
-        :total="total"
-        @current-change="handlePageChange"
-        @size-change="handlePageSizeChange"
-      />
-    </div>
+      <el-empty v-if="!loading && termList.length === 0" :description="t('subject.noTerms')" />
+    </DataTableShell>
 
     <el-dialog
       v-model="termDialogVisible"
@@ -649,95 +691,53 @@ onMounted(() => {
 
     <el-dialog
       v-model="relationDialogVisible"
-      :title="relationMode === 'list' ? t('subject.manageRelation') : t('subject.addRelation')"
+      :title="t('subject.addRelation')"
       width="780px"
       :close-on-click-modal="false"
       destroy-on-close
     >
       <div v-loading="relationDialogLoading" class="space-y-4">
-        <div v-if="relationMode === 'list'" class="space-y-4">
-          <div class="flex items-center justify-between">
-            <div class="text-sm font-medium text-[var(--ep-text-color-primary)]">
-              {{ t('subject.existingRelations') }} ({{ getTermRelations(relationTermId).length }})
-            </div>
-            <el-button type="primary" size="small" @click="handleAddRelation">
-              {{ t('subject.addRelation') }}
-            </el-button>
-          </div>
-          <el-table v-if="getTermRelations(relationTermId).length > 0" :data="getTermRelations(relationTermId)" border>
-            <el-table-column :label="t('subject.selectType')" width="110">
-              <template #default="{ row }">
-                <el-tag :type="row.entity_type === 'TABLE' ? 'info' : 'warning'" size="small">
-                  {{ row.entity_type === 'TABLE' ? t('subject.tableLevel') : t('subject.fieldLevel') }}
-                </el-tag>
-              </template>
-            </el-table-column>
-            <el-table-column :label="t('subject.selectTarget')" min-width="380">
-              <template #default="{ row }">
-                <span class="block truncate" :title="getRelationDisplayText(row)">{{ getRelationDisplayText(row) }}</span>
-              </template>
-            </el-table-column>
-            <el-table-column :label="t('common.actions')" width="120">
-              <template #default="{ row }">
-                <el-button link type="danger" size="small" @click="handleRemoveRelation(relationTermId, row)">
-                  {{ t('common.remove') }}
-                </el-button>
-              </template>
-            </el-table-column>
-          </el-table>
-          <el-empty v-else :description="t('subject.noRelations')" :image-size="60" />
-        </div>
-
-        <div v-else class="space-y-4">
+        <div class="space-y-4">
           <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
-            <el-card shadow="never" class="border border-[var(--ep-border-color-lighter)]">
+            <el-card shadow="never" class="border border-[var(--ep-border-color-lighter)] [&_.el-card__body]:!p-0">
               <template #header>
                 <div class="flex items-center gap-2">
-                  <span class="whitespace-nowrap text-sm font-semibold text-[var(--ep-text-color-primary)]">{{ t('subject.selectTableStep') }}</span>
-                  <div class="w-64">
-                    <el-select
-                      v-model="schemaFilter"
-                      clearable
-                      filterable
-                      :placeholder="t('subject.filterSchema')"
-                      size="default"
-                      class="w-full"
-                      popper-class="schema-filter-popper"
-                    >
-                      <el-option v-for="schema in schemaOptions" :key="schema" :label="schema" :value="schema">
-                        <span class="block truncate" :title="schema">{{ schema }}</span>
-                      </el-option>
-                    </el-select>
-                  </div>
-                  <div class="ml-auto w-full max-w-xs">
+                  <div class="w-full">
                     <el-input
-                      v-model="tableSearch"
+                      v-model="tableSearchKeyword"
                       :placeholder="t('subject.searchTable')"
                       :prefix-icon="Search"
                       clearable
                       size="default"
+                      @keyup.enter="handleTableSearch"
+                      @clear="handleTableSearch"
                     />
                   </div>
                 </div>
               </template>
-              <div class="max-h-[380px] space-y-2 overflow-y-auto pr-1">
-                <el-card
-                  v-for="table in filteredTables"
-                  :key="table.id"
-                  shadow="never"
-                  class="border border-[var(--ep-border-color-lighter)]"
+              <div class="max-h-[240px] overflow-y-auto" @scroll.passive="handleTableListScroll">
+                <el-table
+                  ref="tableRef"
+                  :data="availableTables"
+                  row-key="id"
+                  class="!border-0"
+                  :header-cell-style="{ background: 'transparent', color: 'var(--ep-text-color-secondary)', borderBottom: '1px solid var(--ep-border-color-lighter)' }"
+                  @selection-change="handleSelectionChange"
+                  @row-click="handleRowClick"
                 >
-                  <div class="flex items-center justify-between gap-3">
-                    <el-checkbox :model-value="isTableSelected(table.id)" @change="(value: unknown) => handleTableToggle(table.id, !!value)">
-                      <span class="text-sm font-medium text-[var(--ep-text-color-primary)]">{{ table.name }}</span>
-                    </el-checkbox>
-                    <div class="flex items-center gap-2">
-                      <el-tag v-if="table.schema" size="small" effect="plain">{{ table.schema }}</el-tag>
-                      <el-tag v-if="isTableSelected(table.id)" type="primary" size="small">{{ t('common.selected') }}</el-tag>
-                    </div>
-                  </div>
-                </el-card>
-                <div v-if="tableEmptyText" class="py-8 text-center text-sm text-[var(--ep-text-color-placeholder)]">{{ tableEmptyText }}</div>
+                  <el-table-column type="selection" width="42" />
+                  <el-table-column prop="name" :label="t('common.name')" min-width="140" />
+                  <el-table-column :label="t('common.schema')" width="100">
+                    <template #default="{ row }">
+                      <el-tag v-if="row.schema" size="small" effect="plain">{{ row.schema }}</el-tag>
+                      <span v-else class="text-[var(--ep-text-color-placeholder)]">-</span>
+                    </template>
+                  </el-table-column>
+                </el-table>
+                <div v-if="!relationDialogLoading && !tableLoadingMore && availableTables.length === 0" class="py-6 text-center text-sm text-[var(--ep-text-color-placeholder)]">
+                  {{ tableSearchKeyword ? t('subject.noSearchResults') : t('subject.noTables') }}
+                </div>
+                <div v-if="tableLoadingMore" class="py-3 text-center text-sm text-[var(--ep-text-color-placeholder)]">{{ t('common.loading') }}...</div>
               </div>
             </el-card>
 
@@ -820,20 +820,15 @@ onMounted(() => {
 
       <template #footer>
         <div class="flex items-center justify-end gap-2">
-          <template v-if="relationMode === 'add'">
-            <el-button @click="relationMode = 'list'">{{ t('common.cancel') }}</el-button>
-            <el-button
-              type="primary"
-              :disabled="selectedTableIds.size === 0 || selectedRelationCount === 0"
-              :loading="relationDialogLoading"
-              @click="handleSubmitRelation"
-            >
-              {{ t('common.confirm') }}
-            </el-button>
-          </template>
-          <template v-else>
-            <el-button @click="handleCloseRelationDialog">{{ t('common.close') }}</el-button>
-          </template>
+          <el-button @click="relationDialogVisible = false">{{ t('common.cancel') }}</el-button>
+          <el-button
+            type="primary"
+            :disabled="selectedTableIds.size === 0 || selectedRelationCount === 0"
+            :loading="relationDialogLoading"
+            @click="handleSubmitRelation"
+          >
+            {{ t('common.confirm') }}
+          </el-button>
         </div>
       </template>
     </el-dialog>

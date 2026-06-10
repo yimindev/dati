@@ -97,8 +97,18 @@ export function deleteSubject(id: string, signal?: AbortSignal): Promise<IdRespo
   return del<IdResponse>(`/v1/subjects/${encodeURIComponent(id)}`, undefined, signal);
 }
 
-export function getSubjectTables(subjectId: string, signal?: AbortSignal): Promise<TableInfoVO[]> {
-  return get<TableInfoVO[]>(`/v1/subjects/${encodeURIComponent(subjectId)}/tables`, undefined, signal);
+export function getSubjectTables(
+  subjectId: string,
+  page: number = 1,
+  size: number = 15,
+  keyword?: string,
+  signal?: AbortSignal,
+): Promise<PageResponse<TableInfoVO>> {
+  return get<PageResponse<TableInfoVO>>(
+    `/v1/subjects/${encodeURIComponent(subjectId)}/tables`,
+    { page, size, keyword },
+    signal,
+  );
 }
 
 export function getAvailableTables(subjectId: string, schema: string, signal?: AbortSignal): Promise<SubjectAvailableTableVO[]> {
@@ -117,8 +127,18 @@ export function removeTableFromSubject(subjectId: string, tableId: string, signa
   return del<IdResponse>(`/v1/subjects/${encodeURIComponent(subjectId)}/tables/${encodeURIComponent(tableId)}`, undefined, signal);
 }
 
-export function getTermsBySubject(subjectId: string, signal?: AbortSignal): Promise<TermVO[]> {
-  return get<TermVO[]>(`/v1/subjects/${encodeURIComponent(subjectId)}/terms`, undefined, signal);
+export function getTermsBySubject(
+  subjectId: string,
+  page: number = 1,
+  size: number = 15,
+  keyword?: string,
+  signal?: AbortSignal,
+): Promise<PageResponse<TermVO>> {
+  return get<PageResponse<TermVO>>(
+    `/v1/subjects/${encodeURIComponent(subjectId)}/terms`,
+    { page, size, keyword },
+    signal,
+  );
 }
 
 export function createTerm(subjectId: string, body: CreateTermRequest, signal?: AbortSignal): Promise<IdResponse> {
