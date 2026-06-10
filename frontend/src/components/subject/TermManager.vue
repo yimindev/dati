@@ -48,6 +48,7 @@ const activeFieldConfigTableId = ref('')
 const tableColumnsData = ref<Map<string, { name: string }[]>>(new Map())
 const loadingTableColumns = ref<Set<string>>(new Set())
 const tableSearchKeyword = ref('')
+const selectedTableObjects = ref<Map<string, TableInfoVO>>(new Map())
 const tableRef = ref()
 
 const rules: FormRules = {
@@ -166,7 +167,10 @@ const getExistingRelationKeys = (termId: string) => {
 }
 
 const selectedTables = computed(() => {
-  return availableTables.value.filter(table => selectedTableIds.value.has(table.id))
+  // Source of truth is selectedTableObjects, NOT availableTables.
+  // availableTables is only a filtered view; selected tables must
+  // remain in the right panel even when hidden by a search.
+  return Array.from(selectedTableObjects.value.values())
 })
 
 const selectedRelationCount = computed(() => {
@@ -175,6 +179,12 @@ const selectedRelationCount = computed(() => {
     count += fields.size
   }
   return count
+})
+
+const confirmDisabledReason = computed(() => {
+  if (selectedTableIds.value.size === 0) return t('subject.selectTable')
+  if (selectedRelationCount.value === 0) return t('subject.configureRelationHint')
+  return ''
 })
 
 const isTableLevelEnabled = (tableId: string) => tableLevelTableIds.value.has(tableId)
@@ -210,6 +220,7 @@ const getFieldEmptyTextByTable = (tableId: string) => {
 
 const resetRelationEditorState = () => {
   selectedTableIds.value = new Set()
+  selectedTableObjects.value = new Map()
   tableLevelTableIds.value = new Set()
   selectedFieldsByTable.value = new Map()
   fieldSearchByTable.value = new Map()
@@ -217,12 +228,37 @@ const resetRelationEditorState = () => {
   tableSearchKeyword.value = ''
 }
 
+const isSyncingSelection = ref(false)
+
+const syncTableSelectionVisual = async () => {
+  await nextTick()
+  if (!tableRef.value) return
+  const previouslySyncing = isSyncingSelection.value
+  isSyncingSelection.value = true
+  try {
+    tableRef.value.clearSelection()
+    for (const row of availableTables.value) {
+      if (selectedTableIds.value.has(row.id)) {
+        // Refresh the stored object with latest table info from search results
+        selectedTableObjects.value.set(row.id, row)
+        tableRef.value.toggleRowSelection(row, true)
+      }
+    }
+  } finally {
+    isSyncingSelection.value = previouslySyncing
+  }
+}
+
 const handleSelectionChange = (rows: TableInfoVO[]) => {
+  if (isSyncingSelection.value) return
   const newIds = new Set(rows.map(r => r.id))
 
+  // Add newly selected tables
   for (const row of rows) {
     const id = row.id
     if (!selectedTableIds.value.has(id)) {
+      selectedTableIds.value.add(id)
+      selectedTableObjects.value.set(id, row)
       tableLevelTableIds.value.add(id)
       if (!selectedFieldsByTable.value.has(id)) {
         selectedFieldsByTable.value.set(id, new Set())
@@ -234,8 +270,14 @@ const handleSelectionChange = (rows: TableInfoVO[]) => {
     }
   }
 
+  // Remove deselected tables — but ONLY when they are visible in the
+  // current table list. Tables hidden by a search filter are preserved.
   for (const id of selectedTableIds.value) {
     if (!newIds.has(id)) {
+      const isVisible = availableTables.value.some(t => t.id === id)
+      if (!isVisible) continue
+      selectedTableIds.value.delete(id)
+      selectedTableObjects.value.delete(id)
       tableLevelTableIds.value.delete(id)
       selectedFieldsByTable.value.delete(id)
       fieldSearchByTable.value.delete(id)
@@ -244,8 +286,6 @@ const handleSelectionChange = (rows: TableInfoVO[]) => {
       }
     }
   }
-
-  selectedTableIds.value = newIds
 }
 
 const handleRowClick = (row: TableInfoVO) => {
@@ -381,18 +421,21 @@ const loadTablesForRelation = async (append: boolean) => {
 
 const handleTableSearch = async () => {
   if (relationDialogLoading.value || tableLoadingMore.value) return
-  selectedTableIds.value = new Set()
-  tableLevelTableIds.value = new Set()
-  selectedFieldsByTable.value = new Map()
-  fieldSearchByTable.value = new Map()
-  activeFieldConfigTableId.value = ''
-  tableRef.value?.clearSelection()
   relationDialogLoading.value = true
   tablePage.value = 1
-  availableTables.value = []
+  // Guard selection state while replacing the table list — the el-table
+  // fires selection-change during the data swap and would otherwise
+  // clear previously-selected tables that are not in the search results.
+  isSyncingSelection.value = true
   try {
     await loadTablesForRelation(false)
+    // Re-apply checkmarks for previously selected tables that still appear
+    await syncTableSelectionVisual()
+  } catch (error) {
+    console.error('Failed to search tables:', error)
+    ElMessage.error(t('common.loadFailed'))
   } finally {
+    isSyncingSelection.value = false
     relationDialogLoading.value = false
   }
 }
@@ -748,10 +791,10 @@ onMounted(() => {
                   <el-tag type="info" size="small">{{ selectedTables.length }} {{ t('common.selectedItems') }}</el-tag>
                 </div>
               </template>
-              <div v-if="selectedTables.length === 0" class="py-12">
+              <div v-if="selectedTables.length === 0" class="min-h-[280px] flex items-center justify-center">
                 <el-empty :description="t('subject.selectTable')" :image-size="56" />
               </div>
-              <div v-else class="space-y-3">
+              <div v-else class="space-y-3 min-h-[280px]">
                 <el-tabs
                   v-model="activeFieldConfigTableId"
                   class="field-config-tabs"
@@ -821,14 +864,22 @@ onMounted(() => {
       <template #footer>
         <div class="flex items-center justify-end gap-2">
           <el-button @click="relationDialogVisible = false">{{ t('common.cancel') }}</el-button>
-          <el-button
-            type="primary"
-            :disabled="selectedTableIds.size === 0 || selectedRelationCount === 0"
-            :loading="relationDialogLoading"
-            @click="handleSubmitRelation"
+          <el-tooltip
+            :disabled="!confirmDisabledReason"
+            :content="confirmDisabledReason"
+            placement="top"
           >
-            {{ t('common.confirm') }}
-          </el-button>
+            <span class="inline-flex">
+              <el-button
+                type="primary"
+                :disabled="selectedTableIds.size === 0 || selectedRelationCount === 0"
+                :loading="relationDialogLoading"
+                @click="handleSubmitRelation"
+              >
+                {{ t('common.confirm') }}
+              </el-button>
+            </span>
+          </el-tooltip>
         </div>
       </template>
     </el-dialog>

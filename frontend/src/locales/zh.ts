@@ -171,6 +171,7 @@ export default {
 
     // 术语关联
     selectTable: "请选择表",
+    configureRelationHint: "请开启整表关联或选择字段",
     tableLevel: "整表",
     fieldLevel: "字段",
 

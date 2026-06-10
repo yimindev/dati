@@ -171,6 +171,7 @@ export default {
 
     // Term Relations
     selectTable: "Please select a table",
+    configureRelationHint: "Enable table-level relation or select fields",
     tableLevel: "Table",
     fieldLevel: "Field",
 
