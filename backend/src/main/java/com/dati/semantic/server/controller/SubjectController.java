@@ -27,6 +27,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import jakarta.validation.Valid;
+
 import java.util.List;
 
 @RestController
@@ -67,10 +68,15 @@ public class SubjectController {
     }
 
     @GetMapping("/{id}/tables")
-    public List<TableInfoVO> getSubjectTables(@PathVariable String id) {
-        return subjectService.getTablesBySubjectId(id).stream()
-                .map(tableAssembler::toTableInfoVO)
-                .toList();
+    public PageResponse<TableInfoVO> getSubjectTables(
+            @PathVariable String id,
+            PageReq pageReq,
+            @RequestParam(required = false) String keyword) {
+        Sort sortBy = Sort.by(Sort.Direction.DESC, "updatedAt");
+        Page<TableInfoVO> tableVOPage = subjectService
+                .getTablesBySubjectId(id, keyword, pageReq.toPageRequest().withSort(sortBy))
+                .map(tableAssembler::toTableInfoVO);
+        return PageResponse.of(tableVOPage);
     }
 
     @GetMapping("/{id}/available-tables")

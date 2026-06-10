@@ -3,7 +3,9 @@ package com.dati.semantic.domain.service;
 import com.dati.base.exception.DatiException;
 import com.dati.base.exception.ErrorCode;
 import com.dati.common.StringUtils;
+import com.dati.datasource.domain.model.TableInfo;
 import com.dati.datasource.repository.dao.TableInfoDAO;
+import com.dati.datasource.repository.mapper.TableMapper;
 import com.dati.datasource.repository.po.TableInfoPO;
 import com.dati.semantic.domain.SemanticEntityType;
 import com.dati.semantic.domain.model.Subject;
@@ -177,19 +179,16 @@ public class SubjectService {
     }
 
     @Transactional(readOnly = true)
-    public List<com.dati.datasource.domain.model.TableInfo> getTablesBySubjectId(String subjectId) {
+    public Page<TableInfo> getTablesBySubjectId(
+            String subjectId, @Nullable String keyword, Pageable pageable) {
         if (!subjectDAO.existsById(subjectId)) {
             throw new DatiException(ErrorCode.SM_SUBJECT_NOT_FOUND, subjectId);
         }
 
-        List<SubjectTablePO> subjectTables = subjectTableDAO.findBySubjectId(subjectId);
-        List<String> tableIds = subjectTables.stream()
-                .map(SubjectTablePO::getTableId)
-                .collect(Collectors.toList());
-
-        return tableInfoDAO.findAllById(tableIds).stream()
-                .map(com.dati.datasource.repository.mapper.TableMapper::toTableInfo)
-                .collect(Collectors.toList());
+        return (StringUtils.isEmpty(keyword)
+                ? subjectTableDAO.findTablesBySubjectId(subjectId, pageable)
+                : subjectTableDAO.findTablesBySubjectIdAndNameContaining(subjectId, keyword, pageable))
+                .map(TableMapper::toTableInfo);
     }
 
     @Transactional(readOnly = true)

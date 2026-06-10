@@ -13,6 +13,9 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -201,7 +204,7 @@ class TermControllerTest {
     }
 
     @Test
-    @DisplayName("获取 Subject 下的 Terms - 成功返回 200")
+    @DisplayName("获取 Subject 下的 Terms - 分页 + keyword 返回 200")
     void getTermsBySubject_shouldReturn200() throws Exception {
         Term term1 = new Term();
         term1.setId("term-001");
@@ -231,14 +234,26 @@ class TermControllerTest {
         termVO2.setName("Term 2");
         termVO2.setDescription("Description 2");
 
-        when(termService.getTermsBySubject("subject-001")).thenReturn(java.util.List.of(term1, term2));
+        Page<Term> termPage = new PageImpl<>(
+                java.util.List.of(term1, term2),
+                PageRequest.of(0, 10),
+                2);
+
+        when(termService.getTermsBySubject(
+                org.mockito.ArgumentMatchers.eq("subject-001"),
+                org.mockito.ArgumentMatchers.isNull(),
+                org.mockito.ArgumentMatchers.any()))
+                .thenReturn(termPage);
         when(termAssembler.toVO(term1)).thenReturn(termVO1);
         when(termAssembler.toVO(term2)).thenReturn(termVO2);
 
-        mockMvc.perform(get("/v1/subjects/subject-001/terms"))
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$.length()").value(2))
-            .andExpect(jsonPath("$[0].id").value("term-001"))
-            .andExpect(jsonPath("$[1].id").value("term-002"));
+        mockMvc.perform(get("/v1/subjects/subject-001/terms?page=1&size=10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.length()").value(2))
+                .andExpect(jsonPath("$.data[0].id").value("term-001"))
+                .andExpect(jsonPath("$.data[1].id").value("term-002"))
+                .andExpect(jsonPath("$.total").value(2))
+                .andExpect(jsonPath("$.page").value(1))
+                .andExpect(jsonPath("$.size").value(10));
     }
 }

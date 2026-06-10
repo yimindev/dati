@@ -2,6 +2,7 @@ package com.dati.semantic.domain.service;
 
 import com.dati.base.exception.DatiException;
 import com.dati.semantic.domain.SemanticEntityType;
+import com.dati.semantic.domain.model.Term;
 import com.dati.semantic.repository.dao.TermDAO;
 import com.dati.semantic.repository.dao.TermRelationDAO;
 import com.dati.semantic.repository.po.SemanticSearchDocument;
@@ -14,6 +15,10 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 import java.util.Optional;
@@ -21,6 +26,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -116,5 +122,57 @@ class TermServiceTest {
         termService.unlinkEntity(termId, tableId, fieldName);
 
         verify(termRelationDAO).delete(relation);
+    }
+
+    @Test
+    @DisplayName("getTermsBySubject - keyword 非空时应按 ID 前缀或名称模糊匹配")
+    void getTermsBySubject_withKeyword_shouldReturnMatchingTerms() {
+        String subjectId = "subject-001";
+        String keyword = "客户";
+        Pageable pageable = PageRequest.of(0, 10);
+
+        TermPO termPO = new TermPO();
+        termPO.setId("term-001");
+        termPO.setSubjectId(subjectId);
+        termPO.setName("客户分析");
+        termPO.setDescription("客户相关数据");
+        termPO.setCreatedAt(java.time.Instant.now());
+        termPO.setUpdatedAt(java.time.Instant.now());
+
+        Page<TermPO> poPage = new PageImpl<>(List.of(termPO), pageable, 1);
+        when(termDAO.findBySubjectIdAndKeyword(subjectId, keyword, pageable)).thenReturn(poPage);
+
+        Page<Term> result = termService.getTermsBySubject(subjectId, keyword, pageable);
+
+        assertThat(result.getTotalElements()).isEqualTo(1);
+        assertThat(result.getContent().getFirst().getName()).isEqualTo("客户分析");
+    }
+
+    @Test
+    @DisplayName("getTermsBySubject - keyword 为空时应查所有")
+    void getTermsBySubject_withNullKeyword_shouldReturnAll() {
+        String subjectId = "subject-001";
+        Pageable pageable = PageRequest.of(0, 10);
+
+        TermPO termPO1 = new TermPO();
+        termPO1.setId("term-001");
+        termPO1.setSubjectId(subjectId);
+        termPO1.setName("客户");
+        termPO1.setCreatedAt(java.time.Instant.now());
+        termPO1.setUpdatedAt(java.time.Instant.now());
+
+        TermPO termPO2 = new TermPO();
+        termPO2.setId("term-002");
+        termPO2.setSubjectId(subjectId);
+        termPO2.setName("营收");
+        termPO2.setCreatedAt(java.time.Instant.now());
+        termPO2.setUpdatedAt(java.time.Instant.now());
+
+        Page<TermPO> poPage = new PageImpl<>(List.of(termPO1, termPO2), pageable, 2);
+        when(termDAO.findBySubjectId(eq(subjectId), eq(pageable))).thenReturn(poPage);
+
+        Page<Term> result = termService.getTermsBySubject(subjectId, null, pageable);
+
+        assertThat(result.getTotalElements()).isEqualTo(2);
     }
 }

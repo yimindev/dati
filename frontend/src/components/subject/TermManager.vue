@@ -18,6 +18,10 @@ const props = defineProps<Props>()
 
 const loading = ref(false)
 const termList = ref<TermVO[]>([])
+const searchKeyword = ref('')
+const page = ref(1)
+const pageSize = ref(15)
+const total = ref(0)
 const termDetails = ref<Map<string, TermVO & { relations: TermRelationVO[] }>>(new Map())
 
 const termDialogVisible = ref(false)
@@ -80,13 +84,43 @@ const removeTermAlias = (alias: string) => {
 const loadTerms = async () => {
   try {
     loading.value = true
-    termList.value = await getTermsBySubject(props.subjectId)
+    const keywordParam = searchKeyword.value.trim() || undefined
+    const response = await getTermsBySubject(
+      props.subjectId,
+      page.value,
+      pageSize.value,
+      keywordParam,
+    )
+    termList.value = response.data ?? []
+    total.value = response.total ?? 0
   } catch (error) {
     console.error('Failed to load terms:', error)
     ElMessage.error(t('common.loadFailed'))
   } finally {
     loading.value = false
   }
+}
+
+const handleSearch = () => {
+  page.value = 1
+  loadTerms()
+}
+
+const handleClearSearch = () => {
+  searchKeyword.value = ''
+  page.value = 1
+  loadTerms()
+}
+
+const handlePageChange = (p: number) => {
+  page.value = p
+  loadTerms()
+}
+
+const handlePageSizeChange = (ps: number) => {
+  pageSize.value = ps
+  page.value = 1
+  loadTerms()
 }
 
 const loadTermDetail = async (termId: string) => {
@@ -342,7 +376,8 @@ const handleOpenRelationDialog = async (termId: string) => {
 
   try {
     relationDialogLoading.value = true
-    availableTables.value = await getSubjectTables(props.subjectId)
+    const tablesRes = await getSubjectTables(props.subjectId, 1, 200)
+    availableTables.value = tablesRes.data ?? []
     if (!termDetails.value.has(termId)) {
       await loadTermDetail(termId)
     }
@@ -474,7 +509,24 @@ onMounted(() => {
 
 <template>
   <div class="space-y-4 py-4">
-    <div class="flex items-center justify-end">
+    <div class="flex items-center justify-between mb-4 gap-2 flex-wrap">
+      <div class="flex items-center gap-2">
+        <el-input
+          v-model="searchKeyword"
+          :placeholder="t('common.search')"
+          clearable
+          class="!w-60"
+          @keyup.enter="handleSearch"
+          @clear="handleClearSearch"
+        >
+          <template #prefix>
+            <el-icon><Search /></el-icon>
+          </template>
+        </el-input>
+        <el-button type="primary" plain :icon="Search" @click="handleSearch">
+          {{ t('common.search') }}
+        </el-button>
+      </div>
       <el-button type="primary" :icon="Plus" @click="handleOpenTermDialog()">
         {{ t('subject.addTerm') }}
       </el-button>
@@ -531,6 +583,19 @@ onMounted(() => {
     </el-table>
 
     <el-empty v-if="!loading && termList.length === 0" :description="t('subject.noTerms')" />
+
+    <div v-if="!loading && total > 0" class="flex items-center justify-between mt-4">
+      <span class="text-[var(--ep-text-color-secondary)] text-sm">{{ t('common.total', { total }) }}</span>
+      <el-pagination
+        layout="sizes, prev, pager, next"
+        :current-page="page"
+        :page-size="pageSize"
+        :page-sizes="[15, 30, 50, 100]"
+        :total="total"
+        @current-change="handlePageChange"
+        @size-change="handlePageSizeChange"
+      />
+    </div>
 
     <el-dialog
       v-model="termDialogVisible"

@@ -15,6 +15,9 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -22,8 +25,6 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.Instant;
 import java.util.List;
-
-import org.springframework.data.domain.Page;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -103,7 +104,7 @@ class SubjectControllerTest {
     }
 
     @Test
-    @DisplayName("获取 Subject Tables - 成功返回 200")
+    @DisplayName("获取 Subject Tables - 分页 + keyword 返回 200")
     void getSubjectTables_shouldReturn200() throws Exception {
         TableInfo tableInfo = new TableInfo();
         tableInfo.setId("table-001");
@@ -120,13 +121,26 @@ class SubjectControllerTest {
         tableVO.setSchema("public");
         tableVO.setDescription("Users table description");
 
-        when(subjectService.getTablesBySubjectId("subject-001")).thenReturn(List.of(tableInfo));
+        Page<TableInfo> tablePage = new PageImpl<>(
+                List.of(tableInfo),
+                PageRequest.of(0, 10),
+                1);
+
+        when(subjectService.getTablesBySubjectId(
+                org.mockito.ArgumentMatchers.eq("subject-001"),
+                org.mockito.ArgumentMatchers.isNull(),
+                org.mockito.ArgumentMatchers.any()))
+                .thenReturn(tablePage);
         when(tableAssembler.toTableInfoVO(any(TableInfo.class))).thenReturn(tableVO);
 
-        mockMvc.perform(get("/v1/subjects/subject-001/tables"))
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$[0].id").value("table-001"))
-            .andExpect(jsonPath("$[0].name").value("users"));
+        mockMvc.perform(get("/v1/subjects/subject-001/tables?page=1&size=10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.length()").value(1))
+                .andExpect(jsonPath("$.data[0].id").value("table-001"))
+                .andExpect(jsonPath("$.data[0].name").value("users"))
+                .andExpect(jsonPath("$.total").value(1))
+                .andExpect(jsonPath("$.page").value(1))
+                .andExpect(jsonPath("$.size").value(10));
     }
 
     @Test

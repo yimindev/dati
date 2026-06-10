@@ -256,28 +256,6 @@ class SubjectServiceTest {
                 .hasMessageContaining("Association between subject");
     }
 
-    @Test
-    @DisplayName("getTablesBySubjectId - 应返回 Subject 关联的 tables")
-    void getTablesBySubjectId_shouldReturnTables() {
-        String subjectId = "subject-001";
-
-        SubjectTablePO subjectTablePO = new SubjectTablePO();
-        subjectTablePO.setId("st-001");
-        subjectTablePO.setSubjectId(subjectId);
-        subjectTablePO.setTableId("table-001");
-        subjectTablePO.setCreatedAt(Instant.now());
-
-        when(subjectDAO.existsById(subjectId)).thenReturn(true);
-        when(subjectTableDAO.findBySubjectId(subjectId)).thenReturn(List.of(subjectTablePO));
-        when(tableInfoDAO.findAllById(List.of("table-001"))).thenReturn(List.of(sampleTableInfoPO));
-
-        List<TableInfo> result = subjectService.getTablesBySubjectId(subjectId);
-
-        assertThat(result).hasSize(1);
-        assertThat(result.getFirst().getId()).isEqualTo("table-001");
-        assertThat(result.getFirst().getName()).isEqualTo("test_table");
-    }
-
     @ParameterizedTest
     @NullAndEmptySource
     @DisplayName("getSubjects - keyword 为 null 或空时应查所有")
@@ -307,5 +285,73 @@ class SubjectServiceTest {
 
         assertThat(result.getTotalElements()).isEqualTo(1);
         assertThat(result.getContent().getFirst().getName()).isEqualTo("Test Subject");
+    }
+
+    @Test
+    @DisplayName("getTablesBySubjectId (分页) - keyword 为空时应调用 findTablesBySubjectId")
+    void getTablesBySubjectId_paginated_withoutKeyword_shouldReturnAll() {
+        String subjectId = "subject-001";
+        Pageable pageable = PageRequest.of(0, 10);
+
+        TableInfoPO ti1 = new TableInfoPO();
+        ti1.setId("table-001");
+        ti1.setName("orders");
+        ti1.setDataSourceId("datasource-001");
+        ti1.setUpdatedAt(Instant.now());
+
+        TableInfoPO ti2 = new TableInfoPO();
+        ti2.setId("table-002");
+        ti2.setName("users");
+        ti2.setDataSourceId("datasource-001");
+        ti2.setUpdatedAt(Instant.now().minusSeconds(100));
+
+        Page<TableInfoPO> poPage = new org.springframework.data.domain.PageImpl<>(List.of(ti1, ti2), pageable, 2);
+
+        when(subjectDAO.existsById(subjectId)).thenReturn(true);
+        when(subjectTableDAO.findTablesBySubjectId(subjectId, pageable)).thenReturn(poPage);
+
+        Page<TableInfo> result = subjectService.getTablesBySubjectId(subjectId, null, pageable);
+
+        assertThat(result.getTotalElements()).isEqualTo(2);
+        assertThat(result.getContent()).hasSize(2);
+        assertThat(result.getContent().get(0).getName()).isEqualTo("orders");
+        assertThat(result.getContent().get(1).getName()).isEqualTo("users");
+    }
+
+    @Test
+    @DisplayName("getTablesBySubjectId (分页) - keyword 非空时应按名称过滤")
+    void getTablesBySubjectId_paginated_withKeyword_shouldFilterByName() {
+        String subjectId = "subject-001";
+        String keyword = "user";
+        Pageable pageable = PageRequest.of(0, 10);
+
+        TableInfoPO ti1 = new TableInfoPO();
+        ti1.setId("table-002");
+        ti1.setName("users");
+        ti1.setDataSourceId("datasource-001");
+        ti1.setUpdatedAt(Instant.now());
+
+        Page<TableInfoPO> poPage = new org.springframework.data.domain.PageImpl<>(List.of(ti1), pageable, 1);
+
+        when(subjectDAO.existsById(subjectId)).thenReturn(true);
+        when(subjectTableDAO.findTablesBySubjectIdAndNameContaining(subjectId, keyword, pageable)).thenReturn(poPage);
+
+        Page<TableInfo> result = subjectService.getTablesBySubjectId(subjectId, keyword, pageable);
+
+        assertThat(result.getTotalElements()).isEqualTo(1);
+        assertThat(result.getContent().getFirst().getName()).isEqualTo("users");
+    }
+
+    @Test
+    @DisplayName("getTablesBySubjectId (分页) - Subject 不存在时应抛出异常")
+    void getTablesBySubjectId_paginated_shouldThrowWhenSubjectNotFound() {
+        String subjectId = "non-existent";
+        Pageable pageable = PageRequest.of(0, 10);
+
+        when(subjectDAO.existsById(subjectId)).thenReturn(false);
+
+        assertThatThrownBy(() -> subjectService.getTablesBySubjectId(subjectId, null, pageable))
+                .isInstanceOf(DatiException.class)
+                .hasMessageContaining("Subject not found");
     }
 }

@@ -44,21 +44,6 @@ class TermRepositoryTest {
     }
 
     @Test
-    @DisplayName("根据 subjectId 查询 - 成功")
-    void findBySubjectId_shouldReturnTermPO() {
-        TermPO termPO = new TermPO();
-        termPO.setSubjectId("subject-123");
-        termPO.setName("Test Term 2");
-        termPO.setDescription("Test Description 2");
-        termDAO.save(termPO);
-
-        List<TermPO> foundList = termDAO.findBySubjectId("subject-123");
-
-        assertThat(foundList).hasSize(1);
-        assertThat(foundList.get(0).getName()).isEqualTo("Test Term 2");
-    }
-
-    @Test
     @DisplayName("保存 TermRelationPO - 成功")
     void save_shouldPersistTermRelationPO() {
         TermRelationPO termRelationPO = new TermRelationPO();
@@ -87,8 +72,8 @@ class TermRepositoryTest {
         List<TermRelationPO> foundList = termRelationDAO.findByTermId("term-456");
 
         assertThat(foundList).hasSize(1);
-        assertThat(foundList.get(0).getEntityType()).isEqualTo(SemanticEntityType.FIELD);
-        assertThat(foundList.get(0).getFieldName()).isEqualTo("test_field");
+        assertThat(foundList.getFirst().getEntityType()).isEqualTo(SemanticEntityType.FIELD);
+        assertThat(foundList.getFirst().getFieldName()).isEqualTo("test_field");
     }
 
     @Test
@@ -120,7 +105,7 @@ class TermRepositoryTest {
         List<TermRelationPO> foundList = termRelationDAO.findByTermIdAndTableId("term-999", "table-def");
 
         assertThat(foundList).hasSize(1);
-        assertThat(foundList.get(0).getEntityType()).isEqualTo(SemanticEntityType.TABLE);
+        assertThat(foundList.getFirst().getEntityType()).isEqualTo(SemanticEntityType.TABLE);
     }
 
     @Test

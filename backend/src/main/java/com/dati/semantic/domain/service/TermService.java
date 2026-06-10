@@ -2,6 +2,7 @@ package com.dati.semantic.domain.service;
 
 import com.dati.base.exception.DatiException;
 import com.dati.base.exception.ErrorCode;
+import com.dati.common.StringUtils;
 import com.dati.datasource.repository.po.TableInfoPO;
 import com.dati.semantic.domain.SemanticEntityType;
 import com.dati.semantic.domain.model.Term;
@@ -17,6 +18,9 @@ import com.dati.semantic.repository.po.SemanticSearchDocument;
 import com.dati.semantic.repository.po.TermPO;
 import com.dati.semantic.repository.po.TermRelationPO;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -137,10 +141,11 @@ public class TermService {
     }
 
     @Transactional(readOnly = true)
-    public List<Term> getTermsBySubject(String subjectId) {
-        return termDAO.findBySubjectId(subjectId).stream()
-                .map(TermMapper::toTerm)
-                .collect(Collectors.toList());
+    public Page<Term> getTermsBySubject(String subjectId, @Nullable String keyword, Pageable pageable) {
+        Page<TermPO> pos = StringUtils.isEmpty(keyword)
+                ? termDAO.findBySubjectId(subjectId, pageable)
+                : termDAO.findBySubjectIdAndKeyword(subjectId, keyword, pageable);
+        return pos.map(TermMapper::toTerm);
     }
 
     @Transactional(readOnly = true)

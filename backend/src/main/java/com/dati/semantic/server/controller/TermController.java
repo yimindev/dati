@@ -1,6 +1,8 @@
 package com.dati.semantic.server.controller;
 
 import com.dati.base.pojo.IdResponse;
+import com.dati.base.pojo.PageReq;
+import com.dati.base.pojo.PageResponse;
 import com.dati.semantic.domain.model.Term;
 import com.dati.semantic.domain.service.TermService;
 import com.dati.semantic.server.assembler.TermAssembler;
@@ -10,9 +12,9 @@ import com.dati.semantic.server.pojo.request.UpdateTermRequest;
 import com.dati.semantic.server.pojo.vo.TermVO;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Sort;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/v1")
@@ -47,10 +49,15 @@ public class TermController {
     }
 
     @GetMapping("/subjects/{subjectId}/terms")
-    public List<TermVO> getTermsBySubject(@PathVariable String subjectId) {
-        return termService.getTermsBySubject(subjectId).stream()
-                .map(termAssembler::toVO)
-                .toList();
+    public PageResponse<TermVO> getTermsBySubject(
+            @PathVariable String subjectId,
+            PageReq pageReq,
+            @RequestParam(required = false) String keyword) {
+        Sort sortBy = Sort.by(Sort.Direction.DESC, "updatedAt");
+        Page<TermVO> termVOPage = termService
+                .getTermsBySubject(subjectId, keyword, pageReq.toPageRequest().withSort(sortBy))
+                .map(termAssembler::toVO);
+        return PageResponse.of(termVOPage);
     }
 
     @PostMapping("/terms/{id}/relations")
