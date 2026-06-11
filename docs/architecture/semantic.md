@@ -82,13 +82,13 @@ backend/src/main/java/com/dati/semantic/
 
 | Method | Path | 说明 |
 |--------|------|------|
-| GET | `/v1/subjects?datasourceId=&page=&size=` | 分页查询主题 |
-| GET | `/v1/subjects/{id}` | 获取主题详情 |
+| GET | `/v1/subjects?keyword=&page=&size=` | 分页查询主题（按名称搜索） |
+| GET | `/v1/subjects/{id}` | 获取主题详情（含数据源名称） |
 | POST | `/v1/subjects` | 创建主题 |
 | PUT | `/v1/subjects/{id}` | 更新主题 |
 | DELETE | `/v1/subjects/{id}` | 删除主题 |
-| GET | `/v1/subjects/{id}/tables` | 获取已关联的表 |
-| GET | `/v1/subjects/{id}/tables/available` | 获取可关联的表 |
+| GET | `/v1/subjects/{id}/tables?keyword=&page=&size=` | 分页查询已关联的表（按表名搜索，DB 层分页） |
+| GET | `/v1/subjects/{id}/available-tables?schema=` | 获取可关联的表 |
 | POST | `/v1/subjects/{id}/tables` | 关联表到主题 |
 | DELETE | `/v1/subjects/{id}/tables/{tableId}` | 取消关联 |
 
@@ -96,7 +96,7 @@ backend/src/main/java/com/dati/semantic/
 
 | Method | Path | 说明 |
 |--------|------|------|
-| GET | `/v1/subjects/{subjectId}/terms` | 查询主题下的术语 |
+| GET | `/v1/subjects/{subjectId}/terms?keyword=&page=&size=` | 分页查询主题下的术语（DB 层分页） |
 | GET | `/v1/terms/{id}` | 获取术语详情（含关联） |
 | POST | `/v1/subjects/{subjectId}/terms` | 创建术语 |
 | PUT | `/v1/terms/{id}` | 更新术语 |
@@ -127,24 +127,24 @@ frontend/src/pages/subjects/
 
 ```typescript
 // Subject
-listSubjects(page, size, datasourceId): PageResponse<SubjectVO>
-getSubject(id): SubjectVO
-createSubject(body): IdResponse
-updateSubject(id, body): void
-deleteSubject(id): void
-getSubjectTables(subjectId): SubjectTableVO[]
-getAvailableTables(subjectId, schema): SubjectAvailableTableVO[]
-addTableToSubject(subjectId, body): void
-removeTableFromSubject(subjectId, tableId): void
+listSubjects(page, size, keyword?, signal?): PageResponse<SubjectVO>
+getSubject(id, signal?): SubjectVO
+createSubject(body, signal?): IdResponse
+updateSubject(id, body, signal?): IdResponse
+deleteSubject(id, signal?): IdResponse
+getSubjectTables(subjectId, page?, size?, keyword?, signal?): PageResponse<TableInfoVO>
+getAvailableTables(subjectId, schema, signal?): SubjectAvailableTableVO[]
+addTableToSubject(subjectId, body, signal?): IdResponse
+removeTableFromSubject(subjectId, tableId, signal?): IdResponse
 
 // Term
-getTermsBySubject(subjectId): TermVO[]
-getTermDetail(id): TermVO
-createTerm(subjectId, body): IdResponse
-updateTerm(id, body): void
-deleteTerm(id): void
-linkTermRelation(termId, body): void
-unlinkTermRelation(termId, tableId, fieldNameOrNull): void
+getTermsBySubject(subjectId, page?, size?, keyword?, signal?): PageResponse<TermVO>
+getTermDetail(id, signal?): TermVO & { relations: TermRelationVO[] }
+createTerm(subjectId, body, signal?): IdResponse
+updateTerm(id, body, signal?): IdResponse
+deleteTerm(id, signal?): IdResponse
+linkTermRelation(termId, body, signal?): IdResponse
+unlinkTermRelation(termId, tableId, fieldName, signal?): IdResponse
 ```
 
 ## 技术要点
@@ -152,4 +152,7 @@ unlinkTermRelation(termId, tableId, fieldNameOrNull): void
 1. **ES 索引同步**：Subject/Term 创建/更新/删除时同步写 Elasticsearch，支持全文检索
 2. **级联删除**：删除 Subject 会清理 ES 索引；删除 Term 会清理关联的 TermRelation
 3. **表归属校验**：关联表到主题时校验表必须属于同一数据源
-4. **DTO 命名**：后端使用 `camelCase`，前端 API 层转换为 `snake_case`（后端统一按 dev profile 的 snake_case 处理）
+4. **数据库级分页**：`getSubjectTables` 和 `getTermsBySubject` 通过 JPQL 子查询在 DB 层完成分页/排序/关键词过滤，避免内存分页
+5. **关键词搜索**：主题列表按名称搜索，已关联的表按表名搜索，术语按名称/别名搜索；均采用 Java 层分支（keyword 空/非空分别调用不同 DAO 方法），避免 `IS NULL OR` 影响查询计划
+6. **数据源名称富集**：`SubjectVO.datasourceName` 由 `SubjectAssembler` 批量解析——`toVO()` 和 `toVOList()` 内部通过 `DataSourceService.getDataSourceNameMap()` 一次查询完成所有 ID→名称映射
+7. **DTO 命名**：后端使用 `camelCase`，前端 API 层转换为 `snake_case`（后端统一按 dev profile 的 snake_case 处理）
