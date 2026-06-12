@@ -3,6 +3,7 @@ import App from './App.vue'
 
 import '~/styles/index.scss'
 import '~/styles/tailwind.css'
+import '~/utils/codemirror/editor-theme.css'
 
 import { i18n, setupI18n } from "./plugins/i18n"
 

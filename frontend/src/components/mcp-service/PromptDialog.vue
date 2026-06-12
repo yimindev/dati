@@ -18,7 +18,6 @@ const isEdit = computed(() => !!props.prompt);
 
 const rules: FormRules = {
   name: [{ required: true, message: () => t("mcpService.prompt.nameRequired"), trigger: "blur" }],
-  content: [{ required: true, message: () => t("mcpService.prompt.contentRequired"), trigger: "blur" }],
 };
 
 const form = reactive({ name: "", description: "", content: "", parameters: [] as PromptParameter[] });
@@ -63,6 +62,12 @@ const removeParam = (i: number) => form.parameters.splice(i, 1);
 
 const handleSave = async () => {
   if (!await formRef.value?.validate().catch(() => false)) return;
+
+  if (!form.content.trim()) {
+    ElMessage.warning(t("mcpService.prompt.contentRequired"));
+    return;
+  }
+
   saving.value = true;
   try {
     if (isEdit.value) {
@@ -112,7 +117,7 @@ const handleSave = async () => {
       <section class="flex flex-col gap-4">
         <h4 class="m-0 text-sm font-semibold text-[var(--ep-text-color-primary)] flex items-center gap-2">{{ t("mcpService.prompt.content") }}</h4>
         <el-form-item prop="content">
-          <el-input v-model="form.content" type="textarea" :rows="10" :placeholder="t('mcpService.prompt.contentPlaceholder')" class="mono-input" />
+          <PromptTemplateEditor v-model="form.content" />
         </el-form-item>
       </section>
 
@@ -187,10 +192,6 @@ h4::before {
   height: 14px;
   background-color: var(--ep-color-primary);
   border-radius: 2px;
-}
-/* ── 等宽字体输入框（需穿透 el-input） ── */
-.mono-input :deep(textarea) {
-  font-family: "Fira Code", "Consolas", "Monaco", monospace;
 }
 /* ── el-table 单元格紧凑内边距 ── */
 .param-table :deep(.el-table__cell) {

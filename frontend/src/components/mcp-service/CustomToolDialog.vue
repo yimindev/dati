@@ -36,9 +36,6 @@ const rules: FormRules = {
   description: [
     { required: true, message: () => t("mcpService.tool.descRequired"), trigger: "blur" },
   ],
-  sqlTemplate: [
-    { required: true, message: () => t("mcpService.tool.sqlRequired"), trigger: "blur" },
-  ],
   dataSourceId: [
     { required: true, message: () => t("mcpService.tool.dataSourceRequired"), trigger: "blur" },
   ],
@@ -168,6 +165,11 @@ const handleSave = async () => {
   const valid = await formRef.value?.validate().catch(() => false);
   if (!valid) return;
 
+  if (!form.sqlTemplate.trim()) {
+    ElMessage.warning(t("mcpService.tool.sqlRequired"));
+    return;
+  }
+
   saving.value = true;
   try {
     const config = JSON.stringify({
@@ -277,13 +279,7 @@ const handleSave = async () => {
           <template #label>
             {{ t("mcpService.tool.sqlTemplate") }}
           </template>
-          <el-input
-            v-model="form.sqlTemplate"
-            type="textarea"
-            :rows="6"
-            :placeholder="`SELECT * FROM {{{table}}}\n{{#where}}\n  {{#if id}}AND id = {{id}}{{/if}}\n{{/where}}`"
-            class="mono-input"
-          />
+          <SqlTemplateEditor v-model="form.sqlTemplate" />
         </el-form-item>
       </section>
 
@@ -385,10 +381,6 @@ h4::before {
   height: 14px;
   background-color: var(--ep-color-primary);
   border-radius: 2px;
-}
-/* ── 等宽字体输入框（需穿透 el-input） ── */
-.mono-input :deep(textarea) {
-  font-family: "Fira Code", "Consolas", "Monaco", monospace;
 }
 /* ── el-table 单元格紧凑内边距 ── */
 .param-table :deep(.el-table__cell) {

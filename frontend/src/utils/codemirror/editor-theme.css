@@ -1,0 +1,72 @@
+/* frontend/src/utils/codemirror/editor-theme.css */
+/* ── Wrapper constrains width for .cm-editor ── */
+.cm-editor-wrapper {
+  width: 100%;
+}
+
+/* ── Base appearance, mapped to Element Plus CSS variables ── */
+.cm-editor {
+  background-color: var(--ep-bg-color);
+  color: var(--ep-text-color-primary);
+  font-size: 14px;
+  border: 1px solid var(--ep-border-color);
+  border-radius: var(--ep-border-radius-base);
+  min-height: 120px;
+}
+
+.cm-editor .cm-scroller {
+  min-height: inherit;
+}
+
+.cm-editor.cm-focused {
+  border-color: var(--ep-color-primary);
+  box-shadow: 0 0 0 1px var(--ep-color-primary);
+  outline: none;
+}
+
+/* ── Placeholder: hide on focus like native textarea ── */
+.cm-editor.cm-focused .cm-placeholder {
+  opacity: 0;
+}
+
+/* ── Active line ── */
+.cm-editor .cm-activeLine,
+.cm-editor .cm-activeLineGutter {
+  background-color: var(--ep-color-primary-light-9);
+}
+
+/* ── Cursor ── */
+.cm-editor .cm-cursor {
+  border-left-color: var(--ep-text-color-primary);
+}
+
+/* ── Selection ── */
+.cm-editor .cm-selectionBackground {
+  background-color: var(--ep-color-primary-light-5) !important;
+}
+
+/* ── Template syntax colors (fixed constants, legible in both light and dark) ── */
+.cm-editor .cm-tpl-var {
+  color: #1677ff;
+  font-weight: 500;
+}
+
+.cm-editor .cm-tpl-raw-var {
+  color: #d48806;
+  font-weight: 600;
+  text-decoration: underline wavy;
+}
+
+.cm-editor .cm-tpl-keyword {
+  color: #389e0d;
+  font-weight: 600;
+}
+
+/* ── SQL syntax token colors (light/dark agnostic, !important to override CodeMirror defaults) ── */
+.cm-editor .tok-keyword { color: #8959a8 !important; font-weight: 600 !important; }  /* SELECT FROM WHERE */
+.cm-editor .tok-string { color: #718c00 !important; }                      /* 'string literal' */
+.cm-editor .tok-number { color: #f5871f !important; }                      /* 123 3.14 */
+.cm-editor .tok-comment { color: #8e908c !important; font-style: italic !important; } /* -- comment */
+.cm-editor .tok-typeName { color: #4271ae !important; }                   /* INT VARCHAR */
+.cm-editor .tok-operator { color: #3e999f !important; }                   /* = < > */
+.cm-editor .tok-variableName { color: #c82829 !important; }               /* table.column */
