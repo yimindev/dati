@@ -45,21 +45,29 @@
   background-color: var(--ep-color-primary-light-5) !important;
 }
 
-/* ── Template syntax colors (fixed constants, legible in both light and dark) ── */
-.cm-editor .cm-tpl-var {
-  color: #1677ff;
-  font-weight: 500;
+/* ── Template syntax colors ──
+   !important + * descendant ensure template styles systematically
+   override host-language (SQL) highlighting within any nesting level.
+   When a template span wraps inside a SQL token span → color on
+   the inner span wins (direct over inherited).
+   When a SQL token span wraps inside a template span → * forces
+   the child to adopt template color. */
+.cm-editor .cm-tpl-var,
+.cm-editor .cm-tpl-var * {
+  color: #1677ff !important;
+  font-weight: 500 !important;
 }
 
-.cm-editor .cm-tpl-raw-var {
-  color: #d48806;
-  font-weight: 600;
-  text-decoration: underline wavy;
+.cm-editor .cm-tpl-raw-var,
+.cm-editor .cm-tpl-raw-var * {
+  color: #d48806 !important;
+  font-weight: 600 !important;
 }
 
-.cm-editor .cm-tpl-keyword {
-  color: #389e0d;
-  font-weight: 600;
+.cm-editor .cm-tpl-keyword,
+.cm-editor .cm-tpl-keyword * {
+  color: #389e0d !important;
+  font-weight: 600 !important;
 }
 
 /* ── SQL syntax token colors (light/dark agnostic, !important to override CodeMirror defaults) ── */

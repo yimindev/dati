@@ -13,7 +13,7 @@ import type { Extension } from "@codemirror/state";
 const PATTERNS: { regex: RegExp; cls: string }[] = [
   { regex: /(?<!\\)\{\{([#\/])(if|where)\s*(\w*)}}/g, cls: "cm-tpl-keyword" },
   { regex: /(?<!\\)\{\{\{(\w+)(:[^}]+)?}}}/g, cls: "cm-tpl-raw-var" },
-  { regex: /(?<!\\)\{\{(\w+)(:[^}]+)?}}/g, cls: "cm-tpl-var" },
+  { regex: /(?<!\\)(?<!\{)\{\{(\w+)(:[^}]+)?}}/g, cls: "cm-tpl-var" },
 ];
 
 function buildDecorations(view: EditorView): DecorationSet {
