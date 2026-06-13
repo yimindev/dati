@@ -2,10 +2,13 @@
 <script setup lang="ts">
 import { useVModel } from "@vueuse/core";
 import { sql } from "@codemirror/lang-sql";
-import { bracketMatching, syntaxHighlighting, defaultHighlightStyle } from "@codemirror/language";
-import { EditorView } from "@codemirror/view";
+import { autocompletion } from "@codemirror/autocomplete";
+import { bracketMatching, syntaxHighlighting } from "@codemirror/language";
 import { useCodeMirror } from "~/composables/useCodeMirror";
 import { templateDecorations } from "~/utils/codemirror/template-decorations";
+import { templateCompletions } from "~/utils/codemirror/completions/template-completions";
+import { templateAutoClose } from "~/utils/codemirror/completions/template-auto-close";
+import { datiSqlHighlight } from "~/utils/codemirror/sql-highlight";
 
 const props = defineProps<{
   modelValue: string;
@@ -19,10 +22,11 @@ const cm = useCodeMirror({
   modelValue: useVModel(props, "modelValue", emit),
   extensions: [
     sql(),
-    syntaxHighlighting(defaultHighlightStyle),
+    syntaxHighlighting(datiSqlHighlight),
+    autocompletion({ override: [templateCompletions()] }),
+    templateAutoClose(),
     templateDecorations(),
     bracketMatching(),
-    EditorView.lineWrapping,
   ],
   placeholder: `SELECT * FROM {{{table}}} {{#where}} {{#if id}}AND id = {{id}}{{/if}} {{/where}}`,
 });

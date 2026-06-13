@@ -46,16 +46,16 @@
 }
 
 /* ── Template syntax colors ──
-   !important + * descendant ensure template styles systematically
-   override host-language (SQL) highlighting within any nesting level.
-   When a template span wraps inside a SQL token span → color on
-   the inner span wins (direct over inherited).
-   When a SQL token span wraps inside a template span → * forces
-   the child to adopt template color. */
+   !important ensures template highlighting always wins over host-language
+   (SQL) tokens, regardless of which decoration ends up as the inner span.
+   * child selector covers the case where a SQL token span is nested inside
+   a template span, forcing the child to adopt template color.
+   SQL token colors are defined in sql-highlight.ts via HighlightStyle,
+   NOT in this file — hence !important here is one-directional (not a race). */
 .cm-editor .cm-tpl-var,
 .cm-editor .cm-tpl-var * {
   color: #1677ff !important;
-  font-weight: 500 !important;
+  font-weight: 600 !important;
 }
 
 .cm-editor .cm-tpl-raw-var,
@@ -70,11 +70,17 @@
   font-weight: 600 !important;
 }
 
-/* ── SQL syntax token colors (light/dark agnostic, !important to override CodeMirror defaults) ── */
-.cm-editor .tok-keyword { color: #8959a8 !important; font-weight: 600 !important; }  /* SELECT FROM WHERE */
-.cm-editor .tok-string { color: #718c00 !important; }                      /* 'string literal' */
-.cm-editor .tok-number { color: #f5871f !important; }                      /* 123 3.14 */
-.cm-editor .tok-comment { color: #8e908c !important; font-style: italic !important; } /* -- comment */
-.cm-editor .tok-typeName { color: #4271ae !important; }                   /* INT VARCHAR */
-.cm-editor .tok-operator { color: #3e999f !important; }                   /* = < > */
-.cm-editor .tok-variableName { color: #c82829 !important; }               /* table.column */
+/* ── Escape: \{{ → grey, treated as literal text ── */
+.cm-editor .cm-tpl-escape,
+.cm-editor .cm-tpl-escape * {
+  color: var(--ep-text-color-placeholder) !important;
+  font-weight: 400 !important;
+  text-decoration: none !important;
+}
+
+/* ── Error: unclosed {{ → orange wavy underline ── */
+.cm-editor .cm-tpl-error,
+.cm-editor .cm-tpl-error * {
+  text-decoration: underline wavy #d48806 !important;
+  text-decoration-skip-ink: none;
+}
