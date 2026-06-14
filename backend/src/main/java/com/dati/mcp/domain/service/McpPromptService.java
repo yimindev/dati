@@ -2,6 +2,7 @@ package com.dati.mcp.domain.service;
 
 import com.dati.base.exception.DatiException;
 import com.dati.base.exception.ErrorCode;
+import com.dati.common.JsonUtils;
 import com.dati.common.template.CompiledTemplate;
 import com.dati.common.template.TemplateParseException;
 import com.dati.common.template.TemplateParser;
@@ -46,15 +47,27 @@ public class McpPromptService {
     }
 
     @Transactional
-    public void updatePrompt(String serviceId, String promptId, McpPrompt prompt) {
-        McpPromptPO po = promptDAO.findByServiceIdAndId(serviceId, promptId)
-            .orElseThrow(() -> new DatiException(ErrorCode.MS_PROMPT_NOT_FOUND, promptId));
+    public void updatePrompt(McpPrompt prompt) {
+        McpPromptPO po = promptDAO.findByServiceIdAndId(prompt.getServiceId(), prompt.getId())
+            .orElseThrow(() -> new DatiException(ErrorCode.MS_PROMPT_NOT_FOUND, prompt.getId()));
         if (prompt.getName() != null && !po.getName().equals(prompt.getName())
-            && promptDAO.existsByServiceIdAndNameAndIdNot(serviceId, prompt.getName(), promptId)) {
+            && promptDAO.existsByServiceIdAndNameAndIdNot(prompt.getServiceId(), prompt.getName(), prompt.getId())) {
             throw new DatiException(ErrorCode.MS_PROMPT_NAME_EXISTS, prompt.getName());
         }
         validateContentParams(prompt);
-        McpPromptMapper.copyProperties(prompt, po);
+        if (prompt.getName() != null) {
+            po.setName(prompt.getName());
+        }
+        if (prompt.getDescription() != null) {
+            po.setDescription(prompt.getDescription());
+        }
+        if (prompt.getContent() != null) {
+            po.setContent(prompt.getContent());
+        }
+        if (prompt.getParameters() != null) {
+            po.setParameters(JsonUtils.toJson(prompt.getParameters()));
+        }
+        po.setEnabled(prompt.isEnabled());
         promptDAO.save(po);
     }
 

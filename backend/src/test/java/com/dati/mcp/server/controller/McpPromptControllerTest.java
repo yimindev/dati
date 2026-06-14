@@ -1,8 +1,10 @@
 package com.dati.mcp.server.controller;
 
 import com.dati.TestFixtures;
+import com.dati.mcp.domain.model.McpPrompt;
 import com.dati.mcp.domain.service.McpPromptService;
 import com.dati.mcp.server.assembler.McpPromptAssembler;
+import com.dati.mcp.server.pojo.McpPromptRequest;
 import com.dati.mcp.server.pojo.McpPromptVO;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -68,7 +70,8 @@ class McpPromptControllerTest {
 
     @Test @DisplayName("PUT /prompts/{id} - 更新")
     void update() throws Exception {
-        doNothing().when(promptService).updatePrompt(eq(TestFixtures.TEST_MCP_SERVICE_ID), eq(TestFixtures.TEST_MCP_PROMPT_ID), any());
+        when(promptAssembler.toModel(any(McpPromptRequest.class))).thenReturn(new McpPrompt());
+        doNothing().when(promptService).updatePrompt(any());
         mockMvc.perform(put("/v1/mcp-services/{id}/prompts/{pid}", TestFixtures.TEST_MCP_SERVICE_ID, TestFixtures.TEST_MCP_PROMPT_ID)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"enabled\":false}"))

@@ -1,6 +1,7 @@
 package com.dati.mcp.server.controller;
 
 import com.dati.TestFixtures;
+import com.dati.mcp.domain.model.McpCustomTool;
 import com.dati.mcp.domain.model.McpToolType;
 import com.dati.mcp.domain.service.McpToolService;
 import com.dati.mcp.domain.service.ToolsResult;
@@ -103,7 +104,8 @@ class McpToolControllerTest {
     @Test
     @DisplayName("PUT /tools/{toolId} - 更新自定义工具")
     void updateTool_custom() throws Exception {
-        doNothing().when(mcpToolService).updateCustomTool(eq(TestFixtures.TEST_MCP_SERVICE_ID), eq(TestFixtures.TEST_MCP_CUSTOM_TOOL_ID), any());
+        when(mcpToolAssembler.toModel(any(com.dati.mcp.server.pojo.CustomToolRequest.class))).thenReturn(new McpCustomTool());
+        doNothing().when(mcpToolService).updateCustomTool(any());
 
         mockMvc.perform(put("/v1/mcp-services/{serviceId}/tools/{toolId}", TestFixtures.TEST_MCP_SERVICE_ID, TestFixtures.TEST_MCP_CUSTOM_TOOL_ID)
                 .contentType(MediaType.APPLICATION_JSON)

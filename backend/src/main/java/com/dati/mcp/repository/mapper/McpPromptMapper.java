@@ -12,18 +12,24 @@ public class McpPromptMapper {
 
     public static McpPromptPO toPO(McpPrompt model) {
         McpPromptPO po = new McpPromptPO();
-        copyProperties(model, po);
+        MapperUtils.copyBaseInfo(model, po);
+        if (model.getName() != null) {
+            po.setName(model.getName());
+        }
+        if (model.getDescription() != null) {
+            po.setDescription(model.getDescription());
+        }
+        if (model.getServiceId() != null) {
+            po.setServiceId(model.getServiceId());
+        }
+        po.setEnabled(model.isEnabled());
+        if (model.getContent() != null) {
+            po.setContent(model.getContent());
+        }
+        if (model.getParameters() != null) {
+            po.setParameters(JsonUtils.toJson(model.getParameters()));
+        }
         return po;
-    }
-
-    public static void copyProperties(McpPrompt source, McpPromptPO target) {
-        MapperUtils.copyBaseInfo(source, target);
-        target.setName(source.getName());
-        target.setDescription(source.getDescription());
-        target.setServiceId(source.getServiceId());
-        target.setEnabled(source.isEnabled());
-        target.setContent(source.getContent());
-        target.setParameters(JsonUtils.toJson(source.getParameters()));
     }
 
     public static McpPrompt toModel(McpPromptPO po) {

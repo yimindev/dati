@@ -191,8 +191,9 @@ class McpPromptServiceTest {
         when(templateParser.parse(testPrompt.getContent())).thenReturn(compiled);
 
         testPrompt.setEnabled(false);
-        promptService.updatePrompt(TestFixtures.TEST_MCP_SERVICE_ID, TestFixtures.TEST_MCP_PROMPT_ID, testPrompt);
+        promptService.updatePrompt(testPrompt);
 
+        verify(promptDAO).save(testPromptPO);
         assertThat(testPromptPO.getEnabled()).isFalse();
     }
 
@@ -203,7 +204,7 @@ class McpPromptServiceTest {
             .thenReturn(Optional.empty());
 
         DatiException ex = assertThrows(DatiException.class, () ->
-            promptService.updatePrompt(TestFixtures.TEST_MCP_SERVICE_ID, TestFixtures.TEST_MCP_PROMPT_ID, testPrompt)
+            promptService.updatePrompt(testPrompt)
         );
         assertThat(ex.getCode()).isEqualTo(ErrorCode.MS_PROMPT_NOT_FOUND);
     }

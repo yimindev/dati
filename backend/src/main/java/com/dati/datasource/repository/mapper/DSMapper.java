@@ -13,7 +13,7 @@ public class DSMapper {
         return dataSourcePO;
     }
 
-    public static void copyProperties(DataSource source, DataSourcePO target) {
+    private static void copyProperties(DataSource source, DataSourcePO target) {
         MapperUtils.copyBaseResourceInfo(source, target);
         target.setType(source.getType());
         target.setJdbcUrl(source.getJdbcUrl());

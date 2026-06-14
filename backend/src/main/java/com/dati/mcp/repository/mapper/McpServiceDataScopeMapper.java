@@ -8,16 +8,12 @@ public class McpServiceDataScopeMapper {
 
     public static McpServiceDataScopePO toPO(McpServiceDataScope scope) {
         McpServiceDataScopePO po = new McpServiceDataScopePO();
-        copyProperties(scope, po);
+        MapperUtils.copyBaseInfo(scope, po);
+        po.setServiceId(scope.getServiceId());
+        po.setScopeType(scope.getScopeType());
+        po.setReferenceId(scope.getReferenceId());
+        po.setReferenceName(scope.getReferenceName());
         return po;
-    }
-
-    public static void copyProperties(McpServiceDataScope source, McpServiceDataScopePO target) {
-        MapperUtils.copyBaseInfo(source, target);
-        target.setServiceId(source.getServiceId());
-        target.setScopeType(source.getScopeType());
-        target.setReferenceId(source.getReferenceId());
-        target.setReferenceName(source.getReferenceName());
     }
 
     public static McpServiceDataScope toModel(McpServiceDataScopePO po) {

@@ -8,16 +8,12 @@ public class McpServiceMapper {
 
     public static McpServicePO toPO(McpService service) {
         McpServicePO po = new McpServicePO();
-        copyProperties(service, po);
-        return po;
-    }
-
-    public static void copyProperties(McpService source, McpServicePO target) {
-        MapperUtils.copyBaseResourceInfo(source, target);
-        if (source.getCode() != null) {
-            target.setCode(source.getCode());
+        MapperUtils.copyBaseResourceInfo(service, po);
+        if (service.getCode() != null) {
+            po.setCode(service.getCode());
         }
-        target.setStatus(source.getStatus());
+        po.setStatus(service.getStatus());
+        return po;
     }
 
     public static McpService toModel(McpServicePO po) {

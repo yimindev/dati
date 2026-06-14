@@ -2,6 +2,7 @@ package com.dati.datasource.domain.service;
 
 import com.dati.base.exception.DatiException;
 import com.dati.base.exception.ErrorCode;
+import com.dati.base.EncryptionUtils;
 import com.dati.common.StringUtils;
 import com.dati.db.HikariPoolManager;
 import com.dati.db.JdbcConnector;
@@ -50,9 +51,26 @@ public class DataSourceService {
     }
 
     public void updateDataSource(String id, DataSource dataSource) {
-        DataSourcePO dataSourcePO = dataSourceDAO.findById(id).orElseThrow();
-        DSMapper.copyProperties(dataSource, dataSourcePO);
-        dataSourceDAO.save(dataSourcePO);
+        DataSourcePO po = dataSourceDAO.findById(id).orElseThrow();
+        if (dataSource.getName() != null) {
+            po.setName(dataSource.getName());
+        }
+        if (dataSource.getDescription() != null) {
+            po.setDescription(dataSource.getDescription());
+        }
+        if (dataSource.getJdbcUrl() != null) {
+            po.setJdbcUrl(dataSource.getJdbcUrl());
+        }
+        if (dataSource.getType() != null) {
+            po.setType(dataSource.getType());
+        }
+        if (dataSource.getUsername() != null) {
+            po.setUserName(dataSource.getUsername());
+        }
+        if (dataSource.getPassword() != null) {
+            po.setEncryptedPassword(EncryptionUtils.encrypt(dataSource.getPassword()));
+        }
+        dataSourceDAO.save(po);
     }
 
     public void deleteDataSource(String id) {

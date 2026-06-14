@@ -11,21 +11,27 @@ public class McpCustomToolMapper {
 
     public static McpCustomToolPO toPO(McpCustomTool model) {
         McpCustomToolPO po = new McpCustomToolPO();
-        copyProperties(model, po);
-        return po;
-    }
-
-    public static void copyProperties(McpCustomTool source, McpCustomToolPO target) {
-        MapperUtils.copyBaseInfo(source, target);
-        target.setName(source.getName());
-        target.setDescription(source.getDescription());
-        target.setServiceId(source.getServiceId());
-        target.setToolType(source.getToolType());
-        target.setTitle(source.getTitle());
-        target.setEnabled(source.isEnabled());
-        if (source.getConfig() != null) {
-            target.setConfig(JsonUtils.toJson(source.getConfig()));
+        MapperUtils.copyBaseInfo(model, po);
+        if (model.getServiceId() != null) {
+            po.setServiceId(model.getServiceId());
         }
+        if (model.getName() != null) {
+            po.setName(model.getName());
+        }
+        if (model.getDescription() != null) {
+            po.setDescription(model.getDescription());
+        }
+        if (model.getToolType() != null) {
+            po.setToolType(model.getToolType());
+        }
+        if (model.getTitle() != null) {
+            po.setTitle(model.getTitle());
+        }
+        po.setEnabled(model.isEnabled());
+        if (model.getConfig() != null) {
+            po.setConfig(JsonUtils.toJson(model.getConfig()));
+        }
+        return po;
     }
 
     public static McpCustomTool toModel(McpCustomToolPO po) {

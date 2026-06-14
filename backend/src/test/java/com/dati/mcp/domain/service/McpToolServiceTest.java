@@ -298,7 +298,7 @@ class McpToolServiceTest {
 
         testCustomTool.setEnabled(false);
         testCustomTool.setTitle("新标题");
-        mcpToolService.updateCustomTool(TestFixtures.TEST_MCP_SERVICE_ID, TestFixtures.TEST_MCP_CUSTOM_TOOL_ID, testCustomTool);
+        mcpToolService.updateCustomTool(testCustomTool);
 
         verify(customToolDAO).save(testCustomToolPO);
         assertThat(testCustomToolPO.getEnabled()).isFalse();
@@ -312,7 +312,7 @@ class McpToolServiceTest {
             .thenReturn(Optional.empty());
 
         DatiException ex = assertThrows(DatiException.class, () ->
-            mcpToolService.updateCustomTool(TestFixtures.TEST_MCP_SERVICE_ID, TestFixtures.TEST_MCP_CUSTOM_TOOL_ID, testCustomTool)
+            mcpToolService.updateCustomTool(testCustomTool)
         );
         assertThat(ex.getCode()).isEqualTo(ErrorCode.MS_TOOL_NOT_FOUND);
     }

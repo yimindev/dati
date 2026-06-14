@@ -39,7 +39,9 @@ public class McpPromptController {
     public IdResponse updatePrompt(@PathVariable String serviceId, @PathVariable String promptId,
                                     @RequestBody McpPromptRequest request) {
         McpPrompt prompt = promptAssembler.toModel(request);
-        promptService.updatePrompt(serviceId, promptId, prompt);
+        prompt.setId(promptId);
+        prompt.setServiceId(serviceId);
+        promptService.updatePrompt(prompt);
         return new IdResponse(promptId);
     }
 

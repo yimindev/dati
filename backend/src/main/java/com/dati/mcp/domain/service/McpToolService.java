@@ -125,18 +125,31 @@ public class McpToolService {
     }
 
     @Transactional
-    public void updateCustomTool(String serviceId, String toolId, McpCustomTool tool) {
-        McpCustomToolPO po = customToolDAO.findByServiceIdAndId(serviceId, toolId)
-            .orElseThrow(() -> new DatiException(ErrorCode.MS_TOOL_NOT_FOUND, toolId));
+    public void updateCustomTool(McpCustomTool tool) {
+        McpCustomToolPO po = customToolDAO.findByServiceIdAndId(tool.getServiceId(), tool.getId())
+            .orElseThrow(() -> new DatiException(ErrorCode.MS_TOOL_NOT_FOUND, tool.getId()));
         if (tool.getName() != null) {
             validateToolName(tool.getName());
             if (!po.getName().equals(tool.getName())
-                && customToolDAO.existsByServiceIdAndNameAndIdNot(serviceId, tool.getName(), toolId)) {
+                && customToolDAO.existsByServiceIdAndNameAndIdNot(tool.getServiceId(), tool.getName(), tool.getId())) {
                 throw new DatiException(ErrorCode.MS_TOOL_NAME_EXISTS, tool.getName());
             }
+            po.setName(tool.getName());
         }
-        validateSqlTemplate(tool);
-        McpCustomToolMapper.copyProperties(tool, po);
+        if (tool.getDescription() != null) {
+            po.setDescription(tool.getDescription());
+        }
+        if (tool.getTitle() != null) {
+            po.setTitle(tool.getTitle());
+        }
+        if (tool.getToolType() != null) {
+            po.setToolType(tool.getToolType());
+        }
+        po.setEnabled(tool.isEnabled());
+        if (tool.getConfig() != null) {
+            validateSqlTemplate(tool);
+            po.setConfig(JsonUtils.toJson(tool.getConfig()));
+        }
         customToolDAO.save(po);
     }
 

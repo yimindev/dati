@@ -51,7 +51,9 @@ public class McpToolController {
             mcpToolService.updatePrebuiltTool(serviceId, request.getToolType(), input);
         } else {
             McpCustomTool tool = mcpToolAssembler.toModel(request);
-            mcpToolService.updateCustomTool(serviceId, toolId, tool);
+            tool.setId(toolId);
+            tool.setServiceId(serviceId);
+            mcpToolService.updateCustomTool(tool);
         }
         return new IdResponse(toolId);
     }
