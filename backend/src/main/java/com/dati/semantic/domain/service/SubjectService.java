@@ -25,6 +25,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -192,10 +193,22 @@ public class SubjectService {
     }
 
     @Transactional(readOnly = true)
+    public List<Subject> getSubjectsByIds(Collection<String> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return List.of();
+        }
+        return subjectDAO.findAllById(ids).stream()
+                .map(SubjectMapper::toSubject)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
     public Subject getSubjectById(String id) {
-        SubjectPO subjectPO = subjectDAO.findById(id)
-                .orElseThrow(() -> new DatiException(ErrorCode.SM_SUBJECT_NOT_FOUND, id));
-        return SubjectMapper.toSubject(subjectPO);
+        List<Subject> subjects = getSubjectsByIds(List.of(id));
+        if (subjects.isEmpty()) {
+            throw new DatiException(ErrorCode.SM_SUBJECT_NOT_FOUND, id);
+        }
+        return subjects.getFirst();
     }
 
 }

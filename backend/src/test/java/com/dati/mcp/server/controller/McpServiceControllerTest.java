@@ -6,7 +6,11 @@ import com.dati.mcp.domain.model.McpService;
 import com.dati.mcp.domain.model.McpServiceDataScope;
 import com.dati.mcp.domain.service.McpServiceDataScopeService;
 import com.dati.mcp.domain.service.McpServiceService;
+import com.dati.mcp.server.assembler.McpDataScopeAssembler;
 import com.dati.mcp.server.assembler.McpServiceAssembler;
+import com.dati.mcp.server.pojo.DataScopeItemVO;
+import com.dati.mcp.server.pojo.DataScopeResponse;
+import com.dati.mcp.server.pojo.DataSourceRefVO;
 import com.dati.mcp.server.pojo.McpServiceVO;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -23,6 +27,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.List;
+import java.util.Set;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -55,6 +60,9 @@ class McpServiceControllerTest {
 
     @MockitoBean
     private McpServiceDataScopeService dataScopeService;
+
+    @MockitoBean
+    private McpDataScopeAssembler dataScopeAssembler;
 
     private McpService testService;
 
@@ -168,22 +176,37 @@ class McpServiceControllerTest {
     }
 
     @Test
-    @DisplayName("查询数据范围 - 成功")
+    @DisplayName("查询数据范围 - 通过 Assembler 组装响应")
     void getDataScope_shouldReturnItems() throws Exception {
         McpServiceDataScope scope = new McpServiceDataScope();
         scope.setId("scope-001");
         scope.setScopeType(McpDataScopeType.DATA_SOURCE);
         scope.setReferenceId(TestFixtures.TEST_DATASOURCE_ID);
-        scope.setReferenceName("Test MySQL");
         when(dataScopeService.getDataScope(TestFixtures.TEST_MCP_SERVICE_ID))
                 .thenReturn(List.of(scope));
+        when(dataScopeService.getResolvedDataSourceIds(TestFixtures.TEST_MCP_SERVICE_ID))
+                .thenReturn(Set.of(TestFixtures.TEST_DATASOURCE_ID));
+
+        DataScopeResponse response = new DataScopeResponse();
+        DataScopeItemVO item = new DataScopeItemVO();
+        item.setId("scope-001");
+        item.setScopeType("DATA_SOURCE");
+        item.setReferenceId(TestFixtures.TEST_DATASOURCE_ID);
+        item.setReferenceName("Test MySQL");
+        response.setItems(List.of(item));
+        response.setResolvedDataSources(List.of(new DataSourceRefVO(TestFixtures.TEST_DATASOURCE_ID, "Test MySQL")));
+        when(dataScopeAssembler.toDataScopeResponse(List.of(scope), Set.of(TestFixtures.TEST_DATASOURCE_ID)))
+                .thenReturn(response);
 
         mockMvc.perform(get("/v1/mcp-services/{id}/data-scope", TestFixtures.TEST_MCP_SERVICE_ID))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.items").isArray())
                 .andExpect(jsonPath("$.items[0].scope_type").value("DATA_SOURCE"))
                 .andExpect(jsonPath("$.items[0].reference_id").value(TestFixtures.TEST_DATASOURCE_ID))
-                .andExpect(jsonPath("$.items[0].reference_name").value("Test MySQL"));
+                .andExpect(jsonPath("$.items[0].reference_name").value("Test MySQL"))
+                .andExpect(jsonPath("$.resolved_data_sources").isArray())
+                .andExpect(jsonPath("$.resolved_data_sources[0].id").value(TestFixtures.TEST_DATASOURCE_ID))
+                .andExpect(jsonPath("$.resolved_data_sources[0].name").value("Test MySQL"));
     }
 
     @Test
@@ -196,8 +219,8 @@ class McpServiceControllerTest {
                         .content("""
                                 {
                                   "items": [
-                                    { "scope_type": "DATA_SOURCE", "reference_id": "ds-001", "reference_name": "Test MySQL" },
-                                    { "scope_type": "SUBJECT", "reference_id": "subject-001", "reference_name": "Sales" }
+                                    { "scope_type": "DATA_SOURCE", "reference_id": "ds-001" },
+                                    { "scope_type": "SUBJECT", "reference_id": "subject-001" }
                                   ]
                                 }
                                 """))

@@ -12,7 +12,7 @@ public class McpServiceDataScopeMapper {
         po.setServiceId(scope.getServiceId());
         po.setScopeType(scope.getScopeType());
         po.setReferenceId(scope.getReferenceId());
-        po.setReferenceName(scope.getReferenceName());
+
         return po;
     }
 
@@ -22,7 +22,7 @@ public class McpServiceDataScopeMapper {
         scope.setServiceId(po.getServiceId());
         scope.setScopeType(po.getScopeType());
         scope.setReferenceId(po.getReferenceId());
-        scope.setReferenceName(po.getReferenceName());
+
         return scope;
     }
 

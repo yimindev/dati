@@ -11,6 +11,5 @@ public class McpServiceDataScope extends BaseResource {
     private String serviceId;
     private McpDataScopeType scopeType;
     private String referenceId;
-    private String referenceName;
 
 }

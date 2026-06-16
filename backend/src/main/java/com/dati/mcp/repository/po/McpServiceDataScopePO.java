@@ -33,7 +33,5 @@ public class McpServiceDataScopePO extends BasePO {
     @Column(nullable = false)
     private String referenceId;
 
-    @Column
-    private String referenceName;
 
 }

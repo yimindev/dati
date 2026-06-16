@@ -10,8 +10,8 @@ import com.dati.mcp.domain.model.McpServiceDataScope;
 import com.dati.mcp.domain.model.McpServiceStatus;
 import com.dati.mcp.domain.service.McpServiceDataScopeService;
 import com.dati.mcp.domain.service.McpServiceService;
+import com.dati.mcp.server.assembler.McpDataScopeAssembler;
 import com.dati.mcp.server.assembler.McpServiceAssembler;
-import com.dati.mcp.server.pojo.DataScopeItemVO;
 import com.dati.mcp.server.pojo.DataScopeRequest;
 import com.dati.mcp.server.pojo.DataScopeResponse;
 import com.dati.mcp.server.pojo.McpServiceVO;
@@ -26,6 +26,7 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import java.util.List;
+import java.util.Set;
 
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -38,13 +39,16 @@ public class McpServiceController {
     private final McpServiceService mcpServiceService;
     private final McpServiceAssembler mcpServiceAssembler;
     private final McpServiceDataScopeService dataScopeService;
+    private final McpDataScopeAssembler dataScopeAssembler;
 
     public McpServiceController(McpServiceService mcpServiceService,
                                 McpServiceAssembler mcpServiceAssembler,
-                                McpServiceDataScopeService dataScopeService) {
+                                McpServiceDataScopeService dataScopeService,
+                                McpDataScopeAssembler dataScopeAssembler) {
         this.mcpServiceService = mcpServiceService;
         this.mcpServiceAssembler = mcpServiceAssembler;
         this.dataScopeService = dataScopeService;
+        this.dataScopeAssembler = dataScopeAssembler;
     }
 
     @PostMapping
@@ -80,17 +84,8 @@ public class McpServiceController {
     @GetMapping("/{id}/data-scope")
     public DataScopeResponse getDataScope(@PathVariable String id) {
         List<McpServiceDataScope> scopes = dataScopeService.getDataScope(id);
-        List<DataScopeItemVO> items = scopes.stream().map(scope -> {
-            DataScopeItemVO vo = new DataScopeItemVO();
-            vo.setId(scope.getId());
-            vo.setScopeType(scope.getScopeType().name());
-            vo.setReferenceId(scope.getReferenceId());
-            vo.setReferenceName(scope.getReferenceName());
-            return vo;
-        }).toList();
-        DataScopeResponse response = new DataScopeResponse();
-        response.setItems(items);
-        return response;
+        Set<String> resolvedIds = dataScopeService.getResolvedDataSourceIds(id);
+        return dataScopeAssembler.toDataScopeResponse(scopes, resolvedIds);
     }
 
     @PutMapping("/{id}/data-scope")
@@ -101,7 +96,6 @@ public class McpServiceController {
             scope.setServiceId(id);
             scope.setScopeType(McpDataScopeType.valueOf(item.getScopeType()));
             scope.setReferenceId(item.getReferenceId());
-            scope.setReferenceName(item.getReferenceName());
             return scope;
         }).toList();
         dataScopeService.saveDataScope(id, scopes);
