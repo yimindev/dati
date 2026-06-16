@@ -23,7 +23,7 @@ onMounted(async () => {
     const resp = await getDataScope(props.serviceId);
     for (const item of resp.items || []) {
       if (item.scope_type === "DATA_SOURCE") {
-        dsNameMap.value[item.reference_id] = item.reference_name;
+        dsNameMap.value[item.reference_id] = item.reference_name ?? item.reference_id;
       }
     }
   } catch { /* ignore */ }

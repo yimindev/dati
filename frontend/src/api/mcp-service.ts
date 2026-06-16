@@ -40,7 +40,7 @@ export interface DataScopeItem {
   id?: string;
   scope_type: "DATA_SOURCE" | "SUBJECT";
   reference_id: string;
-  reference_name: string;
+  reference_name?: string;
   table_names?: string[];
   tables?: Array<{
     name?: string;
@@ -49,8 +49,14 @@ export interface DataScopeItem {
   }>;
 }
 
+export interface DataSourceRef {
+  id: string;
+  name: string;
+}
+
 export interface DataScopeResponse {
   items: DataScopeItem[];
+  resolved_data_sources: DataSourceRef[];
 }
 
 export function getDataScope(id: string, signal?: AbortSignal): Promise<DataScopeResponse> {

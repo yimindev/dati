@@ -101,12 +101,10 @@ const loadForm = () => {
 const loadDataSources = async () => {
   try {
     const resp = await getDataScope(props.serviceId);
-    dataSources.value = (resp.items || [])
-      .filter((item: any) => item.scope_type === "DATA_SOURCE")
-      .map((item: any) => ({
-        id: item.reference_id,
-        name: item.reference_name,
-      }));
+    dataSources.value = (resp.resolved_data_sources || []).map((ds) => ({
+      id: ds.id,
+      name: ds.name,
+    }));
   } catch {
     // Ignore
   }

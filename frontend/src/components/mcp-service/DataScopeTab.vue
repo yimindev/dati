@@ -173,7 +173,7 @@ const handleConfirmAdd = async () => {
     .map((id) => {
       const opt = dialogOptions.value.find((o) => o.value === id);
       return opt
-        ? ({ scope_type: addType.value, reference_id: opt.value, reference_name: opt.label } as DataScopeItem)
+        ? ({ scope_type: addType.value, reference_id: opt.value } as DataScopeItem)
         : null;
     })
     .filter((item): item is DataScopeItem => item !== null);
