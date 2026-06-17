@@ -32,8 +32,8 @@ onMounted(() => {
       <BaseHeader />
       <div class="main-container flex">
         <BaseSide/>
-        <div class="flex-1 min-w-0 bg-[var(--ep-fill-color-light)]">
-          <div class="m-4 p-2 bg-[var(--ep-bg-color)]">
+        <div class="flex-1 min-w-0 bg-[var(--ep-fill-color-light)] flex flex-col">
+          <div class="m-4 p-2 bg-[var(--ep-bg-color)] flex-1">
             <RouterView id="main-content" tabindex="-1" />
           </div>
         </div>
