@@ -39,6 +39,9 @@ const rules: FormRules = {
   dataSourceId: [
     { required: true, message: () => t("mcpService.tool.dataSourceRequired"), trigger: "blur" },
   ],
+  sqlTemplate: [
+    { required: true, message: () => t("mcpService.tool.sqlRequired"), trigger: "blur" },
+  ],
 };
 
 const form = reactive({
@@ -225,18 +228,18 @@ const handleSave = async () => {
     @close="loadForm"
     append-to-body
   >
-    <div class="dialog-body-scroll flex flex-col gap-8 overflow-y-auto px-3 py-1">
+    <div class="dialog-body-scroll flex flex-col overflow-y-auto px-3 py-1">
     <el-form ref="formRef" :model="form" :rules="rules" label-position="top">
       <!-- Basic Info -->
-      <section class="flex flex-col gap-4">
-        <h4 class="m-0 text-sm font-semibold text-[var(--ep-text-color-primary)] flex items-center gap-2">{{ t("mcpService.tool.basicInfo") }}</h4>
+      <section class="flex flex-col mb-6">
+        <h4 class="m-0 mb-4 text-sm font-semibold text-[var(--ep-text-color-primary)] flex items-center gap-2">{{ t("mcpService.tool.basicInfo") }}</h4>
         <div class="grid grid-cols-2 gap-3">
           <el-form-item prop="name">
             <template #label>
               {{ t("mcpService.tool.toolName") }}
             </template>
             <el-input v-model="form.name" maxlength="128" placeholder="only_letters_and_123" />
-            <span class="block mt-1 text-[11px] text-[var(--ep-text-color-placeholder)]">{{ t("mcpService.tool.nameFormatHint") }}</span>
+            <span class="block mt-1 text-[11px] leading-none text-[var(--ep-text-color-placeholder)]">{{ t("mcpService.tool.nameFormatHint") }}</span>
           </el-form-item>
           <el-form-item>
             <template #label>
@@ -259,8 +262,8 @@ const handleSave = async () => {
       </section>
 
       <!-- Execution Config -->
-      <section class="flex flex-col gap-4">
-        <h4 class="m-0 text-sm font-semibold text-[var(--ep-text-color-primary)] flex items-center gap-2">{{ t("mcpService.tool.execConfig") }}</h4>
+      <section class="flex flex-col mb-6">
+        <h4 class="m-0 mb-4 text-sm font-semibold text-[var(--ep-text-color-primary)] flex items-center gap-2">{{ t("mcpService.tool.execConfig") }}</h4>
         <el-form-item prop="dataSourceId">
           <template #label>
             {{ t("mcpService.tool.dataSourceBinding") }}
@@ -282,9 +285,9 @@ const handleSave = async () => {
       </section>
 
       <!-- Parameters -->
-      <section class="flex flex-col gap-4">
-        <h4 class="m-0 text-sm font-semibold text-[var(--ep-text-color-primary)] flex items-center gap-2">{{ t("mcpService.tool.parameters") }}</h4>
-        <div class="flex gap-2">
+      <section class="flex flex-col mb-6">
+        <h4 class="m-0 mb-4 text-sm font-semibold text-[var(--ep-text-color-primary)] flex items-center gap-2">{{ t("mcpService.tool.parameters") }}</h4>
+        <div class="flex gap-2 mb-4">
           <el-button size="small" :loading="scanning" @click="scanParams">
             {{ t("mcpService.tool.scanParams") }}
           </el-button>
@@ -328,8 +331,8 @@ const handleSave = async () => {
       </section>
 
       <!-- Security -->
-      <section class="flex flex-col gap-4">
-        <h4 class="m-0 text-sm font-semibold text-[var(--ep-text-color-primary)] flex items-center gap-2">{{ t("mcpService.tool.security") }}</h4>
+      <section class="flex flex-col">
+        <h4 class="m-0 mb-4 text-sm font-semibold text-[var(--ep-text-color-primary)] flex items-center gap-2">{{ t("mcpService.tool.security") }}</h4>
         <SqlSecurityConfig
           v-model:allow-select="form.allowSelect"
           v-model:allow-insert="form.allowInsert"

@@ -18,6 +18,9 @@ const isEdit = computed(() => !!props.prompt);
 
 const rules: FormRules = {
   name: [{ required: true, message: () => t("mcpService.prompt.nameRequired"), trigger: "blur" }],
+  content: [
+    { required: true, message: () => t("mcpService.prompt.contentRequired"), trigger: "blur" },
+  ],
 };
 
 const form = reactive({ name: "", description: "", content: "", parameters: [] as PromptParameter[] });
@@ -97,15 +100,15 @@ const handleSave = async () => {
     @close="loadForm"
     append-to-body
   >
-    <div class="dialog-body-scroll flex flex-col gap-8 overflow-y-auto px-3 py-1">
+    <div class="dialog-body-scroll flex flex-col overflow-y-auto px-3 py-1">
     <el-form ref="formRef" :model="form" :rules="rules" label-position="top">
       <!-- Basic Info -->
-      <section class="flex flex-col gap-4">
-        <h4 class="m-0 text-sm font-semibold text-[var(--ep-text-color-primary)] flex items-center gap-2">{{ t("mcpService.prompt.basicInfo") }}</h4>
+      <section class="flex flex-col mb-6">
+        <h4 class="m-0 mb-4 text-sm font-semibold text-[var(--ep-text-color-primary)] flex items-center gap-2">{{ t("mcpService.prompt.basicInfo") }}</h4>
         <el-form-item prop="name">
           <template #label>{{ t("mcpService.prompt.promptName") }}</template>
           <el-input v-model="form.name" maxlength="128" placeholder="e.g. analyze_table" />
-          <span class="block mt-1 text-[11px] text-[var(--ep-text-color-placeholder)]">{{ t("mcpService.tool.nameFormatHint") }}</span>
+          <span class="block mt-1 text-[11px] leading-none text-[var(--ep-text-color-placeholder)]">{{ t("mcpService.tool.nameFormatHint") }}</span>
         </el-form-item>
         <el-form-item>
           <template #label>{{ t("common.description") }}</template>
@@ -114,17 +117,17 @@ const handleSave = async () => {
       </section>
 
       <!-- Content -->
-      <section class="flex flex-col gap-4">
-        <h4 class="m-0 text-sm font-semibold text-[var(--ep-text-color-primary)] flex items-center gap-2">{{ t("mcpService.prompt.content") }}</h4>
+      <section class="flex flex-col mb-6">
+        <h4 class="m-0 mb-4 text-sm font-semibold text-[var(--ep-text-color-primary)] flex items-center gap-2">{{ t("mcpService.prompt.content") }}</h4>
         <el-form-item prop="content">
           <PromptTemplateEditor v-model="form.content" />
         </el-form-item>
       </section>
 
       <!-- Parameters -->
-      <section class="flex flex-col gap-4">
-        <h4 class="m-0 text-sm font-semibold text-[var(--ep-text-color-primary)] flex items-center gap-2">{{ t("mcpService.prompt.parameters") }}</h4>
-        <div class="flex gap-2">
+      <section class="flex flex-col">
+        <h4 class="m-0 mb-4 text-sm font-semibold text-[var(--ep-text-color-primary)] flex items-center gap-2">{{ t("mcpService.prompt.parameters") }}</h4>
+        <div class="flex gap-2 mb-4">
           <el-button size="small" :loading="scanning" @click="scanParams">{{ t("mcpService.tool.scanParams") }}</el-button>
           <el-button size="small" :icon="Plus" @click="addParam">{{ t("mcpService.tool.addParam") }}</el-button>
         </div>
