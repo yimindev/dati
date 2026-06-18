@@ -19,6 +19,10 @@ async function changeLocale(lang: AppLang) {
 function handleLogout() {
   authStore.logout();
 }
+
+function goToDocs() {
+  window.open('/docs/', '_blank');
+}
 </script>
 
 <template>
@@ -66,6 +70,14 @@ function handleLogout() {
           </el-dropdown-menu>
         </template>
       </el-dropdown>
+    </el-menu-item>
+
+    <el-menu-item class="h-full" @click="goToDocs">
+      <el-tooltip :content="t('layout.header.help')" placement="bottom">
+        <el-icon class="inline-flex">
+          <span class="icon-[codicon--question]"></span>
+        </el-icon>
+      </el-tooltip>
     </el-menu-item>
 
     <el-menu-item class="h-full" v-if="authStore.isLoggedIn">

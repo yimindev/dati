@@ -107,12 +107,14 @@ export default {
       orders: "Orders",
       theme: "Theme",
       language: "Language",
+      help: "Help",
     },
     side: {
       expand: "Expand",
       collapse: "Collapse",
       semanticModels: "Semantic Models",
       dataSources: "Data Sources",
+      help: "Help",
     },
   },
 
@@ -455,5 +457,10 @@ export default {
       deleteConfirm: "Delete prompt \"{name}\"?",
       previewRender: "Preview",
     },
+  },
+
+  help: {
+    title: "Help Center",
+    empty: "No documents",
   },
 };

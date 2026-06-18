@@ -107,12 +107,14 @@ export default {
       orders: "订单",
       theme: "主题",
       language: "语言",
+      help: "帮助",
     },
     side: {
       expand: "展开",
       collapse: "收起",
       semanticModels: "语义模型",
       dataSources: "数据源",
+      help: "帮助",
     },
   },
 
@@ -455,5 +457,10 @@ export default {
       deleteConfirm: "确定删除 Prompt「{name}」吗？",
       previewRender: "测试渲染",
     },
+  },
+
+  help: {
+    title: "帮助中心",
+    empty: "暂无文档",
   },
 };

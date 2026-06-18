@@ -14,6 +14,10 @@ export default defineConfig({
       '.zhangyimin.me'
     ],
     proxy: {
+      "/docs": {
+        target: "http://localhost:5174",
+        changeOrigin: true,
+      },
       "/api": {
         target: "http://localhost:8085",
         rewrite: (path) => path.replace(/^\/api/, '')
