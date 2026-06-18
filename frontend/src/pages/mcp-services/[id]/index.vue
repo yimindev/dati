@@ -16,9 +16,7 @@ import {
   Key,
   Monitor,
   Operation,
-  Promotion,
   SwitchButton,
-  Tools,
   VideoPlay,
 } from "@element-plus/icons-vue";
 import type { McpServiceVO } from "~/api/mcp-service";
@@ -46,8 +44,8 @@ const activeTab = ref("basic");
 const tabs = [
   { key: "basic", label: t("mcpService.tab.basic"), icon: Document },
   { key: "scope", label: t("mcpService.tab.dataScope"), icon: DataAnalysis },
-  { key: "tools", label: t("mcpService.tab.tools"), icon: Tools },
-  { key: "prompts", label: t("mcpService.tab.prompts"), icon: Promotion },
+  { key: "tools", label: t("mcpService.tab.tools"), iconClass: "icon-[codicon--developer-tools]" },
+  { key: "prompts", label: t("mcpService.tab.prompts"), iconClass: "icon-[fluent--prompt-16-regular]" },
   { key: "security", label: t("mcpService.tab.security"), icon: Key },
   { key: "debug", label: t("mcpService.tab.debug"), icon: Monitor },
   { key: "logs", label: t("mcpService.tab.logs"), icon: Operation },
@@ -245,7 +243,10 @@ onMounted(() => {
           @select="(key: string) => (activeTab = key)"
         >
           <el-menu-item v-for="tab in tabs" :key="tab.key" :index="tab.key">
-            <el-icon><component :is="tab.icon" /></el-icon>
+            <el-icon>
+              <span v-if="tab.iconClass" :class="tab.iconClass"></span>
+              <component v-else :is="tab.icon" />
+            </el-icon>
             <span> {{ tab.label }} </span>
           </el-menu-item>
         </el-menu>
