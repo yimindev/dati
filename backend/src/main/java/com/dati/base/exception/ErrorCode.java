@@ -45,6 +45,7 @@ public enum ErrorCode {
     MS_SERVICE_CODE_EXISTS("MS010", 409, "Service code already exists: {0}"),
     MS_SERVICE_CODE_INVALID("MS011", 400, "Service code must be 1-64 chars, lowercase letters, digits, hyphens and underscores only"),
     MS_SERVICE_CODE_REQUIRED("MS012", 400, "Service code is required"),
+    MS_SQL_POLICY_VIOLATION("MS013", 403, "SQL operation not allowed by policy: {0}"),
 
     // ── Authentication module (AUTH) ──────────────────────
 

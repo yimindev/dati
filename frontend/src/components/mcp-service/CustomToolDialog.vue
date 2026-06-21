@@ -56,6 +56,9 @@ const form = reactive({
   allowUpdate: false,
   allowDelete: false,
   allowDdl: false,
+  allowMetadata: false,
+  allowTransaction: false,
+  allowSet: false,
   maxRows: 1000,
   timeout: 30,
   confirmRequired: false,
@@ -76,6 +79,9 @@ const loadForm = () => {
       form.allowUpdate = cfg.sql_policy.allow_update;
       form.allowDelete = cfg.sql_policy.allow_delete;
       form.allowDdl = cfg.sql_policy.allow_ddl;
+      form.allowMetadata = cfg.sql_policy.allow_metadata ?? false;
+      form.allowTransaction = cfg.sql_policy.allow_transaction ?? false;
+      form.allowSet = cfg.sql_policy.allow_set ?? false;
     }
     form.maxRows = cfg?.max_rows ?? 1000;
     form.timeout = cfg?.timeout ?? 30;
@@ -93,6 +99,9 @@ const loadForm = () => {
       allowUpdate: false,
       allowDelete: false,
       allowDdl: false,
+      allowMetadata: false,
+      allowTransaction: false,
+      allowSet: false,
       maxRows: 1000,
       timeout: 30,
       confirmRequired: false,
@@ -183,6 +192,9 @@ const handleSave = async () => {
         allow_update: form.allowUpdate,
         allow_delete: form.allowDelete,
         allow_ddl: form.allowDdl,
+        allow_metadata: form.allowMetadata,
+        allow_transaction: form.allowTransaction,
+        allow_set: form.allowSet,
         allow_multi: false,
       },
       timeout: form.timeout,
@@ -339,6 +351,9 @@ const handleSave = async () => {
           v-model:allow-update="form.allowUpdate"
           v-model:allow-delete="form.allowDelete"
           v-model:allow-ddl="form.allowDdl"
+          v-model:allow-metadata="form.allowMetadata"
+          v-model:allow-transaction="form.allowTransaction"
+          v-model:allow-set="form.allowSet"
           v-model:max-rows="form.maxRows"
           v-model:timeout="form.timeout"
           v-model:confirm-required="form.confirmRequired"

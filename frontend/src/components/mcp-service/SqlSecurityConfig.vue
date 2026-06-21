@@ -11,6 +11,9 @@ const props = withDefaults(defineProps<{
   allowUpdate: boolean;
   allowDelete: boolean;
   allowDdl: boolean;
+  allowMetadata: boolean;
+  allowTransaction: boolean;
+  allowSet: boolean;
   allowMulti?: boolean;
   maxRows: number;
   timeout: number;
@@ -18,6 +21,9 @@ const props = withDefaults(defineProps<{
   showMulti?: boolean;
   showAnnotations?: boolean;
 }>(), {
+  allowMetadata: false,
+  allowTransaction: false,
+  allowSet: false,
   allowMulti: false,
   showMulti: false,
   showAnnotations: false,
@@ -29,6 +35,9 @@ const emit = defineEmits<{
   (e: "update:allowUpdate", v: boolean): void;
   (e: "update:allowDelete", v: boolean): void;
   (e: "update:allowDdl", v: boolean): void;
+  (e: "update:allowMetadata", v: boolean): void;
+  (e: "update:allowTransaction", v: boolean): void;
+  (e: "update:allowSet", v: boolean): void;
   (e: "update:allowMulti", v: boolean): void;
   (e: "update:maxRows", v: number): void;
   (e: "update:timeout", v: number): void;
@@ -41,10 +50,13 @@ const ops = computed(() => {
     { key: "allowInsert", label: "INSERT" },
     { key: "allowUpdate", label: "UPDATE" },
     { key: "allowDelete", label: "DELETE" },
-    { key: "allowDdl", label: "DDL" },
+    { key: "allowDdl", label: "DDL", tooltip: t("mcpService.tool.allowDdlTooltip") },
+    { key: "allowMetadata", label: "METADATA", tooltip: t("mcpService.tool.allowMetadataTooltip") },
+    { key: "allowTransaction", label: "TRANSACTION", tooltip: t("mcpService.tool.allowTransactionTooltip") },
+    { key: "allowSet", label: "SET", tooltip: t("mcpService.tool.allowSetTooltip") },
   ];
   if (props.showMulti) {
-    base.push({ key: "allowMulti", label: "MULTI" });
+    base.push({ key: "allowMulti", label: "MULTI", tooltip: t("mcpService.tool.allowMultiTooltip") });
   }
   return base;
 });
@@ -56,6 +68,9 @@ const toggleOp = (key: string) => {
     allowUpdate: () => emit("update:allowUpdate", !props.allowUpdate),
     allowDelete: () => emit("update:allowDelete", !props.allowDelete),
     allowDdl: () => emit("update:allowDdl", !props.allowDdl),
+    allowMetadata: () => emit("update:allowMetadata", !props.allowMetadata),
+    allowTransaction: () => emit("update:allowTransaction", !props.allowTransaction),
+    allowSet: () => emit("update:allowSet", !props.allowSet),
     allowMulti: () => emit("update:allowMulti", !props.allowMulti),
   };
   map[key]?.();
@@ -78,16 +93,22 @@ const annotations = computed(() => {
     <div>
       <label class="block mb-1.5 text-[var(--ep-text-color-primary)]">{{ t("mcpService.tool.allowedOps") }}</label>
       <div class="flex flex-wrap gap-2">
-        <button
+        <el-tooltip
           v-for="op in ops"
           :key="op.key"
-          type="button"
-          class="perm-pill"
-          :class="{ active: (props as any)[op.key] }"
-          @click="toggleOp(op.key)"
+          :content="op.tooltip"
+          :disabled="!op.tooltip"
+          placement="top"
         >
-          {{ op.label }}
-        </button>
+          <button
+            type="button"
+            class="perm-pill"
+            :class="{ active: (props as any)[op.key] }"
+            @click="toggleOp(op.key)"
+          >
+            {{ op.label }}
+          </button>
+        </el-tooltip>
       </div>
       <p class="flex items-start gap-1 mt-2 text-xs text-[var(--ep-color-warning)]">
         <el-icon><WarningFilled /></el-icon>

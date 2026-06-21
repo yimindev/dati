@@ -8,6 +8,9 @@ export interface SqlPolicy {
   allow_delete: boolean;
   allow_ddl: boolean;
   allow_multi: boolean;
+  allow_metadata: boolean;
+  allow_transaction: boolean;
+  allow_set: boolean;
 }
 
 export interface ToolParameter {

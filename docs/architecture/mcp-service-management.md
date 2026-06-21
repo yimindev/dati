@@ -1,7 +1,7 @@
 # MCP Service 管理 — 架构文档
 
-> 版本：v1.4（US-01 + US-02 + US-03 + US-05 + US-5.5 完整实现，含 Service Code、Data Scope、Prompt 管理、Template Preview 引擎）
-> 最后更新：2026-06-14
+> 版本：v1.5（US-01 + US-02 + US-03 + US-05 + US-5.5 完整实现，含 Service Code、Data Scope、Prompt 管理、Template Preview 引擎、SQL 安全分析）
+> 最后更新：2026-06-21
 
 ---
 
@@ -18,6 +18,7 @@ MCP Service 管理模块提供 **MCP（Model Context Protocol）服务的生命�
 - **Prompt 模板管理**（CRUD + 模板语法校验 + 参数一致性检查）
 - **模板预览引擎**（TEXT 模式渲染 / SQL 模式渲染 + 参数提取）
 - **SQL 安全配置组件**（权限勾选、限流、确认执行）
+- **SQL 安全分析引擎**（操作类型识别、表提取、多语句检测、事务/元数据/SET 分类）
 
 ---
 
@@ -119,7 +120,7 @@ com.dati.mcp/
 |---|---|
 | `McpToolType` | 枚举 4 种类型，含预置工具的元数据（name / description / inputSchema）和 `getDefaultConfig()` 方法 |
 | `ToolConfig` | `sealed interface`，子类：`SearchMetadataConfig` / `GetTableInfoConfig` / `ExecuteSqlConfig` / `ParamSqlConfig`。每个子类有对应可配置字段 + Jackson 序列化默认值 |
-| `SqlPolicy` | SQL 权限策略：`allowSelect` / `allowInsert` / `allowUpdate` / `allowDelete` / `allowDdl` / `allowMulti` |
+| `SqlPolicy` | SQL 权限策略（9 字段）：`allowSelect` / `allowInsert` / `allowUpdate` / `allowDelete` / `allowDdl` / `allowMulti` / `allowMetadata` / `allowTransaction` / `allowSet`。提供 `allows(type)` 和 `validateAllowed(result)` |
 | `ToolParameter` | 工具参数描述：`name`、`type`（String/Number/Boolean/Date/Array）、`required`、`defaultValue`、`description` |
 | `McpPrebuiltToolConfig` | 领域实体。`serviceId` + `toolType` + `enabled` + `config: ToolConfig` |
 | `McpPrebuiltToolConfigPO` | 持久化对象，继承 `BaseResourcePO`。`config` 列存 JSON 字符串 |
@@ -158,6 +159,46 @@ com.dati.mcp/
    - `content` 中 `{{var}}` 提取的变量集 vs `parameters` 中定义的参数名集
    - 定义但未引用的参数 → 抛出 `MS_PROMPT_ARG_MISMATCH`（Unused parameter）
    - 引用但未定义的变量 → 抛出 `MS_PROMPT_ARG_MISMATCH`（Unknown parameter）
+
+#### SQL 安全分析（SqlAnalyzer）
+
+`com.dati.db.analysis` — 数据库层的静态 SQL 分析工具，在 MCP 工具执行前对模板渲染后的 SQL 做安全分析，供权限管控使用。依赖 JSqlParser 5.1 做 AST 解析。
+
+| 类 | 职责 |
+|---|---|
+| `SqlAnalyzer` | `public final class` + 私有构造器，纯静态工具。唯一入口：`SqlAnalyzer.analyze(String sql) → SqlAnalysisResult` |
+| `SqlOperationType` | 枚举 9 种操作类型：`SELECT`、`INSERT`、`UPDATE`、`DELETE`、`DDL`、`METADATA`（SHOW/DESCRIBE/EXPLAIN）、`TRANSACTION`（COMMIT/ROLLBACK）、`SET_STATEMENT`、`MULTI`（多语句标记）、`OTHER`（兜底拒绝）|
+| `SqlAnalysisResult` | Record：`type`（快捷分发）、`statementTypes`（逐条校验完整列表）、`tables`（所有表引用并集）。提供 `isMulti()` 便捷方法 |
+| `TableRef` | Record：`schema`（`@Nullable`）、`name`。支持 `qualifiedName()` |
+
+**核心分析能力：**
+
+| 能力 | 实现 |
+|------|------|
+| **操作类型识别** | `detectOperationType(Statement)` — `instanceof` 分发：`Select`→SELECT, `Insert`→INSERT, `Update`→UPDATE, `Delete`→DELETE, DDL 类→DDL, SHOW/DESCRIBE/EXPLAIN→METADATA, `Commit`/`RollbackStatement`→TRANSACTION, `SetStatement`→SET_STATEMENT, 其余→OTHER |
+| **表引用提取** | `SchemaAwareTableFinder extends TablesNamesFinder<Void>` — 遍历 SQL AST，提取所有表引用（含子查询、JOIN、CTE 中实际表，排除 CTE 定义名）。使用 `getUnquotedSchemaName()` / `getUnquotedName()` 保留完整 schema 信息 |
+| **多语句检测** | `parseStatements()` 解析→过滤空语句→`types.size()>1` 时 `type=MULTI`，`statementTypes` 返回每条语句的独立类型 |
+| **事务语句预扫描** | JSqlParser 5.1 无法解析 `BEGIN` / `START TRANSACTION`。`analyze()` 在两轮标准解析均失败后，用正则检测并分号拆句逐段处理 |
+| **容错处理** | 解析失败不抛异常，返回 `type=OTHER`。空输入/乱码同理 |
+
+**调用方使用模式：**
+
+```java
+var result = SqlAnalyzer.analyze(preparedSql.sql());
+
+if (result.isMulti()) {
+    for (var t : result.statementTypes()) policy.assertAllowed(t);
+} else {
+    policy.assertAllowed(result.type());
+}
+scope.validate(result.tables());
+```
+
+**设计决策：**
+- 静态工具类而非 Spring Bean — 纯函数无状态，与 `JsonUtils` 风格一致
+- `MULTI` 仅作为 `SqlAnalysisResult.type` 标记值，不在 `statementTypes` 列表中出现
+- `METADATA` / `OTHER` 默认拒绝 — 元数据查询应走 `SEARCH_METADATA` 工具，非标准 SQL 一律拒绝
+- 74 条参数化单元测试覆盖所有类型识别、表提取、多语句、注释绕过、事务预扫描场景
 
 #### 模板预览引擎（Template Preview）
 
@@ -278,6 +319,7 @@ McpPrompt (per service, 多个, UNIQUE(service_id, name))
 | `MS010` | 服务 code 已存在 (409) |
 | `MS011` | 服务 code 格式无效 (400) |
 | `MS012` | 服务 code 必填 (400) |
+| `MS013` | SQL 操作违反策略 (403) |
 
 ### 2.6 关键设计决策
 
@@ -310,6 +352,13 @@ McpPrompt (per service, 多个, UNIQUE(service_id, name))
 
 - `content` 中的 `{{var}}` 变量必须与 `parameters` 定义一一对应，**多余和缺失均拒绝**。
 - `\\{{var}}` 转义语法不会被视为变量引用。
+
+#### SQL 安全分析引擎独立于 MCP 模块
+
+- `com.dati.db.analysis` 包是数据库层的 SQL 分析工具，不依赖 MCP 模块。
+- 依赖 JSqlParser 5.1 做 AST 解析，支持操作类型识别、表引用提取、多语句检测。
+- 解析失败不抛异常，统一返回 `OTHER` 类型。调用方必须显式拒绝 `OTHER`。
+- `BEGIN` / `START TRANSACTION` 因 JSqlParser 语法限制无法解析，通过正则预扫描补足。
 
 #### 模板引擎独立于 MCP 模块
 
@@ -476,6 +525,7 @@ mcpService.prompt:
 | `McpPromptServiceTest` | Prompt 创建/更新/删除/列表、name 重复、参数双向校验（未定义/未使用）、模板语法错误、转义变量、null content |
 | `McpPromptControllerTest` | GET/POST/PUT/DELETE 端点集成测试 |
 | `TemplatePreviewControllerTest` | TEXT 模式（简单变量、if 块）、SQL 模式（字符串/数值/布尔/null/数组格式化、原始变量、默认值、完整模板）、语法错误、空 mode、参数提取 |
+| `SqlAnalyzerTest` | 74 条参数化用例：DML/DDL/METADATA/TRANSACTION/SET_STATEMENT 类型识别、基础/子查询/CTE/边界表提取、模板渲染后 SQL（`?` 占位符）、多语句检测（含 `MULTI` 标记）、事务预扫描（BEGIN/START TRANSACTION）、解析失败容错、注释绕过安全 |
 
 ---
 
@@ -509,3 +559,5 @@ mcpService.prompt:
 - [US-5.5 需求文档](../prd/us/US-5.5.md)
 - [MCP Builder PRD](../prd/2026-05-11-mcp-builder-prd.md)
 - [US-03 实施计划](../superpowers/plans/2026-05-21-us-03-mcp-tool.md)
+- [SQL 分析工具设计](../superpowers/specs/2026-06-19-sql-analyzer-design.md)
+- [SQL 分析工具实施计划](../superpowers/plans/2026-06-19-sql-analyzer.md)
