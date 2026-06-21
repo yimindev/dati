@@ -98,7 +98,8 @@ class SqlAnalyzerTest {
                 Arguments.of("COMMIT", SqlOperationType.TRANSACTION, "COMMIT"),
                 Arguments.of("ROLLBACK", SqlOperationType.TRANSACTION, "ROLLBACK"),
                 Arguments.of("SET @var = 1", SqlOperationType.SET, "SET"),
-                Arguments.of("CALL my_proc()", SqlOperationType.OTHER, "CALL")
+                Arguments.of("CALL my_proc()", SqlOperationType.OTHER, "CALL"),
+                Arguments.of("MERGE INTO orders t USING s ON t.id=s.id WHEN MATCHED THEN UPDATE SET t.x=s.x WHEN NOT MATCHED THEN INSERT VALUES (s.id)", SqlOperationType.MERGE, "MERGE")
         );
     }
 

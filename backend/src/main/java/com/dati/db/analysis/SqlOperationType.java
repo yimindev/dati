@@ -5,6 +5,7 @@ public enum SqlOperationType {
     INSERT,
     UPDATE,
     DELETE,
+    MERGE,
     DDL,
     METADATA,
     TRANSACTION,

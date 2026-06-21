@@ -19,6 +19,7 @@ import net.sf.jsqlparser.statement.create.view.CreateView;
 import net.sf.jsqlparser.statement.delete.Delete;
 import net.sf.jsqlparser.statement.drop.Drop;
 import net.sf.jsqlparser.statement.insert.Insert;
+import net.sf.jsqlparser.statement.merge.Merge;
 import net.sf.jsqlparser.statement.select.Select;
 import net.sf.jsqlparser.statement.show.ShowIndexStatement;
 import net.sf.jsqlparser.statement.show.ShowTablesStatement;
@@ -155,6 +156,7 @@ public final class SqlAnalyzer {
         if (stmt instanceof Insert)             return SqlOperationType.INSERT;
         if (stmt instanceof Update)             return SqlOperationType.UPDATE;
         if (stmt instanceof Delete)             return SqlOperationType.DELETE;
+        if (stmt instanceof Merge)              return SqlOperationType.MERGE;
         if (isDDLStatement(stmt))               return SqlOperationType.DDL;
         if (isMetadataStatement(stmt))           return SqlOperationType.METADATA;
         if (stmt instanceof Commit)             return SqlOperationType.TRANSACTION;
