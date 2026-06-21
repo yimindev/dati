@@ -14,8 +14,11 @@ spring:
         cache:
           use_second_level_cache: false
         format_sql: true
-  elasticsearch:
-    enabled: false
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.elasticsearch.ElasticsearchRestClientAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.elasticsearch.ElasticsearchDataAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.elasticsearch.ElasticsearchRepositoriesAutoConfiguration
 
 logging:
   level:
