@@ -1,8 +1,10 @@
 # DataSource 模块架构文档
 
+> **更新时间**: 2026-06-28
+
 ## 1. 概述
 
-DataSource 模块负责管理数据源连接配置，支持多种数据库类型（MySQL、PostgreSQL 等），提供数据源的 CRUD、元数据查询（Schema/Table/Column）和 SQL 执行能力。
+DataSource 模块负责管理数据源连接配置，支持多种数据库类型（MySQL、PostgreSQL 等），提供数据源的 CRUD、元数据查询（Catalog/Schema/Table/Column）、SQL 执行、列值抽取与管理等能力。
 
 ## 2. 后端架构
 
@@ -19,21 +21,35 @@ backend/src/main/java/com/dati/datasource/
 │       ├── DataSourceService.java   # 数据源 CRUD
 │       ├── TableService.java       # 表管理
 │       ├── ColumnService.java       # 列管理
+│       ├── ColumnValueService.java  # 列值抽取与管理
 │       └── JdbcMetaService.java     # JDBC 元数据查询
 ├── repository/
 │   ├── dao/             # JPA 数据访问
+│   │   ├── DataSourceDAO.java
+│   │   ├── TableInfoDAO.java
+│   │   └── ColumnInfoDAO.java
 │   ├── po/              # 持久化对象
-│   ├── mapper/          # PO ↔ Model 映射
-│   └── mapper/          # MyBatis 映射（DSMapper）
+│   │   ├── DataSourcePO.java
+│   │   ├── TableInfoPO.java
+│   │   └── ColumnInfoPO.java
+│   └── mapper/          # PO ↔ Model 静态映射工具（含加解密）
+│       ├── DSMapper.java
+│       ├── TableMapper.java
+│       └── ColumnMapper.java
 └── server/
     ├── controller/      # REST 控制器
     │   ├── DataSourceController.java
     │   ├── TableController.java
     │   └── ColumnController.java
-    ├── pojo/            # VO 对象
+    ├── pojo/            # VO / 请求体对象
     │   ├── DatasourceVO.java
     │   ├── TableInfoVO.java
-    │   └── ColumnInfoVO.java
+    │   ├── ColumnInfoVO.java
+    │   ├── AddTableRequest.java
+    │   ├── SqlExecuteRequest.java
+    │   ├── ColumnValueListRequest.java
+    │   ├── ColumnValueListResponse.java
+    │   └── ColumnValueVO.java
     └── assembler/       # Model ↔ VO 转换
         ├── DSAssembler.java
         ├── TableAssembler.java
@@ -42,45 +58,93 @@ backend/src/main/java/com/dati/datasource/
 
 ### 2.2 核心 API
 
+#### 2.2.1 数据源管理（DataSourceController，前缀 `/v1/data-sources`）
+
 | 方法 | 路径 | 说明 |
 |------|------|------|
+| POST | `/v1/data-sources/test-connection` | 测试连接（不存储） |
 | POST | `/v1/data-sources` | 创建数据源 |
-| PUT | `/v1/data-sources/{id}` | 更新数据源 |
-| DELETE | `/v1/data-sources/{id}` | 删除数据源 |
-| GET | `/v1/data-sources` | 分页查询数据源列表 |
-| POST | `/v1/data-sources/test-connection` | 测试连接 |
-| GET | `/v1/data-sources/{id}/schemas` | 获取 Schema 列表 |
+| PUT | `/v1/data-sources/{id}` | 更新数据源（null 字段不覆盖） |
+| DELETE | `/v1/data-sources/{id}` | 删除数据源（级联清理表/列/ES索引） |
+| GET | `/v1/data-sources` | 分页查询数据源列表，支持 keyword 搜索 |
+| GET | `/v1/data-sources/{id}/schemas` | 获取数据库 Schema 列表 |
 | GET | `/v1/data-sources/{id}/schemas/{schema}/tables` | 获取表列表 |
 | GET | `/v1/data-sources/{id}/schemas/{schema}/tables/{table}/columns` | 获取列信息 |
-| POST | `/v1/data-sources/{id}/execute-sql` | 执行 SQL |
+| POST | `/v1/data-sources/{id}/execute-sql` | 执行 SQL 语句 |
+
+#### 2.2.2 表管理（TableController，前缀 `/v1/data-sources/{datasourceId}`）
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/v1/data-sources/{datasourceId}/tables` | 分页查询已添加的表列表，支持 keyword 搜索 |
+| GET | `/v1/data-sources/{datasourceId}/tables/added-names` | 获取已添加的表名列表（用于添加时去重） |
+| POST | `/v1/data-sources/{datasourceId}/tables/batch` | 批量添加表（从数据库同步表+列+ES索引） |
+| DELETE | `/v1/data-sources/{datasourceId}/tables/{tableId}` | 删除表（级联删列+ES索引） |
+| PUT | `/v1/data-sources/{datasourceId}/tables/{tableId}` | 更新表元数据（别名、描述）并同步 ES |
+
+#### 2.2.3 列管理（ColumnController，前缀 `/v1/data-sources/{datasourceId}/tables/{tableId}/columns`）
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `.../columns` | 分页查询列列表，支持 keyword 搜索 |
+| PUT | `.../columns/{id}` | 更新列元数据（别名、描述、值匹配开关） |
+| POST | `.../columns/sync` | 从数据库同步最新列信息，支持 overwrite_existing 参数 |
+| POST | `.../columns/{columnId}/values/extract` | 从数据库抽取列的去重值到 ES |
+| GET | `.../columns/{columnId}/values` | 分页查询列值列表，支持 keyword 搜索 |
+| PUT | `.../columns/{columnId}/values` | 保存列值（增/删/改同义词） |
 
 ### 2.3 核心领域模型
 
 **DataSource**
-- `id`, `name`, `description`: 基础信息
-- `type`: 数据库类型 (DbType enum)
-- `jdbcUrl`, `username`, `password`: 连接信息
+- `id`, `name`, `description`: 基础信息（继承 BaseResource）
+- `type`: 数据库类型 (DbType enum，支持 MYSQL/POSTGRESQL/CLICKHOUSE/ORACLE 等 10 种)
+- `jdbcUrl`, `username`, `password`: 连接信息（Model 中为明文，PO 中 password 加密存储）
 
 **TableInfo**
 - `id`, `name`, `description`: 基础信息
 - `datasourceId`: 所属数据源 ID
 - `schema`: 数据库 Schema
-- `aliases`: 别名列表（JSON 存储，用户可设置多个搜索关键词）
+- `aliases`: 别名列表（用户可设置多个搜索关键词，用于语义搜索匹配）
 
 **ColumnInfo**
 - `id`, `name`, `description`: 基础信息
 - `tableId`: 所属表 ID
-- `columnType`: 列数据类型
-- `aliases`: 别名列表（JSON 存储，用户可设置多个搜索关键词）
+- `columnType`: 列数据类型（来自 JDBC TYPE_NAME）
+- `aliases`: 别名列表（用户可设置多个搜索关键词）
+- `extractValueEnabled`: 是否启用列值抽取（Boolean，默认 false）。开启后可将该列的 DISTINCT 值抽取到 ES，支持值匹配搜索。关闭时自动清理已抽取的 FIELD_VALUE 文档。
 
 ### 2.4 关键服务
 
-**JdbcMetaService**: 封装 JDBC 元数据查询，通过 `DbClient` 抽象层支持多数据库类型，调用 `HikariPoolManager` 管理连接池。
+**JdbcMetaService**: 封装 JDBC 元数据查询
+- 通过 `DbClient` 抽象层支持多数据库类型
+- 通过 `DbClientFactory.getDbClient(DbType)` 获取对应的 DbClient 实现
+- 调用 `HikariPoolManager` 管理 HikariCP 连接池
+- `executeSql()`: 使用 `JdbcTemplate` 执行 SQL 并返回 `List<Map<String, Object>>`
 
-**DataSourceService**: 核心业务逻辑
-- `testConnection()`: 测试数据库连接
-- `addDataSource()`: 保存新数据源
-- `deleteDataSource()`: 删除时清理关联的表、列和语义索引
+**DataSourceService**: 数据源核心业务逻辑
+- `testConnection(JdbcConnector)`: 测试数据库连接
+- `addDataSource(DataSource)`: 保存新数据源，密码加密后存入 PO
+- `updateDataSource(id, DataSource)`: 更新数据源，仅覆盖非 null 字段
+- `deleteDataSource(id)`: 删除时关闭连接池 → 清理关联的 Column → Table → ES 语义索引
+- `listDataSources(keyword, pageable)`: 分页查询，支持按名称或 ID 搜索
+- `getDataSourceNameMap(ids)`: 批量获取数据源名称映射
+
+**TableService**: 表管理 + ES 语义索引同步
+- `getTables(pageReq, datasourceId, keyword)`: 分页查询表列表
+- `getAddedTableNames(datasourceId)`: 获取已添加表名（用于添加表时避免重复）
+- `batchAddTables(datasourceId, tables)`: **事务方法** — 保存 Table PO → 通过 JDBC 获取列信息 → 保存 Column PO → 批量构建 TABLE + FIELD 类型的 SemanticSearchDocument 写入 ES
+- `deleteTable(tableId)` / `deleteTables(tableIds)`: 级联删除列 + ES 清理
+- `updateTable(tableId, tableInfo)`: 更新别名/描述 → 同步 ES
+
+**ColumnService**: 列管理
+- `getColumns(pageReq, tableId, keyword)`: 分页查询列列表
+- `updateColumn(id, columnInfo)`: 更新列元数据 → 同步 ES；当 `extractValueEnabled` 从 true 变为 false 时，自动清理该列对应的 FIELD_VALUE 文档
+- `syncColumns(datasourceId, tableId, overwriteExisting)`: 从 JDBC 获取最新列 → 删除旧 PO → 保存新 PO → 删除旧 ES FIELD 文档 → 重建 ES 文档。`overwriteExisting` 控制是否覆盖用户自定义的描述
+
+**ColumnValueService**: 列值抽取与管理（NEW）
+- `extractValues(datasourceId, columnId, overwrite)`: 执行 `SELECT DISTINCT {column} FROM {table} LIMIT N` → 将每个值作为 FIELD_VALUE 类型写入 ES。由 `ColumnValueConfig` 控制采样限制（sampleLimit）和长度限制（lengthLimit）
+- `saveValues(columnId, values, deletedIds)`: 手动增/删/改列值，同时更新 ES
+- `getValues(columnId, pageReq, keyword)`: 分页查询列值，支持搜索
 
 ## 3. 前端架构
 
@@ -91,15 +155,16 @@ frontend/src/
 ├── pages/datasources/
 │   ├── index.vue                    # 数据源列表页
 │   └── [id]/tables/
-│       ├── index.vue                # 表管理页
-│       └── [tableId]/columns.vue    # 列管理页
+│       ├── index.vue                # 表管理页（含批量添加、别名配置、列同步）
+│       └── [tableId]/columns.vue    # 列管理页（含别名、值匹配开关、列值管理）
 ├── components/datasource/
 │   ├── DatasourceTable.vue          # 数据源表格组件
-│   ├── DatasourceDialog.vue         # 创建/编辑弹窗
-│   ├── DatasourceForm.vue           # 表单组件
-│   └── DatasourceAction.vue          # 操作按钮组件
+│   ├── DatasourceDialog.vue         # 创建/编辑弹窗（含测试连接）
+│   └── DatasourceForm.vue           # 表单组件（校验+数据库类型选择）
 └── api/
-    └── datasource.ts                # API 接口定义
+    ├── datasource.ts                # 数据源 API + 元数据查询 API
+    ├── tableinfo.ts                 # 表管理 API
+    └── column.ts                    # 列管理 + 列值管理 API
 ```
 
 ### 3.2 页面路由
@@ -107,24 +172,41 @@ frontend/src/
 | 路由 | 页面 | 功能 |
 |------|------|------|
 | `/datasources` | index.vue | 数据源列表、搜索、创建、编辑、删除、测试连接 |
-| `/datasources/{id}/tables` | tables/index.vue | 表管理、添加表、同步列、配置元数据 |
-| `/datasources/{id}/tables/{tableId}/columns` | columns.vue | 列管理 |
+| `/datasources/{id}/tables` | tables/index.vue | 表管理：批量添加（Transfer 穿梭框选择）、配置元数据（别名+描述）、同步列、删除表 |
+| `/datasources/{id}/tables/{tableId}/columns` | columns.vue | 列管理：别名配置、描述编辑、值匹配开关（仅字符串类型可用）、列值抽取与管理 |
 
 ### 3.3 API 接口
 
 ```typescript
-// 数据源管理
-testConnection(body)       // POST /v1/data-sources/test-connection
-addDataSource(body)        // POST /v1/data-sources
-updateDataSource(id, body) // PUT /v1/data-sources/{id}
-deleteDataSource(id)       // DELETE /v1/data-sources/{id}
+// === 数据源管理 (datasource.ts) ===
+testConnection(body)              // POST /v1/data-sources/test-connection
+addDataSource(body)               // POST /v1/data-sources
+updateDataSource(id, body)        // PUT /v1/data-sources/{id}
+deleteDataSource(id)              // DELETE /v1/data-sources/{id}
 listDataSources(page, size, keyword) // GET /v1/data-sources
 
 // 元数据查询
-getSchemas(id)             // GET /v1/data-sources/{id}/schemas
-getTables(id, schema)     // GET /v1/data-sources/{id}/schemas/{schema}/tables
-getColumns(id, schema, table) // GET /v1/data-sources/{id}/schemas/{schema}/tables/{table}/columns
-executeSql(id, sql)        // POST /v1/data-sources/{id}/execute-sql
+getSchemas(id)                    // GET /v1/data-sources/{id}/schemas
+getTables(id, schema)            // GET /v1/data-sources/{id}/schemas/{schema}/tables
+getColumns(id, schema, table)    // GET /v1/data-sources/{id}/schemas/{schema}/tables/{table}/columns
+executeSql(id, sql)              // POST /v1/data-sources/{id}/execute-sql
+
+// === 表管理 (tableinfo.ts) ===
+listTableInfos(datasourceId, page, size, keyword)  // GET .../tables
+getAddedTableNames(datasourceId)                    // GET .../tables/added-names
+batchAddTables(datasourceId, tables)               // POST .../tables/batch
+deleteTable(datasourceId, tableId)                 // DELETE .../tables/{tableId}
+updateTable(datasourceId, tableId, data)           // PUT .../tables/{tableId}
+syncColumns(datasourceId, tableId, overwrite)      // POST .../columns/sync
+
+// === 列管理 (column.ts) ===
+listTableColumns(datasourceId, tableId, page, size, keyword)  // GET .../columns
+saveColumnMetadata(datasourceId, tableId, column)             // PUT .../columns/{id}
+
+// 列值管理
+extractColumnValues(datasourceId, tableId, columnId, overwrite)  // POST .../values/extract
+getColumnValues(datasourceId, tableId, columnId, page, size)     // GET .../values
+saveColumnValues(datasourceId, tableId, columnId, values, deletedIds) // PUT .../values
 ```
 
 ## 4. 数据流
@@ -133,24 +215,29 @@ executeSql(id, sql)        // POST /v1/data-sources/{id}/execute-sql
 ┌─────────────────────────────────────────────────────────────┐
 │                         Frontend                             │
 │  index.vue → DatasourceDialog → DatasourceForm → API        │
+│  tables/index.vue → el-transfer 穿梭框 → batchAddTables     │
+│  columns.vue → 别名/值匹配开关/列值管理弹窗                   │
 └─────────────────────┬───────────────────────────────────────┘
                       │ HTTP /v1/data-sources/*
                       ▼
 ┌─────────────────────────────────────────────────────────────┐
-│                    Backend Controller                        │
-│              DataSourceController                            │
+│                    Backend Controllers                       │
+│  DataSourceController / TableController / ColumnController   │
 └─────────────────────┬───────────────────────────────────────┘
                       │
                       ▼
 ┌─────────────────────────────────────────────────────────────┐
-│                    Domain Service                            │
-│  DataSourceService / JdbcMetaService                         │
+│                    Domain Services                           │
+│  DataSourceService / TableService / ColumnService            │
+│  ColumnValueService / JdbcMetaService                        │
 └─────────────────────┬───────────────────────────────────────┘
                       │
                       ▼
 ┌─────────────────────────────────────────────────────────────┐
-│                    Repository Layer                          │
-│        DataSourceDAO / JdbcMetaService → DbClient            │
+│               Repository / Infrastructure                    │
+│  JPA DAO → MySQL        DbClient → JDBC → 外部数据库          │
+│  SemanticIndexService → Elasticsearch                        │
+│  HikariPoolManager → HikariCP 连接池                          │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -158,7 +245,7 @@ executeSql(id, sql)        // POST /v1/data-sources/{id}/execute-sql
 
 ### 5.1 概述
 
-DataSource 模块通过 `SemanticIndexService` 与 Elasticsearch 集成，将表、字段等元数据同步到 ES 索引，支持语义搜索功能。
+DataSource 模块通过 `SemanticIndexService` 与 Elasticsearch 集成，将表、字段等元数据同步到 ES 索引，支持语义搜索功能。此外，`ColumnValueService` 可将列的 DISTINCT 值抽取到 ES，实现字段值级别的搜索匹配。
 
 ### 5.2 核心组件
 
@@ -168,6 +255,7 @@ DataSource 模块通过 `SemanticIndexService` 与 Elasticsearch 集成，将表
 | `SemanticIndexService` | `semantic/domain/service/` | 语义索引服务 |
 | `SemanticSearchDAO` | `semantic/repository/dao/` | ES Repository |
 | `EntityReference` | `semantic/repository/po/` | 实体引用（关联表/字段） |
+| `ColumnValueConfig` | `config/` | 列值抽取配置（采样数量限制、值长度限制） |
 
 ### 5.3 ES 文档结构
 
@@ -175,17 +263,17 @@ DataSource 模块通过 `SemanticIndexService` 与 Elasticsearch 集成，将表
 @Document(indexName = "semantic_search")
 public class SemanticSearchDocument {
     @Id
-    private String id;                    // 格式: "table:{id}" 或 "field:{id}"
-    
+    private String id;                    // 格式: "table:{id}"、"field:{id}" 或 UUID（FIELD_VALUE）
+
     @Field(type = FieldType.Text, analyzer = "ik_max_word")
     private List<String> keywords;       // [原始名称] + aliases（去重）
-    
+
     @Field(type = FieldType.Text)
     private String description;            // 描述文本（来自数据库 comment）
-    
+
     @Field(type = FieldType.Keyword)
     private SemanticEntityType type;      // SUBJECT / TABLE / FIELD / FIELD_VALUE / TERM
-    
+
     @Field(type = FieldType.Nested)
     private EntityReference entity;       // 关联的实体引用
 }
@@ -198,23 +286,33 @@ EntityReference
 ├── subjectId     # 关联的主题（Subject）ID
 ├── tableId       # 关联的表（TableInfo）ID
 ├── tableName     # 表名
-└── field         # 字段名（FIELD 类型时使用）
+└── field         # 字段名（FIELD / FIELD_VALUE 类型时使用）
 ```
 
 ### 5.5 交互流程
 
 **添加表时** (`TableService.batchAddTables`):
 1. 保存 `TableInfoPO` 到 MySQL
-2. 通过 JDBC 获取表的列信息
+2. 通过 JDBC 获取表的列信息和表注释
 3. 保存 `ColumnInfoPO` 到 MySQL
 4. 批量构建 `SemanticSearchDocument`（TABLE + FIELD 类型）
 5. 调用 `semanticIndexService.saveBatch()` 写入 ES
 
 **同步列时** (`ColumnService.syncColumns`):
 1. 从 JDBC 获取最新列信息
-2. 删除旧 `ColumnInfoPO`，保存新的
-3. 先调用 `semanticIndexService.deleteByEntityTableId()` 删除旧 ES 文档
+2. 删除旧 `ColumnInfoPO`，保存新的（保留已有别名和描述）
+3. 先调用 `semanticIndexService.deleteByEntityTableId()` 删除旧 ES FIELD 文档
 4. 批量构建 FIELD 类型文档并写入 ES
+
+**更新列时** (`ColumnService.updateColumn`):
+1. 更新列 PO 的别名、描述、`extractValueEnabled`
+2. 若 `extractValueEnabled` 从 true 变为 false，调用 `semanticIndexService.deleteByTableFieldAndType()` 清理 FIELD_VALUE 文档
+3. 更新 ES 中的 FIELD 文档
+
+**抽取列值时** (`ColumnValueService.extractValues`):
+1. 执行 `SELECT DISTINCT {column} FROM {table} LIMIT N`（N 由 ColumnValueConfig 配置）
+2. 每个值截断到配置的最大长度
+3. 去重后写入 ES（`SemanticEntityType.FIELD_VALUE`）
 
 **删除数据源时** (`DataSourceService.deleteDataSource`):
 1. 获取该数据源下所有表 ID
@@ -222,6 +320,7 @@ EntityReference
 3. 删除 `TableInfoPO`
 4. 调用 `semanticIndexService.deleteByEntityTableIds()` 清理 ES 文档
 5. 调用 `semanticIndexService.deleteByEntity_SubjectId()` 清理主题关联的 ES 文档
+6. 关闭 HikariCP 连接池
 
 ### 5.6 关键代码路径
 
@@ -235,6 +334,14 @@ ColumnService.syncColumns()
 
 ColumnService.updateColumn()
   └─> semanticIndexService.save(doc)  // 更新单个 FIELD 文档
+  └─> semanticIndexService.deleteByTableFieldAndType()  // extractValueEnabled 从 true→false 时
+
+ColumnValueService.extractValues()
+  └─> jdbcMetaService.executeSql() → SELECT DISTINCT
+  └─> semanticIndexService.saveBatch(docs)  // FIELD_VALUE 文档
+
+ColumnValueService.saveValues()
+  └─> semanticIndexService.deleteById() / saveBatch()  // 手动管理列值
 
 TableService.updateTable()
   └─> semanticIndexService.save(doc)  // 更新 TABLE 文档
@@ -246,10 +353,29 @@ DataSourceService.deleteDataSource()
 
 ## 6. 关键技术点
 
-- **连接池管理**: 使用 HikariCP，通过 `HikariPoolManager` 统一管理
-- **多数据库支持**: `DbClientFactory` 抽象不同数据库的 JDBC 操作
+- **连接池管理**: 使用 HikariCP，通过 `HikariPoolManager`（ConcurrentHashMap）统一管理，ShutdownHook 自动清理
+- **多数据库支持**: `DbClientFactory` 简单工厂模式，通过 `DbClient` 接口 + `AbstractDbClient` 模板方法抽象不同数据库的 JDBC 操作。目前已实现 `MysqlDbClient`（Schema = Catalog）和 `PostgresqlDbClient`
+- **密码安全**: PO 中存储 `encryptedPassword`（`EncryptionUtils.encrypt()`），Mapper 层做加解密转换，VO 层不返回密码
 - **DDD 架构**: 严格分层 `controller → service → repository/dao`
-- **前后端分离**: 前端 Vue 3 + TypeScript，后端 REST API
-- **命名转换**: 前端使用 snake_case (API JSON)，内部使用 camelCase
-- **ES 集成**: 表/字段元数据自动同步到 ES，支持语义搜索
+- **前后端分离**: 前端 Vue 3 + TypeScript + Element Plus，后端 REST API
+- **命名转换**: 前端 API JSON 使用 snake_case（如 `jdbc_url`），前端脚本内部使用 camelCase
+- **ES 集成**: 表/字段元数据自动同步到 ES，支持语义搜索；列值可抽取到 ES 实现值级别匹配
 - **别名系统**: 表/字段支持多个别名（aliases），同步到 ES keywords 去重存储，支持语义搜索匹配
+- **列值抽取**: 通过 `ColumnValueService` 执行 `SELECT DISTINCT` 抽取列的去重值到 ES，支持覆盖/追加两种模式，受 `ColumnValueConfig` 限制采样数量和值长度
+- **值匹配开关**: 仅字符串类型列（varchar/char/text）支持，开启后可管理列值；关闭时自动清理 ES 中的 FIELD_VALUE 数据
+
+## 7. 更新记录
+
+| 日期 | 更新内容 |
+|------|----------|
+| 2026-06-28 | 修正目录结构中 `repository/mapper/` 重复描述的错误，移除不存在的 MyBatis 引用 |
+| 2026-06-28 | 补充 `ColumnInfo.extractValueEnabled` 字段说明 |
+| 2026-06-28 | 新增 `ColumnValueService` 服务文档 |
+| 2026-06-28 | 补充 TableController 和 ColumnController 的完整 API 列表 |
+| 2026-06-28 | 补充 `DataSourceService.updateDataSource()` 方法说明 |
+| 2026-06-28 | 修正前端组件目录，移除不存在的 `DatasourceAction.vue` |
+| 2026-06-28 | 补充前端 `tableinfo.ts` 和 `column.ts` API 文件及接口定义 |
+| 2026-06-28 | 新增列值管理相关功能描述（抽取、手动管理、值匹配开关） |
+| 2026-06-28 | 补充 `ColumnValueConfig` 配置说明 |
+| 2026-06-28 | 完善数据流图，体现 ColumnValueService 和 Table/Column Controller |
+| 2026-06-28 | 增加 ES 集成中 FIELD_VALUE 类型的交互流程 |

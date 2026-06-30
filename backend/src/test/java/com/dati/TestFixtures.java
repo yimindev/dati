@@ -26,6 +26,7 @@ public class TestFixtures {
         ds.setJdbcUrl("jdbc:mysql://localhost:3306/test_db");
         ds.setUsername("root");
         ds.setPassword("password123");
+        ds.setDefaultSchema("public");
         ds.setCreatedBy(TEST_USER_ID);
         ds.setCreatedAt(Instant.now());
         ds.setUpdatedBy(TEST_USER_ID);
@@ -42,6 +43,7 @@ public class TestFixtures {
         po.setJdbcUrl("jdbc:mysql://localhost:3306/test_db");
         po.setUserName("root");
         po.setEncryptedPassword("password123");
+        po.setDefaultSchema("public");
         po.setCreatedBy(TEST_USER_ID);
         po.setCreatedAt(Instant.now());
         po.setUpdatedBy(TEST_USER_ID);

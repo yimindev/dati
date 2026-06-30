@@ -7,6 +7,7 @@ export interface DatasourceVO extends BaseResourceVO {
   jdbc_url: string;
   username: string;
   type: string;
+  default_schema?: string;
 }
 
 // 创建/更新的请求体（蛇形命名）
@@ -17,6 +18,7 @@ export interface DataSourcePayload {
   username: string;
   password?: string;
   type: string;
+  default_schema?: string;
 }
 
 // 列信息（常用字段集合，按蛇形命名）
@@ -57,6 +59,12 @@ export function testConnection(body: DataSourcePayload, signal?: AbortSignal): P
   return post<boolean, DataSourcePayload>('/v1/data-sources/test-connection', body, signal)
 }
 
+// 数据源：无状态获取 Schemas（POST /v1/data-sources/schemas）
+// 用于新建/编辑时测试连接后，根据连接信息拉取 Schema 列表
+export function getSchemasByConnection(body: DataSourcePayload, signal?: AbortSignal): Promise<string[]> {
+  return post<string[], DataSourcePayload>('/v1/data-sources/schemas', body, signal)
+}
+
 // 数据源：新增（POST /v1/data-sources）
 export function addDataSource(body: DataSourcePayload, signal?: AbortSignal): Promise<IdResponse> {
   return post<IdResponse, DataSourcePayload>('/v1/data-sources', body, signal)
@@ -79,6 +87,11 @@ export function listDataSources(page: number, size: number, keyword?: string, si
     { page, size, keyword },
     signal,
   );
+}
+
+// 数据源：详情（GET /v1/data-sources/{id}）
+export function getDataSource(id: string, signal?: AbortSignal): Promise<DatasourceVO> {
+  return get<DatasourceVO>(`/v1/data-sources/${encodeURIComponent(id)}`, undefined, signal)
 }
 
 // Schema 列表（GET /v1/data-sources/{id}/schemas?catalog=...）

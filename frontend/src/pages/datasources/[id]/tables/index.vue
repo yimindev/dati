@@ -11,7 +11,7 @@ import type { InputInstance } from "element-plus";
 import { Plus, Search } from "@element-plus/icons-vue";
 import { useI18n } from "vue-i18n";
 import { listTableInfos, getAddedTableNames, batchAddTables, syncColumns, deleteTable, updateTable, type TableInfoVO } from "~/api/tableinfo.ts";
-import { getSchemas, getTables, type TableVO } from "~/api/datasource.ts";
+import { getSchemas, getTables, getDataSource, type TableVO } from "~/api/datasource.ts";
 import { formatDateTime } from "~/composables";
 
 const { t } = useI18n();
@@ -35,6 +35,7 @@ const currentTable = ref<TableInfoVO | null>(null);
 const addTableDialogVisible = ref(false);
 const schemas = ref<string[]>([]);
 const selectedSchema = ref("");
+const defaultSchema = ref("");
 const availableTables = ref<TableVO[]>([]);
 const selectedTables = ref<string[]>([]);
 const addedTableNames = ref<string[]>([]);
@@ -98,6 +99,12 @@ const handleOpenAddTableDialog = async () => {
     schemaLoading.value = true;
     schemas.value = await getSchemas(datasourceId.value);
     addedTableNames.value = await getAddedTableNames(datasourceId.value);
+
+    // 自动选中数据源的默认 Schema
+    if (defaultSchema.value && schemas.value.includes(defaultSchema.value)) {
+      selectedSchema.value = defaultSchema.value;
+      await handleSchemaChange(defaultSchema.value);
+    }
   } catch (error) {
     console.error("加载 schema 列表失败:", error);
     ElMessage.error(t("common.loadFailed"));
@@ -254,7 +261,13 @@ const handlePageSizeChange = (ps: number) => {
   loadTables();
 };
 
-onMounted(() => {
+onMounted(async () => {
+  try {
+    const ds = await getDataSource(datasourceId.value);
+    if (ds.default_schema) {
+      defaultSchema.value = ds.default_schema;
+    }
+  } catch { /* ignore */ }
   loadTables();
 });
 </script>

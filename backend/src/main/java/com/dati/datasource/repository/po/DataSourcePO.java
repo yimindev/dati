@@ -31,4 +31,7 @@ public class DataSourcePO extends BaseResourcePO {
     @Column(length = 512)
     private String encryptedPassword;
 
+    @Column(length = 256)
+    private String defaultSchema;
+
 }

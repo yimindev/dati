@@ -36,8 +36,12 @@ public class JdbcMetaService {
 
     public List<String> getSchemas(String dataSourceId, @Nullable String catalog) throws SQLException {
         DataSourcePO dataSourcePO = dataSourceDAO.findById(dataSourceId).orElseThrow();
-        DbClient dbClient = DbClientFactory.getDbClient(dataSourcePO.getType());
         DataSource dataSource = DSMapper.toDataSource(dataSourcePO);
+        return getSchemas(dataSource, catalog);
+    }
+
+    public List<String> getSchemas(DataSource dataSource, @Nullable String catalog) throws SQLException {
+        DbClient dbClient = DbClientFactory.getDbClient(dataSource.getType());
         return dbClient.getSchemas(new JdbcConnector(dataSource), catalog);
     }
 

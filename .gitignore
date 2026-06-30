@@ -31,3 +31,5 @@ target/
 /.superpowers/
 /.playwright-cli/
 /design/
+/frontend/public/docs/
+/docs/user-guide/.vitepress/cache/

@@ -22,4 +22,6 @@ public class DataSource extends BaseResource {
 
     private String password;
 
+    private String defaultSchema;
+
 }

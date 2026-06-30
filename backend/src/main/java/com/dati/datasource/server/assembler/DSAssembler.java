@@ -6,8 +6,6 @@ import com.dati.datasource.domain.model.DataSource;
 import com.dati.datasource.server.pojo.DatasourceVO;
 import org.springframework.stereotype.Component;
 
-import java.util.List;
-
 @Component
 public class DSAssembler extends BaseAssembler {
 
@@ -21,13 +19,8 @@ public class DSAssembler extends BaseAssembler {
         datasourceVO.setJdbcUrl(dataSource.getJdbcUrl());
         datasourceVO.setUsername(dataSource.getUsername());
         datasourceVO.setType(dataSource.getType());
+        datasourceVO.setDefaultSchema(dataSource.getDefaultSchema());
         return datasourceVO;
-    }
-
-    public List<DatasourceVO> toDatasourceVOList(List<DataSource> dataSources) {
-        List<DatasourceVO> voList = dataSources.stream().map(this::toDatasourceVO).toList();
-        super.fillUserInfo(voList);
-        return voList;
     }
 
 }

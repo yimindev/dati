@@ -1,5 +1,7 @@
 package com.dati.datasource.domain.service;
 
+import com.dati.base.exception.DatiException;
+import com.dati.base.exception.ErrorCode;
 import com.dati.common.StringUtils;
 import com.dati.db.HikariPoolManager;
 import com.dati.db.JdbcConnector;
@@ -72,5 +74,11 @@ public class DataSourceService {
             return dataSourceDAO.findAll(pageable).map(DSMapper::toDataSource);
         }
         return dataSourceDAO.findAllByNameContainingOrId(keyword, keyword, pageable).map(DSMapper::toDataSource);
+    }
+
+    public DataSource getDataSource(String id) {
+        return dataSourceDAO.findById(id)
+                .map(DSMapper::toDataSource)
+                .orElseThrow(() -> new DatiException(ErrorCode.DS_NOT_FOUND, id));
     }
 }

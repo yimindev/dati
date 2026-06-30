@@ -53,6 +53,16 @@ public class DataSourceController {
         return dataSourceService.testConnection(DSAssembler.toJdbcConnector(dataSource));
     }
 
+    @PostMapping("/schemas")
+    public List<String> getSchemas(@RequestBody DataSource dataSource, @RequestParam(name = "catalog", required = false) String catalog) {
+        try {
+            return jdbcMetaService.getSchemas(dataSource, catalog);
+        } catch (SQLException e) {
+            log.error("Failed to get schemas for datasource",  e);
+            throw new DatiException(ErrorCode.DS_SQL_ERROR, e.getMessage());
+        }
+    }
+
     @PostMapping
     public IdResponse addDataSource(@Valid @RequestBody DataSource dataSource) {
         dsAssembler.fillUsersFromRequest(dataSource);
@@ -78,6 +88,11 @@ public class DataSourceController {
         Page<DatasourceVO> datasourceVOPage = dataSourceService.listDataSources(keyword, pageReq.toPageRequest().withSort(sortBy))
                 .map(dsAssembler::toDatasourceVO);
         return PageResponse.of(datasourceVOPage);
+    }
+
+    @GetMapping("/{id}")
+    public DatasourceVO getDataSource(@PathVariable String id) {
+        return dsAssembler.toDatasourceVO(dataSourceService.getDataSource(id));
     }
 
 

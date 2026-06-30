@@ -207,6 +207,25 @@ class DataSourceControllerTest {
     }
 
     @Test
+    @DisplayName("获取单个数据源 - 返回 default_schema")
+    void getDataSource_shouldReturnWithDefaultSchema() throws Exception {
+        // given
+        when(dataSourceService.getDataSource(TestFixtures.TEST_DATASOURCE_ID)).thenReturn(testDataSource);
+
+        DatasourceVO vo = new DatasourceVO();
+        vo.setId(TestFixtures.TEST_DATASOURCE_ID);
+        vo.setName("Test MySQL DataSource");
+        vo.setDefaultSchema("public");
+        when(dsAssembler.toDatasourceVO(any(DataSource.class))).thenReturn(vo);
+
+        // when & then
+        mockMvc.perform(get("/v1/data-sources/" + TestFixtures.TEST_DATASOURCE_ID))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.id").value(TestFixtures.TEST_DATASOURCE_ID))
+            .andExpect(jsonPath("$.default_schema").value("public"));
+    }
+
+    @Test
     @DisplayName("执行SQL - 成功")
     void executeSql_shouldReturnResults() throws Exception {
         // given

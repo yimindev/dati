@@ -28,8 +28,9 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.mockStatic;
@@ -191,6 +192,34 @@ class DataSourceServiceTest {
         // then
         assertThat(result.getContent()).hasSize(1);
         verify(dataSourceDAO).findAllByNameContainingOrId("test", "test", pageable);
+    }
+
+    @Test
+    @DisplayName("获取单个数据源 - 成功返回带 defaultSchema")
+    void getDataSource_shouldReturnWithDefaultSchema() {
+        // given
+        testDataSourcePO.setDefaultSchema("public");
+        when(dataSourceDAO.findById(TestFixtures.TEST_DATASOURCE_ID)).thenReturn(Optional.of(testDataSourcePO));
+
+        // when
+        DataSource result = dataSourceService.getDataSource(TestFixtures.TEST_DATASOURCE_ID);
+
+        // then
+        assertEquals("public", result.getDefaultSchema());
+        verify(dataSourceDAO).findById(TestFixtures.TEST_DATASOURCE_ID);
+    }
+
+    @Test
+    @DisplayName("获取单个数据源 - 不存在时抛出异常")
+    void getDataSource_shouldThrowWhenNotFound() {
+        // given
+        when(dataSourceDAO.findById(TestFixtures.TEST_DATASOURCE_ID)).thenReturn(Optional.empty());
+
+        // when & then
+        assertThrows(Exception.class, () ->
+            dataSourceService.getDataSource(TestFixtures.TEST_DATASOURCE_ID)
+        );
+        verify(dataSourceDAO).findById(TestFixtures.TEST_DATASOURCE_ID);
     }
 
     @Test

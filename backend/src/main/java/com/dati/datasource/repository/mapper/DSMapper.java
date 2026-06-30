@@ -19,6 +19,7 @@ public class DSMapper {
         target.setJdbcUrl(source.getJdbcUrl());
         target.setUserName(source.getUsername());
         target.setEncryptedPassword(EncryptionUtils.encrypt(source.getPassword()));
+        target.setDefaultSchema(source.getDefaultSchema());
     }
 
     public static DataSource toDataSource(DataSourcePO dataSourcePO) {
@@ -28,6 +29,7 @@ public class DSMapper {
         dataSource.setJdbcUrl(dataSourcePO.getJdbcUrl());
         dataSource.setUsername(dataSourcePO.getUserName());
         dataSource.setPassword(EncryptionUtils.decrypt(dataSourcePO.getEncryptedPassword()));
+        dataSource.setDefaultSchema(dataSourcePO.getDefaultSchema());
         return dataSource;
     }
 

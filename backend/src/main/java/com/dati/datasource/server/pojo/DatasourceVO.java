@@ -15,4 +15,6 @@ public class DatasourceVO extends BaseResourceVO {
 
     private DbType type;
 
+    private String defaultSchema;
+
 }

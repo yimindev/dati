@@ -119,9 +119,12 @@ export default {
     editTitle: "编辑数据源",
 
     // 数据源特有字段
-    jdbcUrl: "JDBC连接字符串",
+    jdbcUrl: "JDBC URL",
     connectionName: "连接名称",
     databaseType: "数据库类型",
+    defaultSchema: "默认 Schema",
+    defaultSchemaPlaceholder: "请选择默认 Schema",
+    testConnectionFirst: "测试连接后可选择默认 Schema",
 
     // 特有操作
     tableManage: "表管理",

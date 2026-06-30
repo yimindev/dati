@@ -119,9 +119,12 @@ export default {
     editTitle: "Edit Data Source",
 
     // Data Source Specific Fields
-    jdbcUrl: "JDBC Connection String",
-    connectionName: "Connection Name",
-    databaseType: "Database Type",
+    jdbcUrl: "JDBC URL",
+    connectionName: "Name",
+    databaseType: "Type",
+    defaultSchema: "Schema",
+    defaultSchemaPlaceholder: "Select default schema",
+    testConnectionFirst: "Test connection to select schema",
 
     // Specific Actions
     tableManage: "Table Manage",
