@@ -70,6 +70,9 @@ public class DataSourceService {
         if (dataSource.getPassword() != null) {
             po.setEncryptedPassword(EncryptionUtils.encrypt(dataSource.getPassword()));
         }
+        if (dataSource.getDefaultSchema() != null) {
+            po.setDefaultSchema(dataSource.getDefaultSchema());
+        }
         dataSourceDAO.save(po);
     }
 

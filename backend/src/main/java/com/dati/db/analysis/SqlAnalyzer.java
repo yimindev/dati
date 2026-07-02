@@ -77,7 +77,12 @@ public final class SqlAnalyzer {
 
     /**
      * Handles SQL containing BEGIN / START TRANSACTION that JSqlParser cannot parse.
-     * Splits by semicolon and analyzes each segment individually:
+     * Splits by semicolon and analyzes each segment individually.
+     * <p>
+     * Note: {@code split(";")} is a naive split that cannot distinguish semicolons
+     * inside string literals (e.g. {@code 'hello;world'}). This is an acceptable
+     * limitation because this code path only activates when JSqlParser fails on both
+     * {@code parseStatements()} and {@code parse()}, which is rare in practice.
      * regex-detected transaction statements → TRANSACTION,
      * parseable segments → normal type detection + table extraction.
      */

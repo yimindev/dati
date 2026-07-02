@@ -4,9 +4,12 @@ import com.dati.base.pojo.IdResponse;
 import com.dati.mcp.domain.model.McpCustomTool;
 import com.dati.mcp.domain.model.McpPrebuiltToolConfig;
 import com.dati.mcp.domain.service.McpToolService;
+import com.dati.mcp.domain.service.McpToolTestService;
 import com.dati.mcp.domain.service.ToolsResult;
 import com.dati.mcp.server.assembler.McpToolAssembler;
 import com.dati.mcp.server.pojo.CustomToolRequest;
+import com.dati.mcp.server.pojo.ToolTestRequest;
+import com.dati.mcp.server.pojo.ToolTestResponse;
 import com.dati.mcp.server.pojo.ToolsResponse;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
@@ -26,10 +29,13 @@ public class McpToolController {
 
     private final McpToolService mcpToolService;
     private final McpToolAssembler mcpToolAssembler;
+    private final McpToolTestService mcpToolTestService;
 
-    public McpToolController(McpToolService mcpToolService, McpToolAssembler mcpToolAssembler) {
+    public McpToolController(McpToolService mcpToolService, McpToolAssembler mcpToolAssembler,
+                              McpToolTestService mcpToolTestService) {
         this.mcpToolService = mcpToolService;
         this.mcpToolAssembler = mcpToolAssembler;
+        this.mcpToolTestService = mcpToolTestService;
     }
 
     @GetMapping
@@ -70,5 +76,12 @@ public class McpToolController {
                                   @PathVariable String toolId) {
         mcpToolService.deleteCustomTool(serviceId, toolId);
         return new IdResponse(toolId);
+    }
+
+    @PostMapping("/{toolId}/test")
+    public ToolTestResponse testTool(@PathVariable String serviceId,
+                                      @PathVariable String toolId,
+                                      @RequestBody ToolTestRequest request) {
+        return mcpToolTestService.test(serviceId, toolId, request);
     }
 }

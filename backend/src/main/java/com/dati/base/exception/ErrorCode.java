@@ -46,6 +46,8 @@ public enum ErrorCode {
     MS_SERVICE_CODE_INVALID("MS011", 400, "Service code must be 1-64 chars, lowercase letters, digits, hyphens and underscores only"),
     MS_SERVICE_CODE_REQUIRED("MS012", 400, "Service code is required"),
     MS_SQL_POLICY_VIOLATION("MS013", 403, "SQL operation not allowed by policy: {0}"),
+    MS_SCOPE_ERROR("MS014", 400, "Data source or table not in scope: {0}"),
+    MS_TOOL_DISABLED("MS015", 400, "Tool is disabled: {0}"),
 
     // ── Authentication module (AUTH) ──────────────────────
 

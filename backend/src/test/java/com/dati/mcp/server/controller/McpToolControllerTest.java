@@ -4,9 +4,13 @@ import com.dati.TestFixtures;
 import com.dati.mcp.domain.model.McpCustomTool;
 import com.dati.mcp.domain.model.McpToolType;
 import com.dati.mcp.domain.service.McpToolService;
+import com.dati.mcp.domain.service.McpToolTestService;
 import com.dati.mcp.domain.service.ToolsResult;
 import com.dati.mcp.server.assembler.McpToolAssembler;
 import com.dati.mcp.server.pojo.McpToolVO;
+import com.dati.mcp.server.pojo.SqlExecution;
+import com.dati.mcp.server.pojo.ToolTestError;
+import com.dati.mcp.server.pojo.ToolTestResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -45,6 +49,9 @@ class McpToolControllerTest {
 
     @MockitoBean
     private McpToolAssembler mcpToolAssembler;
+
+    @MockitoBean
+    private McpToolTestService mcpToolTestService;
 
     @BeforeEach
     void setUp() {
@@ -135,5 +142,45 @@ class McpToolControllerTest {
         mockMvc.perform(delete("/v1/mcp-services/{serviceId}/tools/{toolId}", TestFixtures.TEST_MCP_SERVICE_ID, TestFixtures.TEST_MCP_CUSTOM_TOOL_ID))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.id").value(TestFixtures.TEST_MCP_CUSTOM_TOOL_ID));
+    }
+
+    @Test
+    @DisplayName("POST /tools/{toolId}/test - 工具测试返回 ToolTestResponse")
+    void testTool_shouldReturnToolTestResponse() throws Exception {
+        SqlExecution data = new SqlExecution("SELECT 1", List.of(), null);
+        ToolTestResponse mockResp = new ToolTestResponse(true, 42, data, null);
+        when(mcpToolTestService.test(eq(TestFixtures.TEST_MCP_SERVICE_ID), eq("EXECUTE_SQL"), any()))
+            .thenReturn(mockResp);
+
+        mockMvc.perform(post("/v1/mcp-services/{serviceId}/tools/{toolId}/test",
+                TestFixtures.TEST_MCP_SERVICE_ID, "EXECUTE_SQL")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"arguments\":{\"data_source_id\":\"ds-1\",\"sql\":\"SELECT 1\"}}"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.success").value(true))
+            .andExpect(jsonPath("$.execution_time_ms").value(42))
+            .andExpect(jsonPath("$.data.type").value("SQL_EXECUTION"))
+            .andExpect(jsonPath("$.data.executed_sql").value("SELECT 1"))
+            .andExpect(jsonPath("$.error").doesNotExist());
+    }
+
+    @Test
+    @DisplayName("POST /tools/{toolId}/test - 工具测试返回失败响应")
+    void testTool_shouldReturnErrorResponse() throws Exception {
+        ToolTestError error = new ToolTestError("SCOPE_ERROR", "Data source not in scope");
+        ToolTestResponse mockResp = new ToolTestResponse(false, 15, null, error);
+        when(mcpToolTestService.test(eq(TestFixtures.TEST_MCP_SERVICE_ID), eq("EXECUTE_SQL"), any()))
+            .thenReturn(mockResp);
+
+        mockMvc.perform(post("/v1/mcp-services/{serviceId}/tools/{toolId}/test",
+                TestFixtures.TEST_MCP_SERVICE_ID, "EXECUTE_SQL")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"arguments\":{\"data_source_id\":\"ds-1\",\"sql\":\"SELECT 1\"}}"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.success").value(false))
+            .andExpect(jsonPath("$.execution_time_ms").value(15))
+            .andExpect(jsonPath("$.error.error_category").value("SCOPE_ERROR"))
+            .andExpect(jsonPath("$.error.message").value("Data source not in scope"))
+            .andExpect(jsonPath("$.data").doesNotExist());
     }
 }

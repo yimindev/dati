@@ -18,31 +18,27 @@ public class SqlPolicy {
     private boolean allowTransaction = false;
     private boolean allowSet = false;
 
-    /** 逐条类型许可。MERGE 需 INSERT+UPDATE 复合许可。 */
-    private boolean allows(SqlOperationType type) {
-        return switch (type) {
-            case SELECT      -> allowSelect;
-            case INSERT      -> allowInsert;
-            case UPDATE      -> allowUpdate;
-            case DELETE      -> allowDelete;
-            case MERGE       -> allowInsert && allowUpdate;
-            case DDL         -> allowDdl;
-            case METADATA    -> allowMetadata;
-            case TRANSACTION -> allowTransaction;
-            case SET         -> allowSet;
-            case OTHER       -> false;
-            case MULTI       -> throw new IllegalArgumentException(
-                "MULTI is a marker type; check allowMulti on the result instead");
-        };
-    }
-
-    /** 根据分析结果校验权限，不通过则抛 DatiException。 */
-    public void validateAllowed(SqlAnalysisResult result) {
+    /** 根据分析结果校验权限，不通过则抛 DatiException(MS_SQL_POLICY_VIOLATION)。 */
+    public void validate(SqlAnalysisResult result) {
         if (result.isMulti() && !allowMulti) {
             throw new DatiException(ErrorCode.MS_SQL_POLICY_VIOLATION, "multi-statement not allowed");
         }
         for (SqlOperationType type : result.statementTypes()) {
-            if (!allows(type)) {
+            boolean ok = switch (type) {
+                case SELECT      -> allowSelect;
+                case INSERT      -> allowInsert;
+                case UPDATE      -> allowUpdate;
+                case DELETE      -> allowDelete;
+                case MERGE       -> allowInsert && allowUpdate;
+                case DDL         -> allowDdl;
+                case METADATA    -> allowMetadata;
+                case TRANSACTION -> allowTransaction;
+                case SET         -> allowSet;
+                case OTHER       -> false;
+                case MULTI       -> throw new IllegalArgumentException(
+                    "MULTI is a marker type; check allowMulti on the result instead");
+            };
+            if (!ok) {
                 throw new DatiException(ErrorCode.MS_SQL_POLICY_VIOLATION, type + " not allowed");
             }
         }
