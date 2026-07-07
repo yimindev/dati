@@ -2,11 +2,12 @@
 import { ref, computed, onMounted } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
 import { useI18n } from "vue-i18n";
-import { Edit, Delete, Plus, Search, Coin } from "@element-plus/icons-vue";
+import { Edit, Delete, Plus, Search, Coin, CaretRight } from "@element-plus/icons-vue";
 import type { McpToolVO } from "~/api/mcp-tool";
 import { updateTool, deleteCustomTool } from "~/api/mcp-tool";
 import { getDataScope } from "~/api/mcp-service";
 import CustomToolDialog from "./CustomToolDialog.vue";
+import ToolTestDialog from "./ToolTestDialog.vue";
 
 const { t } = useI18n();
 
@@ -17,6 +18,12 @@ const searchQuery = ref("");
 const dialogVisible = ref(false);
 const editingTool = ref<McpToolVO | null>(null);
 const dsNameMap = ref<Record<string, string>>({});
+const testVisible = ref(false);
+const testingTool = ref<McpToolVO | null>(null);
+const openTest = (tool: McpToolVO) => {
+  testingTool.value = tool;
+  testVisible.value = true;
+};
 
 onMounted(async () => {
   try {
@@ -43,7 +50,6 @@ const filteredTools = computed(() => {
 const handleToggle = async (tool: McpToolVO) => {
   try {
     await updateTool(props.serviceId, tool.id, { tool_type: tool.tool_type, enabled: !tool.enabled });
-    tool.enabled = !tool.enabled;
     ElMessage.success(t("common.saveSuccess"));
     emit("refresh");
   } catch (e: any) {
@@ -137,8 +143,15 @@ const handleDialogSaved = () => {
         </div>
 
         <div class="flex items-center gap-3.5 shrink-0">
-          <el-icon class="action-icon" @click="handleEdit(tool)"><Edit /></el-icon>
-          <el-icon class="action-icon action-delete" @click="handleDelete(tool)"><Delete /></el-icon>
+          <el-tooltip content="编辑" placement="top">
+            <el-icon class="action-icon" @click="handleEdit(tool)"><Edit /></el-icon>
+          </el-tooltip>
+          <el-tooltip content="删除" placement="top">
+            <el-icon class="action-icon action-delete" @click="handleDelete(tool)"><Delete /></el-icon>
+          </el-tooltip>
+          <el-tooltip content="测试" placement="top">
+            <el-icon class="action-icon" @click="openTest(tool)"><CaretRight /></el-icon>
+          </el-tooltip>
           <el-switch
             :model-value="tool.enabled"
             @change="handleToggle(tool)"
@@ -152,6 +165,13 @@ const handleDialogSaved = () => {
       :service-id="props.serviceId"
       :tool="editingTool"
       @saved="handleDialogSaved"
+    />
+
+    <ToolTestDialog
+      v-if="testingTool"
+      v-model:visible="testVisible"
+      :service-id="props.serviceId"
+      :tool="testingTool!"
     />
   </div>
 </template>

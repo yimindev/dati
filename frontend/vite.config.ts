@@ -11,7 +11,7 @@ import { ElementPlusResolver } from "unplugin-vue-components/resolvers";
 export default defineConfig({
   server: {
     allowedHosts: [
-      '.zhangyimin.me'
+      '.zhangyimin.me', '.trycloudflare.com'
     ],
     proxy: {
       "/docs": {

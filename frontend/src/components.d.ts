@@ -26,6 +26,7 @@ declare module 'vue' {
     ElCheckbox: typeof import('element-plus/es')['ElCheckbox']
     ElCheckboxGroup: typeof import('element-plus/es')['ElCheckboxGroup']
     ElConfigProvider: typeof import('element-plus/es')['ElConfigProvider']
+    ElDatePicker: typeof import('element-plus/es')['ElDatePicker']
     ElDialog: typeof import('element-plus/es')['ElDialog']
     ElDivider: typeof import('element-plus/es')['ElDivider']
     ElDropdown: typeof import('element-plus/es')['ElDropdown']
@@ -37,6 +38,7 @@ declare module 'vue' {
     ElIcon: typeof import('element-plus/es')['ElIcon']
     ElInput: typeof import('element-plus/es')['ElInput']
     ElInputNumber: typeof import('element-plus/es')['ElInputNumber']
+    ElInputTag: typeof import('element-plus/es')['ElInputTag']
     ElMenu: typeof import('element-plus/es')['ElMenu']
     ElMenuItem: typeof import('element-plus/es')['ElMenuItem']
     ElOption: typeof import('element-plus/es')['ElOption']
@@ -64,6 +66,7 @@ declare module 'vue' {
     PromptTemplateEditor: typeof import('./components/common/editors/PromptTemplateEditor.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
+    SqlEditor: typeof import('./components/common/editors/SqlEditor.vue')['default']
     SqlSecurityConfig: typeof import('./components/mcp-service/SqlSecurityConfig.vue')['default']
     SqlTemplateEditor: typeof import('./components/common/editors/SqlTemplateEditor.vue')['default']
     SubjectDialog: typeof import('./components/subject/SubjectDialog.vue')['default']
@@ -72,6 +75,7 @@ declare module 'vue' {
     TemplatePreviewDialog: typeof import('./components/mcp-service/TemplatePreviewDialog.vue')['default']
     TermManager: typeof import('./components/subject/TermManager.vue')['default']
     ToolsTab: typeof import('./components/mcp-service/ToolsTab.vue')['default']
+    ToolTestDialog: typeof import('./components/mcp-service/ToolTestDialog.vue')['default']
   }
   export interface GlobalDirectives {
     vLoading: typeof import('element-plus/es')['ElLoadingDirective']

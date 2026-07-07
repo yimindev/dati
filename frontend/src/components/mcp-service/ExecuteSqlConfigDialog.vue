@@ -52,8 +52,11 @@ watch(() => props.modelValue, (v) => { if (v) initForm(); }, { immediate: true }
 const handleSave = async () => {
   saving.value = true;
   try {
+    const existing = (props.tool.config as any) || {};
     const config = {
+      ...existing,
       sql_policy: {
+        ...(existing.sql_policy || {}),
         allow_select: form.allowSelect,
         allow_insert: form.allowInsert,
         allow_update: form.allowUpdate,

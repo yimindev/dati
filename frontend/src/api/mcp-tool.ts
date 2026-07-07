@@ -15,7 +15,7 @@ export interface SqlPolicy {
 
 export interface ToolParameter {
   name: string;
-  type: "String" | "Number" | "Boolean" | "Date" | "Array";
+  type: "String" | "Number" | "Boolean" | "DateTime" | "Array";
   required: boolean;
   default_value?: string;
   description?: string;

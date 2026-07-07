@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import { ElMessage } from "element-plus";
-import { Setting } from "@element-plus/icons-vue";
+import { Setting, CaretRight } from "@element-plus/icons-vue";
 import { useI18n } from "vue-i18n";
 import type { McpToolVO } from "~/api/mcp-tool";
 import { updateTool } from "~/api/mcp-tool";
 import ExecuteSqlConfigDialog from "./ExecuteSqlConfigDialog.vue";
+import ToolTestDialog from "./ToolTestDialog.vue";
 
 const { t } = useI18n();
 
@@ -13,6 +14,12 @@ const props = defineProps<{ tools: McpToolVO[]; serviceId: string }>();
 const emit = defineEmits<{ (e: "refresh"): void }>();
 
 const sqlConfigVisible = ref(false);
+const testVisible = ref(false);
+const testingTool = ref<McpToolVO | null>(null);
+const openTest = (tool: McpToolVO) => {
+  testingTool.value = tool;
+  testVisible.value = true;
+};
 
 const handleToggle = async (tool: McpToolVO) => {
   try {
@@ -75,11 +82,16 @@ const toolTypeLabel = (status: string) => {
       </div>
 
       <div class="flex items-center gap-3.5 shrink-0">
-        <el-icon
-          v-if="tool.tool_type === 'EXECUTE_SQL'"
-          class="config-icon"
-          @click="sqlConfigVisible = true"
-        ><Setting /></el-icon>
+        <el-tooltip content="配置" placement="top">
+          <el-icon
+            v-if="tool.tool_type === 'EXECUTE_SQL'"
+            class="config-icon"
+            @click="sqlConfigVisible = true"
+          ><Setting /></el-icon>
+        </el-tooltip>
+        <el-tooltip content="测试" placement="top">
+          <el-icon class="config-icon" @click="openTest(tool)"><CaretRight /></el-icon>
+        </el-tooltip>
         <el-switch
           :model-value="tool.enabled"
           @change="handleToggle(tool)"
@@ -93,6 +105,13 @@ const toolTypeLabel = (status: string) => {
       :service-id="props.serviceId"
       :tool="tools.find(item => item.tool_type === 'EXECUTE_SQL')!"
       @saved="handleSqlConfigSaved"
+    />
+
+    <ToolTestDialog
+      v-if="testingTool"
+      v-model:visible="testVisible"
+      :service-id="props.serviceId"
+      :tool="testingTool!"
     />
   </div>
 </template>

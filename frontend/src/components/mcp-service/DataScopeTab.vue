@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, computed, watch } from "vue";
+import { ref, onMounted, onUnmounted, computed, watch } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
 import { useI18n } from "vue-i18n";
 import { Plus, Delete, OfficeBuilding, Collection, Search } from "@element-plus/icons-vue";
@@ -38,6 +38,7 @@ const dialogTotalPages = ref(1);
 const dialogTotalCount = ref(0);
 const dialogKeyword = ref("");
 let searchTimer: ReturnType<typeof setTimeout> | null = null;
+onUnmounted(() => { if (searchTimer) clearTimeout(searchTimer); });
 
 const PAGE_SIZE = 20;
 
@@ -217,8 +218,8 @@ const handleRemove = async (index: number) => {
 // ── Labels ──
 const scopeTypeLabel = (type: ScopeType) =>
   type === "DATA_SOURCE"
-    ? t("mcpService.dataScope.typeDataSource")
-    : t("mcpService.dataScope.typeSubject");
+    ? t("common.dataSource")
+    : t("common.subject");
 
 watch(addType, () => {
   selectedIds.value = [];
@@ -309,7 +310,7 @@ onMounted(() => {
             @click="addType = 'DATA_SOURCE'"
           >
             <el-icon><OfficeBuilding /></el-icon>
-            {{ t("mcpService.dataScope.typeDataSource") }}
+            {{ t("common.dataSource") }}
           </button>
           <button
             class="tab-btn"
@@ -317,7 +318,7 @@ onMounted(() => {
             @click="addType = 'SUBJECT'"
           >
             <el-icon><Collection /></el-icon>
-            {{ t("mcpService.dataScope.typeSubject") }}
+            {{ t("common.subject") }}
           </button>
         </div>
         <el-input

@@ -28,7 +28,7 @@ const previewVisible = ref(false);
 
 const isEdit = computed(() => !!props.tool);
 
-const paramTypes = ["String", "Number", "Boolean", "Date", "Array"];
+const paramTypes = ["String", "Number", "Boolean", "DateTime", "Array"];
 const rules: FormRules = {
   name: [
     { required: true, message: () => t("mcpService.tool.nameRequired"), trigger: "blur" },
