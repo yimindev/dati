@@ -59,6 +59,7 @@ declare module 'vue' {
     McpServiceDialog: typeof import('./components/mcp-service/McpServiceDialog.vue')['default']
     McpServiceForm: typeof import('./components/mcp-service/McpServiceForm.vue')['default']
     McpServiceTable: typeof import('./components/mcp-service/McpServiceTable.vue')['default']
+    ParameterInput: typeof import('./components/mcp-service/ParameterInput.vue')['default']
     PrebuiltToolList: typeof import('./components/mcp-service/PrebuiltToolList.vue')['default']
     PromptDialog: typeof import('./components/mcp-service/PromptDialog.vue')['default']
     PromptList: typeof import('./components/mcp-service/PromptList.vue')['default']

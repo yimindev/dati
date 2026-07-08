@@ -60,6 +60,9 @@ importers:
       '@iconify-json/fluent':
         specifier: ^1.2.51
         version: 1.2.51
+      '@iconify-json/lsicon':
+        specifier: ^1.2.5
+        version: 1.2.5
       '@iconify/tailwind4':
         specifier: ^1.0.6
         version: 1.0.6(tailwindcss@4.1.12)
@@ -547,6 +550,9 @@ packages:
 
   '@iconify-json/fluent@1.2.51':
     resolution: {integrity: sha512-9yvCpC3uk1ZpSWNPnlSy/Rd+6HNT5/eyRwgZ42GSBbWzqnzo2GNpmDhVt3587sVrXNStI0KmU+K0ptIAqDgpPw==}
+
+  '@iconify-json/lsicon@1.2.5':
+    resolution: {integrity: sha512-dXmYFljtE+xYf/QKzs3WYjHjJuJIbagiUsIT5NL5z+qsWrCOHojfoL0inivGSSpGJjRQM18GPjspzzPaTfJVtw==}
 
   '@iconify-json/simple-icons@1.2.86':
     resolution: {integrity: sha512-t3jck5qPQuK1qy+bRn9eCoDQhIB7XSazKz1Fjp8hcan3XOAsTI5Mq/s3F0ekOKSvMQqkVORYK6ns6o6T9f5EMA==}
@@ -3391,6 +3397,10 @@ snapshots:
       '@iconify/types': 2.0.0
 
   '@iconify-json/fluent@1.2.51':
+    dependencies:
+      '@iconify/types': 2.0.0
+
+  '@iconify-json/lsicon@1.2.5':
     dependencies:
       '@iconify/types': 2.0.0
 

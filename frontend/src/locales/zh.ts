@@ -485,6 +485,7 @@ export default {
       advicePermissionDenied: "该操作被 SQL 安全策略拒绝，请联系管理员调整策略",
       adviceSqlError: "请检查 SQL 语法或确认数据表是否存在",
       adviceTimeout: "执行超时，请尝试缩小查询范围或增加超时时间",
+      requiredHint: "请填写 {name}",
     },
   },
 

@@ -4,6 +4,7 @@ import { ElMessage } from "element-plus";
 import { useI18n } from "vue-i18n";
 import { CopyDocument } from "@element-plus/icons-vue";
 import { previewTemplate } from "~/api/template-preview";
+import ParameterInput from "./ParameterInput.vue";
 
 const { t } = useI18n();
 
@@ -43,19 +44,11 @@ const doPreview = async () => {
 
   const parsed: Record<string, any> = {};
   for (const [k, v] of Object.entries(previewValues)) {
-    if (v === "" || v === null) {
+    if (v === "" || v === null || v === undefined || v === false) {
       parsed[k] = null;
       continue;
     }
-    if (props.mode === "SQL") {
-      const param = props.parameters.find((p) => p.name === k);
-      if (param?.type === "Number") parsed[k] = Number(v);
-      else if (param?.type === "Boolean") parsed[k] = v === "true";
-      else if (param?.type === "Array") parsed[k] = String(v).split(",").map((s) => s.trim()).filter(Boolean);
-      else parsed[k] = v;
-    } else {
-      parsed[k] = v;
-    }
+    parsed[k] = v;
   }
 
   loading.value = true;
@@ -90,20 +83,16 @@ const copyResult = () => {
         <div class="p-3 px-4 bg-[var(--ep-fill-color-light)] rounded-md font-mono text-[13px] leading-relaxed whitespace-pre-wrap break-all text-[var(--ep-text-color-regular)] max-h-40 overflow-y-auto">{{ template }}</div>
       </div>
 
-      <div v-if="parameters.length > 0">
-        <label class="block text-[13px] font-semibold text-[var(--ep-text-color-primary)] mb-2">{{ t("mcpService.tool.parameters") }}</label>
-        <div class="grid grid-cols-2 gap-3 max-sm:grid-cols-1">
-          <div v-for="p in parameters" :key="p.name" class="flex flex-col gap-1">
-            <span class="text-[13px] font-medium text-[var(--ep-text-color-secondary)]">{{ p.name }}</span>
-            <el-input
-              v-model="previewValues[p.name]"
-              size="small"
-              :aria-label="p.name"
-              :placeholder="p.description || t('mcpService.tool.previewParamPlaceholder')"
-            />
-          </div>
-        </div>
-      </div>
+      <el-form v-if="parameters.length > 0" label-position="top" class="max-w-[320px]">
+        <el-form-item v-for="p in parameters" :key="p.name" :label="p.name" :required="p.required">
+          <ParameterInput
+            :parameter="p"
+            :model-value="previewValues[p.name]"
+            @update:model-value="previewValues[p.name] = $event"
+            :placeholder="t('mcpService.tool.previewParamPlaceholder')"
+          />
+        </el-form-item>
+      </el-form>
 
       <div v-if="result" class="border border-[var(--ep-border-color-lighter)] rounded-lg overflow-hidden" aria-live="polite">
         <div class="flex justify-between items-center px-4 py-2 border-b border-[var(--ep-border-color-lighter)] text-[13px] font-semibold text-[var(--ep-text-color-secondary)]">

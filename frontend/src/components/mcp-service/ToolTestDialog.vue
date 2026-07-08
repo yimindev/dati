@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from "vue";
 import { ElMessage } from "element-plus";
+import type { FormInstance } from "element-plus";
 import { useI18n } from "vue-i18n";
 import { Plus, Delete, CircleCheckFilled, CircleCloseFilled } from "@element-plus/icons-vue";
 import type { McpToolVO } from "~/api/mcp-tool";
@@ -30,9 +31,7 @@ const defaultForm = (): Record<string, any> => {
     case "PARAMETERIZED_SQL": {
       const params: Record<string, any> = {};
       ((props.tool.config as any)?.parameters || []).forEach((p: any) => {
-        if (p.default_value != null) {
-          params[p.name] = p.default_value;
-        }
+        params[p.name] = p.default_value ?? undefined;
       });
       return params;
     }
@@ -106,8 +105,24 @@ const doExecute = async () => {
   }
 };
 
-const handleTestClick = () => {
-  doExecute();
+
+const formRef = ref<FormInstance>();
+
+const formRules = computed(() => {
+  const rules: Record<string, any> = {};
+  for (const p of paramDefs.value) {
+    if (p.required) {
+      rules[p.name] = [{ required: true, message: t('mcpService.toolTest.requiredHint', { name: p.name }), trigger: ['blur', 'change'] }];
+    }
+  }
+  return rules;
+});
+
+const handleTestClick = async () => {
+  if (props.tool?.tool_type === 'PARAMETERIZED_SQL') {
+    try { await formRef.value?.validate(); } catch { return; }
+  }
+  await doExecute();
 };
 
 // --- Error advice ---
@@ -164,19 +179,9 @@ const errorAdvice = computed(() => {
           <div v-if="paramDefs.length === 0" class="text-sm text-[var(--ep-text-color-placeholder)]">
             {{ t("mcpService.toolTest.noParams") }}
           </div>
-          <el-form v-else label-position="top">
-            <el-form-item v-for="p in paramDefs" :key="p.name" :label="p.name + (p.required ? ' *' : '')">
-              <el-input v-if="p.type === 'String'" v-model="form[p.name]" :placeholder="p.description" />
-              <el-input-number v-else-if="p.type === 'Number'" v-model="form[p.name]" class="w-full" />
-              <el-switch v-else-if="p.type === 'Boolean'" v-model="form[p.name]" />
-              <el-date-picker v-else-if="p.type === 'DateTime'" v-model="form[p.name]" type="datetime" class="w-full" />
-              <el-input-tag
-                v-else-if="p.type === 'Array'"
-                v-model="form[p.name]"
-                :placeholder="t('mcpService.toolTest.tagPlaceholder')"
-                class="w-full"
-              />
-              <el-input v-else v-model="form[p.name]" :placeholder="p.description" />
+          <el-form v-else ref="formRef" :model="form" :rules="formRules" label-position="top">
+            <el-form-item v-for="p in paramDefs" :key="p.name" :label="p.name" :required="p.required" :prop="p.name">
+              <ParameterInput :parameter="p" v-model="form[p.name]" />
             </el-form-item>
           </el-form>
         </template>

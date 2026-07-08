@@ -485,6 +485,7 @@ export default {
       advicePermissionDenied: "Operation rejected by SQL policy. Please ask the admin to adjust the policy.",
       adviceSqlError: "Please check the SQL syntax or verify the table exists.",
       adviceTimeout: "Query timed out. Try narrowing the query scope or increasing the timeout.",
+      requiredHint: "Please fill in {name}",
     },
   },
 
