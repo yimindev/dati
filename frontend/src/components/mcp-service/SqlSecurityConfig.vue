@@ -17,7 +17,6 @@ const props = withDefaults(defineProps<{
   allowMulti?: boolean;
   maxRows: number;
   timeout: number;
-  confirmRequired: boolean;
   showMulti?: boolean;
   showAnnotations?: boolean;
 }>(), {
@@ -41,7 +40,6 @@ const emit = defineEmits<{
   (e: "update:allowMulti", v: boolean): void;
   (e: "update:maxRows", v: number): void;
   (e: "update:timeout", v: number): void;
-  (e: "update:confirmRequired", v: boolean): void;
 }>();
 
 const ops = computed(() => {
@@ -140,16 +138,6 @@ const annotations = computed(() => {
           @update:model-value="emit('update:timeout', $event ?? 30)"
         />
       </div>
-    </div>
-
-    <!-- Confirm Required -->
-    <div>
-      <el-checkbox
-        :model-value="confirmRequired"
-        @update:model-value="emit('update:confirmRequired', !!$event)"
-      >
-        {{ t("mcpService.tool.confirmRequired") }}
-      </el-checkbox>
     </div>
 
     <!-- Annotations Preview -->

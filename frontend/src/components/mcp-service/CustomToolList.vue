@@ -133,12 +133,7 @@ const handleDialogSaved = () => {
             <span class="flex items-center gap-1">
               {{ t("mcpService.tool.paramCount", { count: (tool.config as any).parameters?.length ?? 0 }) }}
             </span>
-            <template v-if="(tool.config as any).confirm_required">
-              <span class="meta-divider">|</span>
-              <span class="confirm-badge flex items-center gap-1">
-                {{ t("mcpService.tool.confirmRequired") }}
-              </span>
-            </template>
+
           </div>
         </div>
 

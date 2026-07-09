@@ -114,7 +114,6 @@ class McpToolServiceTest {
         ToolConfig.ExecuteSqlConfig execCfg = new ToolConfig.ExecuteSqlConfig();
         execCfg.setTimeout(60);
         execCfg.setMaxRows(500);
-        execCfg.setConfirmRequired(true);
 
         McpPrebuiltToolConfig input = new McpPrebuiltToolConfig();
         input.setEnabled(false);

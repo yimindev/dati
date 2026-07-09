@@ -422,7 +422,6 @@ export default {
       sqlRiskWarning: "建议仅开启 SELECT 权限。开启 DML/DDL 存在较高数据安全风险。",
       maxRows: "最大返回行数",
       timeout: "超时时间",
-      confirmRequired: "执行前需人工确认",
       annotationsPreview: "MCP 行为标注预览",
       annotationsHint: "标注由权限配置自动推导，用于指导 LLM 正确使用工具。",
       previewRender: "测试渲染",

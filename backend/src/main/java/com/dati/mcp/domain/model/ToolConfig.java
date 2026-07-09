@@ -24,7 +24,6 @@ public interface ToolConfig {
         private SqlPolicy sqlPolicy = new SqlPolicy();
         private int timeout = 30;
         private int maxRows = 1000;
-        private boolean confirmRequired = false;
     }
 
     @Data
@@ -35,6 +34,5 @@ public interface ToolConfig {
         private SqlPolicy sqlPolicy = new SqlPolicy();
         private int timeout = 30;
         private int maxRows = 1000;
-        private boolean confirmRequired = false;
     }
 }

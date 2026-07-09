@@ -28,7 +28,6 @@ export interface ParamSqlConfig {
   sql_policy: SqlPolicy;
   timeout: number;
   max_rows: number;
-  confirm_required: boolean;
 }
 
 export interface McpToolVO {

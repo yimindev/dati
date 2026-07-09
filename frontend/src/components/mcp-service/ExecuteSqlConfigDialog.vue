@@ -25,7 +25,6 @@ const form = reactive({
   allowMulti: false,
   maxRows: 1000,
   timeout: 30,
-  confirmRequired: false,
 });
 
 const initForm = () => {
@@ -44,7 +43,6 @@ const initForm = () => {
   }
   form.maxRows = cfg?.max_rows ?? 1000;
   form.timeout = cfg?.timeout ?? 30;
-  form.confirmRequired = cfg?.confirm_required ?? false;
 };
 
 watch(() => props.modelValue, (v) => { if (v) initForm(); }, { immediate: true });
@@ -69,7 +67,6 @@ const handleSave = async () => {
       },
       timeout: form.timeout,
       max_rows: form.maxRows,
-      confirm_required: form.confirmRequired,
     };
     await updateTool(props.serviceId, "EXECUTE_SQL", {
       tool_type: "EXECUTE_SQL",
@@ -107,7 +104,6 @@ const handleSave = async () => {
       v-model:allow-multi="form.allowMulti"
       v-model:max-rows="form.maxRows"
       v-model:timeout="form.timeout"
-      v-model:confirm-required="form.confirmRequired"
       :show-multi="true"
     />
 

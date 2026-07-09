@@ -61,7 +61,6 @@ const form = reactive({
   allowSet: false,
   maxRows: 1000,
   timeout: 30,
-  confirmRequired: false,
 });
 
 const loadForm = () => {
@@ -85,7 +84,6 @@ const loadForm = () => {
     }
     form.maxRows = cfg?.max_rows ?? 1000;
     form.timeout = cfg?.timeout ?? 30;
-    form.confirmRequired = cfg?.confirm_required ?? false;
   } else {
     Object.assign(form, {
       name: "",
@@ -104,7 +102,6 @@ const loadForm = () => {
       allowSet: false,
       maxRows: 1000,
       timeout: 30,
-      confirmRequired: false,
     });
   }
   formRef.value?.clearValidate();
@@ -199,7 +196,6 @@ const handleSave = async () => {
       },
       timeout: form.timeout,
       max_rows: form.maxRows,
-      confirm_required: form.confirmRequired,
     });
 
     if (isEdit.value) {
@@ -356,7 +352,6 @@ const handleSave = async () => {
           v-model:allow-set="form.allowSet"
           v-model:max-rows="form.maxRows"
           v-model:timeout="form.timeout"
-          v-model:confirm-required="form.confirmRequired"
           :show-annotations="true"
         />
       </section>
