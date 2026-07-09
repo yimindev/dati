@@ -55,9 +55,9 @@ async function handleLogin() {
         <el-form-item>
           <el-button
             type="primary"
+            native-type="submit"
             class="w-full"
             :loading="authStore.loading"
-            @click="handleLogin"
           >
             {{ t("auth.login") }}
           </el-button>

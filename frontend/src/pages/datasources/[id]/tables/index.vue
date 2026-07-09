@@ -451,7 +451,7 @@ onMounted(async () => {
     <el-dialog
       v-model="addTableDialogVisible"
       :title="t('tableInfo.addTable')"
-      width="600px"
+      width="700px"
       destroy-on-close
     >
       <el-form label-width="100px">
