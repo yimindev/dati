@@ -13,7 +13,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 
 
 @DisplayName("TextRenderer 单元测试")
-class TextRendererImplTest {
+class TextRendererTest {
 
     private HandlebarsStyleParser parser;
     private TextRenderer renderer;
@@ -21,7 +21,7 @@ class TextRendererImplTest {
     @BeforeEach
     void setUp() {
         parser = new HandlebarsStyleParser();
-        renderer = new TextRendererImpl();
+        renderer = new TextRenderer();
     }
 
 

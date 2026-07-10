@@ -3,19 +3,22 @@ package com.dati.common.template;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import java.util.*;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 import static java.util.Collections.singletonMap;
 import static org.junit.jupiter.api.Assertions.*;
 
 @DisplayName("SqlRenderer 单元测试")
-class SqlRendererImplTest {
+class SqlRendererTest {
 
     private HandlebarsStyleParser parser;
     private SqlRenderer renderer;
 
     @BeforeEach
-    void setUp() { parser = new HandlebarsStyleParser(); renderer = new SqlRendererImpl(); }
+    void setUp() { parser = new HandlebarsStyleParser(); renderer = new SqlRenderer(); }
 
     // ---- 纯文本 ----
     @Test @DisplayName("纯文本 → 原样，无 binding")

@@ -3,8 +3,14 @@ package com.dati.common.template;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import java.util.*;
-import static org.junit.jupiter.api.Assertions.*;
+
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @DisplayName("模板引擎验收测试")
 class TemplateEngineAcceptanceTest {
@@ -16,8 +22,8 @@ class TemplateEngineAcceptanceTest {
     @BeforeEach
     void setUp() {
         parser = new HandlebarsStyleParser();
-        textRenderer = new TextRendererImpl();
-        sqlRenderer = new SqlRendererImpl();
+        textRenderer = new TextRenderer();
+        sqlRenderer = new SqlRenderer();
     }
 
     // ========== Parser ==========

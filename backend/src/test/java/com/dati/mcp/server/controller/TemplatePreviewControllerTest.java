@@ -2,8 +2,8 @@ package com.dati.mcp.server.controller;
 
 import com.dati.base.exception.GlobalExceptionHandler;
 import com.dati.common.template.HandlebarsStyleParser;
-import com.dati.common.template.SqlRendererImpl;
-import com.dati.common.template.TextRendererImpl;
+import com.dati.common.template.SqlRenderer;
+import com.dati.common.template.TextRenderer;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -29,8 +29,8 @@ class TemplatePreviewControllerTest {
     void setUp() {
         TemplatePreviewController controller = new TemplatePreviewController(
                 new HandlebarsStyleParser(),
-                new TextRendererImpl(),
-                new SqlRendererImpl()
+                new TextRenderer(),
+                new SqlRenderer()
         );
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(new GlobalExceptionHandler())
