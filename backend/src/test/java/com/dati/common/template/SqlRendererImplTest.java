@@ -125,6 +125,38 @@ class SqlRendererImplTest {
         assertEquals("?", r.sql()); assertEquals(1, r.bindings().size());
     }
 
+    @Test @DisplayName("{{#if}} 条件为空字符串 → body 跳过")
+    void testIfEmptyStringFalsy() {
+        PreparedSql r = renderer.render(parser.parse("WHERE 1=1 {{#if s}}AND s={{s}}{{/if}}"), Map.of("s", ""));
+        assertEquals("WHERE 1=1 ", r.sql()); assertTrue(r.bindings().isEmpty());
+    }
+
+    @Test @DisplayName("{{#if}} 条件为空集合 → body 跳过")
+    void testIfEmptyListFalsy() {
+        PreparedSql r = renderer.render(parser.parse("WHERE 1=1 {{#if ids}}AND id IN ({{ids}}){{/if}}"), Map.of("ids", List.of()));
+        assertEquals("WHERE 1=1 ", r.sql()); assertTrue(r.bindings().isEmpty());
+    }
+
+    @Test @DisplayName("{{#if}} 条件为空数组 → body 跳过")
+    void testIfEmptyArrayFalsy() {
+        PreparedSql r = renderer.render(parser.parse("WHERE 1=1 {{#if ids}}AND id IN ({{ids}}){{/if}}"), Map.of("ids", new int[]{}));
+        assertEquals("WHERE 1=1 ", r.sql()); assertTrue(r.bindings().isEmpty());
+    }
+
+    @Test @DisplayName("{{#if}} 条件为 0 → truthy")
+    void testIfZeroTruthy() {
+        PreparedSql r = renderer.render(parser.parse("WHERE 1=1 {{#if n}}AND n={{n}}{{/if}}"), Map.of("n", 0));
+        assertEquals("WHERE 1=1 AND n=?", r.sql()); assertEquals(1, r.bindings().size());
+        assertEquals(0, r.bindings().getFirst().value());
+    }
+
+    @Test @DisplayName("{{#if}} 条件为 false → truthy")
+    void testIfFalseTruthy() {
+        PreparedSql r = renderer.render(parser.parse("WHERE 1=1 {{#if flag}}AND flag={{flag}}{{/if}}"), Map.of("flag", false));
+        assertEquals("WHERE 1=1 AND flag=?", r.sql()); assertEquals(1, r.bindings().size());
+        assertEquals(false, r.bindings().getFirst().value());
+    }
+
     // ---- 嵌套 {{#if}} ----
     @Test @DisplayName("嵌套 {{#if}} 两层都成立 → 内层 SQL 渲染")
     void testNestedIfBothTrue() {
@@ -187,6 +219,28 @@ class SqlRendererImplTest {
     void testWhereMixedIfSkipped() {
         PreparedSql r = renderer.render(parser.parse("{{#where}}d={{d}}{{#if s}}AND s={{s}}{{/if}}{{/where}}"), Map.of("d", 10));
         assertEquals("WHERE d=?", r.sql()); assertEquals(1, r.bindings().size());
+    }
+
+    @Test @DisplayName("{{#where}} 内多个 {{#if}}，部分跳过不产生空行")
+    void testWhereMultipleIfNoBlankLines() {
+        String tpl = """
+                SELECT * FROM invoice i
+                INNER JOIN customer c ON i.customerid = c.customerid
+                {{#where}}
+                  {{#if city}}
+                   and c.city in ({{city}})
+                  {{/if}}
+                 {{#if num}}
+                  and i.customerid > {{num}}
+                 {{/if}}
+                and i.invoicedate > {{invocedate}}
+                {{/where}}""";
+        PreparedSql r = renderer.render(
+                parser.parse(tpl),
+                Map.of("city", List.of("Beijing", "Shanghai"), "invocedate", "2024-01-01"));
+        // 核心断言：渲染结果中不能有空行（\n后紧跟空白再\n）
+        assertFalse(r.sql().matches("(?s).*\\n\\s*\\n.*"), "不应有空行: " + r.sql());
+        assertEquals(3, r.bindings().size());
     }
 
     // ---- Array 展开 ----

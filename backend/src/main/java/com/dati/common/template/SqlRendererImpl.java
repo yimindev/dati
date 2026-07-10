@@ -90,9 +90,22 @@ public class SqlRendererImpl implements SqlRenderer {
 
     private void renderIf(IfNode i, Map<String, Object> params,
                           StringBuilder sql, List<ParamBinding> bindings) {
-        if (params.get(i.condition()) != null) {
+        if (isTruthy(params.get(i.condition()))) {
             renderNodes(i.body(), params, sql, bindings);
         }
+    }
+
+    /**
+     * 判断值对 {{#if}} 是否为 truthy。
+     * falsy: null, 空字符串, 空集合, 空数组。0 和 false 保留为 truthy（SQL 中有实际语义）。
+     */
+    static boolean isTruthy(Object value) {
+        return switch (value) {
+            case null -> false;
+            case String s when s.isEmpty() -> false;
+            case Collection<?> c when c.isEmpty() -> false;
+            default -> !value.getClass().isArray() || java.lang.reflect.Array.getLength(value) != 0;
+        };
     }
 
     private void renderWhere(WhereNode w, Map<String, Object> params,
@@ -101,6 +114,8 @@ public class SqlRendererImpl implements SqlRenderer {
         List<ParamBinding> bodyBindings = new ArrayList<>();
         renderNodes(w.body(), params, body, bodyBindings);
         String trimmed = body.toString().strip();
+        // 折叠因 {{#if}} 跳过产生的行间空行（换行+空白+换行 → 单换行）
+        trimmed = trimmed.replaceAll("\n\\s*\n", "\n");
         if (trimmed.isEmpty()) return;
         sql.append("WHERE ").append(stripLeadingAndOr(trimmed));
         bindings.addAll(bodyBindings);

@@ -34,13 +34,15 @@ public class TextRendererImpl implements TextRenderer {
     }
 
     private void renderIf(IfNode i, Map<String, Object> params, StringBuilder sb) {
-        if (params.get(i.condition()) != null) renderNodes(i.body(), params, sb);
+        if (SqlRendererImpl.isTruthy(params.get(i.condition()))) renderNodes(i.body(), params, sb);
     }
 
     private void renderWhere(WhereNode w, Map<String, Object> params, StringBuilder sb) {
         StringBuilder body = new StringBuilder();
         renderNodes(w.body(), params, body);
         String trimmed = body.toString().strip();
+        // 折叠因 {{#if}} 跳过产生的行间空行（换行+空白+换行 → 单换行）
+        trimmed = trimmed.replaceAll("\n\\s*\n", "\n");
         if (trimmed.isEmpty()) return;
         sb.append(trimmed);
     }

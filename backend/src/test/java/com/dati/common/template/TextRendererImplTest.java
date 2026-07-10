@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 import static java.util.Collections.singletonMap;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 
 
@@ -120,8 +121,17 @@ class TextRendererImplTest {
     @Test @DisplayName("{{#if}} 条件为 false（非 null）→ body 渲染")
     void testIfFalseIsTruthy() { assertEquals("shown", renderer.render(parser.parse("{{#if f}}shown{{/if}}"), Map.of("f", false))); }
 
-    @Test @DisplayName("{{#if}} 条件为空字符串（非 null）→ body 渲染")
-    void testIfEmptyStringTruthy() { assertEquals("shown", renderer.render(parser.parse("{{#if s}}shown{{/if}}"), Map.of("s", ""))); }
+    @Test @DisplayName("{{#if}} 条件为空字符串 → body 跳过（等价空值）")
+    void testIfEmptyStringFalsy() { assertEquals("", renderer.render(parser.parse("{{#if s}}shown{{/if}}"), Map.of("s", ""))); }
+
+    @Test @DisplayName("{{#if}} 条件为空集合 → body 跳过")
+    void testIfEmptyListFalsy() { assertEquals("", renderer.render(parser.parse("{{#if ids}}shown{{/if}}"), Map.of("ids", List.of()))); }
+
+    @Test @DisplayName("{{#if}} 条件为 0 → truthy（SQL 中有语义）")
+    void testIfZeroTruthy() { assertEquals("shown", renderer.render(parser.parse("{{#if n}}shown{{/if}}"), Map.of("n", 0))); }
+
+    @Test @DisplayName("{{#if}} 条件为 false → truthy（SQL 中有语义）")
+    void testIfFalseTruthy() { assertEquals("shown", renderer.render(parser.parse("{{#if flag}}shown{{/if}}"), Map.of("flag", false))); }
 
     // ---- {{#where}} ----
     @Test @DisplayName("{{#where}} 全跳过 → block 消失")
@@ -146,6 +156,23 @@ class TextRendererImplTest {
     void testWhereNoPrefix() {
         CompiledTemplate t = parser.parse("SELECT {{#where}}d={{d}}{{/where}}");
         assertEquals("SELECT d=5", renderer.render(t, Map.of("d", 5)));
+    }
+
+    @Test @DisplayName("{{#where}} 内多个 {{#if}}，部分跳过不产生空行")
+    void testWhereMultipleIfNoBlankLines() {
+        CompiledTemplate t = parser.parse("""
+                查询结果如下：
+                {{#where}}
+                  {{#if city}}
+                    城市：{{city}}
+                  {{/if}}
+                 {{#if num}}
+                    数量：{{num}}
+                 {{/if}}
+                日期：{{invocedate}}
+                {{/where}}""");
+        String result = renderer.render(t, Map.of("city", "Beijing", "invocedate", "2024-01-01"));
+        assertFalse(result.matches("(?s).*\\n\\s*\\n.*"), "不应有空行: " + result);
     }
 
     // ---- Array → toString() ----
