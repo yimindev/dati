@@ -12,6 +12,7 @@
   border: 1px solid var(--ep-border-color);
   border-radius: var(--ep-border-radius-base);
   min-height: 120px;
+  cursor: text;
 }
 
 .cm-editor .cm-scroller {
