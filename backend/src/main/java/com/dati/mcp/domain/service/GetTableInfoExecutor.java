@@ -8,7 +8,6 @@ import com.dati.db.client.DbClient;
 import com.dati.db.client.DbClientFactory;
 import com.dati.mcp.domain.model.McpToolType;
 import com.dati.mcp.domain.model.ToolError;
-import com.dati.mcp.server.pojo.ColumnDef;
 import com.dati.mcp.server.pojo.TableEntry;
 import com.dati.mcp.server.pojo.TableMetadata;
 import com.dati.mcp.server.pojo.ToolTestData;
@@ -67,10 +66,7 @@ public class GetTableInfoExecutor implements ToolExecutor {
             String tableName = (String) entry.get("table");
             try {
                 List<Column> columns = dbClient.getColumns(connector, null, schema, tableName);
-                List<ColumnDef> columnDefs = columns.stream()
-                        .map(c -> new ColumnDef(c.name(), c.type(), c.comment()))
-                        .toList();
-                entries.add(new TableEntry(true, tableName, schema, columnDefs, null));
+                entries.add(new TableEntry(true, tableName, schema, columns, null));
             } catch (Exception e) {
                 entries.add(new TableEntry(false, tableName, schema, null,
                         e instanceof SQLException ? e.getMessage() : "Error fetching table info: " + e.getMessage()));
