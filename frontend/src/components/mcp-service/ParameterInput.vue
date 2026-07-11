@@ -1,8 +1,6 @@
 <script setup lang="ts">
-import type { ToolParameter } from "~/api/mcp-tool";
-
 defineProps<{
-  parameter: ToolParameter;
+  parameter: { type?: string; description?: string };
   modelValue: any;
   size?: "small" | "default" | "large";
   placeholder?: string;

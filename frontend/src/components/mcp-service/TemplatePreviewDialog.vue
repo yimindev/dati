@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { reactive, ref, watch } from "vue";
+import { nextTick, reactive, ref, watch } from "vue";
 import { ElMessage } from "element-plus";
 import { useI18n } from "vue-i18n";
 import { CopyDocument } from "@element-plus/icons-vue";
@@ -12,7 +12,7 @@ const props = defineProps<{
   modelValue: boolean;
   template: string;
   mode: "TEXT" | "SQL";
-  parameters: { name: string; type?: string; description?: string }[];
+  parameters: { name: string; type?: string; description?: string; required?: boolean }[];
 }>();
 const emit = defineEmits<{
   (e: "update:modelValue", v: boolean): void;
@@ -55,6 +55,8 @@ const doPreview = async () => {
   try {
     const resp = await previewTemplate({ mode: props.mode, template: props.template, values: parsed });
     result.value = resp.rendered;
+    await nextTick();
+    resultRef.value?.scrollIntoView({ behavior: "smooth", block: "start" });
   } catch (e: any) {
     ElMessage.error(e?.message || t("common.operationFailed"));
   } finally {
@@ -62,6 +64,7 @@ const doPreview = async () => {
   }
 };
 
+const resultRef = ref<HTMLElement>();
 const copyResult = () => {
   navigator.clipboard.writeText(result.value);
   ElMessage.success(t("mcpService.copySuccess"));
@@ -78,30 +81,33 @@ const copyResult = () => {
     :close-on-click-modal="false"
     append-to-body
   >
-    <div class="flex flex-col gap-5">
-      <div>
+    <div class="dialog-body-scroll overflow-y-auto">
+      <div class="flex flex-col gap-5">
+        <!-- Template preview -->
         <div class="p-3 px-4 bg-[var(--ep-fill-color-light)] rounded-md font-mono text-[13px] leading-relaxed whitespace-pre-wrap break-all text-[var(--ep-text-color-regular)] max-h-40 overflow-y-auto">{{ template }}</div>
-      </div>
 
-      <el-form v-if="parameters.length > 0" label-position="top" class="max-w-[320px]">
-        <el-form-item v-for="p in parameters" :key="p.name" :label="p.name" :required="p.required">
-          <ParameterInput
-            :parameter="p"
-            :model-value="previewValues[p.name]"
-            @update:model-value="previewValues[p.name] = $event"
-            :placeholder="t('mcpService.tool.previewParamPlaceholder')"
-          />
-        </el-form-item>
-      </el-form>
+        <!-- Parameters -->
+        <el-form v-if="parameters.length > 0" label-position="top" class="max-w-[320px]">
+          <el-form-item v-for="p in parameters" :key="p.name" :label="p.name" :required="p.required">
+            <ParameterInput
+              :parameter="p"
+              :model-value="previewValues[p.name]"
+              @update:model-value="previewValues[p.name] = $event"
+              :placeholder="t('mcpService.tool.previewParamPlaceholder')"
+            />
+          </el-form-item>
+        </el-form>
 
-      <div v-if="result" class="border border-[var(--ep-border-color-lighter)] rounded-lg overflow-hidden" aria-live="polite">
-        <div class="flex justify-between items-center px-4 py-2 border-b border-[var(--ep-border-color-lighter)] text-[13px] font-semibold text-[var(--ep-text-color-secondary)]">
-          <span>{{ t("mcpService.tool.previewTextResult") }}</span>
-          <el-button size="small" text :icon="CopyDocument" @click="copyResult">
-            {{ t("common.copy") }}
-          </el-button>
+        <!-- Rendered result -->
+        <div ref="resultRef" v-if="result" class="border border-[var(--ep-border-color-lighter)] rounded-lg overflow-hidden" aria-live="polite">
+          <div class="flex justify-between items-center px-4 py-2 border-b border-[var(--ep-border-color-lighter)] text-[13px] font-semibold text-[var(--ep-text-color-secondary)]">
+            <span>{{ t("mcpService.tool.previewTextResult") }}</span>
+            <el-button size="small" text :icon="CopyDocument" @click="copyResult">
+              {{ t("common.copy") }}
+            </el-button>
+          </div>
+          <div class="bg-[var(--ep-fill-color)] border border-[var(--ep-border-color)] rounded-md px-4 py-3 max-h-60 overflow-y-auto"><pre class="m-0 font-mono text-[13px] leading-relaxed whitespace-pre-wrap break-all text-[var(--ep-text-color-regular)]">{{ result }}</pre></div>
         </div>
-        <div class="bg-[var(--ep-fill-color)] border border-[var(--ep-border-color)] rounded-md px-4 py-3"><pre class="m-0 font-mono text-[13px] leading-relaxed whitespace-pre-wrap break-all text-[var(--ep-text-color-regular)]">{{ result }}</pre></div>
       </div>
     </div>
 
@@ -113,4 +119,10 @@ const copyResult = () => {
     </template>
   </el-dialog>
 </template>
+
+<style scoped>
+.dialog-body-scroll {
+  max-height: calc(85vh - 180px);
+}
+</style>
 
