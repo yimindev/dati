@@ -92,7 +92,9 @@ public class DataSourceController {
 
     @GetMapping("/{id}")
     public DatasourceVO getDataSource(@PathVariable String id) {
-        return dsAssembler.toDatasourceVO(dataSourceService.getDataSource(id));
+        return dsAssembler.toDatasourceVO(
+            dataSourceService.getDataSource(id)
+                .orElseThrow(() -> new DatiException(ErrorCode.DS_NOT_FOUND, id)));
     }
 
 

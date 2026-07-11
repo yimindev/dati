@@ -1,7 +1,5 @@
 package com.dati.mcp.domain.service;
 
-import com.dati.base.exception.DatiException;
-import com.dati.base.exception.ErrorCode;
 import com.dati.common.DateTimeUtils;
 import com.dati.common.template.CompiledTemplate;
 import com.dati.common.template.ParamBinding;
@@ -17,6 +15,7 @@ import com.dati.db.analysis.SqlAnalyzer;
 import com.dati.mcp.domain.model.McpToolType;
 import com.dati.mcp.domain.model.SqlPolicy;
 import com.dati.mcp.domain.model.ToolConfig.ParamSqlConfig;
+import com.dati.mcp.domain.model.ToolError;
 import com.dati.mcp.domain.model.ToolParameter;
 import com.dati.mcp.server.pojo.SqlExecution;
 import com.dati.mcp.server.pojo.StatementResult;
@@ -66,7 +65,8 @@ public class ParameterizedSqlExecutor implements ToolExecutor {
 
         policy.validate(analysis);
 
-        DataSource dataSource = dataSourceService.getDataSource(dsId);
+        DataSource dataSource = dataSourceService.getDataSource(dsId)
+            .orElseThrow(() -> new ToolExecuteException(ToolError.DATA_SOURCE_NOT_FOUND, dsId));
 
         scopeValidator.validate(ctx.scopeItems(), dsId, analysis.tables(), dataSource.getDefaultSchema());
 
@@ -94,7 +94,7 @@ public class ParameterizedSqlExecutor implements ToolExecutor {
             stmt.execute();
             results = SqlExecutorHelper.collect(stmt);
         } catch (SQLException e) {
-            throw new DatiException(ErrorCode.DS_SQL_ERROR, e.getMessage());
+            throw new ToolExecuteException(ToolError.SQL_EXECUTION_ERROR, e.getMessage());
         }
 
         return new SqlExecution(sql, results, prepared.bindings().stream()

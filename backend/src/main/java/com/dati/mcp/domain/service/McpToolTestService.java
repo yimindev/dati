@@ -1,7 +1,5 @@
 package com.dati.mcp.domain.service;
 
-import com.dati.base.exception.DatiException;
-import com.dati.base.exception.ErrorCode;
 import com.dati.mcp.domain.model.McpServiceDataScope;
 import com.dati.mcp.domain.model.McpToolType;
 import com.dati.mcp.repository.dao.McpServiceDataScopeDAO;
@@ -43,32 +41,16 @@ public class McpToolTestService {
                 serviceId, tool.toolType(), tool.config(), request.arguments(), scopeItems);
             ToolExecutor executor = executorMap.get(tool.toolType());
             if (executor == null) {
-                throw new DatiException(ErrorCode.MS_TOOL_NOT_FOUND,
-                    "No executor registered for tool type: " + tool.toolType());
+                throw new IllegalStateException(
+                    "No ToolExecutor registered for " + tool.toolType());
             }
             ToolTestData data = executor.execute(ctx);
             long elapsed = System.currentTimeMillis() - start;
             return new ToolTestResponse(true, elapsed, data, null);
-        } catch (DatiException e) {
-            long elapsed = System.currentTimeMillis() - start;
-            log.error("Tool execution error: ", e);
-            return new ToolTestResponse(false, elapsed, null,
-                new ToolTestError(mapErrorCategory(e.getCode()), e.getMessage()));
-        } catch (Exception e) {
-            log.error("Unexpected error during tool test", e);
+        } catch (ToolExecuteException e) {
             long elapsed = System.currentTimeMillis() - start;
             return new ToolTestResponse(false, elapsed, null,
-                new ToolTestError("INTERNAL_ERROR", e.getMessage()));
+                new ToolTestError(e.getErrorCategory(), e.getMessage()));
         }
-    }
-
-    private String mapErrorCategory(ErrorCode code) {
-        return switch (code) {
-            case MS_TOOL_DISABLED, MS_TOOL_NOT_FOUND, INVALID_PARAMETER, DS_NOT_FOUND -> "PARAM_ERROR";
-            case MS_SCOPE_ERROR -> "SCOPE_ERROR";
-            case MS_SQL_POLICY_VIOLATION -> "PERMISSION_DENIED";
-            case DS_CONNECTION_FAILED, DS_SQL_ERROR -> "SQL_ERROR";
-            default -> "INTERNAL_ERROR";
-        };
     }
 }

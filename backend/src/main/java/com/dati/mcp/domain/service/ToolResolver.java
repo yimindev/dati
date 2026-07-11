@@ -1,11 +1,10 @@
 package com.dati.mcp.domain.service;
 
-import com.dati.base.exception.DatiException;
-import com.dati.base.exception.ErrorCode;
 import com.dati.mcp.domain.model.McpCustomTool;
 import com.dati.mcp.domain.model.McpPrebuiltToolConfig;
 import com.dati.mcp.domain.model.McpToolType;
 import com.dati.mcp.domain.model.ToolConfig;
+import com.dati.mcp.domain.model.ToolError;
 import com.dati.mcp.repository.dao.McpCustomToolDAO;
 import com.dati.mcp.repository.dao.McpPrebuiltToolConfigDAO;
 import com.dati.mcp.repository.mapper.McpCustomToolMapper;
@@ -44,19 +43,19 @@ public class ToolResolver {
             .map(McpPrebuiltToolConfigMapper::toModel)
             .orElseGet(() -> createDefaultConfig(serviceId, toolType));
         if (!cfg.isEnabled()) {
-            throw new DatiException(ErrorCode.MS_TOOL_DISABLED, toolId);
+            throw new ToolExecuteException(ToolError.TOOL_DISABLED, toolId);
         }
-        return new ResolvedTool(toolType, cfg.isEnabled(), cfg.getConfig(), true);
+        return new ResolvedTool(toolType, true, cfg.getConfig(), true);
     }
 
     private ResolvedTool resolveCustom(String serviceId, String toolId) {
         McpCustomTool custom = customToolDAO.findByServiceIdAndId(serviceId, toolId)
             .map(McpCustomToolMapper::toModel)
-            .orElseThrow(() -> new DatiException(ErrorCode.MS_TOOL_NOT_FOUND, toolId));
+            .orElseThrow(() -> new ToolExecuteException(ToolError.TOOL_NOT_FOUND, toolId));
         if (!custom.isEnabled()) {
-            throw new DatiException(ErrorCode.MS_TOOL_DISABLED, toolId);
+            throw new ToolExecuteException(ToolError.TOOL_DISABLED, toolId);
         }
-        return new ResolvedTool(custom.getToolType(), custom.isEnabled(), custom.getConfig(), false);
+        return new ResolvedTool(custom.getToolType(), true, custom.getConfig(), false);
     }
 
     private McpPrebuiltToolConfig createDefaultConfig(String serviceId, McpToolType toolType) {

@@ -1,9 +1,8 @@
 package com.dati.mcp.domain.service;
 
-import com.dati.base.exception.DatiException;
-import com.dati.base.exception.ErrorCode;
 import com.dati.mcp.domain.model.McpToolType;
 import com.dati.mcp.domain.model.ToolConfig.ExecuteSqlConfig;
+import com.dati.mcp.domain.model.ToolError;
 import com.dati.mcp.repository.dao.McpServiceDataScopeDAO;
 import com.dati.mcp.server.pojo.SqlExecution;
 import com.dati.mcp.server.pojo.ToolTestData;
@@ -22,6 +21,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
@@ -66,41 +66,38 @@ class McpToolTestServiceTest {
     }
 
     @Test
-    @DisplayName("executor 抛非 DatiException → 兜底返回 success=false + SQL_ERROR")
-    void shouldCatchRuntimeException() {
+    @DisplayName("executor 抛 RuntimeException → 上抛不捕获")
+    void shouldNotCatchRuntimeException() {
         ToolResolver.ResolvedTool resolved = new ToolResolver.ResolvedTool(
             McpToolType.EXECUTE_SQL, true, new ExecuteSqlConfig(), true);
         when(toolResolver.resolve("svc", "EXECUTE_SQL")).thenReturn(resolved);
         when(scopeDAO.findAllByServiceId("svc")).thenReturn(List.of());
         when(toolExecutor.execute(any())).thenThrow(new NullPointerException("boom"));
 
-        ToolTestResponse resp = service.test("svc", "EXECUTE_SQL",
-            new ToolTestRequest(Map.of("data_source_id", "ds-1", "sql", "SELECT 1")));
-
-        assertThat(resp.success()).isFalse();
-        assertThat(resp.data()).isNull();
-        assertThat(resp.error()).isNotNull();
-        assertThat(resp.error().errorCategory()).isEqualTo("INTERNAL_ERROR");
-        assertThat(resp.error().message()).contains("boom");
-        assertThat(resp.executionTimeMs()).isNotNegative();
+        assertThatThrownBy(() ->
+            service.test("svc", "EXECUTE_SQL",
+                new ToolTestRequest(Map.of("data_source_id", "ds-1", "sql", "SELECT 1"))))
+            .isInstanceOf(NullPointerException.class)
+            .hasMessageContaining("boom");
     }
 
     @ParameterizedTest
     @CsvSource({
-        "MS_SCOPE_ERROR, SCOPE_ERROR",
-        "MS_SQL_POLICY_VIOLATION, PERMISSION_DENIED",
-        "MS_TOOL_DISABLED, PARAM_ERROR",
-        "DS_SQL_ERROR, SQL_ERROR",
-        "DS_CONNECTION_FAILED, SQL_ERROR",
-        "INTERNAL_ERROR, INTERNAL_ERROR",
+        "TOOL_NOT_FOUND, PARAM_ERROR",
+        "TOOL_DISABLED, PARAM_ERROR",
+        "PARAM_MISSING, PARAM_ERROR",
+        "DATA_SOURCE_NOT_FOUND, PARAM_ERROR",
+        "SCOPE_VIOLATION, SCOPE_ERROR",
+        "SQL_POLICY_VIOLATION, PERMISSION_DENIED",
+        "SQL_EXECUTION_ERROR, SQL_ERROR",
     })
-    @DisplayName("DatiException → errorCategory 映射正确")
-    void shouldMapDatiExceptionToCorrectCategory(ErrorCode code, String expectedCategory) {
+    @DisplayName("ToolExecuteException → errorCategory 映射正确")
+    void shouldMapToolExecuteExceptionToCorrectCategory(ToolError toolError, String expectedCategory) {
         ToolResolver.ResolvedTool resolved = new ToolResolver.ResolvedTool(
             McpToolType.EXECUTE_SQL, true, new ExecuteSqlConfig(), true);
         when(toolResolver.resolve("svc", "EXECUTE_SQL")).thenReturn(resolved);
         when(scopeDAO.findAllByServiceId("svc")).thenReturn(List.of());
-        when(toolExecutor.execute(any())).thenThrow(new DatiException(code, "test"));
+        when(toolExecutor.execute(any())).thenThrow(new ToolExecuteException(toolError, "test"));
 
         ToolTestResponse resp = service.test("svc", "EXECUTE_SQL",
             new ToolTestRequest(Map.of("data_source_id", "ds-1", "sql", "SELECT 1")));

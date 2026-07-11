@@ -1,12 +1,11 @@
 package com.dati.mcp.domain.service;
 
-import com.dati.base.exception.DatiException;
-import com.dati.base.exception.ErrorCode;
 import com.dati.datasource.repository.dao.TableInfoDAO;
 import com.dati.datasource.repository.po.TableInfoPO;
 import com.dati.db.analysis.TableRef;
 import com.dati.mcp.domain.model.McpDataScopeType;
 import com.dati.mcp.domain.model.McpServiceDataScope;
+import com.dati.mcp.domain.model.ToolError;
 import com.dati.semantic.repository.dao.SubjectTableDAO;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -66,12 +65,12 @@ class ScopeValidatorTest {
     }
 
     @Test
-    @DisplayName("scopeItems 为空 → 抛 MS014")
+    @DisplayName("scopeItems 为空 → 抛 TOOL_SCOPE_VIOLATION")
     void shouldRejectEmptyScope() {
         assertThatThrownBy(() -> validator.validate(List.of(), DS_ID, Set.of(), null))
-            .isInstanceOf(DatiException.class)
-            .extracting(e -> ((DatiException) e).getCode())
-            .isEqualTo(ErrorCode.MS_SCOPE_ERROR);
+            .isInstanceOf(ToolExecuteException.class)
+            .extracting(e -> ((ToolExecuteException) e).getToolError())
+            .isEqualTo(ToolError.SCOPE_VIOLATION);
     }
 
     @Test
@@ -94,13 +93,13 @@ class ScopeValidatorTest {
     }
 
     @Test
-    @DisplayName("dsId 不被任何 scope 覆盖 → 抛 MS014")
+    @DisplayName("dsId 不被任何 scope 覆盖 → 抛 ToolExecuteException")
     void shouldRejectWhenDsNotInScope() {
         assertThatThrownBy(() ->
             validator.validate(List.of(dataSourceScope("ds-other")), DS_ID, Set.of(), null))
-            .isInstanceOf(DatiException.class)
-            .extracting(e -> ((DatiException) e).getCode())
-            .isEqualTo(ErrorCode.MS_SCOPE_ERROR);
+            .isInstanceOf(ToolExecuteException.class)
+            .extracting(e -> ((ToolExecuteException) e).getToolError())
+            .isEqualTo(ToolError.SCOPE_VIOLATION);
     }
 
     @Test

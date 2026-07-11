@@ -1,7 +1,5 @@
 package com.dati.mcp.domain.service;
 
-import com.dati.base.exception.DatiException;
-import com.dati.base.exception.ErrorCode;
 import com.dati.datasource.domain.model.DataSource;
 import com.dati.datasource.domain.service.DataSourceService;
 import com.dati.db.HikariPoolManager;
@@ -11,6 +9,7 @@ import com.dati.db.analysis.SqlAnalyzer;
 import com.dati.mcp.domain.model.McpToolType;
 import com.dati.mcp.domain.model.SqlPolicy;
 import com.dati.mcp.domain.model.ToolConfig.ExecuteSqlConfig;
+import com.dati.mcp.domain.model.ToolError;
 import com.dati.mcp.server.pojo.SqlExecution;
 import com.dati.mcp.server.pojo.StatementResult;
 import com.dati.mcp.server.pojo.ToolTestData;
@@ -42,27 +41,22 @@ public class ExecuteSqlExecutor implements ToolExecutor {
         String dsId = (String) ctx.arguments().get("data_source_id");
         String sql = (String) ctx.arguments().get("sql");
         if (dsId == null || dsId.isBlank()) {
-            throw new DatiException(ErrorCode.INVALID_PARAMETER, "data_source_id is required");
+            throw new ToolExecuteException(ToolError.PARAM_MISSING, "data_source_id");
         }
         if (sql == null || sql.isBlank()) {
-            throw new DatiException(ErrorCode.INVALID_PARAMETER, "sql is required");
+            throw new ToolExecuteException(ToolError.PARAM_MISSING, "sql");
         }
 
         ExecuteSqlConfig config = (ExecuteSqlConfig) ctx.config();
-        if (config == null) {
-            throw new DatiException(ErrorCode.INVALID_PARAMETER, "tool config is missing");
-        }
 
         SqlPolicy policy = config.getSqlPolicy();
-        if (policy == null) {
-            throw new DatiException(ErrorCode.INVALID_PARAMETER, "SQL policy is not configured");
-        }
 
         SqlAnalysisResult analysis = SqlAnalyzer.analyze(sql);
 
         policy.validate(analysis);
 
-        DataSource dataSource = dataSourceService.getDataSource(dsId);
+        DataSource dataSource = dataSourceService.getDataSource(dsId)
+            .orElseThrow(() -> new ToolExecuteException(ToolError.DATA_SOURCE_NOT_FOUND, dsId));
 
         scopeValidator.validate(ctx.scopeItems(), dsId, analysis.tables(),
             dataSource.getDefaultSchema());
@@ -76,7 +70,7 @@ public class ExecuteSqlExecutor implements ToolExecutor {
             stmt.execute(sql);
             results = SqlExecutorHelper.collect(stmt);
         } catch (SQLException e) {
-            throw new DatiException(ErrorCode.DS_SQL_ERROR, e.getMessage());
+            throw new ToolExecuteException(ToolError.SQL_EXECUTION_ERROR, e.getMessage());
         }
 
         return new SqlExecution(sql, results, null);

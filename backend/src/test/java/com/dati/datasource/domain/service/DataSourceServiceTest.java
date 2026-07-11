@@ -198,28 +198,20 @@ class DataSourceServiceTest {
     @Test
     @DisplayName("获取单个数据源 - 成功返回带 defaultSchema")
     void getDataSource_shouldReturnWithDefaultSchema() {
-        // given
         testDataSourcePO.setDefaultSchema("public");
         when(dataSourceDAO.findById(TestFixtures.TEST_DATASOURCE_ID)).thenReturn(Optional.of(testDataSourcePO));
 
-        // when
-        DataSource result = dataSourceService.getDataSource(TestFixtures.TEST_DATASOURCE_ID);
-
-        // then
-        assertEquals("public", result.getDefaultSchema());
+        assertThat(dataSourceService.getDataSource(TestFixtures.TEST_DATASOURCE_ID))
+            .hasValueSatisfying(ds -> assertEquals("public", ds.getDefaultSchema()));
         verify(dataSourceDAO).findById(TestFixtures.TEST_DATASOURCE_ID);
     }
 
     @Test
-    @DisplayName("获取单个数据源 - 不存在时抛出异常")
-    void getDataSource_shouldThrowWhenNotFound() {
-        // given
+    @DisplayName("获取单个数据源 - 不存在时返回空 Optional")
+    void getDataSource_shouldReturnEmptyWhenNotFound() {
         when(dataSourceDAO.findById(TestFixtures.TEST_DATASOURCE_ID)).thenReturn(Optional.empty());
 
-        // when & then
-        assertThrows(Exception.class, () ->
-            dataSourceService.getDataSource(TestFixtures.TEST_DATASOURCE_ID)
-        );
+        assertThat(dataSourceService.getDataSource(TestFixtures.TEST_DATASOURCE_ID)).isEmpty();
         verify(dataSourceDAO).findById(TestFixtures.TEST_DATASOURCE_ID);
     }
 

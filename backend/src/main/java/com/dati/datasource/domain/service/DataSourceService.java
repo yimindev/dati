@@ -108,9 +108,7 @@ public class DataSourceService {
         return dataSourceDAO.findAllByNameContainingOrId(keyword, keyword, pageable).map(DSMapper::toDataSource);
     }
 
-    public DataSource getDataSource(String id) {
-        return dataSourceDAO.findById(id)
-                .map(DSMapper::toDataSource)
-                .orElseThrow(() -> new DatiException(ErrorCode.DS_NOT_FOUND, id));
+    public Optional<DataSource> getDataSource(String id) {
+        return dataSourceDAO.findById(id).map(DSMapper::toDataSource);
     }
 }

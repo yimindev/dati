@@ -1,12 +1,11 @@
 package com.dati.mcp.domain.service;
 
-import com.dati.base.exception.DatiException;
-import com.dati.base.exception.ErrorCode;
 import com.dati.datasource.repository.dao.TableInfoDAO;
 import com.dati.datasource.repository.po.TableInfoPO;
 import com.dati.db.analysis.TableRef;
 import com.dati.mcp.domain.model.McpDataScopeType;
 import com.dati.mcp.domain.model.McpServiceDataScope;
+import com.dati.mcp.domain.model.ToolError;
 import com.dati.semantic.repository.dao.SubjectTableDAO;
 import jakarta.annotation.Nullable;
 import org.springframework.data.domain.Pageable;
@@ -29,7 +28,7 @@ public class ScopeValidator {
     public void validate(List<McpServiceDataScope> scopeItems, String dsId,
                          Set<TableRef> tableRefs, @Nullable String defaultSchema) {
         if (scopeItems == null || scopeItems.isEmpty()) {
-            throw new DatiException(ErrorCode.MS_SCOPE_ERROR, "No data scope configured");
+            throw new ToolExecuteException(ToolError.SCOPE_VIOLATION, "No data scope configured");
         }
 
         Set<String> coveredDsIds = new HashSet<>();
@@ -45,7 +44,7 @@ public class ScopeValidator {
             }
         }
         if (!coveredDsIds.contains(dsId)) {
-            throw new DatiException(ErrorCode.MS_SCOPE_ERROR,
+            throw new ToolExecuteException(ToolError.SCOPE_VIOLATION,
                 "Data source " + dsId + " not in service scope");
         }
 
@@ -55,7 +54,7 @@ public class ScopeValidator {
         for (TableRef ref : tableRefs) {
             if (allowed.contains(ref)) continue;
             if (tryResolve(ref, defaultSchema, allowed)) continue;
-            throw new DatiException(ErrorCode.MS_SCOPE_ERROR,
+            throw new ToolExecuteException(ToolError.SCOPE_VIOLATION,
                 "Table " + ref.qualifiedName() + " not in scope");
         }
     }

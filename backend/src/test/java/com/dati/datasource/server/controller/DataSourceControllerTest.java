@@ -24,6 +24,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import static org.hamcrest.Matchers.hasSize;
 import static org.mockito.ArgumentMatchers.any;
@@ -210,7 +211,7 @@ class DataSourceControllerTest {
     @DisplayName("获取单个数据源 - 返回 default_schema")
     void getDataSource_shouldReturnWithDefaultSchema() throws Exception {
         // given
-        when(dataSourceService.getDataSource(TestFixtures.TEST_DATASOURCE_ID)).thenReturn(testDataSource);
+        when(dataSourceService.getDataSource(TestFixtures.TEST_DATASOURCE_ID)).thenReturn(Optional.of(testDataSource));
 
         DatasourceVO vo = new DatasourceVO();
         vo.setId(TestFixtures.TEST_DATASOURCE_ID);

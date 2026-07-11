@@ -1,7 +1,5 @@
 package com.dati.mcp.domain.service;
 
-import com.dati.base.exception.DatiException;
-import com.dati.base.exception.ErrorCode;
 import com.dati.datasource.domain.model.DataSource;
 import com.dati.datasource.domain.service.DataSourceService;
 import com.dati.db.Column;
@@ -9,6 +7,7 @@ import com.dati.db.JdbcConnector;
 import com.dati.db.client.DbClient;
 import com.dati.db.client.DbClientFactory;
 import com.dati.mcp.domain.model.McpToolType;
+import com.dati.mcp.domain.model.ToolError;
 import com.dati.mcp.server.pojo.ColumnDef;
 import com.dati.mcp.server.pojo.TableEntry;
 import com.dati.mcp.server.pojo.TableMetadata;
@@ -44,21 +43,22 @@ public class GetTableInfoExecutor implements ToolExecutor {
         List<Map<String, Object>> tables = (List<Map<String, Object>>) ctx.arguments().get("tables");
 
         if (dsId == null || dsId.isBlank()) {
-            throw new DatiException(ErrorCode.INVALID_PARAMETER, "data_source_id is required");
+            throw new ToolExecuteException(ToolError.PARAM_MISSING, "data_source_id");
         }
         if (tables == null || tables.isEmpty()) {
-            throw new DatiException(ErrorCode.INVALID_PARAMETER, "tables is required");
+            throw new ToolExecuteException(ToolError.PARAM_MISSING, "tables");
         }
 
         scopeValidator.validate(ctx.scopeItems(), dsId, Set.of(), null);
 
-        DataSource dataSource = dataSourceService.getDataSource(dsId);
+        DataSource dataSource = dataSourceService.getDataSource(dsId)
+            .orElseThrow(() -> new ToolExecuteException(ToolError.DATA_SOURCE_NOT_FOUND, dsId));
         JdbcConnector connector = new JdbcConnector(dataSource);
 
         DbClient dbClient = DbClientFactory.getDbClient(dataSource.getType());
         if (dbClient == null) {
-            throw new DatiException(ErrorCode.INVALID_PARAMETER,
-                    "Unsupported database type: " + dataSource.getType());
+            throw new IllegalStateException(
+                "No DbClient for database type: " + dataSource.getType());
         }
 
         List<TableEntry> entries = new ArrayList<>();

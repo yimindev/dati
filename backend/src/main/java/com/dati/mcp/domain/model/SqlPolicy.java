@@ -1,9 +1,8 @@
 package com.dati.mcp.domain.model;
 
-import com.dati.base.exception.DatiException;
-import com.dati.base.exception.ErrorCode;
 import com.dati.db.analysis.SqlAnalysisResult;
 import com.dati.db.analysis.SqlOperationType;
+import com.dati.mcp.domain.service.ToolExecuteException;
 import lombok.Data;
 
 @Data
@@ -18,10 +17,10 @@ public class SqlPolicy {
     private boolean allowTransaction = false;
     private boolean allowSet = false;
 
-    /** 根据分析结果校验权限，不通过则抛 DatiException(MS_SQL_POLICY_VIOLATION)。 */
+    /** 根据分析结果校验权限，不通过则抛 ToolExecuteException(SQL_POLICY_VIOLATION)。 */
     public void validate(SqlAnalysisResult result) {
         if (result.isMulti() && !allowMulti) {
-            throw new DatiException(ErrorCode.MS_SQL_POLICY_VIOLATION, "multi-statement not allowed");
+            throw new ToolExecuteException(ToolError.SQL_POLICY_VIOLATION, "multi-statement not allowed");
         }
         for (SqlOperationType type : result.statementTypes()) {
             boolean ok = switch (type) {
@@ -39,7 +38,7 @@ public class SqlPolicy {
                     "MULTI is a marker type; check allowMulti on the result instead");
             };
             if (!ok) {
-                throw new DatiException(ErrorCode.MS_SQL_POLICY_VIOLATION, type + " not allowed");
+                throw new ToolExecuteException(ToolError.SQL_POLICY_VIOLATION, type + " not allowed");
             }
         }
     }

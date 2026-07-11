@@ -1,9 +1,8 @@
 package com.dati.mcp.domain.service;
 
 import com.dati.TestFixtures;
-import com.dati.base.exception.DatiException;
-import com.dati.base.exception.ErrorCode;
 import com.dati.mcp.domain.model.McpToolType;
+import com.dati.mcp.domain.model.ToolError;
 import com.dati.mcp.repository.dao.McpCustomToolDAO;
 import com.dati.mcp.repository.dao.McpPrebuiltToolConfigDAO;
 import com.dati.mcp.repository.po.McpCustomToolPO;
@@ -79,10 +78,10 @@ class ToolResolverTest {
         when(prebuiltDAO.findByServiceIdAndToolType(TestFixtures.TEST_MCP_SERVICE_ID, McpToolType.EXECUTE_SQL))
                 .thenReturn(Optional.of(po));
 
-        DatiException ex = assertThrows(DatiException.class, () ->
+        ToolExecuteException ex = assertThrows(ToolExecuteException.class, () ->
                 toolResolver.resolve(TestFixtures.TEST_MCP_SERVICE_ID, "EXECUTE_SQL"));
 
-        assertThat(ex.getCode()).isEqualTo(ErrorCode.MS_TOOL_DISABLED);
+        assertThat(ex.getToolError()).isEqualTo(ToolError.TOOL_DISABLED);
     }
 
     @Test
@@ -112,14 +111,14 @@ class ToolResolverTest {
         when(customToolDAO.findByServiceIdAndId(TestFixtures.TEST_MCP_SERVICE_ID, "unknown_tool"))
                 .thenReturn(Optional.empty());
 
-        DatiException ex = assertThrows(DatiException.class, () ->
+        ToolExecuteException ex = assertThrows(ToolExecuteException.class, () ->
                 toolResolver.resolve(TestFixtures.TEST_MCP_SERVICE_ID, "unknown_tool"));
 
-        assertThat(ex.getCode()).isEqualTo(ErrorCode.MS_TOOL_NOT_FOUND);
+        assertThat(ex.getToolError()).isEqualTo(ToolError.TOOL_NOT_FOUND);
     }
 
     @Test
-    @DisplayName("resolve - 自定义工具已禁用时抛出 MS_TOOL_DISABLED")
+    @DisplayName("resolve - 自定义工具已禁用时抛出 ToolExecuteException")
     void resolveCustomDisabled() {
         McpCustomToolPO po = new McpCustomToolPO();
         po.setId("ct-002");
@@ -132,10 +131,10 @@ class ToolResolverTest {
         when(customToolDAO.findByServiceIdAndId(TestFixtures.TEST_MCP_SERVICE_ID, "disabled_tool"))
                 .thenReturn(Optional.of(po));
 
-        DatiException ex = assertThrows(DatiException.class, () ->
+        ToolExecuteException ex = assertThrows(ToolExecuteException.class, () ->
                 toolResolver.resolve(TestFixtures.TEST_MCP_SERVICE_ID, "disabled_tool"));
 
-        assertThat(ex.getCode()).isEqualTo(ErrorCode.MS_TOOL_DISABLED);
+        assertThat(ex.getToolError()).isEqualTo(ToolError.TOOL_DISABLED);
     }
 
     @Test
