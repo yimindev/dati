@@ -61,14 +61,20 @@ public abstract class AbstractDbClient implements DbClient {
 
     @Override
     public List<Column> getColumns(JdbcConnector jdbcConnector, @Nullable String catalog, String schema, String table) throws SQLException {
+        try (Connection connection = HikariPoolManager.getConnection(jdbcConnector)) {
+            return getColumns(connection, catalog, schema, table);
+        }
+    }
+
+    @Override
+    public List<Column> getColumns(Connection connection, @Nullable String catalog, String schema, String table) throws SQLException {
         List<Column> columns = new ArrayList<>();
-        try (Connection connection = HikariPoolManager.getConnection(jdbcConnector);
-        ResultSet resultSet = connection.getMetaData().getColumns(catalog, schema, table, null)) {
+        try (ResultSet resultSet = connection.getMetaData().getColumns(catalog, schema, table, null)) {
             while (resultSet.next()) {
-                String columnName = resultSet.getString("COLUMN_NAME");
-                String columnType = resultSet.getString("TYPE_NAME");
-                String columnComment = resultSet.getString("REMARKS");
-                columns.add(new Column(columnName, columnType, columnComment));
+                columns.add(new Column(
+                    resultSet.getString("COLUMN_NAME"),
+                    resultSet.getString("TYPE_NAME"),
+                    resultSet.getString("REMARKS")));
             }
         }
         return columns;

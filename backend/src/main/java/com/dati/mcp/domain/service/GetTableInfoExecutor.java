@@ -3,6 +3,7 @@ package com.dati.mcp.domain.service;
 import com.dati.datasource.domain.model.DataSource;
 import com.dati.datasource.domain.service.DataSourceService;
 import com.dati.db.Column;
+import com.dati.db.HikariPoolManager;
 import com.dati.db.JdbcConnector;
 import com.dati.db.client.DbClient;
 import com.dati.db.client.DbClientFactory;
@@ -13,6 +14,7 @@ import com.dati.mcp.server.pojo.TableMetadata;
 import com.dati.mcp.server.pojo.ToolTestData;
 import org.springframework.stereotype.Component;
 
+import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
@@ -36,17 +38,19 @@ public class GetTableInfoExecutor implements ToolExecutor {
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public ToolTestData execute(ToolExecutionContext ctx) {
-        String dsId = (String) ctx.arguments().get("data_source_id");
-        @SuppressWarnings("unchecked")
-        List<Map<String, Object>> tables = (List<Map<String, Object>>) ctx.arguments().get("tables");
-
-        if (dsId == null || dsId.isBlank()) {
-            throw new ToolExecuteException(ToolError.PARAM_MISSING, "data_source_id");
-        }
-        if (tables == null || tables.isEmpty()) {
+        String dsId = requireNonBlank(ctx.arguments(), "data_source_id");
+        List<Map<String, Object>> rawTables = (List<Map<String, Object>>) ctx.arguments().get("tables");
+        if (rawTables == null || rawTables.isEmpty()) {
             throw new ToolExecuteException(ToolError.PARAM_MISSING, "tables");
         }
+
+        List<TableRef> tableDefs = rawTables.stream()
+            .map(m -> new TableRef(
+                (String) m.get("schema"),
+                requireNonBlank(m, "table")))
+            .toList();
 
         scopeValidator.validate(ctx.scopeItems(), dsId, Set.of(), null);
 
@@ -61,18 +65,31 @@ public class GetTableInfoExecutor implements ToolExecutor {
         }
 
         List<TableEntry> entries = new ArrayList<>();
-        for (Map<String, Object> entry : tables) {
-            String schema = (String) entry.get("schema");
-            String tableName = (String) entry.get("table");
-            try {
-                List<Column> columns = dbClient.getColumns(connector, null, schema, tableName);
-                entries.add(new TableEntry(true, tableName, schema, columns, null));
-            } catch (Exception e) {
-                entries.add(new TableEntry(false, tableName, schema, null,
-                        e instanceof SQLException ? e.getMessage() : "Error fetching table info: " + e.getMessage()));
+        try (Connection conn = HikariPoolManager.getConnection(connector)) {
+            for (TableRef def : tableDefs) {
+                try {
+                    List<Column> columns = dbClient.getColumns(conn, null,
+                        def.schema(), def.name());
+                    entries.add(new TableEntry(true, def.name(), def.schema(), columns, null));
+                } catch (SQLException e) {
+                    entries.add(new TableEntry(false, def.name(), def.schema(), null,
+                        e.getMessage()));
+                }
             }
+        } catch (SQLException e) {
+            throw new ToolExecuteException(ToolError.SQL_EXECUTION_ERROR, e.getMessage());
         }
 
         return new TableMetadata(entries);
     }
+
+    private static String requireNonBlank(Map<String, Object> args, String key) {
+        Object val = args.get(key);
+        if (val == null || (val instanceof String s && s.isBlank())) {
+            throw new ToolExecuteException(ToolError.PARAM_MISSING, key);
+        }
+        return val.toString();
+    }
+
+    private record TableRef(String schema, String name) {}
 }
