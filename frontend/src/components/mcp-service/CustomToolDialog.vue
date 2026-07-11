@@ -285,10 +285,7 @@ const handleSave = async () => {
           </el-select>
         </el-form-item>
         <el-form-item prop="sqlTemplate">
-          <template #label>
-            {{ t("mcpService.tool.sqlTemplate") }}
-          </template>
-          <SqlTemplateEditor v-model="form.sqlTemplate" />
+          <SqlTemplateEditor v-model="form.sqlTemplate" :label="t('mcpService.tool.sqlTemplate')" required />
         </el-form-item>
       </section>
 

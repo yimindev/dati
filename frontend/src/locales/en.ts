@@ -54,6 +54,8 @@ export default {
     none: "Deselect All",
     clear: "Clear",
     selected: "Selected",
+    fullscreen: "Fullscreen",
+    exitFullscreen: "Exit Fullscreen",
 
     // Common Fields
     id: "ID",

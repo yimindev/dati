@@ -2,7 +2,7 @@
 
 ## 概述
 
-前端模板编辑器基于 **CodeMirror 6** 构建，为 Prompt 和 SQL 两种模板场景提供语法高亮与编辑体验。核心目标：让 US-5.5 定义的模板语法（`{{var}}` / `{{{var}}}` / `{{#if}}` / `{{#where}}`）在编辑器中获得清晰、一致的视觉呈现，且模板高亮**无条件优先于**宿主语言（SQL）的语法高亮。
+前端模板编辑器基于 **CodeMirror 6** 构建，提供三种编辑器：**Prompt 模板编辑器**、**SQL 模板编辑器** 和**纯 SQL 编辑器**（用于工具测试）。核心目标：让 US-5.5 定义的模板语法（`{{var}}` / `{{{var}}}` / `{{#if}}` / `{{#where}}`）在编辑器中获得清晰、一致的视觉呈现，且模板高亮**无条件优先于**宿主语言（SQL）的语法高亮。
 
 ## 目录结构
 
@@ -10,9 +10,11 @@
 frontend/src/
 ├── components/common/editors/
 │   ├── PromptTemplateEditor.vue    # Prompt 模板编辑器（纯文本）
-│   └── SqlTemplateEditor.vue       # SQL 模板编辑器（SQL + 模板语法）
+│   ├── SqlTemplateEditor.vue       # SQL 模板编辑器（SQL + 模板语法）
+│   └── SqlEditor.vue               # 纯 SQL 编辑器（工具测试用，无模板功能）
 ├── composables/
-│   └── useCodeMirror.ts            # CodeMirror 实例管理 composable
+│   ├── useCodeMirror.ts            # CodeMirror 实例管理 composable
+│   └── useEditorFullscreen.ts      # 编辑器全屏切换 composable
 ├── utils/codemirror/
 │   ├── completions/
 │   │   ├── template-completions.ts          # 模板补全源（变量 + 块指令）
@@ -31,19 +33,27 @@ frontend/src/
 ```
 ┌──────────────────────────────────────────────────────────┐
 │                    编辑器组件层                            │
-│  PromptTemplateEditor.vue     SqlTemplateEditor.vue       │
-│  extensions: [                extensions: [               │
-│    autocompletion({             sql()                     │
-│      override: [                syntaxHighlighting(...)   │
-│        templateCompletions()    autocompletion({          │
-│      ]                            override: [             │
-│    }),                             templateCompletions()  │
-│    templateAutoClose()           ]                        │
-│    templateDecorations()       }),                        │
-│    lineWrapping                templateAutoClose()        │
-│  ]                              templateDecorations()     │
-│                                 bracketMatching()         │
-│                               ]                           │
+│  PromptTemplateEditor.vue  SqlTemplateEditor.vue           │
+│  extensions: [              extensions: [                  │
+│    autocompletion({           sql()                        │
+│      override: [              syntaxHighlighting(...)      │
+│        templateCompletions()  autocompletion({             │
+│      ]                          override: [                │
+│    }),                           templateCompletions()     │
+│    templateAutoClose()         ]                           │
+│    templateDecorations()     }),                           │
+│    lineWrapping              templateAutoClose()           │
+│  ]                            templateDecorations()        │
+│  props: label, required       bracketMatching()            │
+│                              ]                             │
+│  SqlEditor.vue               props: label, required        │
+│  extensions: [                                              │
+│    sql()                     ├─────────────────────────────┤
+│    syntaxHighlighting(...)   │ 全屏切换（共享）              │
+│  ]                           │ · useEditorFullscreen()      │
+│  props: label, required      │ · cm-editor-fullscreen CSS   │
+│                              │ · 头部行：[label *] [⛶]     │
+│                              │ · capture 拦截 ESC 防弹窗关闭 │
 └──────────────┬───────────────────────────────────────────┘
                │ 共享
                ▼
@@ -103,8 +113,28 @@ modelValue (外部变更) ──→ watch → view.dispatch()    [外部写入]
 ```
 
 **生命周期**：
-- `onMounted`：创建 `EditorState` → 创建 `EditorView` → 挂载到 DOM
-- `onBeforeUnmount`：`editorView.destroy()`
+- `onMounted`：创建 `EditorState` → 创建 `EditorView` → 挂载到 DOM → 注册 `mousedown` 监听（见下）
+- `onBeforeUnmount`：移除 `mousedown` 监听 → `editorView.destroy()`
+
+**点击空白区激活**：
+
+`.cm-editor` 设置了 `min-height: 120px`（见 `editor-theme.css`），当内容不足一行时会产生空白区。但 CM6 的所有鼠标事件只绑定在 `.cm-content` 上——空白区点击不会触发 CM6 原生处理。
+
+解决方案：在 `view.dom`（`.cm-editor`）上挂载原生 `mousedown` 监听，检测到点击在 `.cm-content` 下方时，拦截事件并将光标移到文档末尾并聚焦。不能用 `EditorView.domEventHandlers`（它也绑定在 `.cm-content` 上，空白区事件走不到）。
+
+```typescript
+// 在 onMounted 中，EditorView 创建之后
+const handleMousedown = (e: MouseEvent) => {
+  const view = editorView.value;
+  if (!view) return;
+  if (e.clientY > view.contentDOM.getBoundingClientRect().bottom) {
+    e.preventDefault();
+    view.dispatch({ selection: { anchor: view.state.doc.length } });
+    view.focus();
+  }
+};
+editorView.value.dom.addEventListener('mousedown', handleMousedown);
+```
 
 ### 2. `sql-highlight.ts` — SQL Token 颜色
 
@@ -191,8 +221,24 @@ ViewPlugin.fromClass(
 ### 4. `editor-theme.css` — 视觉层
 
 **职责**：
-1. 编辑器外观（边框、背景、聚焦态）→ 映射 Element Plus CSS 变量
+1. 编辑器外观（边框、背景、聚焦态、光标）→ 映射 Element Plus CSS 变量
 2. 模板 token 颜色（带 `!important` 单向覆盖 SQL）
+3. 全屏覆盖层样式（`.cm-editor-fullscreen`）
+
+**`cursor: text`**：`.cm-editor` 设置 `cursor: text`，确保鼠标在编辑器空白区（由 `min-height` 产生）也显示 I-beam 光标。
+
+**全屏覆盖层**：
+```css
+.cm-editor-fullscreen {
+  position: fixed; inset: 0; z-index: 3000;
+  background: var(--ep-bg-color);
+  display: flex; flex-direction: column;
+  padding: 20px;
+}
+.cm-editor-fullscreen .cm-editor-wrapper { flex: 1; }
+.cm-editor-fullscreen .cm-editor { height: 100%; }
+```
+`z-index: 3000` 确保高于 Element Plus 弹窗（2000），弹窗内的编辑器也能全屏。
 
 **分层策略**：
 
@@ -224,6 +270,69 @@ ViewPlugin.fromClass(
 .cm-editor .cm-tpl-keyword * { ... !important }
 ```
 CodeMirror 在渲染重叠 decoration 时，不保证 SQL 和模板的嵌套顺序（谁外层谁内层）。当 SQL token span 被嵌套在模板 span 内部时，内层 SQL span 的直接声明会覆盖外层的继承值。`*` 子选择器直接命中内层 SQL span，以直接声明方式强制覆盖。
+
+## 全屏功能
+
+### 7. `useEditorFullscreen.ts` — 全屏切换 composable
+
+**职责**：管理编辑器的全屏 / 退出全屏状态切换，供所有编辑器组件复用。
+
+**接口**：
+```typescript
+function useEditorFullscreen(): {
+  isFullscreen: Ref<boolean>;  // 当前是否全屏
+  toggle: () => void;          // 切换全屏状态
+}
+```
+
+**行为**：
+- `enter()`：设置 `isFullscreen = true`，锁定 body 滚动，在 document 上注册 capture 阶段 `keydown` 监听
+- `exit()`：恢复状态，解锁 body 滚动，移除 keydown 监听
+- `onBeforeUnmount`：若全屏中则自动退出
+
+**ESC 拦截**（capture 阶段 + `stopPropagation`）：
+
+Element Plus 的 `el-dialog` 默认 `close-on-press-escape`，在 document 的 bubble 阶段监听 ESC。全屏时按 ESC 应当只退出全屏、不关闭弹窗。
+
+解决方案：在 capture 阶段注册 listener 拦截 ESC——`e.stopPropagation()` 阻止事件传播到 bubble 阶段，Element Plus 收不到 ESC 事件。
+
+```typescript
+function enter() {
+  document.addEventListener("keydown", onKeydown, true); // capture 阶段
+}
+function onKeydown(e: KeyboardEvent) {
+  if (e.key === "Escape") {
+    e.stopPropagation();  // 阻止冒泡到 Element Plus
+    exit();
+  }
+}
+```
+
+### 编辑器组件全屏布局
+
+三个编辑器组件的模板结构统一为：
+
+```html
+<div class="w-full" :class="{ 'cm-editor-fullscreen': isFullscreen }">
+  <div class="flex items-center justify-between mb-1">
+    <!-- 标题行：label + 必填标记 + 全屏按钮 -->
+    <span v-if="label">
+      <span v-if="required" class="text-[var(--ep-color-danger)]">*</span>
+      {{ label }}
+    </span>
+    <el-button :icon="isFullscreen ? undefined : FullScreen" @click="toggle">
+      <span v-if="isFullscreen" class="icon-[mdi--fullscreen-exit]"></span>
+    </el-button>
+  </div>
+  <div :ref="cm.containerRef" class="cm-editor-wrapper flex-1" />
+</div>
+```
+
+**设计要点**：
+- 标题行在全屏和非全屏模式下均可见，全屏时 label 保留在顶部
+- 进入全屏用 Element Plus `FullScreen` 图标，退出全屏用 Iconify `mdi--fullscreen-exit`（需安装 `@iconify-json/mdi`）
+- `label` 和 `required` 均为可选 prop：`label` 控制标题显示，`required` 控制红色 `*` 标记（弥补标签移入编辑器后，`el-form-item` 的必填标记丢失）
+- 正常模式 `w-full` 撑满弹窗宽度，全屏模式 `fixed inset-0 z-3000`
 
 ## 自动补全模块
 
@@ -382,10 +491,11 @@ extensions: [
 
 ## 编辑器行为
 
-| 编辑器 | 折行 | 宿主语言高亮 | 模板语法高亮 | 模板补全 | SQL 关键字补全 | `#if` 自动闭合 |
-|--------|------|-------------|-------------|---------|--------------|--------------|
-| `PromptTemplateEditor` | ✅ | 无 | ✅ | ✅ 变量+指令 | ❌ | ✅ |
-| `SqlTemplateEditor` | ❌ | ✅ SQL | ✅ | ✅ 变量+指令 | ✅ | ✅ |
+| 编辑器 | 折行 | 宿主语言高亮 | 模板语法高亮 | 模板补全 | SQL 关键字补全 | `#if` 自动闭合 | 全屏 |
+|--------|------|-------------|-------------|---------|--------------|--------------|:--:|
+| `PromptTemplateEditor` | ✅ | 无 | ✅ | ✅ 变量+指令 | ❌ | ✅ | ✅ |
+| `SqlTemplateEditor` | ❌ | ✅ SQL | ✅ | ✅ 变量+指令 | ✅ | ✅ | ✅ |
+| `SqlEditor` | ❌ | ✅ SQL | ❌ | ❌ | ❌ | ❌ | ✅ |
 
 ## CodeMirror 6 关键经验
 
@@ -477,6 +587,13 @@ new CompletionContext(state, pos, false)  // pos 是光标位置
 | 25 | 未闭合错误用「语法感知」范围而非整行 | `{{sta fsdfsd` 只标 `{{sta` 为错误，`fsdfsd` 是普通文本不应被标。`validOpenPrefix` 按最大合法模板前缀截断 |
 | 26 | 未闭合错误用橙色波浪线（`#d48806`）而非红色 | 橙色更轻量，与 `cm-tpl-raw-var` 同色系，表示「未完成」而非「错误」 |
 | 27 | 变量补全按距光标最近出现排序 | 用户在补全 `{{` 时最可能想填光标附近的变量；字母序在搜索场景不如就近序直观 |
+| 28 | `SqlEditor` 单独作为纯 SQL 编辑器 | 工具测试场景只需 SQL 高亮，不需要模板语法、补全、自动闭合等模板扩展，保持极简 |
+| 29 | 编辑器标题行（`label` + `required` + 全屏按钮）内置在组件中 | 标签从 `el-form-item` 移入编辑器组件后，全屏时标题保留可见；`required` prop 弥补 `el-form-item` 必填标记丢失 |
+| 30 | 全屏用 `position: fixed; z-index: 3000` | 高于 Element Plus 弹窗（2000），确保弹窗内的编辑器也能全屏覆盖 |
+| 31 | 全屏 ESC 退出用 capture 阶段 + `stopPropagation` | Element Plus 弹窗的 ESC 关闭在 bubble 阶段；capture 拦截可阻止事件传播到弹窗，做到「退出全屏但不关弹窗」 |
+| 32 | 全屏图标：进入用 Element Plus `FullScreen`，退出用 Iconify `mdi--fullscreen-exit` | 两种状态视觉区分更清晰，优于同一个图标旋转 180° 的方案 |
+| 33 | 编辑器空白区点击用原生 `mousedown` 监听在 `view.dom` 上 | CM6 的事件系统（`domEventHandlers`）只绑定在 `.cm-content`，空白区事件进不来；裸 DOM 监听是唯一可靠方案 |
+| 34 | `.cm-editor` 设置 `cursor: text` | 编辑器 `min-height` 产生的空白区也显示 I-beam 光标，与原生 textarea 行为一致 |
 
 ## 依赖关系
 
@@ -490,4 +607,6 @@ package.json
 ├── @lezer/highlight           → tags 常量（tags.keyword 等）
 ├── vue-codemirror             → Vue 3 封装（本项目中通过 useCodeMirror composable 替代）
 └── vitest (dev)               → 单元测试框架
+├── @iconify-json/mdi          → 全屏退出图标（mdi--fullscreen-exit）
+├── @iconify/tailwind4         → Iconify Tailwind CSS 集成（`icon-[...]` 语法）
 ```

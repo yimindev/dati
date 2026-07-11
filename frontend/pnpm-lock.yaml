@@ -26,6 +26,9 @@ importers:
       '@element-plus/icons-vue':
         specifier: ^2.3.2
         version: 2.3.2(vue@3.5.18(typescript@5.8.3))
+      '@iconify-json/mdi':
+        specifier: ^1.2.3
+        version: 1.2.3
       '@lezer/highlight':
         specifier: ^1.2.3
         version: 1.2.3
@@ -553,6 +556,9 @@ packages:
 
   '@iconify-json/lsicon@1.2.5':
     resolution: {integrity: sha512-dXmYFljtE+xYf/QKzs3WYjHjJuJIbagiUsIT5NL5z+qsWrCOHojfoL0inivGSSpGJjRQM18GPjspzzPaTfJVtw==}
+
+  '@iconify-json/mdi@1.2.3':
+    resolution: {integrity: sha512-O3cLwbDOK7NNDf2ihaQOH5F9JglnulNDFV7WprU2dSoZu3h3cWH//h74uQAB87brHmvFVxIOkuBX2sZSzYhScg==}
 
   '@iconify-json/simple-icons@1.2.86':
     resolution: {integrity: sha512-t3jck5qPQuK1qy+bRn9eCoDQhIB7XSazKz1Fjp8hcan3XOAsTI5Mq/s3F0ekOKSvMQqkVORYK6ns6o6T9f5EMA==}
@@ -3401,6 +3407,10 @@ snapshots:
       '@iconify/types': 2.0.0
 
   '@iconify-json/lsicon@1.2.5':
+    dependencies:
+      '@iconify/types': 2.0.0
+
+  '@iconify-json/mdi@1.2.3':
     dependencies:
       '@iconify/types': 2.0.0
 

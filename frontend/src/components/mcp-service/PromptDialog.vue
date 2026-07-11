@@ -118,9 +118,8 @@ const handleSave = async () => {
 
       <!-- Content -->
       <section class="flex flex-col mb-6">
-        <h4 class="m-0 mb-4 text-sm font-semibold text-[var(--ep-text-color-primary)] flex items-center gap-2">{{ t("mcpService.prompt.content") }}</h4>
         <el-form-item prop="content">
-          <PromptTemplateEditor v-model="form.content" />
+          <PromptTemplateEditor v-model="form.content" :label="t('mcpService.prompt.content')" required />
         </el-form-item>
       </section>
 

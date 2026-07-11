@@ -54,6 +54,8 @@ export default {
     none: "取消全选",
     clear: "清空",
     selected: "已选",
+    fullscreen: "全屏",
+    exitFullscreen: "退出全屏",
 
     // 通用字段
     id: "ID",

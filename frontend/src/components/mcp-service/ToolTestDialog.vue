@@ -159,13 +159,13 @@ const errorAdvice = computed(() => {
         <!-- EXECUTE_SQL -->
         <template v-if="tool?.tool_type === 'EXECUTE_SQL'">
           <el-form label-position="top">
-            <el-form-item :label="t('common.dataSource')">
+            <el-form-item :label="t('common.dataSource')" required>
               <el-select v-model="form.data_source_id" class="w-full" placeholder="Select data source">
                 <el-option v-for="ds in dataSources" :key="ds.id" :label="ds.name" :value="ds.id" />
               </el-select>
             </el-form-item>
-            <el-form-item label="SQL">
-              <SqlEditor v-model="form.sql" />
+            <el-form-item>
+              <SqlEditor v-model="form.sql" label="SQL" required />
             </el-form-item>
           </el-form>
         </template>
@@ -189,7 +189,7 @@ const errorAdvice = computed(() => {
         <!-- GET_TABLE_INFO -->
         <template v-else-if="tool?.tool_type === 'GET_TABLE_INFO'">
           <el-form label-position="top">
-            <el-form-item :label="t('common.dataSource')">
+            <el-form-item :label="t('common.dataSource')" required>
               <el-select v-model="form.data_source_id" class="w-full" placeholder="Select data source">
                 <el-option v-for="ds in dataSources" :key="ds.id" :label="ds.name" :value="ds.id" />
               </el-select>
