@@ -3,7 +3,7 @@ import { computed, reactive, ref, watch } from "vue";
 import { ElMessage } from "element-plus";
 import type { FormInstance } from "element-plus";
 import { useI18n } from "vue-i18n";
-import { Plus, Delete, CircleCheckFilled, CircleCloseFilled } from "@element-plus/icons-vue";
+import { Plus, Delete, CircleCheckFilled } from "@element-plus/icons-vue";
 import type { McpToolVO } from "~/api/mcp-tool";
 import type { ToolTestResponse, SqlExecution, TableMetadata, SelectResult, WriteResult } from "~/api/mcp-tool-test";
 import { testTool } from "~/api/mcp-tool-test";
@@ -230,13 +230,14 @@ const errorAdvice = computed(() => {
           <div class="flex flex-col gap-2">
             <div v-for="(entry, i) in (form.tables as any[])" :key="i" class="flex items-center gap-1">
               <el-select v-model="entry.schema" placeholder="schema" filterable clearable
-                class="!w-[112px] shrink-0" :loading="tableLoading" @change="entry.table = ''">
+                class="!w-[112px] shrink-0" :loading="tableLoading" :disabled="!form.data_source_id"
+                @change="entry.table = ''">
                 <el-option v-for="s in schemaOptions" :key="s" :label="s" :value="s" />
               </el-select>
               <span class="text-[var(--ep-text-color-placeholder)] font-semibold shrink-0">.</span>
               <div class="flex-1 min-w-0">
                 <el-select v-model="entry.table" placeholder="table" filterable clearable
-                  :disabled="!entry.schema">
+                  :disabled="!form.data_source_id || !entry.schema">
                   <el-option v-for="t in (tableOptions[i] || [])" :key="t.name" :label="t.name" :value="t.name" />
                 </el-select>
               </div>
@@ -357,27 +358,27 @@ const errorAdvice = computed(() => {
           <!-- TABLE_METADATA -->
           <template v-else-if="response.data?.type === 'TABLE_METADATA'">
             <template v-for="entry in (response.data as TableMetadata).tables" :key="entry.table">
-              <div class="result-card border border-[var(--ep-border-color-lighter)] rounded-lg overflow-hidden mb-3" :class="{ 'result-failed': !entry.success }">
-                <div class="result-card-header flex items-center gap-1.5 text-xs font-semibold text-[var(--ep-text-color-secondary)] bg-[var(--ep-fill-color)] py-2 px-3" :class="{ 'header-failed': !entry.success }">
-                  <template v-if="entry.success">
-                    <el-icon class="text-[var(--ep-color-success)]"><CircleCheckFilled /></el-icon>
-                  </template>
-                  <template v-else>
-                    <el-icon class="text-[var(--ep-color-danger)]"><CircleCloseFilled /></el-icon>
-                  </template>
+              <div class="result-card border border-[var(--ep-border-color-lighter)] rounded-lg overflow-hidden mb-3">
+                <div class="result-card-header flex items-center gap-1.5 text-xs font-semibold text-[var(--ep-text-color-secondary)] bg-[var(--ep-fill-color)] py-2 px-3">
+                  <el-icon class="text-[var(--ep-color-success)]"><CircleCheckFilled /></el-icon>
                   <span>{{ entry.schema ? entry.schema + '.' : '' }}{{ entry.table }}</span>
                 </div>
                 <div class="result-card-body p-0">
-                  <template v-if="entry.success && entry.columns">
-                    <el-table :data="entry.columns" border size="small">
-                      <el-table-column prop="name" label="Column" />
-                      <el-table-column prop="type" label="Type" width="140" />
-                      <el-table-column prop="comment" label="Comment" />
-                    </el-table>
-                  </template>
-                  <template v-else>
-                    <div class="result-error py-3 px-4 text-[13px] text-[var(--ep-color-danger)] font-mono bg-[var(--ep-color-danger-light-9)]">{{ entry.error_message }}</div>
-                  </template>
+                  <el-table v-if="entry.columns" :data="entry.columns" border size="small">
+                    <el-table-column prop="name" label="Column" width="140" />
+                    <el-table-column prop="type" label="Type" width="120" />
+                    <el-table-column prop="comment" label="Comment" min-width="120" />
+                    <el-table-column label="Aliases" width="140">
+                      <template #default="{ row }">
+                        <el-tag v-for="a in row.aliases" :key="a" size="small" class="mr-1">{{ a }}</el-tag>
+                      </template>
+                    </el-table-column>
+                    <el-table-column label="Sample Values" min-width="160">
+                      <template #default="{ row }">
+                        <el-tag v-for="v in row.sample_values" :key="v" size="small" type="info" class="mr-1">{{ v }}</el-tag>
+                      </template>
+                    </el-table-column>
+                  </el-table>
                 </div>
               </div>
             </template>

@@ -27,7 +27,7 @@ export interface SqlExecution {
 
 export interface TableMetadata {
   type: "TABLE_METADATA";
-  tables: TableEntry[];
+  tables: TableDef[];
 }
 
 export interface SearchHit {
@@ -51,18 +51,20 @@ export interface WriteResult {
   error_message?: string;
 }
 
-export interface TableEntry {
-  success: boolean;
+export interface TableDef {
   table: string;
   schema?: string;
+  description?: string;
+  aliases?: string[];
   columns?: ColumnDef[];
-  error_message?: string;
 }
 
 export interface ColumnDef {
   name: string;
   type: string;
   comment: string;
+  aliases?: string[];
+  sample_values?: string[];
 }
 
 export function testTool(

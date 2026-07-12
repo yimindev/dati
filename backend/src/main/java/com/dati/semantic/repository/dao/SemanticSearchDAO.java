@@ -21,6 +21,24 @@ public interface SemanticSearchDAO extends ElasticsearchRepository<SemanticSearc
 
     void deleteByEntity_TableIdAndEntity_FieldAndType(String tableId, String field, SemanticEntityType type);
 
+    /** 查询某表下指定类型的文档，不区分字段。数量由 Pageable 控制。 */
+    @Query("""
+        {
+          "bool": {
+            "must": [
+              { "nested": {
+                  "path": "entity",
+                  "query": {
+                    "term": { "entity.tableId": "?0" }
+                  }
+              }},
+              { "term": { "type": "?1" } }
+            ]
+          }
+        }
+        """)
+    Page<SemanticSearchDocument> findByEntity_TableIdAndType(String tableId, String type, Pageable pageable);
+
     @Query("""
         {
           "bool": {

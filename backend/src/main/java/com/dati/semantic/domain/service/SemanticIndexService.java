@@ -63,6 +63,12 @@ public class SemanticIndexService {
         return semanticSearchDAO.findByEntity_TableIdAndEntity_FieldAndType(tableId, field, type);
     }
 
+    /** 查询某表下指定类型的文档，不区分字段，限制返回数量。 */
+    public List<SemanticSearchDocument> findByTableIdAndType(String tableId, SemanticEntityType type, int maxSize) {
+        return semanticSearchDAO.findByEntity_TableIdAndType(tableId, type.name(),
+                org.springframework.data.domain.PageRequest.of(0, maxSize)).getContent();
+    }
+
     public Page<SemanticSearchDocument> findByTableFieldAndTypePaginated(
             String tableId, String field, SemanticEntityType type, String keyword, Pageable pageable) {
         if (keyword == null || keyword.isBlank()) {
