@@ -8,6 +8,7 @@ import type { McpToolVO } from "~/api/mcp-tool";
 import type { ToolTestResponse, SqlExecution, TableMetadata, SelectResult, WriteResult } from "~/api/mcp-tool-test";
 import { testTool } from "~/api/mcp-tool-test";
 import { getDataScope } from "~/api/mcp-service";
+import { listTableInfos } from "~/api/tableinfo";
 
 const { t } = useI18n();
 
@@ -49,6 +50,9 @@ watch(() => props.visible, (v) => {
     Object.keys(form).forEach(k => delete form[k]);
     Object.assign(form, defaults);
     response.value = null;
+    schemaOptions.value = [];
+    tableOptions.value = {};
+    allTables.value = [];
   }
 });
 
@@ -58,6 +62,34 @@ const paramDefs = computed(() => (props.tool?.config as any)?.parameters || []);
 // GET_TABLE_INFO table list
 const addTableEntry = () => (form.tables as any[])?.push({ schema: "", table: "" });
 const removeTableEntry = (i: number) => (form.tables as any[])?.splice(i, 1);
+
+// Schema & table dropdowns for GET_TABLE_INFO (from platform-managed tables)
+const allTables = ref<{ schema: string; name: string }[]>([]);
+const schemaOptions = ref<string[]>([]);
+const tableOptions = ref<Record<number, { name: string }[]>>({});
+const tableLoading = ref(false);
+
+watch(() => form.data_source_id, async (dsId) => {
+  schemaOptions.value = [];
+  tableOptions.value = {};
+  if (!dsId) return;
+  tableLoading.value = true;
+  try {
+    const resp = await listTableInfos(dsId, 1, 9999);
+    allTables.value = (resp.data || []).map((t: any) => ({ schema: t.schema, name: t.name }));
+    schemaOptions.value = [...new Set(allTables.value.map(t => t.schema).filter(Boolean))].sort() as string[];
+  } catch { allTables.value = []; }
+  finally { tableLoading.value = false; }
+});
+
+watch(() => (form.tables as any[])?.map((e: any) => e.schema), (schemas) => {
+  if (!schemas) return;
+  schemas.forEach((schema: string, i: number) => {
+    tableOptions.value[i] = schema
+      ? allTables.value.filter(t => t.schema === schema).map(t => ({ name: t.name }))
+      : [];
+  });
+}, { deep: true });
 
 // Data source selector
 const dataSources = ref<{ id: string; name: string }[]>([]);
@@ -197,9 +229,17 @@ const errorAdvice = computed(() => {
           </el-form>
           <div class="flex flex-col gap-2">
             <div v-for="(entry, i) in (form.tables as any[])" :key="i" class="flex items-center gap-1">
-              <el-input v-model="entry.schema" placeholder="schema" class="w-[88px]" size="small" />
-              <span class="text-[var(--ep-text-color-placeholder)] font-semibold">.</span>
-              <el-input v-model="entry.table" placeholder="table" class="flex-1" size="small" />
+              <el-select v-model="entry.schema" placeholder="schema" filterable clearable
+                class="!w-[112px] shrink-0" :loading="tableLoading" @change="entry.table = ''">
+                <el-option v-for="s in schemaOptions" :key="s" :label="s" :value="s" />
+              </el-select>
+              <span class="text-[var(--ep-text-color-placeholder)] font-semibold shrink-0">.</span>
+              <div class="flex-1 min-w-0">
+                <el-select v-model="entry.table" placeholder="table" filterable clearable
+                  :disabled="!entry.schema">
+                  <el-option v-for="t in (tableOptions[i] || [])" :key="t.name" :label="t.name" :value="t.name" />
+                </el-select>
+              </div>
               <el-button size="small" text type="danger" :icon="Delete"
                 @click="removeTableEntry(i)" :disabled="(form.tables as any[]).length <= 1" />
             </div>
