@@ -88,6 +88,7 @@ public class ColumnValueService {
                 }
                 String id = UUID.randomUUID().toString();
                 EntityReference entity = EntityReference.builder()
+                        .datasourceId(datasourceId)
                         .tableId(tableId)
                         .field(columnName)
                         .build();
@@ -133,9 +134,14 @@ public class ColumnValueService {
             ColumnInfoPO columnPO = columnInfoDAO.findById(columnId)
                     .orElseThrow(() -> new DatiException("Column not found: " + columnId));
 
+            String datasourceId = tableInfoDAO.findById(columnPO.getTableId())
+                    .orElseThrow(() -> new DatiException("Table not found: " + columnPO.getTableId()))
+                    .getDataSourceId();
+
             List<SemanticSearchDocument> docs = new ArrayList<>();
             for (ValueItem item : values) {
                 EntityReference entity = EntityReference.builder()
+                        .datasourceId(datasourceId)
                         .tableId(columnPO.getTableId())
                         .field(columnPO.getName())
                         .build();

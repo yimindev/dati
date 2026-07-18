@@ -96,6 +96,7 @@ public class TableService {
             tableIds.add(tableId);
 
             EntityReference tableEntity = EntityReference.builder()
+                    .datasourceId(datasourceId)
                     .tableId(tableId)
                     .tableName(tableInfo.getName())
                     .build();
@@ -126,6 +127,7 @@ public class TableService {
                     ColumnInfoPO savedColumnPO = columnInfoDAO.save(ColumnMapper.toColumnInfoPO(columnInfo));
 
                     EntityReference columnEntity = EntityReference.builder()
+                            .datasourceId(datasourceId)
                             .tableId(tableId)
                             .tableName(tableInfo.getName())
                             .field(column.name())
@@ -173,6 +175,7 @@ public class TableService {
         tableInfoDAO.save(existingPO);
 
         EntityReference entity = EntityReference.builder()
+                .datasourceId(existingPO.getDataSourceId())
                 .tableId(tableId)
                 .tableName(existingPO.getName())
                 .build();

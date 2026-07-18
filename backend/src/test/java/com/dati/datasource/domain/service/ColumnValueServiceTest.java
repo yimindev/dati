@@ -188,6 +188,7 @@ class ColumnValueServiceTest {
         @DisplayName("新增值：创建新 ES 文档，keywords 包含值和同义词")
         void saveValues_addNewValue() {
             when(columnInfoDAO.findById("col1")).thenReturn(Optional.of(testColumnPO));
+            when(tableInfoDAO.findById("table1")).thenReturn(Optional.of(testTablePO));
 
             ColumnValueService.ValueItem newItem = new ColumnValueService.ValueItem();
             newItem.setId(null);
@@ -217,6 +218,7 @@ class ColumnValueServiceTest {
         @DisplayName("混合场景：同时删除旧值和新增新值")
         void saveValues_mixedOperations() {
             when(columnInfoDAO.findById("col1")).thenReturn(Optional.of(testColumnPO));
+            when(tableInfoDAO.findById("table1")).thenReturn(Optional.of(testTablePO));
 
             ColumnValueService.ValueItem newItem = new ColumnValueService.ValueItem();
             newItem.setId(null);

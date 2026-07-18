@@ -17,6 +17,9 @@ public class EntityReference {
     private String subjectId;
 
     @Field(type = FieldType.Keyword)
+    private String datasourceId;
+
+    @Field(type = FieldType.Keyword)
     private String tableId;
 
     @Field(type = FieldType.Keyword)

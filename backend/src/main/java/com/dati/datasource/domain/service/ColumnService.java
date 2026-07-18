@@ -79,6 +79,7 @@ public class ColumnService {
 
         TableInfo tableInfo = TableMapper.toTableInfo(tableInfoDAO.findById(columnInfoPO.getTableId()).orElseThrow());
         EntityReference entity = EntityReference.builder()
+                .datasourceId(tableInfo.getDatasourceId())
                 .tableId(tableInfo.getId())
                 .tableName(tableInfo.getName())
                 .field(columnInfoPO.getName())
@@ -147,6 +148,7 @@ public class ColumnService {
         
         List<SemanticSearchDocument> docs = savedList.stream().map(po -> {
             EntityReference entity = EntityReference.builder()
+                    .datasourceId(datasourceId)
                     .tableId(tableId)
                     .tableName(tableInfo.getName())
                     .field(po.getName())
