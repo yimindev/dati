@@ -32,6 +32,24 @@ export interface TableMetadata {
 
 export interface SearchHit {
   type: "SEARCH_HIT";
+  keywords: string[];
+  data_sources: DataSourceDef[];
+  terms: TermDef[];
+}
+
+export interface DataSourceDef {
+  id: string;
+  name: string;
+  db_type?: string;
+  default_schema?: string;
+  description?: string;
+  tables: TableDef[];
+}
+
+export interface TermDef {
+  name: string;
+  description: string;
+  subject_name: string;
 }
 
 export type StatementResult = SelectResult | WriteResult;

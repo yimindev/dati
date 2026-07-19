@@ -487,6 +487,11 @@ export default {
       adviceSqlError: "请检查 SQL 语法或确认数据表是否存在",
       adviceTimeout: "执行超时，请尝试缩小查询范围或增加超时时间",
       requiredHint: "请填写 {name}",
+      keywordsPlaceholder: "输入关键词后按回车",
+      keywords: "关键词",
+      matchTerms: "匹配术语",
+      matchSources: "匹配数据源",
+      tables: "张表",
     },
   },
 
