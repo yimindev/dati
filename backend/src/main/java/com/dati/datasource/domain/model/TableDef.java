@@ -1,6 +1,5 @@
-package com.dati.mcp.server.pojo;
+package com.dati.datasource.domain.model;
 
-import com.dati.datasource.domain.model.ColumnDef;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import java.util.List;
 

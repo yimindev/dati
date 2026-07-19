@@ -3,7 +3,7 @@ package com.dati.mcp.domain.service;
 import com.dati.datasource.domain.service.TableMetadataService;
 import com.dati.mcp.domain.model.McpToolType;
 import com.dati.mcp.domain.model.ToolError;
-import com.dati.mcp.server.pojo.TableDef;
+import com.dati.datasource.domain.model.TableDef;
 import com.dati.mcp.server.pojo.TableMetadata;
 import com.dati.mcp.server.pojo.ToolTestData;
 import org.springframework.stereotype.Component;

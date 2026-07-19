@@ -9,6 +9,7 @@ import com.dati.semantic.domain.model.Term;
 import com.dati.semantic.domain.model.TermRelation;
 import com.dati.datasource.repository.dao.TableInfoDAO;
 import com.dati.semantic.repository.dao.SubjectTableDAO;
+import com.dati.semantic.repository.dao.SubjectDAO;
 import com.dati.semantic.repository.dao.TermDAO;
 import com.dati.semantic.repository.dao.TermRelationDAO;
 import com.dati.semantic.repository.mapper.TermMapper;
@@ -40,14 +41,17 @@ public class TermService {
     private final TableInfoDAO tableInfoDAO;
     private final SemanticIndexService semanticIndexService;
 
+    private final SubjectDAO subjectDAO;
+
     public TermService(TermDAO termDAO, TermRelationDAO termRelationDAO,
                        SubjectTableDAO subjectTableDAO, TableInfoDAO tableInfoDAO,
-                       SemanticIndexService semanticIndexService) {
+                       SemanticIndexService semanticIndexService, SubjectDAO subjectDAO) {
         this.termDAO = termDAO;
         this.termRelationDAO = termRelationDAO;
         this.subjectTableDAO = subjectTableDAO;
         this.tableInfoDAO = tableInfoDAO;
         this.semanticIndexService = semanticIndexService;
+        this.subjectDAO = subjectDAO;
     }
 
     @Transactional
@@ -188,6 +192,27 @@ public class TermService {
             log.warn("Failed to load table metadata for termId={}, tableIds={}", termId, tableIds, e);
             return Collections.emptyMap();
         }
+    }
+
+    /** Lightweight term info with subject name for SEARCH_METADATA. */
+    public record TermInfo(String name, String description, String subjectName) {}
+
+    /** Batch query terms with resolved subject names. */
+    public List<TermInfo> getTermsWithSubject(Set<String> termIds) {
+        if (termIds == null || termIds.isEmpty()) return List.of();
+
+        List<TermPO> terms = termDAO.findAllById(termIds);
+        Set<String> subjectIds = terms.stream()
+                .map(TermPO::getSubjectId).collect(Collectors.toSet());
+        Map<String, String> subjectNames = subjectDAO.findAllById(subjectIds).stream()
+                .collect(Collectors.toMap(
+                        com.dati.base.pojo.BaseResourcePO::getId,
+                        com.dati.base.pojo.BaseResourcePO::getName));
+
+        return terms.stream()
+                .map(t -> new TermInfo(t.getName(), t.getDescription(),
+                        subjectNames.getOrDefault(t.getSubjectId(), "")))
+                .toList();
     }
 
     private TermRelation toTermRelation(TermRelationPO po, Map<String, TableInfoPO> tableInfoMap) {

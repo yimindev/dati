@@ -5,6 +5,7 @@ import com.dati.semantic.repository.dao.SemanticSearchDAO;
 import com.dati.semantic.repository.po.SemanticSearchDocument;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
@@ -79,6 +80,25 @@ public class SemanticIndexService {
         }
         return semanticSearchDAO.searchByTableFieldAndKeyword(
                 tableId, field, keyword, type.name(), pageable);
+    }
+
+    /**
+     * Full-text search across all entity types, filtered by data source / subject scope.
+     * @param maxResults max ES documents to return
+     */
+    public List<SemanticSearchDocument> searchMetadata(
+            List<String> keywords,
+            List<String> datasourceIds,
+            List<String> subjectIds,
+            int maxResults) {
+
+        if (keywords == null || keywords.isEmpty()) return List.of();
+
+        String queryString = String.join(" ", keywords);
+        if (datasourceIds.isEmpty() && subjectIds.isEmpty()) return List.of();
+
+        return semanticSearchDAO.searchByKeyword(queryString, datasourceIds, subjectIds, PageRequest.of(0, maxResults))
+                .getContent();
     }
 
     private Page<SemanticSearchDocument> paginateList(List<SemanticSearchDocument> docs, Pageable pageable) {

@@ -11,10 +11,9 @@ public enum McpToolType {
         {
           "type": "object",
           "properties": {
-            "keyword": {"type": "string", "description": "Search keyword"},
-            "limit": {"type": "integer", "description": "Max results", "default": 10}
+            "keywords": {"type": "array", "items": {"type": "string"}, "description": "Search keywords"}
           },
-          "required": ["keyword"],
+          "required": ["keywords"],
           "additionalProperties": false
         }
         """

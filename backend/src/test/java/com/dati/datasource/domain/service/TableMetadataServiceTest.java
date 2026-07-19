@@ -96,6 +96,8 @@ class TableMetadataServiceTest {
         assertThat(meta.tableName()).isEqualTo("users");
         assertThat(meta.description()).isEqualTo("desc-users");
         assertThat(meta.aliases()).contains("users_alias");
+        assertThat(meta.tableId()).isEqualTo(TABLE_ID);
+        assertThat(meta.dataSourceId()).isEqualTo(DS_ID);
         assertThat(meta.columns()).hasSize(2);
 
         ColumnDef col1 = meta.columns().getFirst();
@@ -213,5 +215,27 @@ class TableMetadataServiceTest {
                 service.getTableMeta(DS_ID, "audit", "users");
 
         assertThat(result).isEmpty();
+    }
+
+    @Test
+    @DisplayName("getTableMetasByIds - 批量查表含别名和列")
+    void getTableMetasByIds_withAliasesAndColumns() {
+        when(tableInfoDAO.findAllById(java.util.Set.of(TABLE_ID)))
+                .thenReturn(List.of(table()));
+        when(columnInfoDAO.findByTableId(TABLE_ID))
+                .thenReturn(List.of(column("id", "int4", "主键"), column("name", "varchar", "用户名")));
+        when(semanticIndexService.findByTableIdAndType(TABLE_ID, SemanticEntityType.FIELD_VALUE, 5000))
+                .thenReturn(List.of());
+
+        java.util.List<TableMetadataService.TableMeta> result =
+                service.getTableMetasByIds(java.util.Set.of(TABLE_ID));
+
+        assertThat(result).hasSize(1);
+        TableMetadataService.TableMeta meta = result.getFirst();
+        assertThat(meta.tableName()).isEqualTo("users");
+        assertThat(meta.tableId()).isEqualTo(TABLE_ID);
+        assertThat(meta.dataSourceId()).isEqualTo(DS_ID);
+        assertThat(meta.aliases()).contains("users_alias");
+        assertThat(meta.columns()).hasSize(2);
     }
 }

@@ -3,6 +3,7 @@ package com.dati.semantic.domain.service;
 import com.dati.base.exception.DatiException;
 import com.dati.semantic.domain.SemanticEntityType;
 import com.dati.semantic.domain.model.Term;
+import com.dati.semantic.repository.dao.SubjectDAO;
 import com.dati.semantic.repository.dao.TermDAO;
 import com.dati.semantic.repository.dao.TermRelationDAO;
 import com.dati.semantic.repository.po.SemanticSearchDocument;
@@ -42,6 +43,9 @@ class TermServiceTest {
 
     @Mock
     private SemanticIndexService semanticIndexService;
+
+    @Mock
+    private SubjectDAO subjectDAO;
 
     @InjectMocks
     private TermService termService;
@@ -174,5 +178,31 @@ class TermServiceTest {
         Page<Term> result = termService.getTermsBySubject(subjectId, null, pageable);
 
         assertThat(result.getTotalElements()).isEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("getTermsWithSubject - 批量查术语跨主题")
+    void getTermsWithSubject_multipleSubjects() {
+        TermPO t1 = new TermPO();
+        t1.setId("t1"); t1.setSubjectId("s1"); t1.setName("活跃用户");
+        t1.setDescription("30天内登录过的用户");
+        TermPO t2 = new TermPO();
+        t2.setId("t2"); t2.setSubjectId("s2"); t2.setName("高价值客户");
+        t2.setDescription("累计消费超1000元");
+        when(termDAO.findAllById(java.util.Set.of("t1", "t2"))).thenReturn(java.util.List.of(t1, t2));
+
+        com.dati.semantic.repository.po.SubjectPO s1 = new com.dati.semantic.repository.po.SubjectPO();
+        s1.setId("s1"); s1.setName("用户分析");
+        com.dati.semantic.repository.po.SubjectPO s2 = new com.dati.semantic.repository.po.SubjectPO();
+        s2.setId("s2"); s2.setName("客户价值");
+        when(subjectDAO.findAllById(java.util.Set.of("s1", "s2"))).thenReturn(java.util.List.of(s1, s2));
+
+        java.util.List<TermService.TermInfo> result = termService.getTermsWithSubject(java.util.Set.of("t1", "t2"));
+
+        assertThat(result).hasSize(2);
+        assertThat(result.get(0).name()).isEqualTo("活跃用户");
+        assertThat(result.get(0).subjectName()).isEqualTo("用户分析");
+        assertThat(result.get(1).name()).isEqualTo("高价值客户");
+        assertThat(result.get(1).subjectName()).isEqualTo("客户价值");
     }
 }

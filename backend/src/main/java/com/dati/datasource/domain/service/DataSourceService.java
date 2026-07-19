@@ -1,19 +1,18 @@
 package com.dati.datasource.domain.service;
 
-import com.dati.base.exception.DatiException;
-import com.dati.base.exception.ErrorCode;
 import com.dati.base.EncryptionUtils;
 import com.dati.common.StringUtils;
-import com.dati.db.HikariPoolManager;
-import com.dati.db.JdbcConnector;
-import com.dati.db.JdbcUtils;
+import com.dati.datasource.domain.model.DataSource;
 import com.dati.datasource.repository.dao.ColumnInfoDAO;
 import com.dati.datasource.repository.dao.DataSourceDAO;
 import com.dati.datasource.repository.dao.TableInfoDAO;
-import com.dati.datasource.domain.model.DataSource;
 import com.dati.datasource.repository.mapper.DSMapper;
 import com.dati.datasource.repository.po.DataSourcePO;
 import com.dati.datasource.repository.po.TableInfoPO;
+import com.dati.db.DbType;
+import com.dati.db.HikariPoolManager;
+import com.dati.db.JdbcConnector;
+import com.dati.db.JdbcUtils;
 import com.dati.semantic.domain.service.SemanticIndexService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -110,5 +109,16 @@ public class DataSourceService {
 
     public Optional<DataSource> getDataSource(String id) {
         return dataSourceDAO.findById(id).map(DSMapper::toDataSource);
+    }
+
+    public record DsBrief(String name, DbType dbType, String defaultSchema, String description) {}
+
+    /** Bulk lookup for lightweight data source info, used by SEARCH_METADATA grouping. */
+    public Map<String, DsBrief> getDataSourceBriefs(Collection<String> ids) {
+        if (ids == null || ids.isEmpty()) return Map.of();
+        return dataSourceDAO.findAllById(ids).stream()
+                .collect(Collectors.toMap(DataSourcePO::getId,
+                        po -> new DsBrief(po.getName(), po.getType(),
+                                po.getDefaultSchema(), po.getDescription())));
     }
 }

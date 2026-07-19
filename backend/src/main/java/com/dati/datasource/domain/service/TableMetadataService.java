@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 import static java.util.stream.Collectors.groupingBy;
 
@@ -48,9 +49,38 @@ public class TableMetadataService {
 
         TableInfoPO table = tables.getFirst();
         List<ColumnInfoPO> columns = columnInfoDAO.findByTableId(table.getId());
+        List<ColumnDef> columnDetails = buildColumnDetails(table.getId(), columns);
 
+        return Optional.of(new TableMeta(table.getId(), table.getSchema(),
+                table.getName(), table.getDescription(), table.getAliases(),
+                table.getDataSourceId(), columnDetails));
+    }
+
+    private boolean matches(TableInfoPO table, String schema, String tableName) {
+        return tableName.equals(table.getName())
+                && (schema == null || schema.equals(table.getSchema()));
+    }
+
+    /**
+     * Returns table defs for a batch of table IDs, each with full column metadata.
+     * Used by SEARCH_METADATA to resolve ES hit tableIds into complete TableDefs.
+     */
+    public List<TableMeta> getTableMetasByIds(Set<String> tableIds) {
+        if (tableIds == null || tableIds.isEmpty()) return List.of();
+
+        List<TableInfoPO> tables = tableInfoDAO.findAllById(tableIds);
+
+        return tables.stream().map(t -> {
+            List<ColumnInfoPO> columns = columnInfoDAO.findByTableId(t.getId());
+            List<ColumnDef> columnDetails = buildColumnDetails(t.getId(), columns);
+            return new TableMeta(t.getId(), t.getSchema(), t.getName(),
+                    t.getDescription(), t.getAliases(), t.getDataSourceId(), columnDetails);
+        }).toList();
+    }
+
+    private List<ColumnDef> buildColumnDetails(String tableId, List<ColumnInfoPO> columns) {
         List<SemanticSearchDocument> allValues =
-                semanticIndexService.findByTableIdAndType(table.getId(),
+                semanticIndexService.findByTableIdAndType(tableId,
                         SemanticEntityType.FIELD_VALUE, VALUE_QUERY_MAX);
 
         Map<String, List<String>> valuesByField = allValues.stream()
@@ -64,7 +94,7 @@ public class TableMetadataService {
                                         list -> list.size() <= SAMPLE_VALUE_LIMIT ? list
                                                 : list.subList(0, SAMPLE_VALUE_LIMIT)))));
 
-        List<ColumnDef> columnDefs = columns.stream()
+        return columns.stream()
                 .map(c -> new ColumnDef(
                         c.getName(),
                         c.getColumnType(),
@@ -72,16 +102,10 @@ public class TableMetadataService {
                         c.getAliases(),
                         valuesByField.getOrDefault(c.getName(), List.of())))
                 .toList();
-
-        return Optional.of(new TableMeta(table.getSchema(), table.getName(),
-                table.getDescription(), table.getAliases(), columnDefs));
     }
 
-    private boolean matches(TableInfoPO table, String schema, String tableName) {
-        return tableName.equals(table.getName())
-                && (schema == null || schema.equals(table.getSchema()));
+    public record TableMeta(String tableId, String schema, String tableName,
+                            String description, List<String> aliases,
+                            String dataSourceId, List<ColumnDef> columns) {
     }
-
-    public record TableMeta(String schema, String tableName, String description,
-                             List<String> aliases, List<ColumnDef> columns) {}
 }
