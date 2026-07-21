@@ -1,7 +1,7 @@
 # MCP Service 管理 — 架构文档
 
-> 版本：v1.5（US-01 + US-02 + US-03 + US-05 + US-5.5 完整实现，含 Service Code、Data Scope、Prompt 管理、Template Preview 引擎、SQL 安全分析）
-> 最后更新：2026-06-21
+> 版本：v2.0（US-01–05, US-5.5, US-07 完整实现）
+> 最后更新：2026-07-19
 
 ---
 
@@ -17,8 +17,8 @@ MCP Service 管理模块提供 **MCP（Model Context Protocol）服务的生命�
 - 自定义工具 CRUD（参数化 SQL）
 - **Prompt 模板管理**（CRUD + 模板语法校验 + 参数一致性检查）
 - **模板预览引擎**（TEXT 模式渲染 / SQL 模式渲染 + 参数提取）
-- **SQL 安全配置组件**（权限勾选、限流、确认执行）
 - **SQL 安全分析引擎**（操作类型识别、表提取、多语句检测、事务/元数据/SET 分类）
+- **工具测试（Tool Test）**：参数输入 → 安全校验 → 执行 → 结果展示（支持 4 种工具类型、多语句 SQL、部分失败、scope 校验）
 
 ---
 
@@ -30,25 +30,37 @@ MCP Service 管理模块提供 **MCP（Model Context Protocol）服务的生命�
 com.dati.mcp/
 ├── domain/
 │   ├── model/               # 领域实体与枚举
-│   │   ├── McpService.java          # 服务聚合（code, status）
-│   │   ├── McpServiceStatus.java    # DRAFT / PUBLISHED / DISABLED
-│   │   ├── McpServiceDataScope.java # 数据范围实体
-│   │   ├── McpDataScopeType.java    # DATA_SOURCE / SUBJECT
-│   │   ├── McpToolType.java         # 工具类型枚举（4 种）
-│   │   ├── ToolConfig.java          # sealed interface 配置体系
-│   │   ├── SqlPolicy.java           # SQL 权限策略
-│   │   ├── ToolParameter.java       # 工具参数描述
+│   │   ├── McpService.java              # 服务聚合（code, status）
+│   │   ├── McpServiceStatus.java        # DRAFT / PUBLISHED / DISABLED
+│   │   ├── McpServiceDataScope.java     # 数据范围实体
+│   │   ├── McpDataScopeType.java        # DATA_SOURCE / SUBJECT
+│   │   ├── McpToolType.java             # 工具类型枚举（4 种，含 inputSchema）
+│   │   ├── ToolConfig.java              # sealed interface 配置体系
+│   │   ├── SqlPolicy.java               # SQL 权限策略（9 字段 + validate）
+│   │   ├── ToolParameter.java           # 工具参数描述（String/Number/Boolean/DateTime/Array）
+│   │   ├── ToolError.java               # 工具执行错误枚举（7 种，含 category）
 │   │   ├── McpPrebuiltToolConfig.java
 │   │   ├── McpCustomTool.java
-│   │   ├── McpPrompt.java           # Prompt 实体
-│   │   ├── PromptParameter.java     # Prompt 参数描述
-│   │   └── TemplateRenderMode.java  # TEXT / SQL
+│   │   ├── McpPrompt.java               # Prompt 实体
+│   │   ├── PromptParameter.java         # Prompt 参数描述
+│   │   └── TemplateRenderMode.java      # TEXT / SQL
 │   └── service/
 │       ├── McpServiceService.java           # 服务 CRUD + code 校验
-│       ├── McpServiceDataScopeService.java  # 数据范围全量替换
-│       ├── McpToolService.java               # 工具 CRUD + 分组
-│       ├── McpPromptService.java             # Prompt CRUD + 模板校验
-│       └── ToolsResult.java                  # { prebuilt, custom } record
+│       ├── McpServiceDataScopeService.java  # 数据范围全量替换 + 解析 dsId 集合
+│       ├── McpToolService.java              # 工具 CRUD + 分组
+│       ├── McpPromptService.java            # Prompt CRUD + 模板校验
+│       ├── McpToolTestService.java          # 工具测试编排（resolve → scope → execute）
+│       ├── ToolResolver.java               # toolId 解析（枚举 → 预置，UUID → 自定义）
+│       ├── ScopeValidator.java             # 两层 scope 校验（数据源级 + 表级）
+│       ├── ToolExecutor.java               # 接口：getToolType() + execute(ctx)
+│       ├── ToolExecutionContext.java        # record：serviceId, toolType, config, args, scopeItems
+│       ├── ExecuteSqlExecutor.java          # EXECUTE_SQL 执行器
+│       ├── ParameterizedSqlExecutor.java    # PARAMETERIZED_SQL 执行器
+│       ├── GetTableInfoExecutor.java        # GET_TABLE_INFO 执行器
+│       ├── SearchMetadataExecutor.java      # SEARCH_METADATA 执行器
+│       ├── SqlExecutorHelper.java           # JDBC getMoreResults() 循环（package-private）
+│       ├── ToolExecuteException.java        # 工具执行异常（extends RuntimeException）
+│       └── ToolsResult.java                 # { prebuilt, custom } record
 ├── repository/
 │   ├── dao/
 │   │   ├── McpServiceDAO.java
@@ -71,21 +83,37 @@ com.dati.mcp/
 └── server/
     ├── controller/
     │   ├── McpServiceController.java      # 服务 CRUD + 数据范围端点
-    │   ├── McpToolController.java         # 工具 CRUD 端点
+    │   ├── McpToolController.java         # 工具 CRUD + 测试端点
     │   ├── McpPromptController.java       # Prompt CRUD 端点
     │   └── TemplatePreviewController.java # 模板预览/提取端点
     ├── pojo/                 # VO / Request / Response
-    │   ├── McpServiceVO.java, DataScopeItemVO.java, DataScopeRequest.java,
-    │   │   DataScopeResponse.java
+    │   ├── McpServiceVO.java, DataScopeItemVO.java, DataScopeRequest.java, DataScopeResponse.java
     │   ├── McpToolVO.java, ToolsResponse.java, CustomToolRequest.java
     │   ├── McpPromptVO.java, McpPromptRequest.java
-    │   └── TemplatePreviewRequest.java, TemplatePreviewResponse.java,
-    │       TemplateExtractRequest.java, TemplateExtractResponse.java
+    │   ├── ToolTestRequest.java, ToolTestResponse.java, ToolTestError.java, ToolTestData.java
+    │   ├── SqlExecution.java, StatementResult.java
+    │   ├── TableMetadata.java, SearchHit.java
+    │   └── TemplatePreviewRequest.java, TemplatePreviewResponse.java, TemplateExtractRequest.java, TemplateExtractResponse.java
     └── assembler/            # @Component extends BaseAssembler, Model ↔ VO
         ├── McpServiceAssembler.java
         ├── McpToolAssembler.java
+        ├── McpDataScopeAssembler.java
         └── McpPromptAssembler.java
 ```
+
+**关键跨模块依赖（domain Def 类型）：**
+
+```
+com.dati.datasource.domain.model/
+├── TableDef.java      # record(schema, table, description, aliases, columns: List<ColumnDef>)
+├── ColumnDef.java     # record(name, type, comment, sampleValues: List<String>)
+└── DataSourceDef.java # record(dataSourceId, dataSourceName, dbType, defaultSchema, description, tables: List<TableDef>)
+
+com.dati.semantic.domain.model/
+└── TermDef.java       # record(name, description, subjectName)
+```
+
+这些 Def 类型是纯数据 record，不含运行时状态，被 MCP 层 pojo（`TableMetadata`、`SearchHit`）引用。
 
 ### 2.2 核心类职责
 
@@ -110,18 +138,18 @@ com.dati.mcp/
 | `McpServiceDataScopePO` | 持久化对象，继承 `BasePO` |
 | `McpServiceDataScopeDAO` | JPA Repository。`findAllByServiceId`、`deleteAllByServiceId` |
 | `McpServiceDataScopeMapper` | PO ↔ Model 转换 |
-| `McpServiceDataScopeService` | 全量替换：先 `deleteAllByServiceId` 再 `saveAll`。空列表即清空 |
+| `McpServiceDataScopeService` | 全量替换：先 `deleteAllByServiceId` 再 `saveAll`。新增 `getResolvedDataSourceIds(serviceId)`：遍历 scope 并展开 SUBJECT 类型为实际数据源 ID 集合，供 SEARCH_METADATA 等使用 |
 | `DataScopeRequest` | 请求体：`{ items: [{ scopeType, referenceId, referenceName }] }` |
-| `DataScopeResponse` | 响应：`{ items: [...] }` |
+| `DataScopeResponse` | 响应：`{ items: [...], resolved_data_sources: [...] }` |
 
 #### Tool 管理
 
 | 类 | 职责 |
 |---|---|
-| `McpToolType` | 枚举 4 种类型，含预置工具的元数据（name / description / inputSchema）和 `getDefaultConfig()` 方法 |
-| `ToolConfig` | `sealed interface`，子类：`SearchMetadataConfig` / `GetTableInfoConfig` / `ExecuteSqlConfig` / `ParamSqlConfig`。每个子类有对应可配置字段 + Jackson 序列化默认值 |
-| `SqlPolicy` | SQL 权限策略（9 字段）：`allowSelect` / `allowInsert` / `allowUpdate` / `allowDelete` / `allowDdl` / `allowMulti` / `allowMetadata` / `allowTransaction` / `allowSet`。提供 `allows(type)` 和 `validateAllowed(result)` |
-| `ToolParameter` | 工具参数描述：`name`、`type`（String/Number/Boolean/Date/Array）、`required`、`defaultValue`、`description` |
+| `McpToolType` | 枚举 4 种类型，含预置工具的元数据（name / description / inputSchema）和 `getDefaultConfig()` 方法。SEARCH_METADATA inputSchema 的 `keywords` 为 array<string> |
+| `ToolConfig` | `sealed interface`，子类：`SearchMetadataConfig` / `GetTableInfoConfig` / `ExecuteSqlConfig` / `ParamSqlConfig`。注：已移除 `confirmRequired` 字段（MCP 协议不支持二次确认） |
+| `SqlPolicy` | SQL 权限策略（9 字段 + `allowMulti`）。提供 `validate(type)` 方法（内联 switch 逐条校验）。`validateAllowed(result)` 额外处理 MULTI 标记 |
+| `ToolParameter` | 工具参数描述：`name`、`type`（String / Number / Boolean / DateTime / Array）、`required`、`defaultValue`、`description` |
 | `McpPrebuiltToolConfig` | 领域实体。`serviceId` + `toolType` + `enabled` + `config: ToolConfig` |
 | `McpPrebuiltToolConfigPO` | 持久化对象，继承 `BaseResourcePO`。`config` 列存 JSON 字符串 |
 | `McpPrebuiltToolConfigDAO` | JPA Repository。`findByServiceIdAndToolType` |
@@ -131,11 +159,41 @@ com.dati.mcp/
 | `McpCustomToolDAO` | JPA Repository。`findByServiceId`、`existsByServiceIdAndName`、`countByServiceId` |
 | `McpCustomToolMapper` | PO ↔ Model。序列化/反序列化 `config` 字段 |
 | `McpToolService` | 分组列表返回 `ToolsResult` record；`updatePrebuiltTool` / `updateCustomTool` / `createCustomTool` / `deleteCustomTool` / `countToolsByServiceId`。name 格式校验 |
-| `McpToolController` | 5 端点（见 2.4），`@Valid` 校验 `CustomToolRequest.toolType` |
 | `McpToolAssembler` | Model ↔ VO / Request 转换，config JSON 解析 |
 | `McpToolVO` | 响应：`id`、`tool_type`、`name`、`title`、`description`、`enabled`、`config` |
 | `ToolsResponse` | `{ prebuilt, custom }` |
 | `CustomToolRequest` | 创建/更新请求体。`toolType: @NotNull McpToolType`，`config: String`（JSON） |
+
+#### Tool Test（工具测试）
+
+| 类 | 职责 |
+|---|---|
+| `ToolExecutor` | 接口：`McpToolType getToolType()` + `ToolTestData execute(ToolExecutionContext ctx)`。Spring 自动注入所有 `@Component` 实现，`McpToolTestService` 构造器中 `List<ToolExecutor>` → `Map<McpToolType, ToolExecutor>` |
+| `ToolExecutionContext` | record：`serviceId`、`toolType`、`config: ToolConfig`、`arguments: Map<String,Object>`、`scopeItems: List<McpServiceDataScope>` |
+| `ToolResolver` | 解析 toolId：先尝试 `McpToolType.valueOf(toolId)` 匹配枚举 → 查 `McpPrebuiltToolConfigDAO`（有则取 DB 值，无则用默认）；解析失败则当 UUID 查 `McpCustomToolDAO`。disabled → throw `ToolExecuteException(TOOL_DISABLED)` |
+| `ScopeValidator` | 两层 scope 校验：① 数据源级 — 遍历 scopeItems 收集所有覆盖的 dsId（DATA_SOURCE 直接 + SUBJECT 展开）；② 表级 — 构建允许的 TableRef 集合，对比 SQL 分析结果。支持 `defaultSchema` 参数解析 schema-less 表引用 |
+| `McpToolTestService` | 测试编排（极简，无分支）：`resolve()` → 查 scope → `execute()` → 计时 → 组装响应。`ToolExecuteException` 在此层 catch 并转为 `ToolTestResponse(success=false, error=...)` |
+| `ExecuteSqlExecutor` | EXECUTE_SQL 执行器。dsId + sql 从 args 取，`Statement.execute()` 执行，`SqlExecutorHelper.collect()` 收集多语句结果。每条语句独立 policy 校验和 try-catch |
+| `ParameterizedSqlExecutor` | PARAMETERIZED_SQL 执行器。dsId 从 config 取，模板渲染 → SQL，`PreparedStatement.execute()` 执行。支持 DateTime 类型参数转换（`DateTimeUtils.parseDateTime()`）。`bindings` 回传前端 |
+| `GetTableInfoExecutor` | GET_TABLE_INFO 执行器。从 args 取 dsId + tables[{schema,table}]，data source 级 scope 校验，通过 `TableMetadataService` 查询平台元数据。不存在的表静默跳过 |
+| `SearchMetadataExecutor` | SEARCH_METADATA 执行器。提取 keywords，通过 `McpServiceDataScopeService.getResolvedDataSourceIds()` 解析 scope → `SemanticSearchService.search()` → 组装分组结果。空 scope 返回空结果（不报错） |
+| `SqlExecutorHelper` | package-private 工具类：`collect(Statement)` — JDBC `getMoreResults() / getResultSet() / getUpdateCount()` 循环，每条独立 try-catch 返回 `StatementResult` |
+| `ToolExecuteException` | `extends RuntimeException`（不继承 DatiException）。包含 `ToolError` 和格式化后的消息。在 `McpToolTestService` 中被 catch |
+| `ToolError` | 枚举，7 种错误 + TIMEOUT 预留（见 2.3 节） |
+
+**异常处理流程**：
+
+```
+Executor / ScopeValidator / ToolResolver
+  │  throw new ToolExecuteException(ToolError.XXX, args...)
+  ▼
+McpToolTestService.test()
+  │  catch (ToolExecuteException e)
+  │  → new ToolTestResponse(false, elapsed, null,
+  │        new ToolTestError(e.getErrorCategory(), e.getMessage()))
+  ▼
+Controller → HTTP 200 + ToolTestResponse JSON
+```
 
 #### Prompt 管理
 
@@ -148,7 +206,7 @@ com.dati.mcp/
 | `McpPromptMapper` | PO ↔ Model。`parameters` JSON ↔ `List<PromptParameter>` |
 | `McpPromptAssembler` | Model ↔ VO / Request |
 | `McpPromptService` | CRUD 完整实现。**核心逻辑**：创建/更新时进行模板语法校验和参数双向一致性检查 |
-| `McpPromptController` | 4 端点（见 2.4） |
+| `McpPromptController` | 4 端点（见 2.5） |
 | `McpPromptVO` | 响应：`id`、`serviceId`、`name`、`description`、`enabled`、`content`、`parameters` |
 | `McpPromptRequest` | 请求体：`name`、`description`、`enabled`、`content`、`parameters` |
 
@@ -160,6 +218,21 @@ com.dati.mcp/
    - 定义但未引用的参数 → 抛出 `MS_PROMPT_ARG_MISMATCH`（Unused parameter）
    - 引用但未定义的变量 → 抛出 `MS_PROMPT_ARG_MISMATCH`（Unknown parameter）
 
+### 2.3 ToolError 枚举
+
+| 枚举值 | category | 含义 | 来源 |
+|--------|----------|------|------|
+| `TOOL_NOT_FOUND` | `PARAM_ERROR` | 工具不存在 | `ToolResolver` |
+| `TOOL_DISABLED` | `PARAM_ERROR` | 工具已禁用 | `ToolResolver` |
+| `PARAM_MISSING` | `PARAM_ERROR` | 缺少必填参数 | 各 Executor |
+| `DATA_SOURCE_NOT_FOUND` | `PARAM_ERROR` | 数据源不存在 | 各 Executor |
+| `SCOPE_VIOLATION` | `SCOPE_ERROR` | 数据源/表不在服务范围 | `ScopeValidator` |
+| `SQL_POLICY_VIOLATION` | `PERMISSION_DENIED` | SQL 操作被策略禁止 | `SqlPolicy` |
+| `SQL_EXECUTION_ERROR` | `SQL_ERROR` | SQL 执行失败 | SQL Executors |
+| （预留）`TIMEOUT` | `TIMEOUT` | 执行超时 | 待超时检测功能 |
+
+`ToolError.category` 直接映射到前端 `ToolTestError.error_category`，用于差异化 UI 处理（高亮表单字段 / 提示调整 Scope / 展示 SQL 错误等）。
+
 #### SQL 安全分析（SqlAnalyzer）
 
 `com.dati.db.analysis` — 数据库层的静态 SQL 分析工具，在 MCP 工具执行前对模板渲染后的 SQL 做安全分析，供权限管控使用。依赖 JSqlParser 5.1 做 AST 解析。
@@ -167,7 +240,7 @@ com.dati.mcp/
 | 类 | 职责 |
 |---|---|
 | `SqlAnalyzer` | `public final class` + 私有构造器，纯静态工具。唯一入口：`SqlAnalyzer.analyze(String sql) → SqlAnalysisResult` |
-| `SqlOperationType` | 枚举 9 种操作类型：`SELECT`、`INSERT`、`UPDATE`、`DELETE`、`DDL`、`METADATA`（SHOW/DESCRIBE/EXPLAIN）、`TRANSACTION`（COMMIT/ROLLBACK）、`SET_STATEMENT`、`MULTI`（多语句标记）、`OTHER`（兜底拒绝）|
+| `SqlOperationType` | 枚举 9 种操作类型：`SELECT`、`INSERT`、`UPDATE`、`DELETE`、`MERGE`、`DDL`、`METADATA`（SHOW/DESCRIBE/EXPLAIN）、`TRANSACTION`（COMMIT/ROLLBACK）、`SET`、`MULTI`（多语句标记）、`OTHER`（兜底拒绝）。注：已新增 `MERGE` 类型，`SET_STATEMENT` 更名为 `SET` |
 | `SqlAnalysisResult` | Record：`type`（快捷分发）、`statementTypes`（逐条校验完整列表）、`tables`（所有表引用并集）。提供 `isMulti()` 便捷方法 |
 | `TableRef` | Record：`schema`（`@Nullable`）、`name`。支持 `qualifiedName()` |
 
@@ -175,30 +248,73 @@ com.dati.mcp/
 
 | 能力 | 实现 |
 |------|------|
-| **操作类型识别** | `detectOperationType(Statement)` — `instanceof` 分发：`Select`→SELECT, `Insert`→INSERT, `Update`→UPDATE, `Delete`→DELETE, DDL 类→DDL, SHOW/DESCRIBE/EXPLAIN→METADATA, `Commit`/`RollbackStatement`→TRANSACTION, `SetStatement`→SET_STATEMENT, 其余→OTHER |
+| **操作类型识别** | `detectOperationType(Statement)` — `instanceof` 分发：`Select`→SELECT, `Insert`→INSERT, `Update`→UPDATE, `Delete`→DELETE, `Merge`→MERGE, DDL 类→DDL, SHOW/DESCRIBE/EXPLAIN→METADATA, Commit/Rollback→TRANSACTION, SetStatement→SET, 其余→OTHER |
 | **表引用提取** | `SchemaAwareTableFinder extends TablesNamesFinder<Void>` — 遍历 SQL AST，提取所有表引用（含子查询、JOIN、CTE 中实际表，排除 CTE 定义名）。使用 `getUnquotedSchemaName()` / `getUnquotedName()` 保留完整 schema 信息 |
 | **多语句检测** | `parseStatements()` 解析→过滤空语句→`types.size()>1` 时 `type=MULTI`，`statementTypes` 返回每条语句的独立类型 |
 | **事务语句预扫描** | JSqlParser 5.1 无法解析 `BEGIN` / `START TRANSACTION`。`analyze()` 在两轮标准解析均失败后，用正则检测并分号拆句逐段处理 |
 | **容错处理** | 解析失败不抛异常，返回 `type=OTHER`。空输入/乱码同理 |
 
-**调用方使用模式：**
-
-```java
-var result = SqlAnalyzer.analyze(preparedSql.sql());
-
-if (result.isMulti()) {
-    for (var t : result.statementTypes()) policy.assertAllowed(t);
-} else {
-    policy.assertAllowed(result.type());
-}
-scope.validate(result.tables());
-```
-
 **设计决策：**
 - 静态工具类而非 Spring Bean — 纯函数无状态，与 `JsonUtils` 风格一致
 - `MULTI` 仅作为 `SqlAnalysisResult.type` 标记值，不在 `statementTypes` 列表中出现
 - `METADATA` / `OTHER` 默认拒绝 — 元数据查询应走 `SEARCH_METADATA` 工具，非标准 SQL 一律拒绝
-- 74 条参数化单元测试覆盖所有类型识别、表提取、多语句、注释绕过、事务预扫描场景
+- 75 条参数化单元测试覆盖所有类型识别、表提取、多语句、MERGE、注释绕过、事务预扫描场景
+
+#### GET_TABLE_INFO 元数据查询（TableMetadataService）
+
+`com.dati.datasource.domain.service.TableMetadataService` — 平台元数据查询服务，替代了原始的 JDBC `DbClient.getColumns()` 方式。
+
+| 方法 | 功能 |
+|------|------|
+| `getTableMeta(dsId, schema, table) → Optional<TableMeta>` | 查单表：先从 `TableInfoDAO` 查表记录（按 dataSourceId + schema + name），再通过 `ColumnInfoDAO` 查列信息，最后通过 `SemanticIndexService` 查每列的样本值（前 5 个） |
+| `getTableMetasByIds(Set<String>) → List<TableMeta>` | 批量查询（供 SEARCH_METADATA 使用） |
+
+`TableMeta` record：`tableId, tableName, schema, description, aliases, dataSourceId, columns: List<ColumnDef>`。
+
+**设计决策**：不再依赖 JDBC 连接查询表结构，统一使用平台同步的元数据。找不到表返回 `Optional.empty()`（GetTableInfoExecutor 静默跳过）。
+
+#### SEARCH_METADATA 全文搜索（SemanticSearchService）
+
+`com.dati.semantic.domain.service.SemanticSearchService` — 元数据全文搜索编排服务，负责 ES 查询 → 文档归并 → 术语关联展开 → 批量查询 → 数据源分组。
+
+**执行流程**：
+
+```
+SemanticSearchService.search(keywords, dsIds, subjectIds)
+  │
+  ├─ SemanticIndexService.searchMetadata(keywords, dsIds, subjectIds, maxResults=50)
+  │     → ES multi_match（keywords + description 加权），filter: datasourceId in dsIds OR subjectIds
+  │     → 返回 SemanticSearchDocument 列表
+  │
+  ├─ 文档归并：
+  │     TABLE/FIELD/FIELD_VALUE → 收集 tableId
+  │     TERM → 收集 termId
+  │     SUBJECT → 忽略
+  │
+  ├─ TermRelation 展开：termId → 查关联表 tableId → 合并到 tableIdSet
+  │
+  ├─ TableMetadataService.getTableMetasByIds() → 批量查表元数据
+  │     mergeWithMatches() → 将 ES FIELD_VALUE 命中值合并到列的 sampleValues
+  │     （命中值在前，不足 5 随机补齐，超 5 丢弃剩余随机值）
+  │
+  ├─ DataSourceService.getDataSourceBriefs() → 批量查数据源名称/类型/默认 schema
+  │
+  └─ 按 dataSourceId 分组 → List<DataSourceGroup>
+       + TermService.getTermsWithSubject() → List<TermInfo>
+       → SearchResult(dataSources, terms)
+```
+
+**SearchResult** record：`dataSources: List<DataSourceGroup>`, `terms: List<TermInfo>`。
+
+**DataSourceGroup** record：`dataSourceId, dataSourceName, dbType, defaultSchema, description, tables: List<TableMeta>`。
+
+**关键设计决策**：
+- maxResults=50 为 Executor 常量，Service 接受参数
+- 空 scope → 空结果，不报错
+- 搜索所有实体类型（TABLE, FIELD, TERM, FIELD_VALUE, SUBJECT），不用 type filter
+- 不裁剪列（对 NL2SQL 有害）
+- BM25 自动加权，不用手动字段加权
+- ES filter 利用 `EntityReference.datasourceId` 字段过滤 scope
 
 #### 模板预览引擎（Template Preview）
 
@@ -233,7 +349,7 @@ scope.validate(result.tables());
 - `{{#if var}}...{{/if}}`：条件块（值不为 null/false/空列表时渲染）
 - `{{#where}}...{{/where}}`：WHERE 子句自动拼接（添加 `WHERE` 前缀、`AND` 连接非空条件）
 
-### 2.3 数据模型
+### 2.4 数据模型
 
 ```
 McpService
@@ -247,8 +363,8 @@ McpServiceDataScope (per service, 多个)
 McpToolType (enum)
   ├─ SEARCH_METADATA ─→ SearchMetadataConfig { timeout }
   ├─ GET_TABLE_INFO  ─→ GetTableInfoConfig { timeout }
-  ├─ EXECUTE_SQL     ─→ ExecuteSqlConfig { sqlPolicy, timeout, maxRows, confirmRequired }
-  └─ PARAMETERIZED_SQL → ParamSqlConfig { dataSourceId, sqlTemplate, parameters[], sqlPolicy, timeout, maxRows, confirmRequired }
+  ├─ EXECUTE_SQL     ─→ ExecuteSqlConfig { sqlPolicy, timeout, maxRows }
+  └─ PARAMETERIZED_SQL → ParamSqlConfig { dataSourceId, sqlTemplate, parameters[], sqlPolicy, timeout, maxRows }
 
 McpPrebuiltToolConfig (per service, UNIQUE(service_id, tool_type))
   ├─ serviceId, toolType, enabled (default true), config (ToolConfig)
@@ -263,7 +379,7 @@ McpPrompt (per service, 多个, UNIQUE(service_id, name))
   └─ 完整 CRUD + 模板语法校验 + 参数一致性检查
 ```
 
-### 2.4 API 端点
+### 2.5 API 端点
 
 #### Service 管理
 
@@ -284,8 +400,50 @@ McpPrompt (per service, 多个, UNIQUE(service_id, name))
 | `PUT` | `/v1/mcp-services/{id}/tools/{toolId}` | 更新（含 enabled 开关）。`@Valid` 要求 `tool_type` 必传 |
 | `POST` | `/v1/mcp-services/{id}/tools` | 创建自定义工具 |
 | `DELETE` | `/v1/mcp-services/{id}/tools/{toolId}` | 删除自定义工具 |
+| `POST` | `/v1/mcp-services/{id}/tools/{toolId}/test` | **测试工具**（US-07） |
 
 `toolId`：预置工具用枚举值（`SEARCH_METADATA` 等），自定义工具用 UUID。
+
+#### Tool Test 响应结构
+
+**`POST /test` 请求体**：`{ arguments: { ... } }`
+
+**响应体 `ToolTestResponse`**：
+
+```json
+{
+  "success": true,              // 整体成功/失败
+  "execution_time_ms": 42,      // 耗时，无论成败都返回
+  "data": {                     // 成功时，按 type 分发
+    "type": "SQL_EXECUTION",
+    "executed_sql": "SELECT ...",
+    "results": [ ... ]
+  },
+  "error": {                    // 失败时（顶层错误）
+    "error_category": "PARAM_ERROR",
+    "message": "缺少必填参数：sql"
+  }
+}
+```
+
+**`data` discriminated union（ToolTestData）**：
+
+| data.type | 对应 pojo | 工具类型 |
+|-----------|----------|----------|
+| `SQL_EXECUTION` | `SqlExecution{ executedSql, bindings?, results: StatementResult[] }` | EXECUTE_SQL / PARAMETERIZED_SQL |
+| `TABLE_METADATA` | `TableMetadata{ tables: TableDef[] }` | GET_TABLE_INFO |
+| `SEARCH_HIT` | `SearchHit{ keywords, dataSources: DataSourceDef[], terms: TermDef[] }` | SEARCH_METADATA |
+
+**`StatementResult` 工厂方法**（非 Jackson 多态，手写 `type()` getter）：
+
+```java
+StatementResult.select(columns, rows, totalRows)    // SELECT 成功
+StatementResult.selectFailure(errorMessage)          // SELECT 失败
+StatementResult.write(affectedRows)                  // WRITE 成功
+StatementResult.writeFailure(errorMessage)           // WRITE 失败
+```
+
+每条 result 自带 `success: boolean`、`type: "SELECT"|"WRITE"`、`errorMessage`。多语句 SQL 会产生多个 results[]，各独立成功/失败。
 
 #### Prompt 管理
 
@@ -303,7 +461,7 @@ McpPrompt (per service, 多个, UNIQUE(service_id, name))
 | `POST` | `/v1/template/preview` | 渲染模板（TEXT 或 SQL 模式），需指定 `mode` + `template` + `values` |
 | `POST` | `/v1/template/extract` | 提取模板中的所有变量名，返回 `{ variables: [...] }` |
 
-### 2.5 错误码（McpService 模块）
+### 2.6 错误码（McpService 模块）
 
 | Code | 含义 |
 |---|---|
@@ -320,8 +478,12 @@ McpPrompt (per service, 多个, UNIQUE(service_id, name))
 | `MS011` | 服务 code 格式无效 (400) |
 | `MS012` | 服务 code 必填 (400) |
 | `MS013` | SQL 操作违反策略 (403) |
+| `MS014` | 数据源或表不在 scope 内 (400) |
+| `MS015` | 工具已禁用 (400) |
 
-### 2.6 关键设计决策
+> **注**：工具测试（US-07）使用独立的 `ToolError` 枚举 + `ToolExecuteException`，不经过 `ErrorCode`。`ToolExecuteException` 在 `McpToolTestService` 中 catch 并转为 `ToolTestResponse`，不进入 `GlobalExceptionHandler`。
+
+### 2.7 关键设计决策
 
 #### Service Code 与 Endpoint
 
@@ -339,26 +501,56 @@ McpPrompt (per service, 多个, UNIQUE(service_id, name))
 - Domain 层 `config: ToolConfig`（强类型），PO 层 `config TEXT`（JSON 字符串）。Mapper 负责序列化/反序列化。
 - 管理端 API 不返回 `annotations` / `inputSchema`（MCP 协议层自行生成）。
 
-#### JsonUtils 统一 SNAKE_CASE
-
-- `JsonUtils` 配置 `PropertyNamingStrategies.SNAKE_CASE`，确保 config JSON 与 Spring MVC 命名一致。
-
 #### 数据范围全量替换
 
 - 数据范围采用「先删后插」策略，客户端每次提交完整列表。空列表即清空。
 - 自定义工具创建时的数据源选择列表限定为当前服务的 `data_scope` 内数据源。
 
-#### Prompt 参数双向校验
+#### Tool Test 异常架构
 
-- `content` 中的 `{{var}}` 变量必须与 `parameters` 定义一一对应，**多余和缺失均拒绝**。
-- `\\{{var}}` 转义语法不会被视为变量引用。
+- `ToolExecuteException extends RuntimeException`（不继承 `DatiException`），避免与 HTTP 层混淆。
+- 在 `McpToolTestService.test()` 中 catch → 转为 `ToolTestResponse(success=false)` → HTTP 200。
+- `ToolError` 自带 `category` 字段，前端据此做差异化处理（高亮表单 / 提示调整 Scope / 展示 SQL 错误）。
+- `GlobalExceptionHandler` 已移除 tool-test 专用逻辑，恢复为纯 HTTP 异常处理。
+
+#### 测试编排最简原则
+
+- `McpToolTestService.test()` 仅做：resolve → 查 scope → execute → 计时 → 组装响应。无校验、无分支。
+- 每个 Executor 内部自行完成参数校验、scope 校验、SQL 分析、策略校验、执行、异常捕获。
+- `ScopeValidator` 由 Executor 调用，不由 Service 层调用。
+
+#### GET_TABLE_INFO 使用平台元数据
+
+- 不再依赖 JDBC 连接查询表结构，统一使用 `TableMetadataService` 查询平台同步的元数据。
+- 好处：离线可查、不消耗连接池、与 SEARCH_METADATA 返回结构一致。
+
+#### SEARCH_METADATA Executor 薄层化
+
+- `SearchMetadataExecutor` 只做 scope 解析 + pojo 映射，业务逻辑全在 `SemanticSearchService`。
+- 结果按数据源分组 → `DataSourceDef`（含 dbType / defaultSchema / description），前端可按组展示。
+
+#### Def 类型按领域归属
+
+- `TableDef`、`ColumnDef`、`DataSourceDef` 放 `datasource.domain.model`
+- `TermDef` 放 `semantic.domain.model`
+- MCP 层 pojo（`TableMetadata`、`SearchHit`）引用这些 Def 类型，不重复定义
+
+#### DateTime 参数类型
+
+- `ToolParameter.type` 支持 `DateTime`。前端 `el-date-picker type="datetime"`。
+- 后端 `DateTimeUtils.parseDateTime()` 处理 3 种 ISO 8601 格式 → `LocalDateTime` 用于 PreparedStatement 绑定。
+- 解析失败时记录 WARN 日志，原始字符串原样传给 JDBC（不阻断执行）。
+
+#### confirmRequired 已移除
+
+- MCP 协议不支持工具执行的二次确认，故从 `ToolConfig.ExecuteSqlConfig` 和 `ParamSqlConfig` 中移除该字段。
+- 前端已同步移除确认弹窗逻辑和相关 UI。
 
 #### SQL 安全分析引擎独立于 MCP 模块
 
 - `com.dati.db.analysis` 包是数据库层的 SQL 分析工具，不依赖 MCP 模块。
 - 依赖 JSqlParser 5.1 做 AST 解析，支持操作类型识别、表引用提取、多语句检测。
 - 解析失败不抛异常，统一返回 `OTHER` 类型。调用方必须显式拒绝 `OTHER`。
-- `BEGIN` / `START TRANSACTION` 因 JSqlParser 语法限制无法解析，通过正则预扫描补足。
 
 #### 模板引擎独立于 MCP 模块
 
@@ -376,23 +568,27 @@ src/
 ├── api/
 │   ├── mcp-service.ts              # McpServiceVO + DataScope 类型与 API
 │   ├── mcp-tool.ts                 # 工具类型（SqlPolicy, ToolParameter, McpToolVO）+ API
+│   ├── mcp-tool-test.ts            # 工具测试类型（ToolTestResponse, SqlExecution, StatementResult 等）+ testTool()
 │   ├── mcp-prompt.ts               # Prompt 类型（McpPromptVO, McpPromptPayload）+ API
 │   └── template-preview.ts         # 模板预览/提取 API
 ├── components/mcp-service/
 │   ├── ToolsTab.vue                # 容器：子 Tab 切换（预置/自定义）
-│   ├── PrebuiltToolList.vue        # 预置工具卡片列表
+│   ├── PrebuiltToolList.vue        # 预置工具卡片列表 + 测试按钮
 │   ├── ExecuteSqlConfigDialog.vue  # EXECUTE_SQL 权限配置弹窗
-│   ├── CustomToolList.vue          # 自定义工具列表
+│   ├── CustomToolList.vue          # 自定义工具列表 + 测试按钮
 │   ├── CustomToolDialog.vue        # 创建/编辑弹窗表单
 │   ├── DataScopeTab.vue            # 数据范围管理页面
 │   ├── PromptsTab.vue              # Prompt 管理 Tab 容器
 │   ├── PromptList.vue              # Prompt 列表（搜索、开关、编辑、删除）
 │   ├── PromptDialog.vue            # Prompt 创建/编辑弹窗（含模板编辑器、参数提取）
 │   ├── TemplatePreviewDialog.vue   # 模板预览弹窗（TEXT/SQL 双模式）
-│   └── SqlSecurityConfig.vue       # SQL 安全配置组件（权限 pill + 限流 + 确认）
+│   ├── ToolTestDialog.vue          # 工具测试弹窗（左右分栏：参数 / 结果）
+│   ├── ParameterInput.vue          # 共享参数输入组件（按类型渲染不同控件）
+│   └── SqlSecurityConfig.vue       # SQL 安全配置组件（权限 pill + 限流）
 ├── components/common/editors/
 │   ├── PromptTemplateEditor.vue    # CodeMirror 编辑器（模板语法高亮 + 智能补全）
-│   └── SqlTemplateEditor.vue       # CodeMirror 编辑器（SQL 语法高亮 + 模板补全）
+│   ├── SqlTemplateEditor.vue       # CodeMirror 编辑器（SQL 语法高亮 + 模板补全）
+│   └── SqlEditor.vue               # CodeMirror 编辑器（纯 SQL 语法高亮，用于 EXECUTE_SQL 测试）
 ├── utils/codemirror/
 │   ├── template-decorations.ts     # {{var}} / {{#if}} 语法高亮装饰器
 │   ├── sql-highlight.ts            # SQL 自定义高亮样式
@@ -410,30 +606,33 @@ src/
 | 组件 | 职责 |
 |---|---|
 | `ToolsTab` | 加载分组数据，渲染预置/自定义子区域。子 Tab 带计数。 |
-| `PrebuiltToolList` | 卡片列表：名称、描述、EXECUTE_SQL 的 sql_policy meta 信息。Setting 图标打开配置弹窗。`el-switch` 开关。 |
-| `ExecuteSqlConfigDialog` | 权限勾选组（SELECT ~ MULTI）+ maxRows + timeout + confirmRequired。`WarningFilled` 安全提示。 |
-| `CustomToolList` | 搜索栏 + 工具列表。图标编辑/删除。显示数据源名称（通过 `getDataScope` 解析 ID→名称）。`el-switch` 开关。 |
+| `PrebuiltToolList` | 卡片列表：工具名称、描述、EXECUTE_SQL 的 sql_policy meta 信息。Setting 图标打开配置弹窗。`el-switch` 开关。每张卡片右侧有「测试」按钮。 |
+| `ExecuteSqlConfigDialog` | 权限勾选组（SELECT ~ MULTI）+ maxRows + timeout。 |
+| `CustomToolList` | 搜索栏 + 工具列表。编辑/删除图标。显示数据源名称。`el-switch` 开关。每张卡片操作区有「测试」按钮。 |
 | `CustomToolDialog` | el-dialog 弹窗表单。el-form 校验（name/desc/SQL/数据源必填）。参数编辑器 + 权限勾选。 |
 | `DataScopeTab` | 数据范围管理。显示已添加列表（数据源/主题 Tag），支持删除。**添加弹窗**：Tab 切换（数据源/主题）、分页列表、搜索、多选 + 已添加去重、全量提交。含已发布提示。 |
 | `PromptsTab` | Prompt 管理 Tab 容器。加载 Prompt 列表，集成 `PromptList`。 |
 | `PromptList` | 搜索栏 + 列表。每个条目显示 name、description、参数计数、开关、编辑/删除图标。 |
 | `PromptDialog` | 创建/编辑弹窗。**基本信息**（name/description）。**模板内容**：使用 `PromptTemplateEditor`（CodeMirror）。**参数列表**：el-table 编辑（name/required/description）+ 「提取参数」按钮调用 `/v1/template/extract` 自动填充。底部「测试渲染」按钮打开预览。 |
 | `TemplatePreviewDialog` | 通用模板预览弹窗。显示原始模板 → 参数输入 → 渲染结果。支持 TEXT 和 SQL 双模式。Copy 按钮复制结果。 |
-| `SqlSecurityConfig` | 可复用的 SQL 安全配置组件。权限 pill（SELECT/INSERT/UPDATE/DELETE/DDL/MULTI）+ maxRows + timeout + confirmRequired + 标注预览。 |
+| `ToolTestDialog` | **工具测试弹窗**（左右分栏布局）：左侧参数输入区、右侧结果展示区。按工具类型渲染不同表单（EXECUTE_SQL: SqlEditor + 数据源下拉；PARAMETERIZED_SQL: ParameterInput 动态表单；GET_TABLE_INFO: schema/table 下拉选择器；SEARCH_METADATA: el-input-tag 关键词输入）。结果按 response.data.type 分发渲染（SELECT 表格、WRITE 卡片、TABLE_METADATA 表列表、SEARCH_HIT 术语卡片 + 数据源分组表卡片）。 |
+| `ParameterInput` | **共享参数输入组件**。按 `ToolParameter.type` 渲染：String → el-input，Number → el-input type="number"，Boolean → el-switch，DateTime → el-date-picker type="datetime"，Array → el-input-tag，default → el-input。被 ToolTestDialog 和 TemplatePreviewDialog 共用。 |
+| `SqlSecurityConfig` | 可复用的 SQL 安全配置组件。权限 pill（SELECT/INSERT/UPDATE/DELETE/DDL/MULTI）+ maxRows + timeout。 |
+| `SqlEditor` | CodeMirror 6 + `@codemirror/lang-sql`。纯 SQL 语法高亮编辑器，用于 EXECUTE_SQL 工具测试的 SQL 输入。 |
 | `PromptTemplateEditor` | CodeMirror 6 包装。支持：模板语法高亮（`{{}}`、`{{#if}}`）、智能补全、自动闭合、bracket matching、行包裹。 |
 | `SqlTemplateEditor` | CodeMirror 6 + `@codemirror/lang-sql`。SQL 语法高亮 + 模板语法高亮 + 自定义自动补全 + 自动闭合。 |
 
 ### 3.3 交互细节
 
-- **预置工具区**：开关 + EXECUTE_SQL 的 Setting 图标。无删除、无编辑名称。
-- **自定义工具区**：Edit/Delete 图标操作。hover 变色（Edit 蓝色，Delete 红色）。
+- **预置工具区**：开关 + EXECUTE_SQL 的 Setting 图标 + 「测试」按钮。无删除、无编辑名称。
+- **自定义工具区**：Edit/Delete 图标 + 「测试」按钮。hover 变色（Edit 蓝色，Delete 红色）。
 - **配置弹窗**：权限 pills 切换（选中态紫色 → 蓝色高亮）。安全警告黄色提示。
+- **工具测试弹窗**：左右分栏布局（参数左 / 结果右）。`SqlEditor`（CodeMirror）用于 SQL 输入。PARAMETERIZED_SQL 使用 `ParameterInput` 动态表单，带 `el-form` 校验（required 字段显示红色星号）。GET_TABLE_INFO 的 schema/table 下拉框通过 `listTableInfos` API 拉取已有元数据。SEARCH_METADATA 的关键词用 `el-input-tag` 输入。执行结果按 `data.type` 分发渲染：SELECT → `el-table` + 行数提示；WRITE → 操作摘要卡片；TABLE_METADATA → 每表一个卡片（表名/列/别名/样本值）；SEARCH_HIT → 术语卡片 + 按数据源分组表卡片。关闭弹窗时自动清空表单和结果。
 - **抽屉表单**：使用 Element Plus `el-form` 的 `FormRules` 校验，保存前 `validate()`，异常时 `clearValidate()`。
 - **错误处理**：统一 `catch (e: any)` + `e?.message` 展示后端错误信息。
 - **数据范围弹窗**：Tab 切换（数据源/主题）。分页加载 + 搜索防抖 300ms。已添加项显示灰色 + `el-tag type="info"` 禁用勾选。确认提交后全量替换。已发布服务显示警告提示。
 - **Prompt 弹窗**：`content` 使用 CodeMirror 编辑器。「提取参数」调用 `/v1/template/extract` 自动扫描 `{{var}}` 并填充参数表。参数表 el-table 内联编辑。
-- **模板预览**：参数输入框自动按 parameters 列表生成。SQL 模式下根据 `type` 字段做类型转换。结果显示在只读代码区域。
-- **CodeMirror 编辑器**：`PromptTemplateEditor` 仅模板语法增强，`SqlTemplateEditor` 叠加 SQL 语言支持。均支持模板变量自动补全（`{{table}}`、`{{#if}}`、`{{#where}}` 等）。
+- **模板预览**：参数输入框自动按 parameters 列表生成，使用 `ParameterInput` 共享组件。SQL 模式下根据 `type` 字段做类型转换。结果显示在只读代码区域。
 
 ### 3.4 数据流
 
@@ -445,16 +644,18 @@ ToolsTab
     │
     ├─ 预置：
     │    ├─ 开关 → PUT /tools/{toolType} { tool_type, enabled }
-    │    └─ 配置 → PUT /tools/EXECUTE_SQL { tool_type, enabled, config: JSON.stringify(...) }
+    │    ├─ 配置 → PUT /tools/EXECUTE_SQL { tool_type, enabled, config: JSON.stringify(...) }
+    │    └─ 测试 → POST /tools/{toolType}/test { arguments: {...} } → ToolTestDialog
     │
     └─ 自定义：
          ├─ 新建 → POST /tools { tool_type, name, description, config: JSON.stringify(...) }
          ├─ 编辑 → PUT /tools/{id} { tool_type, name, description, enabled, config }
          ├─ 开关 → PUT /tools/{id} { tool_type, enabled }
+         ├─ 测试 → POST /tools/{id}/test { arguments: {...} } → ToolTestDialog
          └─ 删除 → DELETE /tools/{id} → 确认弹窗
 
 DataScopeTab
-    ├─ GET /data-scope → { items: [...] }
+    ├─ GET /data-scope → { items: [...], resolved_data_sources: [...] }
     ├─ 添加 → PUT /data-scope { items: [...完整列表...] }
     └─ 删除 → PUT /data-scope { items: [...删后列表...] }
 
@@ -469,6 +670,12 @@ PromptsTab → PromptList → PromptDialog
 TemplatePreviewDialog
     ├─ POST /v1/template/extract { template } → { variables }（提取参数名列表）
     └─ POST /v1/template/preview { mode, template, values } → { rendered }
+
+ToolTestDialog
+    ├─ EXECUTE_SQL:     GET /data-scope → 数据源下拉选项
+    ├─ GET_TABLE_INFO:  GET /data-sources/{id}/table-infos → schema/table 下拉选项
+    ├─ ALL:             POST /tools/{toolId}/test { arguments } → ToolTestResponse
+    └─ 结果分发:        data.type → SELECT table / WRITE card / TABLE_METADATA list / SEARCH_HIT groups
 ```
 
 ---
@@ -486,11 +693,16 @@ mcpService.tool:
   nameRequired, descRequired, sqlRequired, dataSourceRequired
   sqlTemplate, dataSourceBinding, selectDataSource
   parameters, addParam, scanParams, scanParamsSuccess, scanParamsNoNew, noParams, paramCount, paramDesc, paramRequired
-  configExecuteSql, allowedOps, sqlRiskWarning, maxRows, timeout, confirmRequired
+  configExecuteSql, allowedOps, sqlRiskWarning, maxRows, timeout
   annotationsPreview, annotationsHint
   previewRender, previewTitle, previewRun, previewParamPlaceholder, previewEmptyValues, previewTextResult, previewSqlResult
   deleteConfirm
   type: { SEARCH_METADATA, GET_TABLE_INFO, EXECUTE_SQL, PARAMETERIZED_SQL }
+
+mcpService.toolTest:
+  title, parameters, runTest, noParams, result
+  executionTime, affectedRows, rowTotal, emptyResult, comingSoon, keywords, keywordPlaceholder
+  requiredHint
 
 mcpService.dataScope:
   addScope, addDialogTitle, subtitle, empty
@@ -517,15 +729,22 @@ mcpService.prompt:
 
 | 测试类 | 覆盖 |
 |---|---|
-| `McpServiceServiceTest` | 服务 CRUD、code 校验、分页过滤 |
-| `McpServiceControllerTest` | 端点集成测试（创建、更新、查询、分页） |
-| `McpServiceDataScopeServiceTest` | 数据范围全量替换、空列表清空、查询 |
-| `McpToolServiceTest` | 预置列表（默认值回退）、自定义 CRUD、name 校验、计数 |
-| `McpToolControllerTest` | 分组列表、预置/自定义更新、创建、删除 |
-| `McpPromptServiceTest` | Prompt 创建/更新/删除/列表、name 重复、参数双向校验（未定义/未使用）、模板语法错误、转义变量、null content |
-| `McpPromptControllerTest` | GET/POST/PUT/DELETE 端点集成测试 |
-| `TemplatePreviewControllerTest` | TEXT 模式（简单变量、if 块）、SQL 模式（字符串/数值/布尔/null/数组格式化、原始变量、默认值、完整模板）、语法错误、空 mode、参数提取 |
-| `SqlAnalyzerTest` | 74 条参数化用例：DML/DDL/METADATA/TRANSACTION/SET_STATEMENT 类型识别、基础/子查询/CTE/边界表提取、模板渲染后 SQL（`?` 占位符）、多语句检测（含 `MULTI` 标记）、事务预扫描（BEGIN/START TRANSACTION）、解析失败容错、注释绕过安全 |
+| `McpServiceServiceTest` | 服务 CRUD、code 校验、分页过滤（10 + 10 用例） |
+| `McpServiceControllerTest` | 端点集成测试（7 用例） |
+| `McpServiceDataScopeServiceTest` | 数据范围全量替换、空列表清空、查询、`getResolvedDataSourceIds`（8 用例） |
+| `McpToolServiceTest` | 预置列表（默认值回退）、自定义 CRUD、name 校验、计数（17 用例） |
+| `McpToolControllerTest` | 分组列表、预置/自定义更新、创建、删除、测试端点（7 用例） |
+| `McpToolTestServiceTest` | 工具测试编排：正常执行、异常 catch（9 用例） |
+| `ToolResolverTest` | 预置工具 DB/默认配置、disabled、自定义工具找到/未找到/disabled、PARAMETERIZED_SQL 路径（7 用例） |
+| `ScopeValidatorTest` | 数据源级/表级 scope 校验、defaultSchema 解析（5 用例） |
+| `McpPromptServiceTest` | Prompt 创建/更新/删除/列表、name 重复、参数双向校验（未定义/未使用）、模板语法错误、转义变量、null content（12 用例） |
+| `McpPromptControllerTest` | GET/POST/PUT/DELETE 端点集成测试（4 用例） |
+| `TemplatePreviewControllerTest` | TEXT 模式（简单变量、if 块）、SQL 模式（字符串/数值/布尔/null/数组格式化、原始变量、默认值、完整模板）、语法错误、空 mode、参数提取（22 用例） |
+| `SqlAnalyzerTest` | 75 条参数化用例：DML/DDL/MERGE/METADATA/TRANSACTION/SET 类型识别、表提取（含子查询/CTE）、多语句检测、事务预扫描、容错、注释绕过 |
+| `TableMetadataServiceTest` | 单表/批量元数据查询、样本值合并（8 用例） |
+| `SemanticSearchServiceTest` | ES 搜索编排、术语关联展开、数据源分组（4 用例） |
+
+**后端总计：553 测试，0 失败。**
 
 ---
 
@@ -540,7 +759,7 @@ mcpService.prompt:
 | US-05 | 创建与配置 Prompt | ✅ 已实现 | Prompt CRUD + 模板校验 + 参数一致性检查 |
 | US-5.5 | 模板引擎基础设施 | ✅ 已实现 | Handlebars 风格 Parser + Text/SQL Renderer |
 | US-06 | 管理服务 Token | ❌ V1 暂缓 | 统一在应用层认证，MCP 模块不单独设计 |
-| US-07 | 调试 Tool 调用 | ❌ 未实现 | 前端占位按钮，后端无接口 |
+| US-07 | 调试 Tool 调用 | ✅ 已实现 | 工具测试弹窗、4 种 Executor、scope 校验、异常处理、前端结果渲染 |
 | US-08 | 发布与停用 MCP 服务 | ❌ 未实现 | 前端占位按钮（comingSoon），无后端 publish/disable/enable 接口 |
 | US-09 | 查看服务调用日志 | ❌ 未实现 | 无 `mcp_audit_log` 表和对应接口 |
 | US-10 | 删除 MCP 服务 | ❌ 未实现 | 列表页和详情页有删除按钮但仅弹 info（comingSoon），无后端接口 |
@@ -557,6 +776,7 @@ mcpService.prompt:
 - [US-04 需求文档](../prd/us/US-04.md)（暂缓）
 - [US-05 需求文档](../prd/us/US-05.md)
 - [US-5.5 需求文档](../prd/us/US-5.5.md)
+- [US-07 需求文档](../prd/us/US-07.md)
 - [MCP Builder PRD](../prd/2026-05-11-mcp-builder-prd.md)
 - [US-03 实施计划](../superpowers/plans/2026-05-21-us-03-mcp-tool.md)
 - [SQL 分析工具设计](../superpowers/specs/2026-06-19-sql-analyzer-design.md)
