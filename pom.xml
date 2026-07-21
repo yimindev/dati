@@ -23,6 +23,8 @@
         <spring-ai.version>1.0.0</spring-ai.version>
         <jjwt.version>0.12.6</jjwt.version>
         <jsqlparser.version>5.1</jsqlparser.version>
+        <springdoc.version>2.8.17</springdoc.version>
+        <springdoc-plugin.version>1.4</springdoc-plugin.version>
     </properties>
 
     <dependencyManagement>
@@ -53,6 +55,11 @@
                 <groupId>com.github.jsqlparser</groupId>
                 <artifactId>jsqlparser</artifactId>
                 <version>${jsqlparser.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.springdoc</groupId>
+                <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+                <version>${springdoc.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
