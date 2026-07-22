@@ -1,0 +1,141 @@
+# 待修复问题清单
+# Agent 跑完 E2E 测试后自动维护此文件
+
+bugs:
+  - id: BUG-001
+    title: 删除不存在数据源返回 200 而非 404
+    module: 数据源管理
+    source_case: TC-DS-008
+    severity: medium
+    found_at: 2026-07-22
+    description: |
+      DELETE /v1/data-sources/{id} 对不存在的 UUID 返回 200，
+      客户端无法区分「已删除」和「不存在」。应返回 404。
+
+  - id: BUG-002
+    title: 数据源列表不显示创建人/修改人名称
+    module: 数据源管理
+    source_case: TC-DS-001
+    severity: low
+    found_at: 2026-07-22
+    description: |
+      created_user_name / updated_user_name 始终为 null，
+      前端无法展示创建人和修改人信息。
+
+  - id: BUG-003
+    title: test-connection 对不可达地址无超时控制
+    module: 数据源管理
+    source_case: TC-DS-002
+    severity: medium
+    found_at: 2026-07-22
+    description: |
+      测试不可达地址（192.0.2.1:9999）的连接时，耗时约 50 秒才返回 false。
+      应设置 JDBC 连接超时（如 10 秒），提升用户体验。
+
+  - id: BUG-009
+    title: MCP 服务无 DELETE 端点
+    module: MCP 服务管理
+    source_case: TC-MCP-001
+    severity: high
+    found_at: 2026-07-23
+    description: |
+      McpServiceController 没有 @DeleteMapping，所有 DELETE /v1/mcp-services/{id} 请求返回 500。
+      应实现删除端点和对应业务逻辑（考虑级联删除 prompts、custom tools、data scopes）。
+
+  - id: BUG-010
+    title: MCP 服务详情/列表不显示创建人/修改人名称
+    module: MCP 服务管理
+    source_case: TC-MCP-001
+    severity: low
+    found_at: 2026-07-23
+    description: |
+      McpServiceVO.created_user_name / updated_user_name 始终为 null，
+      与 BUG-002（数据源）、BUG-005（主题）、BUG-007（术语）为同一类问题。
+      前端无法展示创建人和修改人信息。
+
+  - id: BUG-011
+    title: 请求体字段名与 SNAKE_CASE 命名策略不匹配导致 NPE
+    module: MCP 服务管理
+    source_case: TC-MCP-002
+    severity: high
+    found_at: 2026-07-23
+    description: |
+      PUT /v1/mcp-services/{id}/data-scope 中，Jackson 因 SNAKE_CASE 策略将
+      `scopeType` 解析为 `scope_type`，但 controller 代码使用 `item.getScopeType()`
+      获取 null 值，导致 McpDataScopeType.valueOf(null) 抛出 NPE。
+      请求 body 必须使用 snake_case 字段名，但无文档提示，易出错。
+
+  - id: BUG-012
+    title: Custom Tool 更新时按 toolType 路由到错误分支
+    module: MCP 工具管理
+    source_case: TC-MCP-004
+    severity: medium
+    found_at: 2026-07-23
+    description: |
+      McpToolController.updateTool() 根据 request.getToolType().isPrebuilt() 判断路由，
+      但 custom tool 也可以使用预置类型（如 SEARCH_METADATA）。
+      当 custom tool 使用预置类型时，更新走入「更新 prebuilt 配置」分支，
+      custom tool 的 description 等字段不会被更新。应基于 tool 来源判断。
+
+  - id: BUG-013
+    title: PARAMETERIZED_SQL 工具测试时 config 为空抛 NPE
+    module: MCP 工具管理
+    source_case: TC-MCP-005
+    severity: medium
+    found_at: 2026-07-23
+    description: |
+      ParameterizedSqlExecutor.execute() 直接调用 config.getSqlTemplate() 未做 null 检查，
+      当创建的 PARAMETERIZED_SQL 类型 tool 没有提供完整 config 时，
+      templateParser.parse(null) 抛出 NPE。应返回明确的参数校验错误。
+
+  - id: BUG-006
+    title: page=0 导致所有列表接口返回 500
+    module: 通用
+    source_case: TC-TERM-001
+    severity: high
+    found_at: 2026-07-22
+    description: |
+      所有列表接口（/v1/subjects、/v1/subjects/{id}/terms、/v1/data-sources 等）
+      传 page=0 时返回 500 Internal Server Error，传 page=1 正常。
+      分页参数应从 0 开始（Spring Pageable 惯例），且前端默认传 page=0。
+
+  - id: BUG-007
+    title: 术语列表/详情不显示创建人/修改人名称
+    module: 术语管理
+    source_case: TC-TERM-001
+    severity: low
+    found_at: 2026-07-22
+    description: |
+      术语（Term）的 created_user_name / updated_user_name / created_by / updated_by
+      全部为 null，与 BUG-002（数据源）、BUG-005（主题）为同一类问题。
+
+  - id: BUG-008
+    title: 术语 relations 字段无关联时为 null 而非空数组
+    module: 术语管理
+    source_case: TC-TERM-002
+    severity: low
+    found_at: 2026-07-22
+    description: |
+      TermVO.relations 在无关联关系时返回 null，而非 []。
+      前端遍历时若未做 null 检查会报错。应始终返回数组。
+
+  - id: BUG-004
+    title: 主题部分更新（只传 description）导致 500
+    module: 主题管理
+    source_case: TC-SUBJ-001
+    severity: medium
+    found_at: 2026-07-22
+    description: |
+      PUT /v1/subjects/{id} 只传 description 字段时返回 500 Internal Server Error。
+      必须同时传 name 才能更新。UpdateSubjectRequest 的所有字段都是 optional，
+      应支持部分更新。
+
+  - id: BUG-005
+    title: 主题列表/详情不显示创建人/修改人名称
+    module: 主题管理
+    source_case: TC-SUBJ-001
+    severity: low
+    found_at: 2026-07-22
+    description: |
+      主题列表和详情中 created_user_name / updated_user_name / created_by / updated_by
+      全部为 null，前端无法展示创建人和修改人信息。与 BUG-002 为同一类问题。

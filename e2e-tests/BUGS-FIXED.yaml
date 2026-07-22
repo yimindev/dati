@@ -1,0 +1,4 @@
+# 已修复问题存档
+# 问题修复后从 BUGS.yaml 移入此处。
+# 若已修复的问题再次复现，必须从本文件移回 BUGS.yaml 并标记 REGRESSION。
+bugs: []

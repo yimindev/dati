@@ -27,7 +27,6 @@ target/
 # H2 Database files
 *.mv.db
 *.trace.db
-/.agents/skills/
 /.superpowers/
 /.playwright-cli/
 /design/
@@ -36,5 +35,4 @@ target/
 /.project
 /.settings/org.eclipse.core.resources.prefs
 /.settings/org.eclipse.m2e.core.prefs
-/frontend/public/docs/
-/docs/user-guide/.vitepress/cache/
+/e2e-tests/reports/

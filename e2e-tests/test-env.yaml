@@ -1,0 +1,29 @@
+# E2E 测试环境配置
+# Agent 启动测试时的精确参数参考
+
+server:
+  base_url: "http://localhost:8085"
+  working_directory: "/Users/zhangyimin/IdeaProjects/dati"
+  start_command: "mvn -f backend/pom.xml spring-boot:run -Dspring-boot.run.workingDirectory=/Users/zhangyimin/IdeaProjects/dati"
+  ready_signal: "Started DatIApplication"
+
+auth:
+  register_endpoint: POST /v1/auth/register
+  login_endpoint: POST /v1/auth/login
+  token_header: "Authorization: Bearer"
+
+conventions:
+  username_pattern: "qa-{timestamp}-{random}"
+  body_format: snake_case
+  idempotency:
+    register_duplicate: warn  # 注册到已存在的用户时，记 warn，不报失败
+
+external_services:
+  elasticsearch:
+    uris: "http://localhost:9200"
+    username: "elastic"
+    password: "yimin123"
+  postgresql:
+    url: "jdbc:postgresql://localhost:5432/postgres"
+    username: "postgres"
+    password: "yimin123"

@@ -1,0 +1,22 @@
+# E2E 测试公共数据
+# 用例通过自然语言引用（如 "使用 test-data.yaml 中的 datasources.postgres_local"）
+
+users:
+  qa_user:
+    name: "qa-e2e-tester"
+    password: "QaTest123456"
+    type: "local"
+
+datasources:
+  postgres_local:
+    name: "e2e-postgres-test"
+    type: "POSTGRESQL"
+    jdbc_url: "jdbc:postgresql://localhost:5432/postgres"
+    username: "postgres"
+    password: "yimin123"
+  bad_connection:
+    name: "e2e-bad-connection"
+    type: "MYSQL"
+    jdbc_url: "jdbc:mysql://192.0.2.1:9999/nothing"
+    username: "nobody"
+    password: "wrong"
