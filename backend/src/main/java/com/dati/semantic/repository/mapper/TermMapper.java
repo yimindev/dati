@@ -9,6 +9,14 @@ import java.util.List;
 
 public class TermMapper {
 
+    public static TermPO toPO(Term term) {
+        TermPO po = new TermPO();
+        MapperUtils.copyBaseResourceInfo(term, po);
+        po.setSubjectId(term.getSubjectId());
+        po.setAliases(term.getAliases() != null ? term.getAliases() : new ArrayList<>());
+        return po;
+    }
+
     public static TermPO toPO(String subjectId, String name, String description, List<String> aliases) {
         TermPO po = new TermPO();
         po.setSubjectId(subjectId);

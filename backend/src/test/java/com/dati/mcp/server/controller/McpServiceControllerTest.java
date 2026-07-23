@@ -1,6 +1,7 @@
 package com.dati.mcp.server.controller;
 
 import com.dati.TestFixtures;
+import com.dati.base.pojo.PageResponse;
 import com.dati.mcp.domain.model.McpDataScopeType;
 import com.dati.mcp.domain.model.McpService;
 import com.dati.mcp.domain.model.McpServiceDataScope;
@@ -141,7 +142,8 @@ class McpServiceControllerTest {
         McpServiceVO vo = new McpServiceVO();
         vo.setId(TestFixtures.TEST_MCP_SERVICE_ID);
         vo.setName("Test MCP Service");
-        when(mcpServiceAssembler.toMcpServiceVO(any())).thenReturn(vo);
+        PageResponse<McpServiceVO> pageResponse = PageResponse.of(new PageImpl<>(List.of(vo)));
+        when(mcpServiceAssembler.toPageResponse(any())).thenReturn(pageResponse);
 
         // when & then
         mockMvc.perform(get("/v1/mcp-services")
@@ -162,7 +164,8 @@ class McpServiceControllerTest {
         McpServiceVO vo = new McpServiceVO();
         vo.setId(TestFixtures.TEST_MCP_SERVICE_ID);
         vo.setName("Test MCP Service");
-        when(mcpServiceAssembler.toMcpServiceVO(any())).thenReturn(vo);
+        PageResponse<McpServiceVO> pageResponse = PageResponse.of(new PageImpl<>(List.of(vo)));
+        when(mcpServiceAssembler.toPageResponse(any())).thenReturn(pageResponse);
 
         // when & then
         mockMvc.perform(get("/v1/mcp-services")

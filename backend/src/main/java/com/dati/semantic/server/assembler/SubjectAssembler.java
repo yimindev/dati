@@ -1,9 +1,12 @@
 package com.dati.semantic.server.assembler;
 
 import com.dati.base.BaseAssembler;
+import com.dati.base.pojo.PageResponse;
 import com.dati.datasource.domain.service.DataSourceService;
 import com.dati.semantic.domain.model.Subject;
 import com.dati.semantic.server.pojo.vo.SubjectVO;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -28,13 +31,17 @@ public class SubjectAssembler extends BaseAssembler {
         }
         SubjectVO vo = mapFields(subject);
         fillDatasourceInfo(List.of(vo));
+        super.fillUserInfo(List.of(vo));
         return vo;
     }
 
-    public List<SubjectVO> toVOList(List<Subject> subjects) {
-        List<SubjectVO> vos = subjects.stream().map(this::mapFields).collect(Collectors.toList());
+    public PageResponse<SubjectVO> toPageResponse(Page<Subject> page) {
+        List<SubjectVO> vos = page.getContent().stream()
+                .map(this::mapFields)
+                .collect(Collectors.toList());
         fillDatasourceInfo(vos);
-        return vos;
+        super.fillUserInfo(vos);
+        return PageResponse.of(new PageImpl<>(vos, page.getPageable(), page.getTotalElements()));
     }
 
     private SubjectVO mapFields(Subject subject) {

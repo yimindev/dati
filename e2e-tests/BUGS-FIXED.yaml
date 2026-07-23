@@ -1,4 +1,57 @@
 # 已修复问题存档
 # 问题修复后从 BUGS.yaml 移入此处。
 # 若已修复的问题再次复现，必须从本文件移回 BUGS.yaml 并标记 REGRESSION。
-bugs: []
+bugs:
+  - id: BUG-002
+    title: 数据源列表不显示创建人/修改人名称
+    module: 数据源管理
+    severity: low
+    fixed_at: 2026-07-23
+    description: |
+      created_user_name / updated_user_name 始终为 null。
+    root_cause: |
+      BaseAssembler.fillUserInfo() 从未被调用，所有模块 Model→VO 转换后均遗漏。
+    fix: |
+      1. 各 Assembler 统一为内部 mapFields + toVO/toPageResponse(Page) 模式，
+         toPageResponse 批量调用 fillUserInfo（1 次 DB 查询）
+      2. Controller 列表/详情端点全部委托 Assembler.toPageResponse/toVO
+
+  - id: BUG-005
+    title: 主题列表/详情不显示创建人/修改人名称
+    module: 主题管理
+    severity: low
+    fixed_at: 2026-07-23
+    description: |
+      主题 created_user_name / updated_user_name / created_by / updated_by 全为 null。
+    root_cause: |
+      1. SubjectService 创建/更新时未设置 createdBy/updatedBy
+      2. fillUserInfo() 未被调用
+    fix: |
+      与 DataSource/McpService 模式统一：Controller 构建 Model → fillUsersFromRequest →
+      Mapper.toPO 拷全部字段（含审计字段）→ Service 不碰 RequestContext。
+      SubjectAssembler 增加 toPageResponse/toVO 调用 fillUserInfo。
+
+  - id: BUG-007
+    title: 术语列表/详情不显示创建人/修改人名称
+    module: 术语管理
+    severity: low
+    fixed_at: 2026-07-23
+    description: |
+      术语 created_user_name / updated_user_name / created_by / updated_by 全为 null。
+    root_cause: |
+      同 BUG-005：TermService 创建时未设审计字段 + fillUserInfo 未调用。
+    fix: |
+      同 BUG-005：统一为 Controller 设审计字段 → Mapper 拷 → Service 不碰 RequestContext。
+      TermAssembler 增加 toPageResponse/toVO 调用 fillUserInfo。
+
+  - id: BUG-010
+    title: MCP 服务详情/列表不显示创建人/修改人名称
+    module: MCP 服务管理
+    severity: low
+    fixed_at: 2026-07-23
+    description: |
+      McpServiceVO.created_user_name / updated_user_name 始终为 null。
+    root_cause: |
+      同 BUG-002：fillUserInfo() 未被调用。
+    fix: |
+      McpServiceAssembler 增加 toPageResponse/toVO 调用 fillUserInfo。

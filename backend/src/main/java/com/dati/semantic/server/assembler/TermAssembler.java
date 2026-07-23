@@ -1,14 +1,18 @@
 package com.dati.semantic.server.assembler;
 
 import com.dati.base.BaseAssembler;
+import com.dati.base.pojo.PageResponse;
 import com.dati.semantic.domain.model.Term;
 import com.dati.semantic.domain.model.TermRelation;
 import com.dati.semantic.server.pojo.vo.TermRelationVO;
 import com.dati.semantic.server.pojo.vo.TermVO;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Component
 public class TermAssembler extends BaseAssembler {
@@ -17,10 +21,8 @@ public class TermAssembler extends BaseAssembler {
         if (term == null) {
             return null;
         }
-        TermVO vo = new TermVO();
-        super.copyBaseInfo(term, vo);
-        vo.setSubjectId(term.getSubjectId());
-        vo.setAliases(term.getAliases() != null ? term.getAliases() : new ArrayList<>());
+        TermVO vo = mapFields(term);
+        super.fillUserInfo(List.of(vo));
         return vo;
     }
 
@@ -32,6 +34,14 @@ public class TermAssembler extends BaseAssembler {
                     .toList());
         }
         return vo;
+    }
+
+    public PageResponse<TermVO> toPageResponse(Page<Term> page) {
+        List<TermVO> vos = page.getContent().stream()
+                .map(this::mapFields)
+                .collect(Collectors.toList());
+        super.fillUserInfo(vos);
+        return PageResponse.of(new PageImpl<>(vos, page.getPageable(), page.getTotalElements()));
     }
 
     public TermRelationVO toRelationVO(TermRelation relation) {
@@ -47,5 +57,13 @@ public class TermAssembler extends BaseAssembler {
                 .schema(relation.getSchema())
                 .fieldName(relation.getFieldName())
                 .build();
+    }
+
+    private TermVO mapFields(Term term) {
+        TermVO vo = new TermVO();
+        super.copyBaseInfo(term, vo);
+        vo.setSubjectId(term.getSubjectId());
+        vo.setAliases(term.getAliases() != null ? term.getAliases() : new ArrayList<>());
+        return vo;
     }
 }

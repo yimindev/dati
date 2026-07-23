@@ -59,7 +59,11 @@ class TermServiceTest {
 
         when(termDAO.save(any(TermPO.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        termService.createTerm(subjectId, name, description, List.of());
+        com.dati.semantic.domain.model.Term model = new com.dati.semantic.domain.model.Term();
+        model.setSubjectId(subjectId);
+        model.setName(name);
+        model.setDescription(description);
+        termService.createTerm(model);
 
         ArgumentCaptor<TermPO> termCaptor = ArgumentCaptor.forClass(TermPO.class);
         verify(termDAO).save(termCaptor.capture());

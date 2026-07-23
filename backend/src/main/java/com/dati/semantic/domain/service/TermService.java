@@ -55,11 +55,14 @@ public class TermService {
     }
 
     @Transactional
-    public Term createTerm(String subjectId, String name, String description, List<String> aliases) {
-        TermPO termPO = TermMapper.toPO(subjectId, name, description, aliases);
+    public Term createTerm(Term term) {
+        TermPO termPO = TermMapper.toPO(term);
         termDAO.save(termPO);
 
         String id = termPO.getId();
+        String name = term.getName();
+        String description = term.getDescription();
+        List<String> aliases = term.getAliases();
 
         List<String> keywords = new java.util.ArrayList<>();
         keywords.add(name);
@@ -72,7 +75,7 @@ public class TermService {
                 .type(SemanticEntityType.TERM)
                 .keywords(keywords.stream().distinct().toList())
                 .description(description)
-                .entity(EntityReference.builder().subjectId(subjectId).build())
+                .entity(EntityReference.builder().subjectId(term.getSubjectId()).build())
                 .build();
         semanticIndexService.save(doc);
 
@@ -80,17 +83,27 @@ public class TermService {
     }
 
     @Transactional
-    public Term updateTerm(String id, String name, String description, List<String> aliases) {
+    public Term updateTerm(String id, Term term) {
         TermPO termPO = termDAO.findById(id)
                 .orElseThrow(() -> new DatiException(ErrorCode.SM_TERM_NOT_FOUND, id));
 
-        termPO.setName(name);
-        termPO.setDescription(description);
-        termPO.setAliases(aliases != null ? aliases : new java.util.ArrayList<>());
+        if (term.getName() != null) {
+            termPO.setName(term.getName());
+        }
+        if (term.getDescription() != null) {
+            termPO.setDescription(term.getDescription());
+        }
+        if (term.getAliases() != null) {
+            termPO.setAliases(term.getAliases());
+        }
+        if (term.getUpdatedBy() != null) {
+            termPO.setUpdatedBy(term.getUpdatedBy());
+        }
         termDAO.save(termPO);
 
         List<String> keywords = new java.util.ArrayList<>();
-        keywords.add(name);
+        keywords.add(termPO.getName());
+        List<String> aliases = termPO.getAliases();
         if (aliases != null) {
             keywords.addAll(aliases);
         }
@@ -99,7 +112,7 @@ public class TermService {
                 .id("term:" + id)
                 .type(SemanticEntityType.TERM)
                 .keywords(keywords.stream().distinct().toList())
-                .description(description)
+                .description(termPO.getDescription())
                 .entity(EntityReference.builder().subjectId(termPO.getSubjectId()).build())
                 .build();
         semanticIndexService.save(doc);

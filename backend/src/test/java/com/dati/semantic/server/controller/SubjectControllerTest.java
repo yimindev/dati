@@ -1,5 +1,6 @@
 package com.dati.semantic.server.controller;
 
+import com.dati.base.pojo.PageResponse;
 import com.dati.datasource.domain.model.TableInfo;
 import com.dati.datasource.server.assembler.TableAssembler;
 import com.dati.datasource.server.pojo.TableInfoVO;
@@ -27,7 +28,6 @@ import java.time.Instant;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -94,7 +94,8 @@ class SubjectControllerTest {
         subjectVO.setCreatedAt(Instant.now());
         subjectVO.setUpdatedAt(Instant.now());
 
-        when(subjectService.createSubject(anyString(), anyString(), anyString(), any())).thenReturn(subject);
+        doNothing().when(subjectAssembler).fillUsersFromRequest(any());
+        when(subjectService.createSubject(any(Subject.class))).thenReturn(subject);
 
         mockMvc.perform(post("/v1/subjects")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -193,7 +194,8 @@ class SubjectControllerTest {
 
         Page<Subject> subjectPage = new PageImpl<>(List.of(subject));
         when(subjectService.getSubjects(any(), any())).thenReturn(subjectPage);
-        when(subjectAssembler.toVOList(any())).thenReturn(List.of(subjectVO));
+        PageResponse<SubjectVO> pageResponse = PageResponse.of(new PageImpl<>(List.of(subjectVO)));
+        when(subjectAssembler.toPageResponse(any())).thenReturn(pageResponse);
 
         mockMvc.perform(get("/v1/subjects?keyword=test"))
             .andExpect(status().isOk())

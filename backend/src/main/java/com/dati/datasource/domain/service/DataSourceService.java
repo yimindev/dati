@@ -17,6 +17,7 @@ import com.dati.semantic.domain.service.SemanticIndexService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Collection;
 import java.util.List;
@@ -49,6 +50,7 @@ public class DataSourceService {
         return dataSourcePO.getId();
     }
 
+    @Transactional
     public void updateDataSource(String id, DataSource dataSource) {
         DataSourcePO po = dataSourceDAO.findById(id).orElseThrow();
         if (dataSource.getName() != null) {
@@ -72,9 +74,13 @@ public class DataSourceService {
         if (dataSource.getDefaultSchema() != null) {
             po.setDefaultSchema(dataSource.getDefaultSchema());
         }
+        if (dataSource.getUpdatedBy() != null) {
+            po.setUpdatedBy(dataSource.getUpdatedBy());
+        }
         dataSourceDAO.save(po);
     }
 
+    @Transactional
     public void deleteDataSource(String id) {
         Optional<DataSourcePO> dataSourcePOOptional = dataSourceDAO.findById(id);
         if (dataSourcePOOptional.isEmpty()) {

@@ -1,5 +1,6 @@
 package com.dati.semantic.domain.service;
 
+import com.dati.TestFixtures;
 import com.dati.base.exception.DatiException;
 import com.dati.datasource.repository.dao.TableInfoDAO;
 import com.dati.datasource.repository.po.TableInfoPO;
@@ -89,7 +90,13 @@ class SubjectServiceTest {
             return po;
         });
 
-        Subject result = subjectService.createSubject(name, description, datasourceId, List.of());
+        Subject model = new Subject();
+        model.setName(name);
+        model.setDescription(description);
+        model.setDatasourceId(datasourceId);
+        model.setCreatedBy(TestFixtures.TEST_USER_ID);
+        model.setUpdatedBy(TestFixtures.TEST_USER_ID);
+        Subject result = subjectService.createSubject(model);
 
         assertThat(result).isNotNull();
         assertThat(result.getId()).isNotNull();
@@ -119,7 +126,11 @@ class SubjectServiceTest {
         when(subjectDAO.findById(id)).thenReturn(Optional.of(sampleSubjectPO));
         when(subjectDAO.save(any(SubjectPO.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        Subject result = subjectService.updateSubject(id, newName, newDescription, List.of());
+        Subject model = new Subject();
+        model.setName(newName);
+        model.setDescription(newDescription);
+        model.setUpdatedBy(TestFixtures.TEST_USER_ID);
+        Subject result = subjectService.updateSubject(id, model);
 
         assertThat(result).isNotNull();
         assertThat(result.getName()).isEqualTo(newName);
@@ -141,7 +152,10 @@ class SubjectServiceTest {
         String id = "non-existent";
         when(subjectDAO.findById(id)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> subjectService.updateSubject(id, "name", "desc", List.of()))
+        Subject model = new Subject();
+        model.setName("name");
+        model.setDescription("desc");
+        assertThatThrownBy(() -> subjectService.updateSubject(id, model))
                 .isInstanceOf(DatiException.class)
                 .hasMessageContaining("Subject not found");
     }

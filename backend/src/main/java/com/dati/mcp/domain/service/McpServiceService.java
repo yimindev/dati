@@ -51,6 +51,9 @@ public class McpServiceService {
         if (service.getDescription() != null) {
             po.setDescription(service.getDescription());
         }
+        if (service.getUpdatedBy() != null) {
+            po.setUpdatedBy(service.getUpdatedBy());
+        }
         mcpServiceDAO.save(po);
     }
 

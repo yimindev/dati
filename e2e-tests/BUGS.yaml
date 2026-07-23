@@ -12,16 +12,6 @@ bugs:
       DELETE /v1/data-sources/{id} 对不存在的 UUID 返回 200，
       客户端无法区分「已删除」和「不存在」。应返回 404。
 
-  - id: BUG-002
-    title: 数据源列表不显示创建人/修改人名称
-    module: 数据源管理
-    source_case: TC-DS-001
-    severity: low
-    found_at: 2026-07-22
-    description: |
-      created_user_name / updated_user_name 始终为 null，
-      前端无法展示创建人和修改人信息。
-
   - id: BUG-003
     title: test-connection 对不可达地址无超时控制
     module: 数据源管理
@@ -41,17 +31,6 @@ bugs:
     description: |
       McpServiceController 没有 @DeleteMapping，所有 DELETE /v1/mcp-services/{id} 请求返回 500。
       应实现删除端点和对应业务逻辑（考虑级联删除 prompts、custom tools、data scopes）。
-
-  - id: BUG-010
-    title: MCP 服务详情/列表不显示创建人/修改人名称
-    module: MCP 服务管理
-    source_case: TC-MCP-001
-    severity: low
-    found_at: 2026-07-23
-    description: |
-      McpServiceVO.created_user_name / updated_user_name 始终为 null，
-      与 BUG-002（数据源）、BUG-005（主题）、BUG-007（术语）为同一类问题。
-      前端无法展示创建人和修改人信息。
 
   - id: BUG-011
     title: 请求体字段名与 SNAKE_CASE 命名策略不匹配导致 NPE
@@ -99,16 +78,6 @@ bugs:
       传 page=0 时返回 500 Internal Server Error，传 page=1 正常。
       分页参数应从 0 开始（Spring Pageable 惯例），且前端默认传 page=0。
 
-  - id: BUG-007
-    title: 术语列表/详情不显示创建人/修改人名称
-    module: 术语管理
-    source_case: TC-TERM-001
-    severity: low
-    found_at: 2026-07-22
-    description: |
-      术语（Term）的 created_user_name / updated_user_name / created_by / updated_by
-      全部为 null，与 BUG-002（数据源）、BUG-005（主题）为同一类问题。
-
   - id: BUG-008
     title: 术语 relations 字段无关联时为 null 而非空数组
     module: 术语管理
@@ -130,12 +99,4 @@ bugs:
       必须同时传 name 才能更新。UpdateSubjectRequest 的所有字段都是 optional，
       应支持部分更新。
 
-  - id: BUG-005
-    title: 主题列表/详情不显示创建人/修改人名称
-    module: 主题管理
-    source_case: TC-SUBJ-001
-    severity: low
-    found_at: 2026-07-22
-    description: |
-      主题列表和详情中 created_user_name / updated_user_name / created_by / updated_by
-      全部为 null，前端无法展示创建人和修改人信息。与 BUG-002 为同一类问题。
+

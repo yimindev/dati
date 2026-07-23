@@ -17,7 +17,6 @@ import com.dati.mcp.server.pojo.DataScopeResponse;
 import com.dati.mcp.server.pojo.McpServiceVO;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Sort;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -76,9 +75,8 @@ public class McpServiceController {
             @RequestParam(name = "keyword", required = false) String keyword,
             @RequestParam(name = "status", required = false) McpServiceStatus status) {
         Sort sortBy = Sort.by(Sort.Direction.DESC, BasePO.Fields.createdAt);
-        Page<McpServiceVO> voPage = mcpServiceService.listMcpServices(keyword, status, pageReq.toPageRequest().withSort(sortBy))
-                .map(mcpServiceAssembler::toMcpServiceVO);
-        return PageResponse.of(voPage);
+        return mcpServiceAssembler.toPageResponse(
+                mcpServiceService.listMcpServices(keyword, status, pageReq.toPageRequest().withSort(sortBy)));
     }
 
     @GetMapping("/{id}/data-scope")

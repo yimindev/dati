@@ -15,7 +15,6 @@ import com.dati.semantic.server.pojo.vo.SubjectAvailableTableVO;
 import com.dati.semantic.server.pojo.vo.SubjectVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Sort;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -42,18 +41,23 @@ public class SubjectController {
 
     @PostMapping
     public IdResponse createSubject(@Valid @RequestBody CreateSubjectRequest request) {
-        Subject subject = subjectService.createSubject(
-                request.getName(),
-                request.getDescription(),
-                request.getDatasourceId(),
-                request.getAliases()
-        );
-        return new IdResponse(subject.getId());
+        Subject subject = new Subject();
+        subject.setName(request.getName());
+        subject.setDescription(request.getDescription());
+        subject.setDatasourceId(request.getDatasourceId());
+        subject.setAliases(request.getAliases());
+        subjectAssembler.fillUsersFromRequest(subject);
+        return new IdResponse(subjectService.createSubject(subject).getId());
     }
 
     @PutMapping("/{id}")
     public IdResponse updateSubject(@PathVariable String id, @Valid @RequestBody UpdateSubjectRequest request) {
-        subjectService.updateSubject(id, request.getName(), request.getDescription(), request.getAliases());
+        Subject subject = new Subject();
+        subject.setName(request.getName());
+        subject.setDescription(request.getDescription());
+        subject.setAliases(request.getAliases());
+        subjectAssembler.fillUpdateUserFromRequest(subject);
+        subjectService.updateSubject(id, subject);
         return new IdResponse(id);
     }
 
@@ -102,8 +106,7 @@ public class SubjectController {
     @GetMapping
     public PageResponse<SubjectVO> getSubjects(PageReq pageReq, @RequestParam(required = false) String keyword) {
         Sort sortBy = Sort.by(Sort.Direction.DESC, "updatedAt");
-        Page<Subject> subjectPage = subjectService.getSubjects(keyword, pageReq.toPageRequest().withSort(sortBy));
-        List<SubjectVO> vos = subjectAssembler.toVOList(subjectPage.getContent());
-        return PageResponse.of(new PageImpl<>(vos, subjectPage.getPageable(), subjectPage.getTotalElements()));
+        return subjectAssembler.toPageResponse(
+                subjectService.getSubjects(keyword, pageReq.toPageRequest().withSort(sortBy)));
     }
 }

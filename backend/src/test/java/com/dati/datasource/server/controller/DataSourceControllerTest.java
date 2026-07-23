@@ -1,6 +1,7 @@
 package com.dati.datasource.server.controller;
 
 import com.dati.TestFixtures;
+import com.dati.base.pojo.PageResponse;
 import com.dati.datasource.domain.model.DataSource;
 import com.dati.datasource.domain.service.DataSourceService;
 import com.dati.datasource.domain.service.JdbcMetaService;
@@ -143,11 +144,12 @@ class DataSourceControllerTest {
         // given
         Page<DataSource> page = new PageImpl<>(List.of(testDataSource));
         when(dataSourceService.listDataSources(any(), any())).thenReturn(page);
-        
+
         DatasourceVO vo = new DatasourceVO();
         vo.setId(TestFixtures.TEST_DATASOURCE_ID);
         vo.setName("Test MySQL DataSource");
-        when(dsAssembler.toDatasourceVO(any())).thenReturn(vo);
+        PageResponse<DatasourceVO> pageResponse = PageResponse.of(new PageImpl<>(List.of(vo)));
+        when(dsAssembler.toPageResponse(any())).thenReturn(pageResponse);
 
         // when & then
         mockMvc.perform(get("/v1/data-sources")

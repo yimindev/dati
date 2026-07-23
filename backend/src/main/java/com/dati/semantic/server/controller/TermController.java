@@ -12,7 +12,6 @@ import com.dati.semantic.server.pojo.request.UpdateTermRequest;
 import com.dati.semantic.server.pojo.vo.TermVO;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Sort;
 import org.springframework.web.bind.annotation.*;
 
@@ -26,13 +25,23 @@ public class TermController {
 
     @PostMapping("/subjects/{subjectId}/terms")
     public IdResponse createTerm(@PathVariable String subjectId, @Valid @RequestBody CreateTermRequest request) {
-        Term term = termService.createTerm(subjectId, request.getName(), request.getDescription(), request.getAliases());
-        return new IdResponse(term.getId());
+        Term term = new Term();
+        term.setSubjectId(subjectId);
+        term.setName(request.getName());
+        term.setDescription(request.getDescription());
+        term.setAliases(request.getAliases());
+        termAssembler.fillUsersFromRequest(term);
+        return new IdResponse(termService.createTerm(term).getId());
     }
 
     @PutMapping("/terms/{id}")
     public IdResponse updateTerm(@PathVariable String id, @Valid @RequestBody UpdateTermRequest request) {
-        termService.updateTerm(id, request.getName(), request.getDescription(), request.getAliases());
+        Term term = new Term();
+        term.setName(request.getName());
+        term.setDescription(request.getDescription());
+        term.setAliases(request.getAliases());
+        termAssembler.fillUpdateUserFromRequest(term);
+        termService.updateTerm(id, term);
         return new IdResponse(id);
     }
 
@@ -54,10 +63,8 @@ public class TermController {
             PageReq pageReq,
             @RequestParam(required = false) String keyword) {
         Sort sortBy = Sort.by(Sort.Direction.DESC, "updatedAt");
-        Page<TermVO> termVOPage = termService
-                .getTermsBySubject(subjectId, keyword, pageReq.toPageRequest().withSort(sortBy))
-                .map(termAssembler::toVO);
-        return PageResponse.of(termVOPage);
+        return termAssembler.toPageResponse(
+                termService.getTermsBySubject(subjectId, keyword, pageReq.toPageRequest().withSort(sortBy)));
     }
 
     @PostMapping("/terms/{id}/relations")

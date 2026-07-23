@@ -16,7 +16,6 @@ import com.dati.db.Column;
 import com.dati.db.Table;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Sort;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -85,9 +84,8 @@ public class DataSourceController {
     @GetMapping
     public PageResponse<DatasourceVO> listDataSources(PageReq pageReq, @RequestParam(name = "keyword", required = false) String keyword) {
         Sort sortBy = Sort.by(Sort.Direction.DESC, BasePO.Fields.createdAt);
-        Page<DatasourceVO> datasourceVOPage = dataSourceService.listDataSources(keyword, pageReq.toPageRequest().withSort(sortBy))
-                .map(dsAssembler::toDatasourceVO);
-        return PageResponse.of(datasourceVOPage);
+        return dsAssembler.toPageResponse(
+                dataSourceService.listDataSources(keyword, pageReq.toPageRequest().withSort(sortBy)));
     }
 
     @GetMapping("/{id}")

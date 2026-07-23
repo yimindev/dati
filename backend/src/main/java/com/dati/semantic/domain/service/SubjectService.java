@@ -47,15 +47,14 @@ public class SubjectService {
     }
 
     @Transactional
-    public Subject createSubject(String name, String description, String datasourceId, List<String> aliases) {
-        SubjectPO subjectPO = new SubjectPO();
-        subjectPO.setName(name);
-        subjectPO.setDescription(description);
-        subjectPO.setDatasourceId(datasourceId);
-        subjectPO.setAliases(aliases != null ? aliases : new ArrayList<>());
+    public Subject createSubject(Subject subject) {
+        SubjectPO subjectPO = SubjectMapper.toPO(subject);
         subjectDAO.save(subjectPO);
 
         String id = subjectPO.getId();
+        String name = subject.getName();
+        String description = subject.getDescription();
+        List<String> aliases = subject.getAliases();
 
         List<String> keywords = new ArrayList<>();
         keywords.add(name);
@@ -76,17 +75,27 @@ public class SubjectService {
     }
 
     @Transactional
-    public Subject updateSubject(String id, String name, String description, List<String> aliases) {
+    public Subject updateSubject(String id, Subject subject) {
         SubjectPO subjectPO = subjectDAO.findById(id)
                 .orElseThrow(() -> new DatiException(ErrorCode.SM_SUBJECT_NOT_FOUND, id));
 
-        subjectPO.setName(name);
-        subjectPO.setDescription(description);
-        subjectPO.setAliases(aliases != null ? aliases : new ArrayList<>());
+        if (subject.getName() != null) {
+            subjectPO.setName(subject.getName());
+        }
+        if (subject.getDescription() != null) {
+            subjectPO.setDescription(subject.getDescription());
+        }
+        if (subject.getAliases() != null) {
+            subjectPO.setAliases(subject.getAliases());
+        }
+        if (subject.getUpdatedBy() != null) {
+            subjectPO.setUpdatedBy(subject.getUpdatedBy());
+        }
         subjectDAO.save(subjectPO);
 
         List<String> keywords = new ArrayList<>();
-        keywords.add(name);
+        keywords.add(subjectPO.getName());
+        List<String> aliases = subjectPO.getAliases();
         if (aliases != null) {
             keywords.addAll(aliases);
         }
@@ -95,7 +104,7 @@ public class SubjectService {
                 .id("subject:" + id)
                 .type(SemanticEntityType.SUBJECT)
                 .keywords(keywords.stream().distinct().toList())
-                .description(description)
+                .description(subjectPO.getDescription())
                 .entity(EntityReference.builder().subjectId(id).build())
                 .build();
         semanticIndexService.save(doc);

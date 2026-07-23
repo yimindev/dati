@@ -1,5 +1,6 @@
 package com.dati.semantic.server.controller;
 
+import com.dati.base.pojo.PageResponse;
 import com.dati.semantic.domain.model.Term;
 import com.dati.semantic.domain.model.TermRelation;
 import com.dati.semantic.domain.service.TermService;
@@ -75,7 +76,8 @@ class TermControllerTest {
         termVO.setCreatedAt(java.time.Instant.now());
         termVO.setUpdatedAt(java.time.Instant.now());
 
-        when(termService.createTerm(anyString(), anyString(), anyString(), any())).thenReturn(term);
+        doNothing().when(termAssembler).fillUsersFromRequest(any());
+        when(termService.createTerm(any(com.dati.semantic.domain.model.Term.class))).thenReturn(term);
 
         mockMvc.perform(post("/v1/subjects/subject-001/terms")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -167,7 +169,8 @@ class TermControllerTest {
         termVO.setCreatedAt(java.time.Instant.now());
         termVO.setUpdatedAt(java.time.Instant.now());
 
-        when(termService.updateTerm(anyString(), anyString(), anyString(), any())).thenReturn(term);
+        doNothing().when(termAssembler).fillUpdateUserFromRequest(any());
+        when(termService.updateTerm(anyString(), any(com.dati.semantic.domain.model.Term.class))).thenReturn(term);
 
         mockMvc.perform(put("/v1/terms/term-001")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -244,8 +247,9 @@ class TermControllerTest {
                 org.mockito.ArgumentMatchers.isNull(),
                 org.mockito.ArgumentMatchers.any()))
                 .thenReturn(termPage);
-        when(termAssembler.toVO(term1)).thenReturn(termVO1);
-        when(termAssembler.toVO(term2)).thenReturn(termVO2);
+        PageResponse<TermVO> pageResponse = PageResponse.of(
+                new PageImpl<>(java.util.List.of(termVO1, termVO2), PageRequest.of(0, 10), 2));
+        when(termAssembler.toPageResponse(any())).thenReturn(pageResponse);
 
         mockMvc.perform(get("/v1/subjects/subject-001/terms?page=1&size=10"))
                 .andExpect(status().isOk())
