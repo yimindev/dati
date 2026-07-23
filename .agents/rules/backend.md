@@ -26,28 +26,73 @@ PO (Persistence Object) ↔ Domain Model conversion:
 - Static methods only, stateless
 - Public API: `toPO(Model)` → new PO, `toModel(PO)` → Model
 - `copyProperties()` is **private** — used internally by `toPO()` only, never called from Service
-- Uses `MapperUtils.copyBaseInfo()` / `copyBaseResourceInfo()` to handle base fields
+- Uses `MapperUtils.copyBaseResourceInfo()` to copy all fields including audit fields (`createdBy`, `updatedBy`) from Model to PO
 - Handles encryption/decryption (e.g., `EncryptionUtils.encrypt()` for passwords)
-- Example: `DSMapper.toDataSourcePO()`, `DSMapper.toDataSource()`
+- Example: `SubjectMapper.toPO(subject)`, `DSMapper.toDataSource()`
+
+```java
+// Pattern: toPO copies everything including audit fields set by Controller
+public static SubjectPO toPO(Subject subject) {
+    SubjectPO po = new SubjectPO();
+    MapperUtils.copyBaseResourceInfo(subject, po);  // name, description, createdBy, updatedBy
+    po.setDatasourceId(subject.getDatasourceId());
+    po.setAliases(subject.getAliases());
+    return po;
+}
+```
 
 ### Assembler (server/assembler/)
 
-Domain Model ↔ VO conversion + request context enrichment:
+Domain Model ↔ VO conversion + user info enrichment:
 - Spring `@Component`, extends `BaseAssembler`
-- Converts Model to VO (e.g., `toDatasourceVO()`)
-- Enriches VO with user display names via `fillUserInfo()`
-- Fills audit user IDs into Domain Model via `fillUsersFromRequest()` / `fillUpdateUserFromRequest()` (called in Controller before passing to Service)
-- Example: `DSAssembler.toDatasourceVO()`, `DSAssembler.toDatasourceVOList()`
+- Internal `mapFields(model)` — pure field copy, no enrichment
+- `toVO(model)` — single item: `mapFields` + `fillUserInfo`
+- `toPageResponse(Page<model>)` — list: batch `mapFields` + batch `fillUserInfo` → `PageResponse<VO>`
+- `fillUsersFromRequest(model)` / `fillUpdateUserFromRequest(model)` — set `createdBy`/`updatedBy` from current user (called **by Controller** before passing to Service)
+
+```java
+// Internal — pure mapping
+private DatasourceVO mapFields(DataSource ds) { ... }
+
+// Public — single item with user names
+public DatasourceVO toDatasourceVO(DataSource ds) {
+    DatasourceVO vo = mapFields(ds);
+    super.fillUserInfo(List.of(vo));
+    return vo;
+}
+
+// Public — page with batch user name lookup (1 DB query for all rows)
+public PageResponse<DatasourceVO> toPageResponse(Page<DataSource> page) {
+    List<DatasourceVO> vos = page.getContent().stream().map(this::mapFields).toList();
+    super.fillUserInfo(vos);
+    return PageResponse.of(new PageImpl<>(vos, page.getPageable(), page.getTotalElements()));
+}
+```
 
 ## Service Layer Patterns
+
+### Audit Field Flow (all modules must follow)
+
+Audit fields (`createdBy`, `updatedBy`) flow from Controller → Model → Mapper → PO:
+
+```
+Controller:  build Model → fillUsersFromRequest(model)     // sets createdBy, updatedBy
+             service.createSubject(model)
+Service:     SubjectMapper.toPO(model)                      // copies all fields to PO
+             dao.save(po)
+```
+
+- **Controller** is responsible for setting audit fields via `assembler.fillUsersFromRequest(model)` before passing to Service
+- **Mapper.toPO()** uses `MapperUtils.copyBaseResourceInfo()` which copies `createdBy`/`updatedBy` along with other base fields
+- **Service** never calls `RequestContext.getUser()` — audit fields come from the Model passed in
 
 ### Create
 
 Convert Domain Model → PO via Mapper, then save:
 
 ```java
-McpCustomToolPO po = McpCustomToolMapper.toPO(tool);
-po = customToolDAO.save(po);
+SubjectPO po = SubjectMapper.toPO(subject);  // copies all fields including createdBy/updatedBy
+po = subjectDAO.save(po);
 return po.getId();
 ```
 
