@@ -10,6 +10,7 @@ import java.sql.SQLException;
 public class JdbcUtils {
 
     public static boolean testConnection(String jdbcUrl, String username, String password) {
+        DriverManager.setLoginTimeout(10);
         try (Connection ignored = DriverManager.getConnection(jdbcUrl, username, password)) {
             log.info("Database connection test successful");
             return true;

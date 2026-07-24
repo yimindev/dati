@@ -1,6 +1,8 @@
 package com.dati.datasource.domain.service;
 
 import com.dati.base.EncryptionUtils;
+import com.dati.base.exception.DatiException;
+import com.dati.base.exception.ErrorCode;
 import com.dati.common.StringUtils;
 import com.dati.datasource.domain.model.DataSource;
 import com.dati.datasource.repository.dao.ColumnInfoDAO;
@@ -84,7 +86,7 @@ public class DataSourceService {
     public void deleteDataSource(String id) {
         Optional<DataSourcePO> dataSourcePOOptional = dataSourceDAO.findById(id);
         if (dataSourcePOOptional.isEmpty()) {
-            return;
+            throw new DatiException(ErrorCode.DS_NOT_FOUND, id);
         }
         JdbcConnector jdbcConnector = new JdbcConnector(DSMapper.toDataSource(dataSourcePOOptional.get()));
         HikariPoolManager.close(jdbcConnector);

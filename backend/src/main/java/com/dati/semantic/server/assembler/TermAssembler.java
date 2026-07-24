@@ -28,7 +28,7 @@ public class TermAssembler extends BaseAssembler {
 
     public TermVO toVO(Term term, List<TermRelation> relations) {
         TermVO vo = toVO(term);
-        if (relations != null && !relations.isEmpty()) {
+        if (relations != null) {
             vo.setRelations(relations.stream()
                     .map(this::toRelationVO)
                     .toList());

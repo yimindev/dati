@@ -2,26 +2,6 @@
 # Agent 跑完 E2E 测试后自动维护此文件
 
 bugs:
-  - id: BUG-001
-    title: 删除不存在数据源返回 200 而非 404
-    module: 数据源管理
-    source_case: TC-DS-008
-    severity: medium
-    found_at: 2026-07-22
-    description: |
-      DELETE /v1/data-sources/{id} 对不存在的 UUID 返回 200，
-      客户端无法区分「已删除」和「不存在」。应返回 404。
-
-  - id: BUG-003
-    title: test-connection 对不可达地址无超时控制
-    module: 数据源管理
-    source_case: TC-DS-002
-    severity: medium
-    found_at: 2026-07-22
-    description: |
-      测试不可达地址（192.0.2.1:9999）的连接时，耗时约 50 秒才返回 false。
-      应设置 JDBC 连接超时（如 10 秒），提升用户体验。
-
   - id: BUG-009
     title: MCP 服务无 DELETE 端点
     module: MCP 服务管理
@@ -67,36 +47,15 @@ bugs:
       当创建的 PARAMETERIZED_SQL 类型 tool 没有提供完整 config 时，
       templateParser.parse(null) 抛出 NPE。应返回明确的参数校验错误。
 
-  - id: BUG-006
-    title: page=0 导致所有列表接口返回 500
-    module: 通用
-    source_case: TC-TERM-001
-    severity: high
-    found_at: 2026-07-22
-    description: |
-      所有列表接口（/v1/subjects、/v1/subjects/{id}/terms、/v1/data-sources 等）
-      传 page=0 时返回 500 Internal Server Error，传 page=1 正常。
-      分页参数应从 0 开始（Spring Pageable 惯例），且前端默认传 page=0。
-
-  - id: BUG-008
-    title: 术语 relations 字段无关联时为 null 而非空数组
-    module: 术语管理
-    source_case: TC-TERM-002
+  - id: BUG-014
+    title: PUT 更新数据源返回 id 为 null
+    module: 数据源管理
+    source_case: TC-DS-003
     severity: low
-    found_at: 2026-07-22
+    found_at: 2026-07-24
     description: |
-      TermVO.relations 在无关联关系时返回 null，而非 []。
-      前端遍历时若未做 null 检查会报错。应始终返回数组。
-
-  - id: BUG-004
-    title: 主题部分更新（只传 description）导致 500
-    module: 主题管理
-    source_case: TC-SUBJ-001
-    severity: medium
-    found_at: 2026-07-22
-    description: |
-      PUT /v1/subjects/{id} 只传 description 字段时返回 500 Internal Server Error。
-      必须同时传 name 才能更新。UpdateSubjectRequest 的所有字段都是 optional，
-      应支持部分更新。
+      PUT /v1/data-sources/{id} 更新成功后，响应中的 id 字段为 null 而非实际 ID。
+      虽然更新本身成功，但客户端无法从响应中确认操作作用于哪个资源。
+      应返回实际资源 ID。
 
 

@@ -15,6 +15,6 @@ public class TermVO extends BaseResourceVO {
 
     private List<String> aliases = new ArrayList<>();
 
-    private List<TermRelationVO> relations;
+    private List<TermRelationVO> relations = new ArrayList<>();
 
 }

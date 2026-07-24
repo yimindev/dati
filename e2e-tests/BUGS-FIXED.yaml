@@ -6,43 +6,50 @@ bugs:
     title: 数据源列表不显示创建人/修改人名称
     module: 数据源管理
     severity: low
-    fixed_at: 2026-07-23
+    fixed_at: 2026-07-24
     description: |
-      created_user_name / updated_user_name 始终为 null。
-    root_cause: |
-      BaseAssembler.fillUserInfo() 从未被调用，所有模块 Model→VO 转换后均遗漏。
-    fix: |
-      1. 各 Assembler 统一为内部 mapFields + toVO/toPageResponse(Page) 模式，
-         toPageResponse 批量调用 fillUserInfo（1 次 DB 查询）
-      2. Controller 列表/详情端点全部委托 Assembler.toPageResponse/toVO
+      created_user_name / updated_user_name 现已正确填充。
+      Controller → Assembler.toPageResponse/toVO → fillUserInfo 链路已打通。
+      同时修复 displayName 为 null 时降级到 username。
+
+  - id: BUG-003
+    title: test-connection 对不可达地址无超时控制
+    module: 数据源管理
+    severity: medium
+    fixed_at: 2026-07-24
+    description: |
+      JdbcUtils.testConnection 已添加 DriverManager.setLoginTimeout(10)，
+      不可达地址 10 秒准时返回 false。
 
   - id: BUG-005
     title: 主题列表/详情不显示创建人/修改人名称
     module: 主题管理
     severity: low
-    fixed_at: 2026-07-23
+    fixed_at: 2026-07-24
     description: |
-      主题 created_user_name / updated_user_name / created_by / updated_by 全为 null。
-    root_cause: |
-      1. SubjectService 创建/更新时未设置 createdBy/updatedBy
-      2. fillUserInfo() 未被调用
-    fix: |
-      与 DataSource/McpService 模式统一：Controller 构建 Model → fillUsersFromRequest →
-      Mapper.toPO 拷全部字段（含审计字段）→ Service 不碰 RequestContext。
-      SubjectAssembler 增加 toPageResponse/toVO 调用 fillUserInfo。
+      SubjectAssembler 增加 toPageResponse/toVO 调用 fillUserInfo，
+      created_user_name / updated_user_name 正常显示。
 
   - id: BUG-007
     title: 术语列表/详情不显示创建人/修改人名称
     module: 术语管理
     severity: low
-    fixed_at: 2026-07-23
+    fixed_at: 2026-07-24
     description: |
-      术语 created_user_name / updated_user_name / created_by / updated_by 全为 null。
-    root_cause: |
-      同 BUG-005：TermService 创建时未设审计字段 + fillUserInfo 未调用。
-    fix: |
-      同 BUG-005：统一为 Controller 设审计字段 → Mapper 拷 → Service 不碰 RequestContext。
-      TermAssembler 增加 toPageResponse/toVO 调用 fillUserInfo。
+      TermAssembler 增加 toPageResponse/toVO 调用 fillUserInfo，
+      created_user_name / updated_user_name 正常显示。
+
+  - id: BUG-001
+    title: 删除不存在数据源返回 200 而非 404
+    module: 数据源管理
+    severity: medium
+    fixed_at: 2026-07-24
+    description: |
+      DELETE /v1/data-sources/{id} 对不存在的 UUID 现正确返回 404，
+      错误码 DS002，信息 "Data source not found: {id}"。
+      E2E 测试 TC-DS-008 验证通过。
+
+
 
   - id: BUG-010
     title: MCP 服务详情/列表不显示创建人/修改人名称
