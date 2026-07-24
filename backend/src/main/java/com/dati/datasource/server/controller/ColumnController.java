@@ -5,6 +5,7 @@ import com.dati.base.exception.ErrorCode;
 import com.dati.base.pojo.IdResponse;
 import com.dati.base.pojo.PageReq;
 import com.dati.base.pojo.PageResponse;
+import jakarta.validation.Valid;
 import com.dati.datasource.domain.model.ColumnInfo;
 import com.dati.datasource.domain.service.ColumnService;
 import com.dati.datasource.domain.service.ColumnValueService;
@@ -45,7 +46,7 @@ public class ColumnController {
     @GetMapping
     public PageResponse<ColumnInfoVO> getColumns(
             @PathVariable String tableId,
-            PageReq pageReq,
+            @Valid PageReq pageReq,
             @RequestParam(name = "keyword", required = false) String keyword) {
         return PageResponse.of(columnService.getColumns(pageReq, tableId, keyword).map(columnAssembler::toColumnInfoVO));
     }
@@ -88,7 +89,7 @@ public class ColumnController {
     @GetMapping("/{columnId}/values")
     public PageResponse<ColumnValueVO> getValues(
             @PathVariable String columnId,
-            PageReq pageReq,
+            @Valid PageReq pageReq,
             @RequestParam(required = false) String keyword) {
         return PageResponse.of(
                 columnValueService.getValues(columnId, pageReq, keyword)

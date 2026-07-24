@@ -71,7 +71,7 @@ public class McpServiceController {
 
     @GetMapping
     public PageResponse<McpServiceVO> listMcpServices(
-            PageReq pageReq,
+            @Valid PageReq pageReq,
             @RequestParam(name = "keyword", required = false) String keyword,
             @RequestParam(name = "status", required = false) McpServiceStatus status) {
         Sort sortBy = Sort.by(Sort.Direction.DESC, BasePO.Fields.createdAt);

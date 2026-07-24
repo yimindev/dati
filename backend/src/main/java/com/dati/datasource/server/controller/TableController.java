@@ -3,6 +3,7 @@ package com.dati.datasource.server.controller;
 import com.dati.base.pojo.IdResponse;
 import com.dati.base.pojo.PageReq;
 import com.dati.base.pojo.PageResponse;
+import jakarta.validation.Valid;
 import com.dati.datasource.domain.service.TableService;
 import com.dati.datasource.server.assembler.TableAssembler;
 import com.dati.datasource.server.pojo.AddTableRequest;
@@ -27,7 +28,7 @@ public class TableController {
     }
 
     @GetMapping("/tables")
-    public PageResponse<TableInfoVO> getTables(@PathVariable String datasourceId, PageReq pageReq, String keyword) {
+    public PageResponse<TableInfoVO> getTables(@PathVariable String datasourceId, @Valid PageReq pageReq, String keyword) {
         return PageResponse.of(tableService.getTables(pageReq, datasourceId, keyword).map(tableAssembler::toTableInfoVO));
     }
 

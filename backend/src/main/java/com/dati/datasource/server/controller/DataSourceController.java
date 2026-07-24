@@ -82,7 +82,7 @@ public class DataSourceController {
     }
 
     @GetMapping
-    public PageResponse<DatasourceVO> listDataSources(PageReq pageReq, @RequestParam(name = "keyword", required = false) String keyword) {
+    public PageResponse<DatasourceVO> listDataSources(@Valid PageReq pageReq, @RequestParam(name = "keyword", required = false) String keyword) {
         Sort sortBy = Sort.by(Sort.Direction.DESC, BasePO.Fields.createdAt);
         return dsAssembler.toPageResponse(
                 dataSourceService.listDataSources(keyword, pageReq.toPageRequest().withSort(sortBy)));

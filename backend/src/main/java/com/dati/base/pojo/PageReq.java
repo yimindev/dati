@@ -1,23 +1,19 @@
 package com.dati.base.pojo;
 
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import lombok.Data;
 import org.springframework.data.domain.PageRequest;
 
 @Data
 public class PageReq {
 
+    @Min(1)
     private int page = 1;
 
+    @Min(1)
+    @Max(100)
     private int size = 10;
-
-    // 可以添加其他通用分页相关的方法
-    public int getOffset() {
-        return (page - 1) * size;
-    }
-
-    public int getLimit() {
-        return size;
-    }
 
     public PageRequest toPageRequest() {
         return PageRequest.of(page - 1, size);

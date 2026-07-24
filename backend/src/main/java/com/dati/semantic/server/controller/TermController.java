@@ -60,7 +60,7 @@ public class TermController {
     @GetMapping("/subjects/{subjectId}/terms")
     public PageResponse<TermVO> getTermsBySubject(
             @PathVariable String subjectId,
-            PageReq pageReq,
+            @Valid PageReq pageReq,
             @RequestParam(required = false) String keyword) {
         Sort sortBy = Sort.by(Sort.Direction.DESC, "updatedAt");
         return termAssembler.toPageResponse(

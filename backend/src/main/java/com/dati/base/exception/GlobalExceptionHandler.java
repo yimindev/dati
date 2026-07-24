@@ -3,6 +3,7 @@ package com.dati.base.exception;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.validation.BindException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -24,6 +25,16 @@ public class GlobalExceptionHandler {
                 ? ErrorResponse.of(e.getCode(), e.getArgs())
                 : ErrorResponse.ofResolved(e.getCode(), e.getMessage());
         return ResponseEntity.status(e.getStatus()).body(response);
+    }
+
+    @ExceptionHandler(BindException.class)
+    public ResponseEntity<ErrorResponse> handleBindException(BindException e) {
+        String fieldErrors = e.getBindingResult().getFieldErrors().stream()
+            .map(err -> MessageFormat.format("Field {0} has invalid value: {1}", err.getField(), err.getDefaultMessage()))
+            .collect(Collectors.joining("; "));
+
+        ErrorResponse response = ErrorResponse.of(ErrorCode.INVALID_PARAMETER, fieldErrors);
+        return ResponseEntity.badRequest().body(response);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

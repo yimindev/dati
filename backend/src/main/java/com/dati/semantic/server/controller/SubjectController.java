@@ -75,7 +75,7 @@ public class SubjectController {
     @GetMapping("/{id}/tables")
     public PageResponse<TableInfoVO> getSubjectTables(
             @PathVariable String id,
-            PageReq pageReq,
+            @Valid PageReq pageReq,
             @RequestParam(required = false) String keyword) {
         Sort sortBy = Sort.by(Sort.Direction.DESC, "updatedAt");
         Page<TableInfoVO> tableVOPage = subjectService
@@ -104,7 +104,7 @@ public class SubjectController {
     }
 
     @GetMapping
-    public PageResponse<SubjectVO> getSubjects(PageReq pageReq, @RequestParam(required = false) String keyword) {
+    public PageResponse<SubjectVO> getSubjects(@Valid PageReq pageReq, @RequestParam(required = false) String keyword) {
         Sort sortBy = Sort.by(Sort.Direction.DESC, "updatedAt");
         return subjectAssembler.toPageResponse(
                 subjectService.getSubjects(keyword, pageReq.toPageRequest().withSort(sortBy)));
