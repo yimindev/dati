@@ -3,6 +3,7 @@
 
 bugs:
   - id: BUG-009
+    status: suspended
     title: MCP 服务无 DELETE 端点
     module: MCP 服务管理
     source_case: TC-MCP-001
@@ -11,51 +12,4 @@ bugs:
     description: |
       McpServiceController 没有 @DeleteMapping，所有 DELETE /v1/mcp-services/{id} 请求返回 500。
       应实现删除端点和对应业务逻辑（考虑级联删除 prompts、custom tools、data scopes）。
-
-  - id: BUG-011
-    title: 请求体字段名与 SNAKE_CASE 命名策略不匹配导致 NPE
-    module: MCP 服务管理
-    source_case: TC-MCP-002
-    severity: high
-    found_at: 2026-07-23
-    description: |
-      PUT /v1/mcp-services/{id}/data-scope 中，Jackson 因 SNAKE_CASE 策略将
-      `scopeType` 解析为 `scope_type`，但 controller 代码使用 `item.getScopeType()`
-      获取 null 值，导致 McpDataScopeType.valueOf(null) 抛出 NPE。
-      请求 body 必须使用 snake_case 字段名，但无文档提示，易出错。
-
-  - id: BUG-012
-    title: Custom Tool 更新时按 toolType 路由到错误分支
-    module: MCP 工具管理
-    source_case: TC-MCP-004
-    severity: medium
-    found_at: 2026-07-23
-    description: |
-      McpToolController.updateTool() 根据 request.getToolType().isPrebuilt() 判断路由，
-      但 custom tool 也可以使用预置类型（如 SEARCH_METADATA）。
-      当 custom tool 使用预置类型时，更新走入「更新 prebuilt 配置」分支，
-      custom tool 的 description 等字段不会被更新。应基于 tool 来源判断。
-
-  - id: BUG-013
-    title: PARAMETERIZED_SQL 工具测试时 config 为空抛 NPE
-    module: MCP 工具管理
-    source_case: TC-MCP-005
-    severity: medium
-    found_at: 2026-07-23
-    description: |
-      ParameterizedSqlExecutor.execute() 直接调用 config.getSqlTemplate() 未做 null 检查，
-      当创建的 PARAMETERIZED_SQL 类型 tool 没有提供完整 config 时，
-      templateParser.parse(null) 抛出 NPE。应返回明确的参数校验错误。
-
-  - id: BUG-014
-    title: PUT 更新数据源返回 id 为 null
-    module: 数据源管理
-    source_case: TC-DS-003
-    severity: low
-    found_at: 2026-07-24
-    description: |
-      PUT /v1/data-sources/{id} 更新成功后，响应中的 id 字段为 null 而非实际 ID。
-      虽然更新本身成功，但客户端无法从响应中确认操作作用于哪个资源。
-      应返回实际资源 ID。
-
 
