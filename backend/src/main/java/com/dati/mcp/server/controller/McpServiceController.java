@@ -88,7 +88,7 @@ public class McpServiceController {
 
     @PutMapping("/{id}/data-scope")
     public IdResponse saveDataScope(@PathVariable String id,
-                                     @RequestBody DataScopeRequest request) {
+                                     @Valid @RequestBody DataScopeRequest request) {
         List<McpServiceDataScope> scopes = request.getItems().stream().map(item -> {
             McpServiceDataScope scope = new McpServiceDataScope();
             scope.setServiceId(id);

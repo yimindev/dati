@@ -72,7 +72,7 @@ public class DataSourceController {
     public IdResponse updateDataSource(@PathVariable String id, @Valid @RequestBody DataSource dataSource) {
         dsAssembler.fillUpdateUserFromRequest(dataSource);
         dataSourceService.updateDataSource(id, dataSource);
-        return new IdResponse(dataSource.getId());
+        return new IdResponse(id);
     }
 
     @DeleteMapping("/{id}")

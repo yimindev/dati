@@ -186,10 +186,12 @@ public class McpToolService {
 
     private void validateSqlTemplate(McpCustomTool tool) {
         if (!(tool.getConfig() instanceof ToolConfig.ParamSqlConfig cfg)) {
-            return;
+            throw new DatiException(ErrorCode.INVALID_PARAMETER, "config is required for PARAMETERIZED_SQL tool");
         }
         String sqlTemplate = cfg.getSqlTemplate();
-        if (sqlTemplate == null) return;
+        if (sqlTemplate == null || sqlTemplate.isBlank()) {
+            throw new DatiException(ErrorCode.INVALID_PARAMETER, "sql_template is required in config");
+        }
 
         // 1. Template syntax validation
         CompiledTemplate compiled;
