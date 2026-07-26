@@ -11,6 +11,7 @@ import com.dati.datasource.repository.po.ColumnInfoPO;
 import com.dati.datasource.repository.po.TableInfoPO;
 import com.dati.datasource.server.pojo.AddTableRequest;
 import com.dati.db.Column;
+import com.dati.db.Table;
 import com.dati.semantic.domain.service.SemanticIndexService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -122,6 +123,9 @@ class TableServiceTest {
     @DisplayName("批量添加表 - 成功")
     void batchAddTables_shouldAddTablesWithColumns() throws SQLException {
         // given
+        when(jdbcMetaService.getTables(TestFixtures.TEST_DATASOURCE_ID, null, "public"))
+            .thenReturn(List.of(new Table("new_table", "")));
+        // given
         AddTableRequest request = new AddTableRequest();
         request.setName("new_table");
         request.setSchema("public");
@@ -160,9 +164,9 @@ class TableServiceTest {
         AddTableRequest request = new AddTableRequest();
         request.setName("new_table");
         request.setSchema("public");
-        
+
         when(jdbcMetaService.getTables(TestFixtures.TEST_DATASOURCE_ID, null, "public"))
-            .thenReturn(List.of());
+            .thenReturn(List.of(new Table("new_table", "")));
         when(jdbcMetaService.getColumns(TestFixtures.TEST_DATASOURCE_ID, null, "public", "new_table"))
             .thenThrow(new SQLException("Connection failed"));
         when(tableInfoDAO.save(any(TableInfoPO.class))).thenReturn(testTableInfoPO);
@@ -195,6 +199,9 @@ class TableServiceTest {
     @Test
     @DisplayName("删除表 - 成功")
     void deleteTable_shouldDeleteTableAndColumnsAndESDocuments() {
+        // given
+        when(tableInfoDAO.existsById(TestFixtures.TEST_TABLE_ID)).thenReturn(true);
+
         // when
         tableService.deleteTable(TestFixtures.TEST_TABLE_ID);
 

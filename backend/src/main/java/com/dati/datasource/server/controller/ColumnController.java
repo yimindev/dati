@@ -48,7 +48,7 @@ public class ColumnController {
             @PathVariable String tableId,
             @Valid PageReq pageReq,
             @RequestParam(name = "keyword", required = false) String keyword) {
-        return PageResponse.of(columnService.getColumns(pageReq, tableId, keyword).map(columnAssembler::toColumnInfoVO));
+        return columnAssembler.toPageResponse(columnService.getColumns(pageReq, tableId, keyword));
     }
 
     @PutMapping("/{id}")

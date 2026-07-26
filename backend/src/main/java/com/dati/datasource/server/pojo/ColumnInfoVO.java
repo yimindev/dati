@@ -11,8 +11,6 @@ import java.util.List;
 @Data
 public class ColumnInfoVO extends BaseResourceVO {
 
-    private String datasourceId;
-
     private String tableId;
 
     private String columnType;

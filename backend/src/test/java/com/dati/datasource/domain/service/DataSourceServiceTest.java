@@ -1,6 +1,7 @@
 package com.dati.datasource.domain.service;
 
 import com.dati.TestFixtures;
+import com.dati.base.exception.DatiException;
 import com.dati.datasource.domain.model.DataSource;
 import com.dati.datasource.repository.dao.ColumnInfoDAO;
 import com.dati.datasource.repository.dao.DataSourceDAO;
@@ -29,9 +30,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.mockStatic;
@@ -149,15 +150,15 @@ class DataSourceServiceTest {
     }
 
     @Test
-    @DisplayName("删除数据源 - 不存在时静默处理")
-    void deleteDataSource_shouldDoNothingWhenNotFound() {
+    @DisplayName("删除数据源 - 不存在时抛出 DS_NOT_FOUND 异常")
+    void deleteDataSource_shouldThrowWhenNotFound() {
         // given
         when(dataSourceDAO.findById(TestFixtures.TEST_DATASOURCE_ID)).thenReturn(Optional.empty());
 
-        // when
-        dataSourceService.deleteDataSource(TestFixtures.TEST_DATASOURCE_ID);
+        // when & then
+        assertThrows(DatiException.class, () ->
+                dataSourceService.deleteDataSource(TestFixtures.TEST_DATASOURCE_ID));
 
-        // then
         verify(dataSourceDAO).findById(TestFixtures.TEST_DATASOURCE_ID);
         verify(dataSourceDAO, never()).deleteById(any());
     }

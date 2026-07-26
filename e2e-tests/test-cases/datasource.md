@@ -158,7 +158,8 @@
 9. 验证分页列表中的表记录：
    - `name`、`schema` 正确
    - `id` 为 UUID 格式，`aliases` 字段存在
-   - `created_by`、`updated_by` **不为 null**
+   - `created_by`、`updated_by` **不为 null、不为空**
+   - `created_user_name`、`updated_user_name` **不为 null、不为空**
 10. **更新表元数据**：更新 `table_mgmt.update.target` 表，设置：
     - `aliases` = `table_mgmt.update.aliases`
     - `description` = `table_mgmt.update.description`
@@ -192,17 +193,26 @@
    - 返回的列中包含 `column_values.expected_columns` 中的所有列名
    - 每列有 `id`（UUID）、`column_type`、`aliases`
    - `extract_value_enabled` 字段存在（初始为 false）
+   - `created_by`、`updated_by` **不为 null、不为空**
+   - `created_user_name`、`updated_user_name` **不为 null、不为空**
+   - `table_id` 正确
 6. **ES 验证 - FIELD 已同步**：查询 ES 中 `entity.tableId` = tableId AND `type` = `FIELD`
 7. 验证有与 `expected_columns` 数量相等的 FIELD 文档，`entity.field` 分别对应各列名
    - 每条 `keywords` 至少包含列名本身
    - `entity.datasourceId`、`entity.tableId`、`entity.tableName` 正确
-8. **更新列元数据**：将 `column_values.target_column` 列的：
-   - `description` 更新为 `column_values.column_description`
-   - `aliases` 设为 `column_values.column_aliases`
-   - `extract_value_enabled` 设为 `true`
-   - 注意：使用 PUT /columns/{columnId}，只传需要更新的字段
+8. **部分更新列元数据（不含 name）**：将 `column_values.target_column` 列进行部分更新：
+   - body 中 **只传** `description`、`aliases`、`extract_value_enabled` 三个字段
+   - **不传 `name`、不传 `column_type`**
+   - `description` = `column_values.column_description`
+   - `aliases` = `column_values.column_aliases`
+   - `extract_value_enabled` = `true`
+   - 使用 PUT /columns/{columnId}
 9. 验证更新返回 200
-10. 查询列列表确认更新生效：aliases、description 已更新，`extract_value_enabled` 为 `true`
+10. 再次查询列列表确认更新生效：
+    - aliases、description 已更新
+    - `extract_value_enabled` 为 `true`
+    - **`name` 未被清空**，仍为原来的列名（验证部分更新语义正确）
+    - **`column_type` 未被清空**，仍为原来的类型
 11. **ES 验证 - FIELD 已更新**：查询 ES 中 `id` = `field:{该列的columnId}` 的文档
     - `keywords` 包含 `column_values.column_aliases` 中的所有值
     - `description` 为 `column_values.column_description`
@@ -234,11 +244,11 @@
 
 1. 创建 PostgreSQL 数据源（使用 postgres_local）
 2. **添加不存在的表**：尝试批量添加 `nonexistent_table`
-3. 预期返回错误（400 或 500，但不能是 200 假装成功）
-4. **删除不存在的表**：用一个不存在的 UUID 删除表
-5. 预期返回 404 或 400，不能返回 200
+3. 预期返回 404，错误信息指明表在数据源中不存在
+4. **删除不存在的表**：用一个不存在的 UUID（如 `00000000-0000-0000-0000-000000000000`）删除表
+5. 预期返回 404，错误信息指明表不存在
 6. **对不存在的表同步列**：用一个不存在的 tableId 触发列同步
-7. 预期返回错误而非 200
+7. 预期返回 404，错误信息指明表不存在
 8. 删除数据源（清理）
 
 ---

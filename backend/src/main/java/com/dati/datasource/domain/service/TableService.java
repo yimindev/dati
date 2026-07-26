@@ -32,6 +32,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -73,15 +74,21 @@ public class TableService {
         List<SemanticSearchDocument> docsToSave = new ArrayList<>();
 
         Map<String, String> tableCommentMap;
+        Set<String> validTableNames;
         try {
             List<Table> dbTables = jdbcMetaService.getTables(datasourceId, null, tables.getFirst().getSchema());
             tableCommentMap = dbTables.stream()
                     .collect(Collectors.toMap(Table::name, t -> t.comment() != null ? t.comment() : ""));
+            validTableNames = dbTables.stream().map(Table::name).collect(Collectors.toSet());
         } catch (SQLException e) {
             throw new DatiException(ErrorCode.DS_SYNC_FAILED, e.getMessage());
         }
 
         for (AddTableRequest request : tables) {
+            if (!validTableNames.contains(request.getName())) {
+                throw new DatiException(ErrorCode.DS_NOT_FOUND,
+                        "Table not found in datasource: " + request.getName());
+            }
             TableInfo tableInfo = new TableInfo();
             tableInfo.setDatasourceId(datasourceId);
             tableInfo.setName(request.getName());
@@ -163,6 +170,9 @@ public class TableService {
 
     @Transactional
     public void deleteTable(String tableId) {
+        if (!tableInfoDAO.existsById(tableId)) {
+            throw new DatiException(ErrorCode.DS_NOT_FOUND, "Table not found: " + tableId);
+        }
         deleteTables(List.of(tableId));
     }
 

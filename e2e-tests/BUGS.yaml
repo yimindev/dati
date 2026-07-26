@@ -13,3 +13,51 @@ bugs:
       McpServiceController 没有 @DeleteMapping，所有 DELETE /v1/mcp-services/{id} 请求返回 500。
       应实现删除端点和对应业务逻辑（考虑级联删除 prompts、custom tools、data scopes）。
 
+  - id: BUG-010
+    status: open
+    title: MCP 服务列表 status 筛选与 keyword 联用时失效
+    module: MCP 服务管理
+    source_case: TC-MCP-006
+    severity: medium
+    found_at: 2026-07-26
+    description: |
+      同时传 keyword 和 status 参数时，status 筛选被忽略。
+      例如 ?keyword=e2e-mcp-status&status=PUBLISHED 返回了 status=DRAFT 的记录。
+      单独使用 status 参数时筛选正常。
+
+  - id: BUG-011
+    status: open
+    title: 创建 Prompt 不传 description 返回 500
+    module: MCP 服务管理
+    source_case: TC-MCP-003
+    severity: low
+    found_at: 2026-07-26
+    description: |
+      POST /v1/mcp-services/{id}/prompts 不带 description 字段时返回 500。
+      McpPromptRequest 中 description 非 required，应处理 null 值。
+
+  - id: BUG-012
+    status: open
+    title: TABLE scope type 未实现，保存时返回 500 且无友好错误
+    module: MCP 服务管理
+    source_case: TC-MCP-005
+    severity: low
+    found_at: 2026-07-26
+    description: |
+      尝试保存 scope_type=TABLE 的数据范围时返回 500 Internal server error。
+      McpDataScopeType 枚举仅支持 DATA_SOURCE 和 SUBJECT，TABLE 类型未实现。
+      应返回友好的参数错误提示（如 "Unsupported scope type: TABLE"）而非 500。
+
+  - id: BUG-013
+    status: open
+    title: default_schema 为 null 时 DATA_SOURCE scope 无法解析表级权限
+    module: MCP 服务管理
+    source_case: TC-MCP-005
+    severity: low
+    found_at: 2026-07-26
+    description: |
+      当 datasource.default_schema 为 null 时，ScopeValidator.buildAllowedTableRefs 创建
+      TableRef(null, tableName)，而 SQL 解析的 TableRef 也是 (null, tableName)，
+      但 tryResolve 要求 defaultSchema 非 null 才能匹配，导致 SCOPE_ERROR。
+      应改进 schema 为空时的 fallback 逻辑。
+

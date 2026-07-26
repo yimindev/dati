@@ -1,6 +1,7 @@
 package com.dati.datasource.server.controller;
 
 import com.dati.TestFixtures;
+import com.dati.base.pojo.PageResponse;
 import com.dati.datasource.domain.model.TableInfo;
 import com.dati.datasource.domain.service.TableService;
 import com.dati.datasource.server.assembler.TableAssembler;
@@ -60,12 +61,14 @@ class TableControllerTest {
         Page<TableInfo> page = new PageImpl<>(List.of(testTableInfo));
         when(tableService.getTables(any(), eq(TestFixtures.TEST_DATASOURCE_ID), any()))
             .thenReturn(page);
-        
+
         TableInfoVO vo = new TableInfoVO();
         vo.setId(TestFixtures.TEST_TABLE_ID);
         vo.setName("test_table");
         vo.setDatasourceId(TestFixtures.TEST_DATASOURCE_ID);
-        when(tableAssembler.toTableInfoVO(any())).thenReturn(vo);
+        PageResponse<TableInfoVO> pageResponse = PageResponse.of(
+                new PageImpl<>(List.of(vo), page.getPageable(), page.getTotalElements()));
+        when(tableAssembler.toPageResponse(page)).thenReturn(pageResponse);
 
         // when & then
         mockMvc.perform(get("/v1/data-sources/{datasourceId}/tables", TestFixtures.TEST_DATASOURCE_ID)
@@ -84,11 +87,13 @@ class TableControllerTest {
         Page<TableInfo> page = new PageImpl<>(List.of(testTableInfo));
         when(tableService.getTables(any(), eq(TestFixtures.TEST_DATASOURCE_ID), eq("user")))
             .thenReturn(page);
-        
+
         TableInfoVO vo = new TableInfoVO();
         vo.setId(TestFixtures.TEST_TABLE_ID);
         vo.setName("users");
-        when(tableAssembler.toTableInfoVO(any())).thenReturn(vo);
+        PageResponse<TableInfoVO> pageResponse = PageResponse.of(
+                new PageImpl<>(List.of(vo), page.getPageable(), page.getTotalElements()));
+        when(tableAssembler.toPageResponse(page)).thenReturn(pageResponse);
 
         // when & then
         mockMvc.perform(get("/v1/data-sources/{datasourceId}/tables", TestFixtures.TEST_DATASOURCE_ID)

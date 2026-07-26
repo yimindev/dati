@@ -2,6 +2,8 @@ package com.dati.datasource.domain.service;
 
 import com.dati.auth.authentication.User;
 import com.dati.base.RequestContext;
+import com.dati.base.exception.DatiException;
+import com.dati.base.exception.ErrorCode;
 import com.dati.base.pojo.BasePO;
 import com.dati.base.pojo.PageReq;
 import com.dati.common.StringUtils;
@@ -56,16 +58,27 @@ public class ColumnService {
     }
 
     public void updateColumn(String id, ColumnInfo columnInfo) {
-        ColumnInfoPO columnInfoPO = columnInfoDAO.findById(id).orElseThrow();
+        ColumnInfoPO columnInfoPO = columnInfoDAO.findById(id)
+                .orElseThrow(() -> new DatiException(ErrorCode.DS_NOT_FOUND, "Column not found: " + id));
 
         boolean wasEnabled = columnInfoPO.isExtractValueEnabled();
-        boolean nowEnabled = columnInfo.getExtractValueEnabled();
 
-        columnInfoPO.setName(columnInfo.getName());
-        columnInfoPO.setColumnType(columnInfo.getColumnType());
-        columnInfoPO.setAliases(columnInfo.getAliases());
-        columnInfoPO.setDescription(columnInfo.getDescription());
-        columnInfoPO.setExtractValueEnabled(columnInfo.getExtractValueEnabled());
+        if (columnInfo.getName() != null) {
+            columnInfoPO.setName(columnInfo.getName());
+        }
+        if (columnInfo.getColumnType() != null) {
+            columnInfoPO.setColumnType(columnInfo.getColumnType());
+        }
+        if (columnInfo.getAliases() != null) {
+            columnInfoPO.setAliases(columnInfo.getAliases());
+        }
+        if (columnInfo.getDescription() != null) {
+            columnInfoPO.setDescription(columnInfo.getDescription());
+        }
+        if (columnInfo.getExtractValueEnabled() != null) {
+            columnInfoPO.setExtractValueEnabled(columnInfo.getExtractValueEnabled());
+        }
+        boolean nowEnabled = columnInfoPO.isExtractValueEnabled();
         columnInfoDAO.save(columnInfoPO);
 
         // 从开启变为禁用，清理该列的值数据
@@ -101,7 +114,8 @@ public class ColumnService {
 
     @Transactional
     public void syncColumns(String datasourceId, String tableId, boolean overwriteExisting) throws SQLException {
-        TableInfo tableInfo = TableMapper.toTableInfo(tableInfoDAO.findById(tableId).orElseThrow());
+        TableInfo tableInfo = TableMapper.toTableInfo(tableInfoDAO.findById(tableId)
+                .orElseThrow(() -> new DatiException(ErrorCode.DS_NOT_FOUND, "Table not found: " + tableId)));
         
         Map<String, ColumnInfoPO> existingColumns = columnInfoDAO.findByTableId(tableId)
                 .stream()

@@ -111,3 +111,50 @@ bugs:
       ParameterizedSqlExecutor.execute() 直接调用 config.getSqlTemplate() 未做 null 检查，
       当创建的 PARAMETERIZED_SQL 类型 tool 没有提供完整 config 时，
       templateParser.parse(null) 抛出 NPE。应返回明确的参数校验错误。
+  - id: BUG-20260726-001
+    title: 批量添加不存在的表时不报错，返回200假装成功
+    module: 数据源管理-表管理
+    severity: medium
+    fixed_at: 2026-07-26
+    description: |
+      TC-DS-012: POST /v1/data-sources/{id}/tables/batch 传入不存在的表名 e2e_nonexistent_table_xyz，返回200 {"id":"1"} 假装成功添加。应返回400或500并提示表不存在。
+        - id: BUG-20260726-002
+  - id: BUG-20260726-002
+    title: 删除不存在的表返回200而非404
+    module: 数据源管理-表管理
+    severity: medium
+    fixed_at: 2026-07-26
+    description: |
+      TC-DS-012: DELETE /v1/data-sources/{dsId}/tables/{nonExistentId} 对不存在的tableId返回200并回显该ID。应返回404，与数据源删除（BUG-001 fixed）行为一致。
+        - id: BUG-20260726-003
+  - id: BUG-20260726-003
+    title: 同步不存在的表的列时返回500而非404
+    module: 数据源管理-表管理
+    severity: low
+    fixed_at: 2026-07-26
+    description: |
+      TC-DS-012: POST /v1/data-sources/{dsId}/tables/{nonExistentTableId}/columns/sync 对不存在的tableId返回500 Internal server error。应返回404（资源不存在）。
+        - id: BUG-20260726-004
+  - id: BUG-20260726-004
+    title: 批量添加的表在列表中created_user_name/updated_user_name为null
+    module: 数据源管理-表管理
+    severity: low
+    fixed_at: 2026-07-26
+    description: |
+      TC-DS-010: 批量添加表后，GET /v1/data-sources/{dsId}/tables 返回的 TableInfoVO 中 created_user_name 和 updated_user_name 均为 null。Assembler 可能没有调用 fillUserInfo。曾在 BUG-002（数据源列表）修复类似问题。
+        - id: BUG-20260726-005
+  - id: BUG-20260726-005
+    title: 列详情中datasource_id为null，column_type在某些场景丢失
+    module: 数据源管理-表管理
+    severity: low
+    fixed_at: 2026-07-26
+    description: |
+      TC-DS-011: 列信息中 datasource_id 始终为 null。另，PUT 更新列元数据时不传 name 字段会导致 name 被覆盖为 null（PUT为全量替换而非部分更新）。建议说明文档或改为PATCH语义。
+        - id: BUG-20260726-006
+  - id: BUG-20260726-006
+    title: 列更新 PUT /columns/{columnId} 部分更新导致 name 被清空为 null
+    module: 数据源管理-列管理
+    severity: medium
+    fixed_at: 2026-07-26
+    description: |
+      TC-DS-011: 调用 PUT /columns/{columnId} 只传 description/aliases/extract_value_enabled 时（不传 name），name 字段被设为 null，导致 ES 中对应 FIELD 文档的 field 属性也为 null，后续列值抽取失效。API 应做部分更新（merge）而非全量替换。按 openapi，name 是 ColumnInfoVO 的普通属性非 required，说明行为应为部分更新。

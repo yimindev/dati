@@ -29,7 +29,7 @@ public class TableController {
 
     @GetMapping("/tables")
     public PageResponse<TableInfoVO> getTables(@PathVariable String datasourceId, @Valid PageReq pageReq, String keyword) {
-        return PageResponse.of(tableService.getTables(pageReq, datasourceId, keyword).map(tableAssembler::toTableInfoVO));
+        return tableAssembler.toPageResponse(tableService.getTables(pageReq, datasourceId, keyword));
     }
 
     @GetMapping("/tables/added-names")

@@ -2,6 +2,7 @@ package com.dati.datasource.server.controller;
 
 import com.dati.TestFixtures;
 import com.dati.base.pojo.PageReq;
+import com.dati.base.pojo.PageResponse;
 import com.dati.datasource.domain.model.ColumnInfo;
 import com.dati.datasource.domain.service.ColumnService;
 import com.dati.datasource.domain.service.ColumnValueService;
@@ -79,7 +80,9 @@ class ColumnControllerTest {
         vo.setName("test_column");
         vo.setTableId(TestFixtures.TEST_TABLE_ID);
         vo.setColumnType("VARCHAR(255)");
-        when(columnAssembler.toColumnInfoVO(any())).thenReturn(vo);
+        PageResponse<ColumnInfoVO> pageResponse = PageResponse.of(
+                new PageImpl<>(List.of(vo), page.getPageable(), page.getTotalElements()));
+        when(columnAssembler.toPageResponse(page)).thenReturn(pageResponse);
 
         // when & then
         mockMvc.perform(get("/v1/data-sources/{datasourceId}/tables/{tableId}/columns",
@@ -104,7 +107,9 @@ class ColumnControllerTest {
         ColumnInfoVO vo = new ColumnInfoVO();
         vo.setId(TestFixtures.TEST_COLUMN_ID);
         vo.setName("user_id");
-        when(columnAssembler.toColumnInfoVO(any())).thenReturn(vo);
+        PageResponse<ColumnInfoVO> pageResponse = PageResponse.of(
+                new PageImpl<>(List.of(vo), page.getPageable(), page.getTotalElements()));
+        when(columnAssembler.toPageResponse(page)).thenReturn(pageResponse);
 
         // when & then
         mockMvc.perform(get("/v1/data-sources/{datasourceId}/tables/{tableId}/columns",
@@ -222,7 +227,7 @@ class ColumnControllerTest {
         vo.setSynonyms(List.of("帝都"));
 
         Page<ColumnValueService.ValueItem> page = new PageImpl<>(
-                List.of(createValueItem("doc1", "北京", List.of("帝都"))),
+                List.of(createValueItem(List.of("帝都"))),
                 PageRequest.of(0, 10),
                 1
         );
@@ -241,10 +246,10 @@ class ColumnControllerTest {
             .andExpect(jsonPath("$.size").value(10));
     }
 
-    private ColumnValueService.ValueItem createValueItem(String id, String value, List<String> synonyms) {
+    private ColumnValueService.ValueItem createValueItem(List<String> synonyms) {
         ColumnValueService.ValueItem item = new ColumnValueService.ValueItem();
-        item.setId(id);
-        item.setValue(value);
+        item.setId("doc1");
+        item.setValue("北京");
         item.setSynonyms(synonyms);
         return item;
     }
