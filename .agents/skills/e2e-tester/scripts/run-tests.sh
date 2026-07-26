@@ -18,7 +18,7 @@ if [[ "$1" == "-h" || "$1" == "--help" ]]; then
     echo "  --no-stop     跑完不关服务（调试用）"
     echo ""
     echo "环境变量:"
-    echo "  PI_MODEL      子进程模型（默认 deepseek/deepseek-v4-flash）"
+    echo "  E2E_MODEL     子进程模型（覆盖 test-env.yaml runner.model）"
     exit 0
 fi
 
@@ -28,11 +28,19 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 SKILL_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 PROJECT_DIR="$(cd "$SKILL_DIR/../../.." && pwd)"
 REPORT_DIR="$PROJECT_DIR/e2e-tests/reports"
+ENV_FILE="$PROJECT_DIR/e2e-tests/test-env.yaml"
 
 # 参数
 MODULES=()
 NO_STOP=false
-MODEL="${PI_MODEL:-deepseek/deepseek-v4-flash}"
+# 模型：E2E_MODEL 环境变量 > test-env.yaml runner.model > 硬编码兜底
+if [ -n "${E2E_MODEL:-}" ]; then
+    MODEL="$E2E_MODEL"
+elif command -v yq &>/dev/null; then
+    MODEL=$(yq -r '.runner.model // "deepseek-v4-flash"' "$ENV_FILE")
+else
+    MODEL="deepseek-v4-flash"
+fi
 
 while [[ $# -gt 0 ]]; do
     case "$1" in

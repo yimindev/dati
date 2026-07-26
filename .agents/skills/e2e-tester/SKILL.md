@@ -106,6 +106,7 @@ Warnings: 1
 | `scripts/service.sh` | 服务生命周期 |
 | `scripts/run-tests.sh` | 一键测试调度器 |
 | `scripts/bug-tracker.sh` | Bug 生命周期管理 |
+| `scripts/helpers.sh` | 公共辅助函数（source 使用） |
 
 所有脚本支持 `--help` 查看详细用法。Agent 直接调用：
 
@@ -132,3 +133,7 @@ scripts/bug-tracker.sh fix BUG-20260724-001
 ### 服务
 - 启动命令必须指定 workingDirectory
 - 子进程 pi -p 必须 `< /dev/null` 重定向 stdin
+
+### ES
+- 写入后查询 ES 前必须先 `es_refresh`，否则异步索引延迟会导致误报查不到数据
+- 用法：测试会话开头 `source .agents/skills/e2e-tester/scripts/helpers.sh`，之后在任何 ES 查询前调用 `es_refresh`

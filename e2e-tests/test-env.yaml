@@ -7,6 +7,9 @@ server:
   start_command: "mvn -f backend/pom.xml spring-boot:run -Dspring-boot.run.workingDirectory=/Users/zhangyimin/IdeaProjects/dati"
   ready_signal: "Started DatIApplication"
 
+runner:
+  model: "deepseek-v4-flash"
+
 auth:
   register_endpoint: POST /v1/auth/register
   login_endpoint: POST /v1/auth/login
