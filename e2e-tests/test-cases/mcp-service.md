@@ -1,98 +1,96 @@
 # MCP 服务管理 - 端到端测试
 
+使用 test-data.yaml 中配置的测试数据集。所有具体值引用数据集 `e2e` 段下的路径。
+共享种子数据源（`seeded_datasource_name`）和种子主题（`seeded_subject_name`）由 TC-SEM-000 创建，本模块用例按名称查找复用。
+
+---
+
 ## TC-MCP-001 创建、查询、更新、删除 MCP 服务
 **级别：** P0
 **前置：** 已登录
 
-1. 创建一个 MCP 服务，名称和描述自定
-2. 验证返回结果：
-   - 包含 `id` 且为 UUID 格式
-   - 状态码 200
-3. 在 MCP 服务列表中用默认分页参数查询，确认能找到该服务
-4. 验证列表项完整合理：
-   - `name`、`description` 与创建时一致
-   - `status` 字段存在且有合理值（如 DRAFT/ACTIVE）
-   - `created_at`、`updated_at` 为合理时间戳
-   - `created_by`、`updated_by` **不为 null、不为空**
-   - `created_user_name`、`updated_user_name` **不为 null、不为空**
-5. 仅更新该服务的 description（部分更新，不传 name）
-6. 查询详情，验证：
-   - description 已更新为新值
-   - `updated_at` 晚于 `created_at`
-   - name 等其他字段未被意外修改或清空
-7. 删除该服务（清理）
+1. **创建 MCP 服务**：name 自定，description 自定，`code` 自定（必填）
+2. 验证返回 200，`id` 为 UUID
+3. 在服务列表中搜该 name，确认能找到
+4. 验证列表项：name/description/code 与创建一致，`status`=DRAFT
+   - `created_by`/`updated_by`/`created_user_name`/`updated_user_name` 不为 null
+   - `created_at`/`updated_at` 合理
+5. **部分更新**：仅改 description（不传 name/code 等其他字段）
+6. 查详情验证 description 已更新，`updated_at > created_at`，name/code/status 未变
+7. **删除服务**，查列表确认已删
 
 ---
 
 ## TC-MCP-002 配置数据范围
 **级别：** P1
-**前置：** 已登录，已有数据源
+**前置：** 已登录，种子数据源已就绪（TC-SEM-000）
+**数据：** `chinook.e2e.{seeded_datasource_name, mcp.data_scope_type}`
 
-1. 创建一个 MCP 服务
-2. 为该服务配置数据范围（data-scope），绑定一个存在的资源（如数据源）
-3. 查询该服务的数据范围，验证刚才的配置已生效
-4. 验证返回的数据范围信息完整：
-   - 包含绑定资源的 id 和类型
-   - 绑定的资源信息与实际一致
-5. 删除该服务（清理）
+1. 搜索 `seeded_datasource_name` 获取 datasourceId，创建 MCP 服务
+2. **配置数据范围**：使用 `mcp.data_scope_type` 类型，reference_id 填 datasourceId
+   - 注意：请求 body 字段使用 snake_case（`scope_type`、`reference_id`）
+3. 验证返回 200
+4. **查数据范围**：验证 items 含刚配置的记录
+   - `scope_type` 匹配，`reference_id` 匹配，`reference_name` 非空
+   - `resolved_data_sources` 包含数据源名称
+5. 删除服务（清理）
 
 ---
 
 ## TC-MCP-003 Prompt CRUD
 **级别：** P1
-**前置：** 已登录，已创建 MCP 服务
+**前置：** 已登录
 
-1. 创建一个 MCP 服务
-2. 在该服务下创建一个 Prompt，填写名称和模板内容
-3. 验证创建返回 200，包含 id
-4. 查询该服务的 Prompt 列表，确认刚创建的 Prompt 在其中
-5. 验证 Prompt 列表项完整：name、template 内容与创建时一致
-6. 仅更新该 Prompt 的模板内容（部分更新，不传其他字段）
-7. 再次查询列表，验证模板内容已更新，其他字段未被意外修改
-8. 删除该 Prompt
-9. 查询列表，确认已删除（清理）
-10. 删除服务（清理）
+1. 创建 MCP 服务
+2. **创建 Prompt**：name 自定，content 自定（如 `chinook.e2e.mcp.prompt_content_example`），`enabled`=true
+3. 验证返回 200，含 id
+4. 查 Prompt 列表，确认 name/content/enabled 与创建一致
+5. **部分更新**：仅改 content（不传 name/enabled）
+6. 查列表验证 content 已更新，name/enabled 未变
+7. **删除 Prompt**，查列表确认已删
+8. 删除服务（清理）
 
 ---
 
 ## TC-MCP-004 Tool CRUD
 **级别：** P1
-**前置：** 已登录，已创建 MCP 服务
+**前置：** 已登录，种子数据源已就绪
+**数据：** `chinook.e2e.{seeded_datasource_name, mcp.tool}`
 
-1. 创建一个 MCP 服务
-2. 在该服务下创建一个 Tool，填写名称和描述
-3. 验证创建返回 200
-4. 查询该服务的 Tool 列表，确认刚创建的 Tool 在其中
-5. 仅更新该 Tool 的描述（部分更新，不传其他字段）
-6. 查询列表，验证描述已更新，其他字段未被意外修改
-7. 删除该 Tool
-8. 查询列表确认已删除（清理）
-9. 删除服务（清理）
+1. 搜索 `seeded_datasource_name` 获取 datasourceId，创建 MCP 服务
+2. **创建 Tool**：type=`mcp.tool.type`
+   - config 中包含 data_source_id（填种子 datasourceId）、sql_template、parameters（参考 `mcp.tool.config`）
+   - 注意：请求 body 使用 snake_case（`tool_type`、`data_source_id`、`sql_template`）
+3. 验证返回 200
+4. 查 Tool 列表（custom 列表），确认 type/name/title 正确
+5. **部分更新**：改 description
+6. 查列表验证已更新
+7. **删除 Tool**，查列表确认
+8. 删除服务（清理）
 
 ---
 
 ## TC-MCP-005 测试 Tool
 **级别：** P1
-**前置：** 已登录，已创建 MCP 服务，已创建 Tool
+**前置：** 已登录，种子数据源已就绪
+**数据：** `chinook.e2e.{seeded_datasource_name, mcp.tool}`
 
-1. 创建一个 MCP 服务
-2. 创建一个 Tool（配置完整的参数，避免空指针）
-3. 调用该 Tool 的测试接口
-4. 验证返回结果：
-   - 状态码 200
-   - 响应体包含执行结果（非空、有意义）
-   - 不是 500 或空指针异常
-5. 清理：删除 Tool，删除服务
+1. 搜索种子数据源 → 创建 MCP 服务 → 配置 data scope（绑定数据源）
+2. 创建 Tool（PARAMETERIZED_SQL，sql_template 使用 `mcp.tool.config.sql_template`）
+3. **测试 Tool**：传入参数（如 genre_name=`chinook.e2e.datasource.column_values.sample_values[0]`）
+4. 验证：状态码 200，响应含执行结果（非空、非 500）
+5. 删 Tool，删服务（清理）
 
 ---
 
 ## TC-MCP-006 按状态筛选服务列表
 **级别：** P2
-**前置：** 已登录，至少有一个服务
+**前置：** 已登录
 
-1. 用 status 参数筛选 MCP 服务列表
-2. 验证返回的每条记录的 status 都匹配筛选条件
-3. 用不同 status 值重复，确认筛选有效
+1. 创建 2 个 MCP 服务（不同 name）
+2. 用 status=DRAFT 筛选，验证返回的记录 status 全为 DRAFT
+3. 用 status=PUBLISHED 筛选，验证返回空或全为 PUBLISHED
+4. 删服务（清理）
 
 ---
 
@@ -100,5 +98,5 @@
 **级别：** P2
 **前置：** 已登录
 
-1. 用一个不存在的 ID 尝试删除 MCP 服务
-2. 预期返回错误（应为 404，不能返回 200 或 500）
+1. 用不存在的 UUID 删除 MCP 服务
+2. 预期返回错误（404），不能返回 200 或 500

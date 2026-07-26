@@ -8,6 +8,6 @@
 2. 验证返回结果：
    - 状态码 200
    - 响应体非空
-   - 包含系统配置相关的字段（如 column-value-sample-limit 等）
+   - 包含系统配置相关的字段（如 `chinook.e2e.system.expected_config_keys` 中的键）
    - 每个配置项的值合理（非 null、非异常值）
 3. 无需认证即可访问（如果该接口不需要认证）

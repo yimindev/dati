@@ -4,7 +4,7 @@
 **级别：** P1
 **前置：** 已登录
 
-1. 调用模板提取接口，传入一段示例 SQL 文本（如 `SELECT * FROM album WHERE artist_id = ?`）
+1. 调用模板提取接口，传入一段示例 SQL 文本（如 `chinook.e2e.template.extract_sql`）
 2. 验证返回结果：
    - 状态码 200
    - 响应体非空，包含提取出的模板结构信息

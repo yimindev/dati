@@ -23,6 +23,17 @@ external_services:
     uris: "http://localhost:9200"
     username: "elastic"
     password: "yimin123"
+    index: "semantic_search"
+    doc_types:
+      TABLE: "表元数据，id 格式 table:{tableId}"
+      FIELD: "列元数据，id 格式 field:{columnId}"
+      FIELD_VALUE: "维度值，id 为维度值自身的 UUID"
+      TERM: "术语，id 格式 term:{termId}"
+    query_conventions:
+      by_datasource: "entity.datasourceId = {datasourceId}"
+      by_table: "entity.tableId = {tableId}"
+      by_column: "entity.field = {columnName} AND entity.tableId = {tableId}"
+      cleanup_check: "删除数据源/表/列后，按 datasourceId 查询应返回 0 条对应 type 的文档"
   postgresql:
     url: "jdbc:postgresql://localhost:5432/postgres"
     username: "postgres"

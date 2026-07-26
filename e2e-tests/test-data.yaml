@@ -20,3 +20,246 @@ datasources:
     jdbc_url: "jdbc:mysql://192.0.2.1:9999/nothing"
     username: "nobody"
     password: "wrong"
+
+# ============================================================
+# Chinook 音乐商店示例数据库（PostgreSQL public schema）
+# 数据规模：11 张表，~15,500 行
+# 无正式 PK/FK 约束，但逻辑关系完整。日期/金额字段多为 text 类型。
+# ============================================================
+chinook:
+  # 11 张表的概要
+  tables:
+    - name: "artist"
+      rows: 275
+      columns:
+        - { name: "artistid", type: "int4", description: "艺人 ID" }
+        - { name: "name", type: "text", description: "艺人名称" }
+
+    - name: "album"
+      rows: 347
+      columns:
+        - { name: "albumid", type: "int4", description: "专辑 ID" }
+        - { name: "title", type: "varchar", description: "专辑标题" }
+        - { name: "artistid", type: "int4", description: "所属艺人 ID → artist.artistid" }
+
+    - name: "track"
+      rows: 3485
+      columns:
+        - { name: "trackid", type: "int4", description: "曲目 ID" }
+        - { name: "name", type: "text", description: "曲目名称" }
+        - { name: "albumid", type: "int4", description: "所属专辑 ID → album.albumid" }
+        - { name: "mediatypeid", type: "int4", description: "媒体类型 ID → mediatype.mediatypeid" }
+        - { name: "genreid", type: "int4", description: "流派 ID → genre.genreid" }
+        - { name: "composer", type: "text", description: "作曲者" }
+        - { name: "milliseconds", type: "text", description: "时长（毫秒，存为文本）" }
+        - { name: "bytes", type: "text", description: "文件大小（字节，存为文本）" }
+        - { name: "unitprice", type: "text", description: "单价（存为文本，如 0.99）" }
+
+    - name: "genre"
+      rows: 25
+      columns:
+        - { name: "genreid", type: "int4", description: "流派 ID" }
+        - { name: "name", type: "text", description: "流派名称" }
+      notable_values:
+        - "Rock (1), Jazz (2), Metal (3), Alternative & Punk (4), Blues (6), Latin (7), Reggae (8), Pop (9), Classical (24), Opera (25)"
+
+    - name: "mediatype"
+      rows: 5
+      columns:
+        - { name: "mediatypeid", type: "int4", description: "媒体类型 ID" }
+        - { name: "name", type: "text", description: "媒体类型名称" }
+      notable_values:
+        - "MPEG audio file (1), Protected AAC audio file (2), Protected MPEG-4 video file (3), Purchased AAC audio file (4), AAC audio file (5)"
+
+    - name: "playlist"
+      rows: 18
+      columns:
+        - { name: "playlistid", type: "int4", description: "歌单 ID" }
+        - { name: "name", type: "text", description: "歌单名称" }
+
+    - name: "playlisttrack"
+      rows: 8715
+      columns:
+        - { name: "playlistid", type: "int4", description: "歌单 ID → playlist.playlistid" }
+        - { name: "trackid", type: "int4", description: "曲目 ID → track.trackid" }
+
+    - name: "customer"
+      rows: 59
+      columns:
+        - { name: "customerid", type: "int4", description: "客户 ID" }
+        - { name: "firstname", type: "text" }
+        - { name: "lastname", type: "text" }
+        - { name: "company", type: "text" }
+        - { name: "address", type: "text" }
+        - { name: "city", type: "text" }
+        - { name: "state", type: "text" }
+        - { name: "country", type: "text" }
+        - { name: "postalcode", type: "text" }
+        - { name: "phone", type: "text" }
+        - { name: "fax", type: "text" }
+        - { name: "email", type: "text" }
+        - { name: "supportrepid", type: "int4", description: "支持人员 ID → employee.employeeid" }
+
+    - name: "employee"
+      rows: 8
+      columns:
+        - { name: "employeeid", type: "int4", description: "员工 ID" }
+        - { name: "lastname", type: "text" }
+        - { name: "firstname", type: "text" }
+        - { name: "title", type: "text" }
+        - { name: "reportsto", type: "int4", description: "上级 ID（自引用）" }
+        - { name: "birthdate", type: "text" }
+        - { name: "hiredate", type: "text" }
+        - { name: "address", type: "text" }
+        - { name: "city", type: "text" }
+        - { name: "state", type: "text" }
+        - { name: "country", type: "text" }
+        - { name: "postalcode", type: "text" }
+        - { name: "phone", type: "text" }
+        - { name: "fax", type: "text" }
+        - { name: "email", type: "text" }
+
+    - name: "invoice"
+      rows: 411
+      columns:
+        - { name: "invoiceid", type: "int4", description: "发票 ID" }
+        - { name: "customerid", type: "int4", description: "客户 ID → customer.customerid" }
+        - { name: "invoicedate", type: "date", description: "发票日期" }
+        - { name: "billingaddress", type: "text" }
+        - { name: "billingcity", type: "text" }
+        - { name: "billingstate", type: "text" }
+        - { name: "billingcountry", type: "text" }
+        - { name: "billingpostalcode", type: "text" }
+        - { name: "total", type: "text", description: "总金额（存为文本）" }
+
+    - name: "invoiceline"
+      rows: 2240
+      columns:
+        - { name: "invoicelineid", type: "int4", description: "发票行 ID" }
+        - { name: "invoiceid", type: "int4", description: "发票 ID → invoice.invoiceid" }
+        - { name: "trackid", type: "int4", description: "曲目 ID → track.trackid" }
+        - { name: "unitprice", type: "float8", description: "单价" }
+        - { name: "quantity", type: "text", description: "数量（存为文本）" }
+
+  # 表关系（逻辑关系，非数据库约束）
+  relationships:
+    - { from: "album.artistid", to: "artist.artistid", desc: "专辑 → 艺人" }
+    - { from: "track.albumid", to: "album.albumid", desc: "曲目 → 专辑" }
+    - { from: "track.mediatypeid", to: "mediatype.mediatypeid", desc: "曲目 → 媒体类型" }
+    - { from: "track.genreid", to: "genre.genreid", desc: "曲目 → 流派" }
+    - { from: "playlisttrack.playlistid", to: "playlist.playlistid", desc: "歌单关联" }
+    - { from: "playlisttrack.trackid", to: "track.trackid", desc: "歌单曲目" }
+    - { from: "invoice.customerid", to: "customer.customerid", desc: "发票 → 客户" }
+    - { from: "invoiceline.invoiceid", to: "invoice.invoiceid", desc: "发票行 → 发票" }
+    - { from: "invoiceline.trackid", to: "track.trackid", desc: "发票行 → 曲目" }
+    - { from: "customer.supportrepid", to: "employee.employeeid", desc: "客户 → 支持人员" }
+    - { from: "employee.reportsto", to: "employee.employeeid", desc: "员工上下级（自引用）" }
+
+  # E2E 测试常用 SQL 片段
+  sample_queries:
+    simple_count: "SELECT count(*) AS total FROM album"
+    list_with_limit: "SELECT albumid, title FROM album LIMIT 3"
+    join_three_tables: "SELECT t.name AS track, a.title AS album, ar.name AS artist FROM track t JOIN album a ON t.albumid = a.albumid JOIN artist ar ON a.artistid = ar.artistid WHERE ar.name = 'AC/DC' LIMIT 5"
+    aggregation: "SELECT ar.name, count(*) AS album_count FROM album a JOIN artist ar ON a.artistid = ar.artistid GROUP BY ar.name ORDER BY album_count DESC LIMIT 5"
+    cross_module: "SELECT c.firstname, c.lastname, c.country, i.total FROM customer c JOIN invoice i ON c.customerid = i.customerid WHERE c.country = 'Brazil'"
+    parameterized: "SELECT * FROM track WHERE albumid = ?"
+
+  # ============================================================
+  # E2E 测试场景引用数据
+  # 用例只引用此处的路径，不硬编码具体值。
+  # 换测试基准时只需替换 chinook 整个块。
+  # ============================================================
+  e2e:
+    default_schema: "public"
+
+    # ---- 数据源测试 ----
+    datasource:
+      # TC-DS-004/005 浏览验证
+      expected_schemas: ["public", "information_schema", "pg_catalog"]
+      expected_schema: "public"
+      core_tables: ["album", "artist", "track"]
+      browse_table1: "artist"
+      browse_table1_columns: ["artistid", "name"]
+      browse_table2: "track"
+      browse_table2_columns: ["trackid", "name", "albumid", "genreid", "composer"]
+
+      # TC-DS-006 SQL 验证
+      album_row_count: 347
+      join_result_fields: ["track", "album", "artist"]
+
+      # TC-DS-010 表管理全流程
+      table_mgmt:
+        add_tables: ["artist", "album", "track"]
+        update:
+          target: "artist"
+          aliases: ["歌手", "艺人"]
+          description: "音乐艺术家表"
+        delete_target: "track"
+
+      # TC-DS-011 列同步与维度值
+      column_values:
+        table: "genre"
+        expected_columns: ["genreid", "name"]
+        target_column: "name"
+        column_aliases: ["流派名称", "音乐类型"]
+        column_description: "音乐流派名称"
+        value_count: 25
+        sample_values: ["Rock", "Jazz", "Metal", "Classical"]
+        synonym_updates:
+          - value: "Rock"
+            synonyms: ["摇滚", "摇滚乐"]
+          - value: "Jazz"
+            synonyms: ["爵士", "爵士乐"]
+
+      # TC-DS-012 错误场景
+      nonexistent_table: "e2e_nonexistent_table_xyz"
+      # TC-DS-013 分页测试
+      pagination_count: 3
+
+    # ---- 种子数据（语义层/MCP 测试共享，只建不删）----
+    seeded_datasource_name: "e2e-chinook-seed"
+    seeded_tables: ["artist", "album", "genre"]
+    seeded_subject_name: "e2e-chinook-subject"
+
+    # ---- MCP 服务测试 ----
+    mcp:
+      prompt_content_example: "You are a helpful assistant for {topic}"
+      data_scope_type: "DATA_SOURCE"
+      # Tool 创建用
+      tool:
+        type: "PARAMETERIZED_SQL"
+        config:
+          data_source_id: "__SEED_DATASOURCE_ID__"
+          sql_template: "SELECT * FROM genre WHERE name = {{genre_name}}"
+          parameters:
+            - name: "genre_name"
+              type: "STRING"
+              required: true
+
+    # ---- 语义层测试 ----
+    semantic:
+      # TC-SEM-002 主题表管理
+      subject_tables: ["artist", "album"]
+
+      # TC-SEM-003 术语 CRUD
+      term_table: "artist"
+
+      # TC-SEM-004 术语关联
+      term_relation:
+        table: "genre"
+        field: "name"
+        entity_types: ["FIELD", "FIELD_VALUE"]
+        sample_dim_value: "Rock"
+
+      # TC-SEM-000 种子术语名
+      seed_term_name: "音乐流派"
+      # TC-SEM-008 分页搜索
+      search_keyword: "chinook-e2e-search"
+
+    # ---- 模板预览测试 ----
+    template:
+      extract_sql: "SELECT * FROM album WHERE artist_id = ?"
+
+    # ---- 系统配置测试 ----
+    system:
+      expected_config_keys: ["column-value-sample-limit"]
