@@ -74,7 +74,7 @@ public class McpServiceService {
             return mcpServiceDAO.findAllByNameContainingOrId(keyword, keyword, pageable)
                     .map(McpServiceMapper::toModel);
         }
-        return mcpServiceDAO.findAllByNameContainingOrIdAndStatus(keyword, keyword, status, pageable)
+        return mcpServiceDAO.searchByKeywordAndStatus(keyword, status, pageable)
                 .map(McpServiceMapper::toModel);
     }
 

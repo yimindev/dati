@@ -4,7 +4,6 @@ import com.dati.base.pojo.BasePO;
 import com.dati.base.pojo.IdResponse;
 import com.dati.base.pojo.PageReq;
 import com.dati.base.pojo.PageResponse;
-import com.dati.mcp.domain.model.McpDataScopeType;
 import com.dati.mcp.domain.model.McpService;
 import com.dati.mcp.domain.model.McpServiceDataScope;
 import com.dati.mcp.domain.model.McpServiceStatus;
@@ -92,7 +91,7 @@ public class McpServiceController {
         List<McpServiceDataScope> scopes = request.getItems().stream().map(item -> {
             McpServiceDataScope scope = new McpServiceDataScope();
             scope.setServiceId(id);
-            scope.setScopeType(McpDataScopeType.valueOf(item.getScopeType()));
+            scope.setScopeType(item.getScopeType());
             scope.setReferenceId(item.getReferenceId());
             return scope;
         }).toList();

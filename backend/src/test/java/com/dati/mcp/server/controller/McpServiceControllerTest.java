@@ -193,7 +193,7 @@ class McpServiceControllerTest {
         DataScopeResponse response = new DataScopeResponse();
         DataScopeItemVO item = new DataScopeItemVO();
         item.setId("scope-001");
-        item.setScopeType("DATA_SOURCE");
+        item.setScopeType(McpDataScopeType.DATA_SOURCE);
         item.setReferenceId(TestFixtures.TEST_DATASOURCE_ID);
         item.setReferenceName("Test MySQL");
         response.setItems(List.of(item));

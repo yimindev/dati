@@ -266,8 +266,8 @@ class McpToolServiceTest {
     }
 
     @Test
-    @DisplayName("创建 Parameterized SQL — 空模板允许")
-    void createCustomTool_emptyTemplate_allowed() {
+    @DisplayName("创建 Parameterized SQL — 空模板应拒绝")
+    void createCustomTool_emptyTemplate_rejected() {
         when(mcpServiceDAO.existsById(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(true);
         when(customToolDAO.existsByServiceIdAndName(TestFixtures.TEST_MCP_SERVICE_ID, "empty_tool")).thenReturn(false);
 
@@ -277,11 +277,11 @@ class McpToolServiceTest {
         cfg.setParameters(List.of());
         testCustomTool.setName("empty_tool");
         testCustomTool.setConfig(cfg);
-        testCustomToolPO.setName("empty_tool");
-        when(customToolDAO.save(any(McpCustomToolPO.class))).thenReturn(testCustomToolPO);
 
-        String result = mcpToolService.createCustomTool(TestFixtures.TEST_MCP_SERVICE_ID, testCustomTool);
-        assertThat(result).isEqualTo(TestFixtures.TEST_MCP_CUSTOM_TOOL_ID);
+        DatiException ex = assertThrows(DatiException.class,
+            () -> mcpToolService.createCustomTool(TestFixtures.TEST_MCP_SERVICE_ID, testCustomTool));
+        assertThat(ex.getCode()).isEqualTo(ErrorCode.INVALID_PARAMETER);
+        verify(customToolDAO, never()).save(any());
     }
 
     // ── 更新自定义工具 ──

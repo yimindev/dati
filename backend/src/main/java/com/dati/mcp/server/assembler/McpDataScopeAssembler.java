@@ -49,7 +49,7 @@ public class McpDataScopeAssembler extends BaseAssembler {
         List<DataScopeItemVO> items = scopes.stream().map(scope -> {
             DataScopeItemVO vo = new DataScopeItemVO();
             vo.setId(scope.getId());
-            vo.setScopeType(scope.getScopeType().name());
+            vo.setScopeType(scope.getScopeType());
             vo.setReferenceId(scope.getReferenceId());
             if (scope.getScopeType() == McpDataScopeType.DATA_SOURCE) {
                 vo.setReferenceName(dsNameMap.getOrDefault(scope.getReferenceId(), scope.getReferenceId()));

@@ -2,6 +2,43 @@
 # 问题修复后从 BUGS.yaml 移入此处。
 # 若已修复的问题再次复现，必须从本文件移回 BUGS.yaml 并标记 REGRESSION。
 bugs:
+  - id: BUG-012
+    title: TABLE scope type 未实现，保存时返回 500 且无友好错误
+    module: MCP 服务管理
+    severity: low
+    fixed_at: 2026-07-26
+    description: |
+      DataScopeItemVO.scopeType 从 String 改为 McpDataScopeType 枚举。
+      Jackson 反序列化阶段校验非法值，自动返回 400 + 枚举取值范围提示。
+
+  - id: BUG-010
+    title: MCP 服务列表 status 筛选与 keyword 联用时失效
+    module: MCP 服务管理
+    severity: medium
+    fixed_at: 2026-07-26
+    description: |
+      findAllByNameContainingOrIdAndStatus 解析为 (name LIKE ?) OR (id = ? AND status = ?)，
+      status 条件只在 id 分支生效。改为 @Query 显式定义 JPQL：
+      (name LIKE :keyword AND status = :status) OR (id = :keyword AND status = :status)。
+
+  - id: BUG-011
+    title: 创建 Prompt 不传 description 返回 500
+    module: MCP 服务管理
+    severity: low
+    fixed_at: 2026-07-26
+    description: |
+      McpPromptPO.description 标记 @Column(nullable = false)，null 持久化时抛约束违例。
+      将 nullable = false 改为 nullable = true。
+
+  - id: BUG-013
+    title: default_schema 为 null 时 DATA_SOURCE scope 无法解析表级权限
+    module: MCP 服务管理
+    severity: low
+    fixed_at: 2026-07-26
+    description: |
+      tryResolve 缺少 ref.schema 为 null 且 defaultSchema 也为 null 时的 fallback。
+      新增分支：ref.schema 为 null 时遍历 allowed set 按 name 匹配（忽略 schema）。
+
   - id: BUG-002
     title: 数据源列表不显示创建人/修改人名称
     module: 数据源管理

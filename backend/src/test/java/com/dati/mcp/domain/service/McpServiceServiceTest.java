@@ -180,14 +180,14 @@ class McpServiceServiceTest {
         // given
         Pageable pageable = PageRequest.of(0, 10);
         Page<McpServicePO> page = new PageImpl<>(List.of(testServicePO));
-        when(mcpServiceDAO.findAllByNameContainingOrIdAndStatus("test", "test", McpServiceStatus.DRAFT, pageable)).thenReturn(page);
+        when(mcpServiceDAO.searchByKeywordAndStatus("test", McpServiceStatus.DRAFT, pageable)).thenReturn(page);
 
         // when
         Page<McpService> result = mcpServiceService.listMcpServices("test", McpServiceStatus.DRAFT, pageable);
 
         // then
         assertThat(result.getContent()).hasSize(1);
-        verify(mcpServiceDAO).findAllByNameContainingOrIdAndStatus("test", "test", McpServiceStatus.DRAFT, pageable);
+        verify(mcpServiceDAO).searchByKeywordAndStatus("test", McpServiceStatus.DRAFT, pageable);
     }
 
     @Nested
