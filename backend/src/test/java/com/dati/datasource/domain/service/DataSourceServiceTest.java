@@ -8,6 +8,7 @@ import com.dati.datasource.repository.dao.DataSourceDAO;
 import com.dati.datasource.repository.dao.TableInfoDAO;
 import com.dati.datasource.repository.po.DataSourcePO;
 import com.dati.datasource.repository.po.TableInfoPO;
+import com.dati.db.DbType;
 import com.dati.db.HikariPoolManager;
 import com.dati.db.JdbcConnector;
 import com.dati.db.JdbcUtils;
@@ -16,6 +17,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
@@ -25,6 +27,7 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 
+import java.sql.SQLException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -56,6 +59,9 @@ class DataSourceServiceTest {
     @Mock
     private SemanticIndexService semanticIndexService;
 
+    @Mock
+    private JdbcMetaService jdbcMetaService;
+
     @InjectMocks
     private DataSourceService dataSourceService;
 
@@ -69,17 +75,98 @@ class DataSourceServiceTest {
     }
 
     @Test
-    @DisplayName("添加数据源 - 成功")
-    void addDataSource_shouldReturnId() {
+    @DisplayName("添加数据源 - 成功，探测真实 schema 并单次保存")
+    void addDataSource_shouldReturnId() throws SQLException {
         // given
-        when(dataSourceDAO.save(any(DataSourcePO.class))).thenReturn(testDataSourcePO);
+        ArgumentCaptor<DataSourcePO> captor = ArgumentCaptor.forClass(DataSourcePO.class);
+        when(jdbcMetaService.resolveCurrentSchema(any(JdbcConnector.class), eq(DbType.MYSQL)))
+            .thenReturn("real_schema");
+        when(dataSourceDAO.save(captor.capture())).thenReturn(testDataSourcePO);
 
         // when
         String result = dataSourceService.addDataSource(testDataSource);
 
         // then
         assertThat(result).isEqualTo(TestFixtures.TEST_DATASOURCE_ID);
-        verify(dataSourceDAO).save(any(DataSourcePO.class));
+        verify(dataSourceDAO, org.mockito.Mockito.times(1)).save(any(DataSourcePO.class));
+        assertThat(captor.getValue().getDefaultSchema()).isEqualTo("real_schema");
+    }
+
+    @Test
+    @DisplayName("添加数据源 - 忽略客户端传入的伪造 defaultSchema，使用真实探测结果")
+    void addDataSource_shouldIgnoreClientSuppliedFakeSchema() throws SQLException {
+        // given：TestFixtures 中的 testDataSource 自带 defaultSchema="public"，属于客户端伪造值
+        ArgumentCaptor<DataSourcePO> captor = ArgumentCaptor.forClass(DataSourcePO.class);
+        when(jdbcMetaService.resolveCurrentSchema(any(JdbcConnector.class), eq(DbType.MYSQL)))
+            .thenReturn("real_schema");
+        when(dataSourceDAO.save(captor.capture())).thenReturn(testDataSourcePO);
+
+        // when
+        dataSourceService.addDataSource(testDataSource);
+
+        // then
+        assertThat(testDataSource.getDefaultSchema()).isEqualTo("public");
+        assertThat(captor.getValue().getDefaultSchema()).isEqualTo("real_schema");
+    }
+
+    @Test
+    @DisplayName("添加数据源 - SQLException 转为 DatiException，且不保存")
+    void addDataSource_shouldThrowDatiException_whenSQLException() throws SQLException {
+        // given
+        when(jdbcMetaService.resolveCurrentSchema(any(JdbcConnector.class), eq(DbType.MYSQL)))
+            .thenThrow(new SQLException("connection refused"));
+
+        // when & then
+        assertThrows(DatiException.class, () -> dataSourceService.addDataSource(testDataSource));
+        verify(dataSourceDAO, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("添加数据源 - Hikari 连接初始化失败等价路径转为 DatiException，且不保存")
+    void addDataSource_shouldThrowDatiException_whenConnectionInitializationFails() throws SQLException {
+        // given：等价于 HikariPoolManager 将连接池初始化失败转换后的 SQLException
+        when(jdbcMetaService.resolveCurrentSchema(any(JdbcConnector.class), eq(DbType.MYSQL)))
+            .thenThrow(new SQLException("Failed to initialize connection pool: Connection is not available"));
+
+        // when & then
+        assertThrows(DatiException.class, () -> dataSourceService.addDataSource(testDataSource));
+        verify(dataSourceDAO, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("添加数据源 - 不支持的数据库类型转为 DatiException，且不保存")
+    void addDataSource_shouldThrowDatiException_whenUnsupportedType() throws SQLException {
+        // given
+        when(jdbcMetaService.resolveCurrentSchema(any(JdbcConnector.class), eq(DbType.MYSQL)))
+            .thenThrow(new DatiException(com.dati.base.exception.ErrorCode.DS_UNSUPPORTED_TYPE, DbType.MYSQL));
+
+        // when & then
+        assertThrows(DatiException.class, () -> dataSourceService.addDataSource(testDataSource));
+        verify(dataSourceDAO, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("添加数据源 - 探测结果为 null 时转为 DatiException，且不保存")
+    void addDataSource_shouldThrowDatiException_whenSchemaIsNull() throws SQLException {
+        // given
+        when(jdbcMetaService.resolveCurrentSchema(any(JdbcConnector.class), eq(DbType.MYSQL)))
+            .thenReturn(null);
+
+        // when & then
+        assertThrows(DatiException.class, () -> dataSourceService.addDataSource(testDataSource));
+        verify(dataSourceDAO, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("添加数据源 - 探测结果为空字符串时转为 DatiException，且不保存")
+    void addDataSource_shouldThrowDatiException_whenSchemaIsEmpty() throws SQLException {
+        // given
+        when(jdbcMetaService.resolveCurrentSchema(any(JdbcConnector.class), eq(DbType.MYSQL)))
+            .thenReturn("   ");
+
+        // when & then
+        assertThrows(DatiException.class, () -> dataSourceService.addDataSource(testDataSource));
+        verify(dataSourceDAO, never()).save(any());
     }
 
     @Test
@@ -98,13 +185,13 @@ class DataSourceServiceTest {
     }
 
     @Test
-    @DisplayName("更新数据源 - 数据源不存在时抛出异常")
+    @DisplayName("更新数据源 - 数据源不存在时抛出 DS_NOT_FOUND 异常")
     void updateDataSource_shouldThrowWhenNotFound() {
         // given
         when(dataSourceDAO.findById(TestFixtures.TEST_DATASOURCE_ID)).thenReturn(Optional.empty());
 
         // when & then
-        assertThrows(Exception.class, () -> 
+        assertThrows(DatiException.class, () ->
             dataSourceService.updateDataSource(TestFixtures.TEST_DATASOURCE_ID, testDataSource)
         );
         verify(dataSourceDAO).findById(TestFixtures.TEST_DATASOURCE_ID);
@@ -257,6 +344,173 @@ class DataSourceServiceTest {
             // then
             assertThat(result).isTrue();
             mockedJdbc.verify(() -> JdbcUtils.testConnection(eq(testDataSource.getJdbcUrl()), eq(testDataSource.getUsername()), eq(testDataSource.getPassword())));
+        }
+    }
+
+    @Test
+    @DisplayName("更新数据源 - URL 变化时重新探测 defaultSchema，并单次保存")
+    void updateDataSource_reDetectsWhenUrlChanges() throws SQLException {
+        testDataSourcePO.setJdbcUrl("jdbc:mysql://old-host:3306/db");
+        testDataSource.setJdbcUrl("jdbc:mysql://new-host:3306/db");
+        ArgumentCaptor<DataSourcePO> captor = ArgumentCaptor.forClass(DataSourcePO.class);
+        when(dataSourceDAO.findById(TestFixtures.TEST_DATASOURCE_ID)).thenReturn(Optional.of(testDataSourcePO));
+        when(dataSourceDAO.save(captor.capture())).thenReturn(testDataSourcePO);
+        when(jdbcMetaService.resolveCurrentSchema(any(JdbcConnector.class), eq(DbType.MYSQL)))
+            .thenReturn("newdb");
+
+        try (MockedStatic<HikariPoolManager> mockedHikari = mockStatic(HikariPoolManager.class)) {
+            dataSourceService.updateDataSource(TestFixtures.TEST_DATASOURCE_ID, testDataSource);
+
+            verify(jdbcMetaService).resolveCurrentSchema(any(JdbcConnector.class), eq(DbType.MYSQL));
+            verify(dataSourceDAO, org.mockito.Mockito.times(1)).save(any(DataSourcePO.class));
+            assertThat(captor.getValue().getDefaultSchema()).isEqualTo("newdb");
+            mockedHikari.verify(() -> HikariPoolManager.close(any(JdbcConnector.class)));
+        }
+    }
+
+    @Test
+    @DisplayName("更新数据源 - username 变化时重新探测 defaultSchema")
+    void updateDataSource_reDetectsWhenUsernameChanges() throws SQLException {
+        testDataSource.setUsername("new_user");
+        when(dataSourceDAO.findById(TestFixtures.TEST_DATASOURCE_ID)).thenReturn(Optional.of(testDataSourcePO));
+        when(dataSourceDAO.save(any(DataSourcePO.class))).thenReturn(testDataSourcePO);
+        when(jdbcMetaService.resolveCurrentSchema(any(JdbcConnector.class), eq(DbType.MYSQL)))
+            .thenReturn("newdb");
+
+        try (MockedStatic<HikariPoolManager> mockedHikari = mockStatic(HikariPoolManager.class)) {
+            dataSourceService.updateDataSource(TestFixtures.TEST_DATASOURCE_ID, testDataSource);
+
+            verify(jdbcMetaService).resolveCurrentSchema(any(JdbcConnector.class), eq(DbType.MYSQL));
+            mockedHikari.verify(() -> HikariPoolManager.close(any(JdbcConnector.class)));
+        }
+    }
+
+    @Test
+    @DisplayName("更新数据源 - password 变化时重新探测 defaultSchema")
+    void updateDataSource_reDetectsWhenPasswordChanges() throws SQLException {
+        testDataSource.setPassword("new_password");
+        when(dataSourceDAO.findById(TestFixtures.TEST_DATASOURCE_ID)).thenReturn(Optional.of(testDataSourcePO));
+        when(dataSourceDAO.save(any(DataSourcePO.class))).thenReturn(testDataSourcePO);
+        when(jdbcMetaService.resolveCurrentSchema(any(JdbcConnector.class), eq(DbType.MYSQL)))
+            .thenReturn("newdb");
+
+        try (MockedStatic<HikariPoolManager> mockedHikari = mockStatic(HikariPoolManager.class)) {
+            dataSourceService.updateDataSource(TestFixtures.TEST_DATASOURCE_ID, testDataSource);
+
+            verify(jdbcMetaService).resolveCurrentSchema(any(JdbcConnector.class), eq(DbType.MYSQL));
+            mockedHikari.verify(() -> HikariPoolManager.close(any(JdbcConnector.class)));
+        }
+    }
+
+    @Test
+    @DisplayName("更新数据源 - type 变化时重新探测 defaultSchema")
+    void updateDataSource_reDetectsWhenTypeChanges() throws SQLException {
+        testDataSource.setType(DbType.POSTGRESQL);
+        when(dataSourceDAO.findById(TestFixtures.TEST_DATASOURCE_ID)).thenReturn(Optional.of(testDataSourcePO));
+        when(dataSourceDAO.save(any(DataSourcePO.class))).thenReturn(testDataSourcePO);
+        when(jdbcMetaService.resolveCurrentSchema(any(JdbcConnector.class), eq(DbType.POSTGRESQL)))
+            .thenReturn("newdb");
+
+        try (MockedStatic<HikariPoolManager> mockedHikari = mockStatic(HikariPoolManager.class)) {
+            dataSourceService.updateDataSource(TestFixtures.TEST_DATASOURCE_ID, testDataSource);
+
+            verify(jdbcMetaService).resolveCurrentSchema(any(JdbcConnector.class), eq(DbType.POSTGRESQL));
+            mockedHikari.verify(() -> HikariPoolManager.close(any(JdbcConnector.class)));
+        }
+    }
+
+    @Test
+    @DisplayName("更新数据源 - 非连接字段变化时不探测、不关闭连接池")
+    void updateDataSource_doesNotDetect_whenOnlyNonConnectionFieldsChange() {
+        testDataSource.setName("Renamed Source");
+        testDataSource.setDescription("new description");
+        when(dataSourceDAO.findById(TestFixtures.TEST_DATASOURCE_ID)).thenReturn(Optional.of(testDataSourcePO));
+        when(dataSourceDAO.save(any(DataSourcePO.class))).thenReturn(testDataSourcePO);
+
+        try (MockedStatic<HikariPoolManager> mockedHikari = mockStatic(HikariPoolManager.class)) {
+            dataSourceService.updateDataSource(TestFixtures.TEST_DATASOURCE_ID, testDataSource);
+
+            verify(dataSourceDAO, org.mockito.Mockito.times(1)).save(any(DataSourcePO.class));
+            mockedHikari.verifyNoInteractions();
+        }
+    }
+
+    @Test
+    @DisplayName("更新数据源 - 连接信息探测失败(SQLException)时不修改、不保存原数据")
+    void updateDataSource_shouldNotSave_whenDetectionThrowsSQLException() throws SQLException {
+        testDataSource.setJdbcUrl("jdbc:mysql://new-host:3306/db");
+        String originalJdbcUrl = testDataSourcePO.getJdbcUrl();
+        when(dataSourceDAO.findById(TestFixtures.TEST_DATASOURCE_ID)).thenReturn(Optional.of(testDataSourcePO));
+        when(jdbcMetaService.resolveCurrentSchema(any(JdbcConnector.class), eq(DbType.MYSQL)))
+            .thenThrow(new SQLException("connection refused"));
+
+        assertThrows(DatiException.class, () ->
+            dataSourceService.updateDataSource(TestFixtures.TEST_DATASOURCE_ID, testDataSource));
+
+        assertThat(testDataSourcePO.getJdbcUrl()).isEqualTo(originalJdbcUrl);
+        verify(dataSourceDAO, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("更新数据源 - 不支持的数据库类型时不修改、不保存原数据")
+    void updateDataSource_shouldNotSave_whenDetectionThrowsUnsupportedType() throws SQLException {
+        testDataSource.setType(DbType.POSTGRESQL);
+        when(dataSourceDAO.findById(TestFixtures.TEST_DATASOURCE_ID)).thenReturn(Optional.of(testDataSourcePO));
+        when(jdbcMetaService.resolveCurrentSchema(any(JdbcConnector.class), eq(DbType.POSTGRESQL)))
+            .thenThrow(new DatiException(com.dati.base.exception.ErrorCode.DS_UNSUPPORTED_TYPE, DbType.POSTGRESQL));
+
+        assertThrows(DatiException.class, () ->
+            dataSourceService.updateDataSource(TestFixtures.TEST_DATASOURCE_ID, testDataSource));
+
+        verify(dataSourceDAO, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("更新数据源 - 探测结果为空时不修改、不保存原数据")
+    void updateDataSource_shouldNotSave_whenSchemaIsBlank() throws SQLException {
+        testDataSource.setJdbcUrl("jdbc:mysql://new-host:3306/db");
+        when(dataSourceDAO.findById(TestFixtures.TEST_DATASOURCE_ID)).thenReturn(Optional.of(testDataSourcePO));
+        when(jdbcMetaService.resolveCurrentSchema(any(JdbcConnector.class), eq(DbType.MYSQL)))
+            .thenReturn("");
+
+        assertThrows(DatiException.class, () ->
+            dataSourceService.updateDataSource(TestFixtures.TEST_DATASOURCE_ID, testDataSource));
+
+        verify(dataSourceDAO, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("更新数据源 - 探测成功后使用变更前的旧凭据关闭旧连接池")
+    void updateDataSource_closesOldPool_withOldCredentials() throws SQLException {
+        JdbcConnector expectedOldConnector = new JdbcConnector(
+            testDataSourcePO.getJdbcUrl(), testDataSourcePO.getUserName(), testDataSourcePO.getEncryptedPassword());
+        testDataSource.setJdbcUrl("jdbc:mysql://new-host:3306/db");
+        when(dataSourceDAO.findById(TestFixtures.TEST_DATASOURCE_ID)).thenReturn(Optional.of(testDataSourcePO));
+        when(dataSourceDAO.save(any(DataSourcePO.class))).thenReturn(testDataSourcePO);
+        when(jdbcMetaService.resolveCurrentSchema(any(JdbcConnector.class), eq(DbType.MYSQL)))
+            .thenReturn("newdb");
+
+        try (MockedStatic<HikariPoolManager> mockedHikari = mockStatic(HikariPoolManager.class)) {
+            dataSourceService.updateDataSource(TestFixtures.TEST_DATASOURCE_ID, testDataSource);
+
+            mockedHikari.verify(() -> HikariPoolManager.close(eq(expectedOldConnector)));
+        }
+    }
+
+    @Test
+    @DisplayName("更新数据源 - 保存失败时不关闭旧连接池")
+    void updateDataSource_doesNotClosePool_whenSaveFails() throws SQLException {
+        testDataSource.setJdbcUrl("jdbc:mysql://new-host:3306/db");
+        when(dataSourceDAO.findById(TestFixtures.TEST_DATASOURCE_ID)).thenReturn(Optional.of(testDataSourcePO));
+        when(jdbcMetaService.resolveCurrentSchema(any(JdbcConnector.class), eq(DbType.MYSQL)))
+            .thenReturn("newdb");
+        when(dataSourceDAO.save(any(DataSourcePO.class))).thenThrow(new RuntimeException("db down"));
+
+        try (MockedStatic<HikariPoolManager> mockedHikari = mockStatic(HikariPoolManager.class)) {
+            assertThrows(RuntimeException.class, () ->
+                dataSourceService.updateDataSource(TestFixtures.TEST_DATASOURCE_ID, testDataSource));
+
+            mockedHikari.verify(() -> HikariPoolManager.close(any(JdbcConnector.class)), never());
         }
     }
 }

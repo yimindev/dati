@@ -1,6 +1,9 @@
 package com.dati.datasource.domain.service;
 
+import com.dati.base.exception.DatiException;
+import com.dati.base.exception.ErrorCode;
 import com.dati.db.Column;
+import com.dati.db.DbType;
 import com.dati.db.HikariPoolManager;
 import com.dati.db.JdbcConnector;
 import com.dati.db.Table;
@@ -36,12 +39,8 @@ public class JdbcMetaService {
 
     public List<String> getSchemas(String dataSourceId, @Nullable String catalog) throws SQLException {
         DataSourcePO dataSourcePO = dataSourceDAO.findById(dataSourceId).orElseThrow();
+        DbClient dbClient = DbClientFactory.getDbClient(dataSourcePO.getType());
         DataSource dataSource = DSMapper.toDataSource(dataSourcePO);
-        return getSchemas(dataSource, catalog);
-    }
-
-    public List<String> getSchemas(DataSource dataSource, @Nullable String catalog) throws SQLException {
-        DbClient dbClient = DbClientFactory.getDbClient(dataSource.getType());
         return dbClient.getSchemas(new JdbcConnector(dataSource), catalog);
     }
 
@@ -64,5 +63,14 @@ public class JdbcMetaService {
         JdbcConnector jdbcConnector = new JdbcConnector(DSMapper.toDataSource(dataSourcePO));
         JdbcTemplate jdbcTemplate = new JdbcTemplate(HikariPoolManager.getDataSource(jdbcConnector));
         return jdbcTemplate.queryForList(sql);
+    }
+
+    @Nullable
+    public String resolveCurrentSchema(JdbcConnector connector, DbType dbType) throws SQLException {
+        DbClient dbClient = DbClientFactory.getDbClient(dbType);
+        if (dbClient == null) {
+            throw new DatiException(ErrorCode.DS_UNSUPPORTED_TYPE, dbType);
+        }
+        return dbClient.getCurrentSchema(connector);
     }
 }

@@ -7,7 +7,6 @@ import com.dati.mcp.domain.model.McpDataScopeType;
 import com.dati.mcp.domain.model.McpServiceDataScope;
 import com.dati.mcp.domain.model.ToolError;
 import com.dati.semantic.repository.dao.SubjectTableDAO;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -49,18 +48,18 @@ class ScopeValidatorTest {
         return s;
     }
 
-    private static McpServiceDataScope subjectScope(String subjectId) {
+    private static McpServiceDataScope subjectScope() {
         McpServiceDataScope s = new McpServiceDataScope();
         s.setScopeType(McpDataScopeType.SUBJECT);
-        s.setReferenceId(subjectId);
+        s.setReferenceId("sub-1");
         return s;
     }
 
-    private static TableInfoPO table(String dsId, String schema, String name) {
+    private static TableInfoPO table() {
         TableInfoPO po = new TableInfoPO();
-        po.setDataSourceId(dsId);
-        po.setSchema(schema);
-        po.setName(name);
+        po.setDataSourceId(ScopeValidatorTest.DS_ID);
+        po.setSchema("public");
+        po.setName("users");
         return po;
     }
 
@@ -84,11 +83,11 @@ class ScopeValidatorTest {
     @Test
     @DisplayName("SUBJECT 覆盖 dsId → 通过（无表级检查）")
     void shouldPassWhenSubjectScopeCovers() {
-        Page<TableInfoPO> page = new PageImpl<>(List.of(table(DS_ID, "public", "users")));
+        Page<TableInfoPO> page = new PageImpl<>(List.of(table()));
         when(subjectTableDAO.findTablesBySubjectId(anyString(), any(Pageable.class))).thenReturn(page);
 
         assertThatCode(() ->
-            validator.validate(List.of(subjectScope("sub-1")), DS_ID, Set.of(), null))
+            validator.validate(List.of(subjectScope()), DS_ID, Set.of(), null))
             .doesNotThrowAnyException();
     }
 
@@ -106,12 +105,27 @@ class ScopeValidatorTest {
     @DisplayName("SQL 无 schema + 有 defaultSchema → 解析后匹配允许的表")
     void shouldResolveSchemaUsingDefaultSchema() {
         when(tableInfoDAO.findByDataSourceId(DS_ID))
-            .thenReturn(List.of(table(DS_ID, "public", "users")));
+            .thenReturn(List.of(table()));
 
         assertThatCode(() ->
             validator.validate(
                 List.of(dataSourceScope(DS_ID)), DS_ID,
                 Set.of(new TableRef(null, "users")), "public"))
             .doesNotThrowAnyException();
+    }
+
+    @Test
+    @DisplayName("SQL 无 schema + defaultSchema 也为 null → 无法解析，抛 SCOPE_VIOLATION")
+    void shouldRejectUnqualifiedTableWhenDefaultSchemaNull() {
+        when(tableInfoDAO.findByDataSourceId(DS_ID))
+            .thenReturn(List.of(table()));
+
+        assertThatThrownBy(() ->
+            validator.validate(
+                List.of(dataSourceScope(DS_ID)), DS_ID,
+                Set.of(new TableRef(null, "users")), null))
+            .isInstanceOf(ToolExecuteException.class)
+            .extracting(e -> ((ToolExecuteException) e).getToolError())
+            .isEqualTo(ToolError.SCOPE_VIOLATION);
     }
 }

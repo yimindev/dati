@@ -3,7 +3,7 @@ import { ref, computed, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useI18n } from 'vue-i18n'
 import type { DatasourceVO, DataSourcePayload } from '~/api/datasource'
-import { addDataSource, updateDataSource, testConnection, getSchemasByConnection } from '~/api/datasource'
+import { addDataSource, updateDataSource, testConnection } from '~/api/datasource'
 
 // i18n
 const { t } = useI18n()
@@ -36,7 +36,6 @@ const formData = ref<DataSourcePayload>({
   username: '',
   password: '',
   type: 'MySQL',
-  default_schema: '',
 })
 
 // 计算属性
@@ -57,7 +56,6 @@ watch(() => props.datasource, (newVal) => {
       username: newVal.username,
       password: '',
       type: newVal.type,
-      default_schema: newVal.default_schema || '',
     }
   } else {
     resetForm()
@@ -74,7 +72,6 @@ function resetForm() {
     username: '',
     password: '',
     type: 'MySQL',
-    default_schema: '',
   }
   formRef.value?.resetValidation()
   testPassed.value = false
@@ -85,17 +82,6 @@ watch(
   () => ({ url: formData.value.jdbc_url, user: formData.value.username, pass: formData.value.password, type: formData.value.type }),
   () => { testPassed.value = false }
 )
-
-// Schema 列表（测试连接后获取）
-const availableSchemas = ref<string[]>([])
-const schemasLoading = ref(false)
-
-// 弹窗打开时清空上次的 schema 数据
-watch(visible, (val) => {
-  if (val) {
-    availableSchemas.value = []
-  }
-})
 
 // 测试连接
 const handleTestConnection = async () => {
@@ -111,12 +97,6 @@ const handleTestConnection = async () => {
       testPassed.value = true
       ElMessage.success(t('datasource.testSuccess'))
 
-      // 测试连接成功后，拉取 schema 列表（新建/编辑均可用）
-      try {
-        schemasLoading.value = true
-        availableSchemas.value = await getSchemasByConnection(formData.value)
-      } catch { /* ignore */ }
-      finally { schemasLoading.value = false }
     } else {
       testPassed.value = false
       ElMessage.error(t('datasource.testFailed'))
@@ -170,9 +150,6 @@ const handleCancel = () => {
     <DatasourceForm
       ref="formRef"
       v-model="formData"
-      :available-schemas="availableSchemas"
-      :schemas-loading="schemasLoading"
-      :loading="submitting"
       @test-connection="handleTestConnection"
     />
 

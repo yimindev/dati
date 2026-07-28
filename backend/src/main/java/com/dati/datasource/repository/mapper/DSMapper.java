@@ -19,7 +19,6 @@ public class DSMapper {
         target.setJdbcUrl(source.getJdbcUrl());
         target.setUserName(source.getUsername());
         target.setEncryptedPassword(EncryptionUtils.encrypt(source.getPassword()));
-        target.setDefaultSchema(source.getDefaultSchema());
     }
 
     public static DataSource toDataSource(DataSourcePO dataSourcePO) {

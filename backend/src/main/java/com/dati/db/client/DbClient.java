@@ -13,14 +13,16 @@ import java.util.List;
 public interface DbClient {
     DbType getDbType();
 
-    List<String> getCatalogs(JdbcConnector connection) throws SQLException;
+    List<String> getCatalogs(JdbcConnector jdbcConnector) throws SQLException;
 
-    List<String> getSchemas(JdbcConnector connection, @Nullable String catalog) throws SQLException;
+    List<String> getSchemas(JdbcConnector jdbcConnector, @Nullable String catalog) throws SQLException;
 
-    List<Table> getTables(JdbcConnector connection, @Nullable String catalog, String schema) throws SQLException;
+    List<Table> getTables(JdbcConnector jdbcConnector, @Nullable String catalog, String schema) throws SQLException;
 
-    List<Column> getColumns(JdbcConnector connection, @Nullable String catalog, String schema, String table) throws SQLException;
+    List<Column> getColumns(JdbcConnector jdbcConnector, @Nullable String catalog, String schema, String table) throws SQLException;
 
     /** 使用已有连接查询列信息，由调用方管理连接生命周期。 */
     List<Column> getColumns(Connection connection, @Nullable String catalog, String schema, String table) throws SQLException;
+
+    String getCurrentSchema(JdbcConnector jdbcConnector) throws SQLException;
 }

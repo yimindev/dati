@@ -2,6 +2,7 @@ package com.dati.db;
 
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
+import com.zaxxer.hikari.pool.HikariPool;
 import lombok.extern.slf4j.Slf4j;
 
 import java.sql.Connection;
@@ -42,8 +43,24 @@ public class HikariPoolManager {
         return cfg;
     }
 
-    public static HikariDataSource getDataSource(JdbcConnector jdbcConnector) {
-        return POOLS.computeIfAbsent(jdbcConnector, k -> new HikariDataSource(buildConfig(jdbcConnector)));
+    /** 预期的 Hikari 连接池初始化失败（如认证失败、网络不通等）会被转换为 SQLException，供调用方统一处理为业务异常。 */
+    public static HikariDataSource getDataSource(JdbcConnector jdbcConnector) throws SQLException {
+        HikariDataSource existing = POOLS.get(jdbcConnector);
+        if (existing != null) {
+            return existing;
+        }
+        HikariDataSource created;
+        try {
+            created = new HikariDataSource(buildConfig(jdbcConnector));
+        } catch (HikariPool.PoolInitializationException e) {
+            throw new SQLException("Failed to initialize connection pool: " + e.getMessage(), e);
+        }
+        HikariDataSource prior = POOLS.putIfAbsent(jdbcConnector, created);
+        if (prior != null) {
+            created.close();
+            return prior;
+        }
+        return created;
     }
 
     public static Connection getConnection(JdbcConnector jdbcConnector) throws SQLException {

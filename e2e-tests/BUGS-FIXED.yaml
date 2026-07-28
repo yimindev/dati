@@ -34,10 +34,11 @@ bugs:
     title: default_schema 为 null 时 DATA_SOURCE scope 无法解析表级权限
     module: MCP 服务管理
     severity: low
-    fixed_at: 2026-07-26
+    fixed_at: 2026-07-27
     description: |
-      tryResolve 缺少 ref.schema 为 null 且 defaultSchema 也为 null 时的 fallback。
-      新增分支：ref.schema 为 null 时遍历 allowed set 按 name 匹配（忽略 schema）。
+      改为后端自动探测 defaultSchema（DbClient.getCurrentSchema），
+      addDataSource / updateDataSource 时自动写入。defaultSchema 不再由用户手工输入，
+      确保 ScopeValidator.tryResolve 拿到的始终是 DB 真实值。
 
   - id: BUG-002
     title: 数据源列表不显示创建人/修改人名称

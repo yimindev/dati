@@ -18,6 +18,8 @@ public enum ErrorCode {
     DS_NOT_FOUND("DS002", 404, "Data source not found: {0}"),
     DS_SQL_ERROR("DS003", 400, "SQL execution error: {0}"),
     DS_SYNC_FAILED("DS004", 500, "Failed to sync metadata for data source: {0}"),
+    DS_UNSUPPORTED_TYPE("DS005", 400, "Unsupported database type: {0}"),
+    DS_SCHEMA_DETECTION_FAILED("DS006", 400, "Failed to detect default schema: {0}"),
 
     // ── Semantic module (SM) ─────────────────────────────
 

@@ -10,9 +10,6 @@ const { t } = useI18n();
 // Props & Emits
 interface Props {
   modelValue: DataSourcePayload;
-  loading?: boolean;
-  availableSchemas?: string[];
-  schemasLoading?: boolean;
 }
 
 interface Emits {
@@ -20,7 +17,7 @@ interface Emits {
   (e: "test-connection"): void;
 }
 
-const props = defineProps<Props>();
+defineProps<Props>();
 defineEmits<Emits>();
 
 // 表单引用
@@ -120,28 +117,6 @@ defineExpose({
         :placeholder="t('common.password')"
         show-password
       />
-    </el-form-item>
-
-    <el-form-item :label="t('datasource.defaultSchema')">
-      <el-select
-        v-model="modelValue.default_schema"
-        :placeholder="props.availableSchemas?.length
-          ? t('datasource.defaultSchemaPlaceholder')
-          : t('datasource.testConnectionFirst')"
-        :disabled="!props.availableSchemas?.length"
-        clearable
-        filterable
-        allow-create
-        :loading="props.schemasLoading"
-        style="width: 100%"
-      >
-        <el-option
-          v-for="schema in props.availableSchemas"
-          :key="schema"
-          :label="schema"
-          :value="schema"
-        />
-      </el-select>
     </el-form-item>
 
     <el-form-item :label="t('common.description')">

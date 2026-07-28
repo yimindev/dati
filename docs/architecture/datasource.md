@@ -1,6 +1,6 @@
 # DataSource 模块架构文档
 
-> **更新时间**: 2026-06-28
+> **更新时间**: 2026-07-27
 
 ## 1. 概述
 
@@ -99,6 +99,7 @@ backend/src/main/java/com/dati/datasource/
 - `id`, `name`, `description`: 基础信息（继承 BaseResource）
 - `type`: 数据库类型 (DbType enum，支持 MYSQL/POSTGRESQL/CLICKHOUSE/ORACLE 等 10 种)
 - `jdbcUrl`, `username`, `password`: 连接信息（Model 中为明文，PO 中 password 加密存储）
+- `defaultSchema`: 默认 Schema，由服务端在创建/连接信息变更时实际探测写入，**忽略客户端传入的值**（`DSMapper` 创建映射时不复制该字段）
 
 **TableInfo**
 - `id`, `name`, `description`: 基础信息
@@ -120,11 +121,12 @@ backend/src/main/java/com/dati/datasource/
 - 通过 `DbClientFactory.getDbClient(DbType)` 获取对应的 DbClient 实现
 - 调用 `HikariPoolManager` 管理 HikariCP 连接池
 - `executeSql()`: 使用 `JdbcTemplate` 执行 SQL 并返回 `List<Map<String, Object>>`
+- `resolveCurrentSchema(connector, dbType)`: 探测连接的默认 schema。**由本方法统一管理连接的获取与释放**（`try-with-resources` 包裹 `HikariPoolManager.getConnection()`），`DbClient.getCurrentSchema(Connection)` 仅负责在已有连接上执行 SQL，不再自行管理连接生命周期；若 `dbType` 不受支持则抛出 `DatiException(DS_UNSUPPORTED_TYPE)`
 
 **DataSourceService**: 数据源核心业务逻辑
 - `testConnection(JdbcConnector)`: 测试数据库连接
-- `addDataSource(DataSource)`: 保存新数据源，密码加密后存入 PO
-- `updateDataSource(id, DataSource)`: 更新数据源，仅覆盖非 null 字段
+- `addDataSource(DataSource)`: **持久化前**探测真实 `defaultSchema`（忽略客户端传入值），探测失败（`SQLException`、不支持的类型、探测结果为空）均转换为明确的 `DatiException` 业务错误，**不落库**；探测成功后密码加密并单次 `save`
+- `updateDataSource(id, DataSource)`: 仅覆盖非 null 字段；仅当 `jdbcUrl`/`username`/`password`/`type` 任一实际发生变化时，才基于合并后的候选连接信息重新探测 `defaultSchema`——探测在写入 `po`/保存前完成，失败时不修改、不保存原数据；探测成功后连同其它字段单次 `save`，保存成功后再使用**变更前的旧连接信息**关闭旧的 HikariCP 连接池（非连接字段变化或保存失败均不触发探测/关闭）。方法不加 `@Transactional`，避免将探测这类外部网络 I/O 包裹进元数据库事务
 - `deleteDataSource(id)`: 删除时关闭连接池 → 清理关联的 Column → Table → ES 语义索引
 - `listDataSources(keyword, pageable)`: 分页查询，支持按名称或 ID 搜索
 - `getDataSourceNameMap(ids)`: 批量获取数据源名称映射
@@ -353,7 +355,7 @@ DataSourceService.deleteDataSource()
 
 ## 6. 关键技术点
 
-- **连接池管理**: 使用 HikariCP，通过 `HikariPoolManager`（ConcurrentHashMap）统一管理，ShutdownHook 自动清理
+- **连接池管理**: 使用 HikariCP，通过 `HikariPoolManager`（ConcurrentHashMap）统一管理，ShutdownHook 自动清理；预期的连接池初始化失败（如认证失败、网络不通）会被 `HikariPoolManager.getDataSource()` 捕获并转换为 `SQLException`，由上层统一处理为业务异常，而不是让未处理的 `PoolInitializationException` 直接抛出
 - **多数据库支持**: `DbClientFactory` 简单工厂模式，通过 `DbClient` 接口 + `AbstractDbClient` 模板方法抽象不同数据库的 JDBC 操作。目前已实现 `MysqlDbClient`（Schema = Catalog）和 `PostgresqlDbClient`
 - **密码安全**: PO 中存储 `encryptedPassword`（`EncryptionUtils.encrypt()`），Mapper 层做加解密转换，VO 层不返回密码
 - **DDD 架构**: 严格分层 `controller → service → repository/dao`
@@ -379,3 +381,4 @@ DataSourceService.deleteDataSource()
 | 2026-06-28 | 补充 `ColumnValueConfig` 配置说明 |
 | 2026-06-28 | 完善数据流图，体现 ColumnValueService 和 Table/Column Controller |
 | 2026-06-28 | 增加 ES 集成中 FIELD_VALUE 类型的交互流程 |
+| 2026-07-27 | 新增/更新数据源时改为持久化前探测真实 `defaultSchema`（忽略客户端传入值），失败转明确的 `DatiException`；`DbClient.getCurrentSchema` 改为接收 `Connection`，连接生命周期统一收敛到 `JdbcMetaService`；`HikariPoolManager` 将预期的连接池初始化失败转换为 `SQLException`；新增 `DS_UNSUPPORTED_TYPE`/`DS_SCHEMA_DETECTION_FAILED` 错误码 |

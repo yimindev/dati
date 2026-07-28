@@ -18,7 +18,6 @@ export interface DataSourcePayload {
   username: string;
   password?: string;
   type: string;
-  default_schema?: string;
 }
 
 // 列信息（常用字段集合，按蛇形命名）
@@ -57,12 +56,6 @@ export interface CatalogParam {
 // 注意：请求体字段用蛇形（如 jdbc_url、username、password、type）
 export function testConnection(body: DataSourcePayload, signal?: AbortSignal): Promise<boolean> {
   return post<boolean, DataSourcePayload>('/v1/data-sources/test-connection', body, signal)
-}
-
-// 数据源：无状态获取 Schemas（POST /v1/data-sources/schemas）
-// 用于新建/编辑时测试连接后，根据连接信息拉取 Schema 列表
-export function getSchemasByConnection(body: DataSourcePayload, signal?: AbortSignal): Promise<string[]> {
-  return post<string[], DataSourcePayload>('/v1/data-sources/schemas', body, signal)
 }
 
 // 数据源：新增（POST /v1/data-sources）
