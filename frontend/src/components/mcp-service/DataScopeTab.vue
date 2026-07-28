@@ -34,7 +34,6 @@ const selectedIds = ref<string[]>([]);
 const dialogOptions = ref<ScopeOption[]>([]);
 const dialogLoading = ref(false);
 const dialogPage = ref(1);
-const dialogTotalPages = ref(1);
 const dialogTotalCount = ref(0);
 const dialogKeyword = ref("");
 let searchTimer: ReturnType<typeof setTimeout> | null = null;
@@ -63,13 +62,6 @@ const searchPlaceholder = computed(() =>
     : t("mcpService.dataScope.searchSubject"),
 );
 
-const showingRange = computed(() => {
-  if (dialogTotalCount.value === 0) return null;
-  const from = (dialogPage.value - 1) * PAGE_SIZE + 1;
-  const to = Math.min(dialogPage.value * PAGE_SIZE, dialogTotalCount.value);
-  return { from, to, total: dialogTotalCount.value };
-});
-
 // ── Data loading ──
 const loadDataScope = async () => {
   loading.value = true;
@@ -91,7 +83,6 @@ const loadDialogOptions = async (page: number, keyword?: string) => {
         value: ds.id,
         description: ds.description || ds.type,
       }));
-      dialogTotalPages.value = res.total_pages;
       dialogTotalCount.value = res.total;
     } else {
       const res = await listSubjects(page, PAGE_SIZE, keyword || undefined);
@@ -100,12 +91,10 @@ const loadDialogOptions = async (page: number, keyword?: string) => {
         value: s.id,
         description: s.description || s.datasource_name || undefined,
       }));
-      dialogTotalPages.value = res.total_pages;
       dialogTotalCount.value = res.total;
     }
   } catch {
     dialogOptions.value = [];
-    dialogTotalPages.value = 1;
     dialogTotalCount.value = 0;
   } finally {
     dialogLoading.value = false;
@@ -120,16 +109,9 @@ const handleSearch = () => {
   }, 300);
 };
 
-const handlePrevPage = () => {
-  if (dialogPage.value <= 1) return;
-  dialogPage.value--;
-  loadDialogOptions(dialogPage.value, dialogKeyword.value || undefined);
-};
-
-const handleNextPage = () => {
-  if (dialogPage.value >= dialogTotalPages.value) return;
-  dialogPage.value++;
-  loadDialogOptions(dialogPage.value, dialogKeyword.value || undefined);
+const handleDialogPageChange = (page: number) => {
+  dialogPage.value = page;
+  loadDialogOptions(page, dialogKeyword.value || undefined);
 };
 
 const handleSelectAllToggle = () => {
@@ -332,84 +314,75 @@ onMounted(() => {
         />
       </div>
 
-      <!-- Table header -->
-      <div class="table-header">
-        <span class="col-check">
-          <el-checkbox
-            :model-value="allSelectableSelected"
-            :disabled="dialogLoading || selectableOnPage.length === 0"
-            @change="handleSelectAllToggle"
-          />
-        </span>
-        <span class="col-name">{{ t("common.name") }}</span>
-        <span class="col-desc">{{ t("common.description") }}</span>
-        <span class="col-status"></span>
-      </div>
-
-      <!-- Table body -->
-      <div v-loading="dialogLoading" class="min-h-64">
-        <el-empty
-          v-if="!dialogLoading && dialogOptions.length === 0"
-          :description="t('mcpService.dataScope.noResults')"
-          :image-size="80"
-        />
-
-        <div
-          v-for="opt in dialogOptions"
-          :key="opt.value"
-          class="table-row"
-          :class="{
-            existing: isAlreadyAdded(opt.value),
-            selected: !isAlreadyAdded(opt.value) && selectedIds.includes(opt.value),
-          }"
-          @click="!isAlreadyAdded(opt.value) && toggleSelection(opt.value)"
-        >
-          <span class="col-check" @click.stop>
+      <DataTableShell
+        compact
+        :loading="dialogLoading"
+        :total="dialogTotalCount"
+        :page="dialogPage"
+        :page-size="PAGE_SIZE"
+        :page-sizes="[]"
+        @page-change="handleDialogPageChange"
+      >
+        <!-- Table header -->
+        <div class="table-header">
+          <span class="col-check">
             <el-checkbox
-              :model-value="isAlreadyAdded(opt.value) || selectedIds.includes(opt.value)"
-              :disabled="isAlreadyAdded(opt.value)"
-              @change="toggleSelection(opt.value)"
+              :model-value="allSelectableSelected"
+              :disabled="dialogLoading || selectableOnPage.length === 0"
+              @change="handleSelectAllToggle"
             />
           </span>
-          <span class="col-name">
-            <span class="row-title">{{ opt.label }}</span>
-            <span class="row-id">{{ opt.value }}</span>
-          </span>
-          <span class="col-desc">{{ opt.description || "" }}</span>
-          <span class="col-status">
-            <el-tag v-if="isAlreadyAdded(opt.value)" size="small" type="info">
-              {{ t("mcpService.dataScope.alreadyAdded") }}
-            </el-tag>
-            <el-tag
-              v-else-if="selectedIds.includes(opt.value)"
-              size="small"
-              type="primary"
-              effect="plain"
-            >
-              {{ t("mcpService.dataScope.selected") }}
-            </el-tag>
-          </span>
+          <span class="col-name">{{ t("common.name") }}</span>
+          <span class="col-desc">{{ t("common.description") }}</span>
+          <span class="col-status"></span>
         </div>
-      </div>
 
-      <!-- Pagination -->
-      <div class="flex items-center justify-between border-t border-[var(--ep-border-color-lighter)] pt-3">
-        <span v-if="showingRange" class="text-sm text-[var(--ep-text-color-secondary)]">
-          {{ t("mcpService.dataScope.showingRange", showingRange) }}
-        </span>
-        <span v-else>&nbsp;</span>
-        <div class="flex items-center gap-1.5">
-          <el-button size="small" :disabled="dialogPage <= 1 || dialogLoading" @click="handlePrevPage">
-            {{ t("mcpService.dataScope.prevPage") }}
-          </el-button>
-          <span class="mx-1 text-sm text-[var(--ep-text-color-secondary)]">
-            {{ t("mcpService.dataScope.pageText", { page: dialogPage, total: dialogTotalPages || 1 }) }}
-          </span>
-          <el-button size="small" :disabled="dialogPage >= dialogTotalPages || dialogLoading || dialogTotalPages === 0" @click="handleNextPage">
-            {{ t("mcpService.dataScope.nextPage") }}
-          </el-button>
+        <!-- Table body -->
+        <div class="min-h-64">
+          <el-empty
+            v-if="!dialogLoading && dialogOptions.length === 0"
+            :description="t('mcpService.dataScope.noResults')"
+            :image-size="80"
+          />
+
+          <div
+            v-for="opt in dialogOptions"
+            :key="opt.value"
+            class="table-row"
+            :class="{
+              existing: isAlreadyAdded(opt.value),
+              selected: !isAlreadyAdded(opt.value) && selectedIds.includes(opt.value),
+            }"
+            @click="!isAlreadyAdded(opt.value) && toggleSelection(opt.value)"
+          >
+            <span class="col-check" @click.stop>
+              <el-checkbox
+                :model-value="isAlreadyAdded(opt.value) || selectedIds.includes(opt.value)"
+                :disabled="isAlreadyAdded(opt.value)"
+                @change="toggleSelection(opt.value)"
+              />
+            </span>
+            <span class="col-name">
+              <span class="row-title">{{ opt.label }}</span>
+              <span class="row-id">{{ opt.value }}</span>
+            </span>
+            <span class="col-desc">{{ opt.description || "" }}</span>
+            <span class="col-status">
+              <el-tag v-if="isAlreadyAdded(opt.value)" size="small" type="info">
+                {{ t("mcpService.dataScope.alreadyAdded") }}
+              </el-tag>
+              <el-tag
+                v-else-if="selectedIds.includes(opt.value)"
+                size="small"
+                type="primary"
+                effect="plain"
+              >
+                {{ t("mcpService.dataScope.selected") }}
+              </el-tag>
+            </span>
+          </div>
         </div>
-      </div>
+      </DataTableShell>
 
       <!-- Footer -->
       <template #footer>
@@ -508,6 +481,9 @@ onMounted(() => {
 }
 .table-row.selected {
   background: var(--ep-color-primary-light-9);
+}
+.table-row:last-child {
+  border-bottom: 0;
 }
 
 .col-check {

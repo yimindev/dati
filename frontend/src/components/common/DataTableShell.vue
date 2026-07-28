@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from "vue";
 import { useI18n } from "vue-i18n";
 
 const { t } = useI18n();
@@ -9,12 +10,18 @@ interface Props {
   page: number;
   pageSize: number;
   pageSizes?: number[];
+  compact?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
   loading: false,
   pageSizes: () => [10, 20, 50, 100],
+  compact: false,
 });
+
+const paginationLayout = computed(() =>
+  props.pageSizes.length > 1 ? "sizes, prev, pager, next" : "prev, pager, next",
+);
 
 const emit = defineEmits<{
   (e: "pageChange", page: number): void;
@@ -23,7 +30,11 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <div v-loading="props.loading" class="data-table-shell">
+  <div
+    v-loading="props.loading"
+    class="data-table-shell"
+    :class="{ 'data-table-shell--compact': props.compact }"
+  >
     <div class="data-table-body">
       <slot />
     </div>
@@ -33,7 +44,8 @@ const emit = defineEmits<{
         {{ t("common.total", { total }) }}
       </span>
       <el-pagination
-        layout="sizes, prev, pager, next"
+        :layout="paginationLayout"
+        :disabled="props.loading"
         :current-page="page"
         :page-size="pageSize"
         :page-sizes="pageSizes"
@@ -64,6 +76,10 @@ const emit = defineEmits<{
   gap: 12px;
   /* padding via Tailwind py-3.5 px-4 on template */
   border-top: 1px solid var(--ep-border-color-lighter);
+}
+
+.data-table-shell--compact .data-table-footer {
+  padding: 10px 12px !important;
 }
 
 .total-text {

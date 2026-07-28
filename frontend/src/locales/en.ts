@@ -148,6 +148,7 @@ export default {
     // List Page
     createButton: "Create Data Source",
     searchPlaceholder: "Name or ID",
+    emptyList: "No data sources yet",
   },
 
   subject: {
@@ -239,6 +240,7 @@ export default {
     selectedCount: "{count} table(s) selected",
     selectAtLeastOne: "Please select at least one table",
     addSelected: "Add Selected Tables",
+    emptyList: "No tables yet",
 
     // Specific Messages
     addSuccess: "Added successfully",
@@ -260,6 +262,7 @@ export default {
 
     // Search
     searchPlaceholder: "Search by column name or description",
+    emptyList: "No columns yet",
 
     // Actions
     editTitle: "Edit Column",
@@ -366,9 +369,6 @@ export default {
       searchDataSource: "Search data sources...",
       searchSubject: "Search subjects...",
       alreadyAdded: "Added",
-      pageText: "Page {page} / {total}",
-      prevPage: "Prev",
-      nextPage: "Next",
       confirmAdd: "Confirm ({count})",
       selectFirst: "Select at least one item",
       noResults: "No matching results",
@@ -376,7 +376,6 @@ export default {
       selected: "Selected",
       selectedCount: "{count} item(s) selected",
       noSelection: "No items selected",
-      showingRange: "Showing {from}–{to} of {total} entries",
     },
     tool: {
       title: "Tool Management",

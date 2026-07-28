@@ -166,7 +166,6 @@ onMounted(() => {
     >
       <SubjectTable
         :data="subjectList"
-        :loading="loading"
         @detail="handleDetail"
         @edit="handleEdit"
         @delete="handleDelete"

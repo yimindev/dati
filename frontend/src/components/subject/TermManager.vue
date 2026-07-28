@@ -578,13 +578,13 @@ onMounted(() => {
 
 <template>
   <div class="space-y-4 py-4">
-    <div class="flex items-center justify-between mb-4 gap-2 flex-wrap">
-      <div class="flex items-center gap-2">
+    <div class="toolbar toolbar--compact flex items-center justify-between gap-2 max-md:items-stretch max-md:flex-col">
+      <div class="toolbar-fields">
         <el-input
           v-model="searchKeyword"
           :placeholder="t('common.search')"
           clearable
-          class="!w-60"
+          class="toolbar-search"
           @keyup.enter="handleSearch"
           @clear="handleClearSearch"
         >
@@ -621,7 +621,7 @@ onMounted(() => {
             <span v-else class="text-sm text-[var(--ep-text-color-placeholder)]">-</span>
           </template>
         </el-table-column>
-        <el-table-column prop="description" :label="t('common.description')" min-width="220" />
+        <el-table-column prop="description" :label="t('common.description')" min-width="220" show-overflow-tooltip />
         <el-table-column :label="t('subject.linkedEntities')" min-width="260">
           <template #default="{ row }">
             <template v-if="getTermRelations(row.id).length > 0">
@@ -664,7 +664,7 @@ onMounted(() => {
             <span v-else class="text-sm text-[var(--ep-text-color-placeholder)]">-</span>
           </template>
         </el-table-column>
-        <el-table-column :label="t('common.actions')" width="210" fixed="right">
+        <el-table-column :label="t('common.actions')" width="210" fixed="right" align="right">
           <template #default="{ row }">
             <el-button link type="primary" @click="handleOpenAddRelationDialog(row.id)">
               {{ t('subject.addRelation') }}
@@ -677,9 +677,10 @@ onMounted(() => {
             </el-button>
           </template>
         </el-table-column>
+        <template #empty>
+          <el-empty :description="t('subject.noTerms')" />
+        </template>
       </el-table>
-
-      <el-empty v-if="!loading && termList.length === 0" :description="t('subject.noTerms')" />
     </DataTableShell>
 
     <el-dialog

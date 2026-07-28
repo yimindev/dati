@@ -6,7 +6,6 @@ const { t } = useI18n()
 
 interface Props {
   data: SubjectVO[]
-  loading?: boolean
 }
 
 interface Emits {
@@ -22,16 +21,25 @@ defineEmits<Emits>()
 <template>
   <el-table
     :data="data"
-    :loading="loading"
     stripe
     style="width: 100%"
     @row-click="(row: SubjectVO) => $emit('detail', row)"
   >
-    <el-table-column prop="name" :label="t('common.name')" min-width="160">
+    <el-table-column prop="name" :label="t('common.name')" min-width="180">
       <template #default="{ row }">
-        <el-button link type="primary" @click.stop="$emit('detail', row)">
-          {{ row.name }}
-        </el-button>
+        <div class="flex flex-col gap-0.5 min-w-0" @click.stop>
+          <el-button
+            link
+            type="primary"
+            class="!justify-start font-medium text-left !p-0 truncate"
+            @click="$emit('detail', row)"
+          >
+            {{ row.name }}
+          </el-button>
+          <span v-if="row.id" class="text-xs text-[var(--ep-text-color-placeholder)] font-mono truncate">
+            {{ row.id }}
+          </span>
+        </div>
       </template>
     </el-table-column>
     <el-table-column :label="t('common.aliases')" min-width="180">
@@ -50,9 +58,9 @@ defineEmits<Emits>()
       </template>
     </el-table-column>
     <el-table-column prop="description" :label="t('common.description')" min-width="200" show-overflow-tooltip />
-    <el-table-column :label="t('common.actions')" width="150" fixed="right">
+    <el-table-column :label="t('common.actions')" width="150" fixed="right" align="right">
       <template #default="{ row }">
-        <div class="flex items-center gap-2">
+        <div class="flex items-center justify-end gap-2">
           <el-button type="primary" link @click.stop="$emit('edit', row)">
             {{ t('common.edit') }}
           </el-button>
@@ -62,5 +70,8 @@ defineEmits<Emits>()
         </div>
       </template>
     </el-table-column>
+    <template #empty>
+      <el-empty :description="t('subject.noSubject')" />
+    </template>
   </el-table>
 </template>

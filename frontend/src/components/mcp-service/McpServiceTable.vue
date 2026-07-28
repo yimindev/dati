@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ElMessage } from "element-plus";
-import { DocumentCopy, MoreFilled } from "@element-plus/icons-vue";
+import { DocumentCopy } from "@element-plus/icons-vue";
 import type { McpServiceVO } from "~/api/mcp-service";
 import { formatDateTime } from "~/composables";
 import { useI18n } from "vue-i18n";
@@ -9,7 +9,6 @@ const { t } = useI18n();
 
 interface Props {
   data: McpServiceVO[];
-  loading?: boolean;
 }
 
 interface Emits {
@@ -23,8 +22,6 @@ defineEmits<Emits>();
 
 const statusType = (status: string) => {
   switch (status) {
-    case "DRAFT":
-      return "info";
     case "PUBLISHED":
       return "success";
     case "DISABLED":
@@ -60,84 +57,80 @@ const handleCopy = async (endpointPath: string) => {
 <template>
   <el-table
     :data="data"
-    :loading="loading"
-    row-key="id"
-    class="mcp-service-table"
+    stripe
     style="width: 100%"
   >
     <el-table-column
       prop="name"
       :label="t('mcpService.serviceName')"
-      min-width="220"
-      fixed="left"
+      min-width="200"
     >
       <template #default="{ row }">
-        <button class="service-cell" type="button" @click="$emit('detail', row)">
-          <span class="service-main">
-            <span class="service-name">{{ row.name }}</span>
-            <span class="service-code">{{ row.code }}</span>
+        <div class="flex flex-col gap-0.5 min-w-0">
+          <el-button
+            link
+            type="primary"
+            class="!justify-start font-medium text-left !p-0 truncate"
+            @click="$emit('detail', row)"
+          >
+            {{ row.name }}
+          </el-button>
+          <span class="text-xs text-[var(--ep-text-color-placeholder)] font-mono truncate">
+            {{ row.code }}
           </span>
-        </button>
+        </div>
       </template>
     </el-table-column>
     <el-table-column
       prop="description"
       :label="t('common.description')"
-      min-width="240"
+      min-width="200"
       show-overflow-tooltip
     >
       <template #default="{ row }">
-        <span class="description-text">
-          {{ row.description || t("mcpService.emptyDescription") }}
-        </span>
+        {{ row.description || '-' }}
       </template>
     </el-table-column>
     <el-table-column
       prop="status"
       :label="t('mcpService.status.label')"
-      min-width="120"
+      min-width="100"
     >
       <template #default="{ row }">
-        <span class="status-cell">
-          <span v-if="row.status === 'PUBLISHED'" class="status-dot published"></span>
-          <span v-else-if="row.status === 'DISABLED'" class="status-dot disabled"></span>
-          <span v-else class="status-dot draft"></span>
-          <el-tag :type="statusType(row.status)" size="small" effect="plain">
-            {{ statusLabel(row.status) }}
-          </el-tag>
-        </span>
+        <el-tag :type="statusType(row.status)" size="small">
+          {{ statusLabel(row.status) }}
+        </el-tag>
       </template>
     </el-table-column>
     <el-table-column
       prop="tool_count"
       :label="t('mcpService.toolCount')"
-      min-width="100"
+      min-width="90"
       align="right"
     >
       <template #default="{ row }">
-        <el-tag round effect="plain">{{ row.tool_count ?? 0 }}</el-tag>
+        <span class="font-mono text-sm">{{ row.tool_count ?? 0 }}</span>
       </template>
     </el-table-column>
     <el-table-column
       prop="endpoint_path"
       :label="t('mcpService.endpointPath')"
-      min-width="260"
+      min-width="240"
     >
       <template #default="{ row }">
-        <div v-if="row.endpoint_path" class="endpoint-cell">
-          <el-tooltip :content="row.endpoint_path" placement="top">
-            <code>{{ row.endpoint_path }}</code>
-          </el-tooltip>
-          <el-tooltip :content="t('common.copy')" placement="top">
-            <el-button
-              link
-              :icon="DocumentCopy"
-              :aria-label="t('common.copy')"
-              @click="handleCopy(row.endpoint_path)"
-            />
-          </el-tooltip>
+        <div v-if="row.endpoint_path" class="flex items-center gap-1.5 min-w-0">
+          <code class="text-xs px-1.5 py-0.5 rounded bg-[var(--ep-fill-color-light)] text-[var(--ep-text-color-primary)] font-mono truncate max-w-[180px]">
+            {{ row.endpoint_path }}
+          </code>
+          <el-button
+            link
+            type="primary"
+            :icon="DocumentCopy"
+            :aria-label="t('common.copy')"
+            @click="handleCopy(row.endpoint_path)"
+          />
         </div>
-        <span v-else class="description-text">{{ t("mcpService.notPublished") }}</span>
+        <span v-else class="text-sm text-[var(--ep-text-color-placeholder)]">-</span>
       </template>
     </el-table-column>
     <el-table-column
@@ -151,28 +144,21 @@ const handleCopy = async (endpointPath: string) => {
     </el-table-column>
     <el-table-column
       :label="t('common.actions')"
-      width="190"
+      width="180"
       fixed="right"
       align="right"
     >
       <template #default="{ row }">
-        <div class="action-cell">
+        <div class="flex items-center justify-end gap-2">
           <el-button type="primary" link @click="$emit('detail', row)">
             {{ t("common.detail") }}
           </el-button>
           <el-button type="primary" link @click="$emit('edit', row)">
             {{ t("common.edit") }}
           </el-button>
-          <el-dropdown trigger="click">
-            <el-button link :icon="MoreFilled" :aria-label="t('common.actions')" />
-            <template #dropdown>
-              <el-dropdown-menu>
-                <el-dropdown-item @click="$emit('delete', row)">
-                  <span class="danger-action">{{ t("common.delete") }}</span>
-                </el-dropdown-item>
-              </el-dropdown-menu>
-            </template>
-          </el-dropdown>
+          <el-button type="danger" link @click="$emit('delete', row)">
+            {{ t("common.delete") }}
+          </el-button>
         </div>
       </template>
     </el-table-column>
@@ -183,87 +169,3 @@ const handleCopy = async (endpointPath: string) => {
   </el-table>
 </template>
 
-<style scoped>
-.service-cell {
-  display: inline-flex;
-  max-width: 100%;
-  align-items: center;
-  gap: 10px;
-  border: 0;
-  background: transparent;
-  color: inherit;
-  cursor: pointer;
-  padding: 0;
-  text-align: left;
-}
-
-.service-main {
-  display: flex;
-  min-width: 0;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.service-name {
-  overflow: hidden;
-  color: var(--ep-color-primary);
-  font-weight: 500;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.service-code {
-  overflow: hidden;
-  color: var(--ep-text-color-secondary);
-  font-family: monospace;
-  font-size: 12px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.description-text {
-  color: var(--ep-text-color-secondary);
-  font-size: 12px;
-}
-
-.status-cell,
-.endpoint-cell,
-.action-cell {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.status-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 999px;
-}
-
-.status-dot.draft {
-  background: var(--ep-color-info);
-}
-
-.status-dot.published {
-  background: var(--ep-color-success);
-}
-
-.status-dot.disabled {
-  background: var(--ep-color-danger);
-}
-
-.endpoint-cell {
-  max-width: 100%;
-}
-
-.endpoint-cell code {
-  overflow: hidden;
-  max-width: 210px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.danger-action {
-  color: var(--ep-color-danger);
-}
-</style>

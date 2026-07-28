@@ -114,6 +114,13 @@ code {
   padding: 14px;
 }
 
+.toolbar--compact {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  padding: 0;
+}
+
 .toolbar-fields {
   display: flex;
   align-items: center;

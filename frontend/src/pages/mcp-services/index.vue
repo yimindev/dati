@@ -189,7 +189,6 @@ onMounted(() => {
     >
       <McpServiceTable
         :data="serviceList"
-        :loading="loading"
         @detail="handleDetail"
         @edit="handleEdit"
         @delete="handleDelete"

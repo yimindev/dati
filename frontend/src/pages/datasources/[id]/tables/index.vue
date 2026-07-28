@@ -8,7 +8,7 @@ import { nextTick, onMounted, ref, computed } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { ElMessage, ElMessageBox } from "element-plus";
 import type { InputInstance } from "element-plus";
-import { Plus, Search, Refresh } from "@element-plus/icons-vue";
+import { Plus, Search, Refresh, MoreFilled } from "@element-plus/icons-vue";
 import { useI18n } from "vue-i18n";
 import { listTableInfos, getAddedTableNames, batchAddTables, syncColumns, deleteTable, updateTable, type TableInfoVO } from "~/api/tableinfo.ts";
 import { getSchemas, getTables, getDataSource, type TableVO } from "~/api/datasource.ts";
@@ -328,12 +328,23 @@ onMounted(async () => {
       @page-change="handlePageChange"
       @page-size-change="handlePageSizeChange"
     >
-      <el-table :data="tableList">
+      <el-table :data="tableList" stripe style="width: 100%">
         <el-table-column
           prop="name"
           :label="t('common.tableName')"
-          min-width="150"
-        />
+          min-width="160"
+        >
+          <template #default="{ row }">
+            <el-button
+              link
+              type="primary"
+              class="!p-0 font-medium"
+              @click="handleColumnManage(row)"
+            >
+              {{ row.name }}
+            </el-button>
+          </template>
+        </el-table-column>
         <el-table-column
           :label="t('common.aliases')"
           min-width="180"
@@ -354,6 +365,7 @@ onMounted(async () => {
           prop="description"
           :label="t('common.description')"
           min-width="150"
+          show-overflow-tooltip
         />
         <el-table-column
           prop="schema"
@@ -363,7 +375,7 @@ onMounted(async () => {
         <el-table-column
           prop="updated_at"
           :label="t('common.updatedAt')"
-          min-width="120"
+          min-width="140"
         >
           <template #default="{ row }">
             {{ formatDateTime(row.updated_at) }}
@@ -371,27 +383,39 @@ onMounted(async () => {
         </el-table-column>
         <el-table-column
           :label="t('common.actions')"
-          min-width="150"
+          width="160"
           fixed="right"
+          align="right"
         >
           <template #default="{ row }">
-            <el-button type="primary" link @click="handleColumnManage(row)">
-              {{ t("tableInfo.columnSettings") }}
-            </el-button>
+            <div class="flex items-center justify-end gap-2">
+              <el-button type="primary" link @click="handleColumnManage(row)">
+                {{ t("tableInfo.columnSettings") }}
+              </el-button>
 
-            <el-button link type="primary" @click="handleConfigMetadata(row)">
-              {{ t("common.edit") }}
-            </el-button>
+              <el-button link type="primary" @click="handleConfigMetadata(row)">
+                {{ t("common.edit") }}
+              </el-button>
 
-            <el-button link type="primary" @click="handleSyncColumns(row)">
-              {{ t("tableInfo.syncColumns") }}
-            </el-button>
-
-            <el-button link type="danger" @click="handleRemoveTable(row)">
-              {{ t("common.remove") }}
-            </el-button>
+              <el-dropdown trigger="click">
+                <el-button link :icon="MoreFilled" :aria-label="t('common.actions')" />
+                <template #dropdown>
+                  <el-dropdown-menu>
+                    <el-dropdown-item @click="handleSyncColumns(row)">
+                      {{ t("tableInfo.syncColumns") }}
+                    </el-dropdown-item>
+                    <el-dropdown-item @click="handleRemoveTable(row)">
+                      <span class="text-[var(--ep-color-danger)]">{{ t("common.remove") }}</span>
+                    </el-dropdown-item>
+                  </el-dropdown-menu>
+                </template>
+              </el-dropdown>
+            </div>
           </template>
         </el-table-column>
+        <template #empty>
+          <el-empty :description="t('tableInfo.emptyList')" />
+        </template>
       </el-table>
     </DataTableShell>
 

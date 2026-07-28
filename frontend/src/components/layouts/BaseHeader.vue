@@ -42,7 +42,7 @@ function goToDocs() {
       <el-menu-item index="2-2"> {{ t("layout.header.itemTwo") }} </el-menu-item>
     </el-sub-menu>
 
-    <el-menu-item class="h-full" @click="toggleDark()">
+    <el-menu-item index="header-theme" class="h-full" @click="toggleDark()">
       <button
         class="w-full cursor-pointer border-0 bg-transparent"
         style="height: var(--ep-menu-item-height)"
@@ -55,7 +55,7 @@ function goToDocs() {
       </button>
     </el-menu-item>
 
-    <el-menu-item class="h-full">
+    <el-menu-item index="header-locale" class="h-full">
       <el-dropdown
         trigger="click"
         @command="(cmd: AppLang) => changeLocale(cmd)"
@@ -72,7 +72,7 @@ function goToDocs() {
       </el-dropdown>
     </el-menu-item>
 
-    <el-menu-item class="h-full" @click="goToDocs">
+    <el-menu-item index="header-docs" class="h-full" @click="goToDocs">
       <el-tooltip :content="t('layout.header.help')" placement="bottom">
         <el-icon class="inline-flex">
           <span class="icon-[codicon--question]"></span>
@@ -80,7 +80,7 @@ function goToDocs() {
       </el-tooltip>
     </el-menu-item>
 
-    <el-menu-item class="h-full" v-if="authStore.isLoggedIn">
+    <el-menu-item index="header-user" class="h-full" v-if="authStore.isLoggedIn">
       <el-dropdown trigger="click" @command="handleLogout">
         <div class="size-full flex items-center justify-center gap-2 cursor-pointer">
           <el-avatar :size="24">{{ userDisplayName.charAt(0).toUpperCase() }}</el-avatar>
@@ -96,7 +96,7 @@ function goToDocs() {
         </template>
       </el-dropdown>
     </el-menu-item>
-    <el-menu-item class="h-full" v-else>
+    <el-menu-item index="header-login" class="h-full" v-else>
       <RouterLink to="/login">
         <el-button type="primary" size="small">{{ t("auth.login") }}</el-button>
       </RouterLink>

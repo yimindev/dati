@@ -673,6 +673,7 @@ onMounted(() => {
           prop="description"
           :label="t('column.description')"
           min-width="160"
+          show-overflow-tooltip
         />
         <el-table-column
           prop="column_type"
@@ -713,25 +714,31 @@ onMounted(() => {
           :label="t('common.actions')"
           width="180"
           fixed="right"
+          align="right"
         >
           <template #default="{ row }">
-            <el-button
-              link
-              type="primary"
-              @click="handleConfigMetadata(row)"
-            >
-              {{ t("common.edit") }}
-            </el-button>
-            <el-button
-              v-if="row.extract_value_enabled && isValueMatchingSupported(row.column_type)"
-              link
-              type="primary"
-              @click="handleManageValues(row)"
-            >
-              {{ t("column.manageValues") }}
-            </el-button>
+            <div class="flex items-center justify-end gap-2">
+              <el-button
+                link
+                type="primary"
+                @click="handleConfigMetadata(row)"
+              >
+                {{ t("common.edit") }}
+              </el-button>
+              <el-button
+                v-if="row.extract_value_enabled && isValueMatchingSupported(row.column_type)"
+                link
+                type="primary"
+                @click="handleManageValues(row)"
+              >
+                {{ t("column.manageValues") }}
+              </el-button>
+            </div>
           </template>
         </el-table-column>
+        <template #empty>
+          <el-empty :description="t('column.emptyList')" />
+        </template>
       </el-table>
     </DataTableShell>
 
@@ -813,7 +820,7 @@ onMounted(() => {
       :close-on-click-modal="false"
       class="values-dialog"
     >
-      <div v-loading="valuesLoading" class="values-dialog-content">
+      <div class="values-dialog-content">
         <!-- 操作栏：搜索 + 抽取 + 添加 -->
         <div class="mb-4 flex items-center justify-between">
           <el-input
@@ -850,25 +857,35 @@ onMounted(() => {
         </div>
 
         <!-- 值列表表格 -->
-        <el-table :data="displayedColumnValues" stripe style="width: 100%" :max-height="tableMaxHeight">
-          <el-table-column :label="t('column.valueLabel')" min-width="180" show-overflow-tooltip>
-            <template #default="{ row, $index }">
-              <div class="flex items-center gap-2">
-                <el-tag v-if="row._isDraft" size="small" type="success">
-                  {{ t("column.newValueTag") }}
-                </el-tag>
-                <el-input
-                  v-if="row._isDraft"
-                  :ref="$index === 0 ? setDraftValueInputRef : undefined"
-                  v-model="row.value"
-                  :placeholder="t('column.enterValue')"
-                  @keyup.enter="handleConfirmDraftValue(row)"
-                  @keyup.esc="handleCancelDraftValue"
-                />
-                <span v-else>{{ row.value }}</span>
-              </div>
-            </template>
-          </el-table-column>
+        <DataTableShell
+          compact
+          :loading="valuesLoading"
+          :total="valuesTotal"
+          :page="valuesPage"
+          :page-size="valuesPageSize"
+          :page-sizes="valuePageSizes"
+          @page-change="handleValuePageChange"
+          @page-size-change="handleValuePageSizeChange"
+        >
+          <el-table :data="displayedColumnValues" stripe style="width: 100%" :max-height="tableMaxHeight">
+            <el-table-column :label="t('column.valueLabel')" min-width="180" show-overflow-tooltip>
+              <template #default="{ row, $index }">
+                <div class="flex items-center gap-2">
+                  <el-tag v-if="row._isDraft" size="small" type="success">
+                    {{ t("column.newValueTag") }}
+                  </el-tag>
+                  <el-input
+                    v-if="row._isDraft"
+                    :ref="$index === 0 ? setDraftValueInputRef : undefined"
+                    v-model="row.value"
+                    :placeholder="t('column.enterValue')"
+                    @keyup.enter="handleConfirmDraftValue(row)"
+                    @keyup.esc="handleCancelDraftValue"
+                  />
+                  <span v-else>{{ row.value }}</span>
+                </div>
+              </template>
+            </el-table-column>
 
           <!-- 同义词列（行内编辑） -->
           <el-table-column :label="t('column.synonyms')" min-width="220">
@@ -910,6 +927,7 @@ onMounted(() => {
             :label="t('common.actions')"
             width="130"
             fixed="right"
+            align="right"
           >
             <template #default="{ row }">
               <template v-if="row._isDraft">
@@ -941,24 +959,12 @@ onMounted(() => {
             </template>
           </el-table-column>
           <template #empty>
-            <div class="text-center text-[var(--ep-text-color-placeholder)] py-8">
-              {{ valueSearchKeyword ? t("column.noValueSearchResult") : t("column.noValues") }}
-            </div>
+            <el-empty
+              :description="valueSearchKeyword ? t('column.noValueSearchResult') : t('column.noValues')"
+            />
           </template>
-        </el-table>
-
-        <div v-if="valuesTotal > 0" class="flex items-center justify-between mt-4">
-          <span class="text-[var(--ep-text-color-secondary)] text-sm">{{ t('common.total', { total: valuesTotal }) }}</span>
-          <el-pagination
-            layout="sizes, prev, pager, next"
-            :current-page="valuesPage"
-            :page-size="valuesPageSize"
-            :page-sizes="valuePageSizes"
-            :total="valuesTotal"
-            @current-change="handleValuePageChange"
-            @size-change="handleValuePageSizeChange"
-          />
-        </div>
+          </el-table>
+        </DataTableShell>
       </div>
 
       <template #footer>

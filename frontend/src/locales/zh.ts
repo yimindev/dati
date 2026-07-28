@@ -148,6 +148,7 @@ export default {
     // 列表页
     createButton: "创建数据源",
     searchPlaceholder: "名称或ID",
+    emptyList: "暂无数据源",
   },
 
   subject: {
@@ -239,6 +240,7 @@ export default {
     selectedCount: "已选择 {count} 个表",
     selectAtLeastOne: "请至少选择一个表",
     addSelected: "添加选中表",
+    emptyList: "暂无表",
 
     // 特有消息
     addSuccess: "添加成功",
@@ -260,6 +262,7 @@ export default {
 
     // 搜索
     searchPlaceholder: "搜索列名或描述",
+    emptyList: "暂无列",
 
     // 操作
     editTitle: "编辑列信息",
@@ -366,9 +369,6 @@ export default {
       searchDataSource: "搜索数据源...",
       searchSubject: "搜索主题...",
       alreadyAdded: "已添加",
-      pageText: "第 {page} 页 / 共 {total} 页",
-      prevPage: "上一页",
-      nextPage: "下一页",
       confirmAdd: "确认添加 ({count})",
       selectFirst: "请至少选择一项",
       noResults: "未找到匹配项",
@@ -376,7 +376,6 @@ export default {
       selected: "已选择",
       selectedCount: "已选择 {count} 项",
       noSelection: "未选择任何项",
-      showingRange: "第 {from}–{to} 条，共 {total} 条",
     },
     tool: {
       title: "工具管理 (Tools)",

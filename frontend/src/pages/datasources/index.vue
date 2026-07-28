@@ -205,7 +205,6 @@ onMounted(() => {
     >
       <DatasourceTable
         :data="datasourceList"
-        :loading="loading"
         @edit="handleEdit"
         @delete="handleDelete"
         @test-connection="handleTestConnection"
