@@ -36,7 +36,6 @@
     "@iconify-json/fluent": "^1.2.51",
     "@iconify-json/lsicon": "^1.2.5",
     "@iconify/tailwind4": "^1.0.6",
-    "@playwright/test": "^1.59.1",
     "@tailwindcss/typography": "^0.5.16",
     "@tailwindcss/vite": "^4.1.12",
     "@types/node": "^24.2.0",

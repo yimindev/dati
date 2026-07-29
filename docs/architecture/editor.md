@@ -463,7 +463,7 @@ function ctx(docWithPipe: string): CompletionContext {
 - `transactionFilter` 在两个 spec 合并时的坐标系统行为
 - `view.dispatch()` 的嵌套调用检测
 
-这些属于集成层，适合 Playwright e2e 测试覆盖。
+这些属于集成层，适合 e2e 测试覆盖。
 
 ## Extension 注册顺序
 
@@ -581,7 +581,7 @@ new CompletionContext(state, pos, false)  // pos 是光标位置
 | 19 | 变量名正则支持 `:default` 语法 | `(\w[\w.]*)(?::[^}]+)?` 捕获变量名但忽略默认值部分 |
 | 20 | `detectIfClose` 向前扫描而非行首锚定 | `{{#if` 可在行中间（如 `SELECT * FROM users {{#if status}}`），不能依赖 `^` |
 | 21 | 前端单测框架选用 Vitest | 原生 Vite 集成，零配置复用路径别名，兼容 CodeMirror `EditorState.create()` 轻量 mock |
-| 22 | 两套测试粒度：纯函数单测 + Playwright e2e | 补全源和闭合检测的纯逻辑用 Vitest 单测；`transactionFilter` 坐标系统等集成行为用 Playwright |
+| 22 | 两套测试粒度：纯函数单测 + 集成 e2e | 补全源和闭合检测的纯逻辑用 Vitest 单测；`transactionFilter` 坐标系统等集成行为用 e2e 测试覆盖 |
 | 23 | 模板高亮着色与闭合状态解耦（所有 Pattern 的 `}}` 可选） | 输入过程中 `{{var` 也应获得蓝色高亮，不被 SQL tokenizer 误染其他颜色。闭合与否仅影响错误检测的橙色波浪线 |
 | 24 | Pattern 3 用 `(?![\{#\/])` 替代 `(?<!\{)` | 一次性排除 `{{{` / `{{#` / `{{/`，比两个 lookbehind 更清晰 |
 | 25 | 未闭合错误用「语法感知」范围而非整行 | `{{sta fsdfsd` 只标 `{{sta` 为错误，`fsdfsd` 是普通文本不应被标。`validOpenPrefix` 按最大合法模板前缀截断 |
