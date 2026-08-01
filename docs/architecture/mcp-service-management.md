@@ -1,7 +1,7 @@
 # MCP Service 管理 — 架构文档
 
-> 版本：v2.0（US-01–05, US-5.5, US-07 完整实现）
-> 最后更新：2026-07-19
+> 版本：v2.1（US-01–05, US-5.5, US-07, US-08 完整实现）
+> 最后更新：2026-08-01
 
 ---
 
@@ -19,6 +19,9 @@ MCP Service 管理模块提供 **MCP（Model Context Protocol）服务的生命�
 - **模板预览引擎**（TEXT 模式渲染 / SQL 模式渲染 + 参数提取）
 - **SQL 安全分析引擎**（操作类型识别、表提取、多语句检测、事务/元数据/SET 分类）
 - **工具测试（Tool Test）**：参数输入 → 安全校验 → 执行 → 结果展示（支持 4 种工具类型、多语句 SQL、部分失败、scope 校验）
+- **发布与版本管理（US-08）**：草稿-快照隔离、发布/发布变更、停用/启用、版本历史与回滚、草稿 vs 线上 diff
+
+> **遗留**：MCP JSON-RPC/SSE Endpoint（`/{code}/mcp` 对外暴露）未实现，详见 US-08「遗留任务」。
 
 ---
 
@@ -30,8 +33,9 @@ MCP Service 管理模块提供 **MCP（Model Context Protocol）服务的生命�
 com.dati.mcp/
 ├── domain/
 │   ├── model/               # 领域实体与枚举
-│   │   ├── McpService.java              # 服务聚合（code, status）
-│   │   ├── McpServiceStatus.java        # DRAFT / PUBLISHED / DISABLED
+│   │   ├── McpService.java              # 服务聚合（code, status, activeVersionId/Number）
+│   │   ├── McpServiceStatus.java        # DRAFT / PUBLISHED / DISABLED（状态机）
+│   │   ├── McpServiceSnapshot.java      # 只读快照（content 全量打包）
 │   │   ├── McpServiceDataScope.java     # 数据范围实体
 │   │   ├── McpDataScopeType.java        # DATA_SOURCE / SUBJECT
 │   │   ├── McpToolType.java             # 工具类型枚举（4 种，含 inputSchema）
@@ -46,6 +50,7 @@ com.dati.mcp/
 │   │   └── TemplateRenderMode.java      # TEXT / SQL
 │   └── service/
 │       ├── McpServiceService.java           # 服务 CRUD + code 校验
+│       ├── McpServicePublishService.java    # 发布/停用/启用/diff/回滚（快照管理核心）
 │       ├── McpServiceDataScopeService.java  # 数据范围全量替换 + 解析 dsId 集合
 │       ├── McpToolService.java              # 工具 CRUD + 分组
 │       ├── McpPromptService.java            # Prompt CRUD + 模板校验
@@ -64,30 +69,34 @@ com.dati.mcp/
 ├── repository/
 │   ├── dao/
 │   │   ├── McpServiceDAO.java
+│   │   ├── McpServiceSnapshotDAO.java
 │   │   ├── McpServiceDataScopeDAO.java
 │   │   ├── McpPrebuiltToolConfigDAO.java
 │   │   ├── McpCustomToolDAO.java
 │   │   └── McpPromptDAO.java
 │   ├── po/                  # 持久化对象（继承 BasePO / BaseResourcePO）
 │   │   ├── McpServicePO.java
+│   │   ├── McpServiceSnapshotPO.java
 │   │   ├── McpServiceDataScopePO.java
 │   │   ├── McpPrebuiltToolConfigPO.java
 │   │   ├── McpCustomToolPO.java
 │   │   └── McpPromptPO.java
 │   └── mapper/              # 静态方法 PO ↔ Model（含 JSON 序列化/反序列化）
 │       ├── McpServiceMapper.java
+│       ├── McpServiceSnapshotMapper.java   # 快照 content 反序列化（按 tool_type 路由 ToolConfig）
 │       ├── McpServiceDataScopeMapper.java
 │       ├── McpPrebuiltToolConfigMapper.java
 │       ├── McpCustomToolMapper.java
 │       └── McpPromptMapper.java
 └── server/
     ├── controller/
-    │   ├── McpServiceController.java      # 服务 CRUD + 数据范围端点
+    │   ├── McpServiceController.java      # 服务 CRUD + 数据范围 + 发布/停用/启用/diff/快照/回滚端点
     │   ├── McpToolController.java         # 工具 CRUD + 测试端点
     │   ├── McpPromptController.java       # Prompt CRUD 端点
     │   └── TemplatePreviewController.java # 模板预览/提取端点
     ├── pojo/                 # VO / Request / Response
     │   ├── McpServiceVO.java, DataScopeItemVO.java, DataScopeRequest.java, DataScopeResponse.java
+    │   ├── McpServiceDiffVO.java, McpServiceSnapshotVO.java, PublishRequest.java, RollbackRequest.java
     │   ├── McpToolVO.java, ToolsResponse.java, CustomToolRequest.java
     │   ├── McpPromptVO.java, McpPromptRequest.java
     │   ├── ToolTestRequest.java, ToolTestResponse.java, ToolTestError.java, ToolTestData.java
@@ -126,8 +135,38 @@ com.dati.semantic.domain.model/
 | `McpServicePO` | 持久化对象，继承 `BasePO`。数据库约束：`code` 唯一索引 |
 | `McpServiceDAO` | JPA Repository。`existsByCode`、多条件模糊分页查询 |
 | `McpServiceService` | 创建时校验 code 格式（正则 `^[a-z0-9]([a-z0-9_-]{0,62}[a-z0-9])?$`）和唯一性；分页列表支持 keyword + status 过滤 |
-| `McpServiceAssembler` | Model→VO。推导 `endpointPath = "/{code}/mcp"`；统计 `toolCount` 调用 `McpToolService.countToolsByServiceId()` |
-| `McpServiceVO` | 响应：`code`、`status`、`endpoint_path`、`tool_count` |
+| `McpServiceAssembler` | Model→VO。推导 `endpointPath = "/{code}/mcp"`；统计 `toolCount` 调用 `McpToolService.countToolsByServiceId()`；快照列表 VO 转换（`toSnapshotVO`，仅元信息不含 content） |
+| `McpServiceVO` | 响应：`code`、`status`、`endpoint_path`、`tool_count`、`active_version_number` |
+
+#### 版本管理（Publish / Snapshot / Rollback）
+
+| 类 | 职责 |
+|---|---|
+| `McpServiceSnapshot` | 只读快照领域实体：`serviceId` + `versionNumber`（单调递增）+ `releaseNote` + `content: SnapshotContent`。`SnapshotContent` = `{ serviceInfo, dataScopes, prebuiltTools, customTools, prompts }` 全量打包 |
+| `McpServiceSnapshotPO` | 持久化对象，`content` 列存 JSON 字符串 |
+| `McpServiceSnapshotDAO` | JPA Repository。`findMaxVersionNumberByServiceId`、`findByServiceIdAndVersionNumber`、`findAllByServiceIdOrderByVersionNumberDesc` |
+| `McpServiceSnapshotMapper` | PO ↔ Model。**关键**：`parseContent()` 手动反序列化快照 content，`config` 字段根据父级 `tool_type` 显式路由到具体 `ToolConfig` 实现类（不依赖 `@JsonTypeInfo`，避免污染其他反序列化路径） |
+| `McpServicePublishService` | 版本管理核心服务：`publish()` 打包草稿 → 生成快照 vN+1 → 更新 `active_version_id`；`disable()` / `enable()` 状态切换（不产生快照）；`rollback()` 目标快照内容**全量写回草稿**后重新发布；`getDiff()` 草稿 vs 激活快照业务字段比较；`getSnapshots()` 版本历史 |
+| `McpServiceDiffVO` | diff 响应：`has_changes` + `modified_components` + 各组件 changed 标志 + Tools/Prompts 增删改明细列表 |
+| `McpServiceSnapshotVO` | 快照列表 VO：仅元信息（`serviceId` / `versionNumber` / `releaseNote` + 审计字段），**不含 content** |
+| `PublishRequest` | 发布请求体：`{ release_note? }` |
+| `RollbackRequest` | 回滚请求体：`{ target_version_number, release_note? }` |
+
+**状态机（含前置条件校验）：**
+
+| 操作 | 合法转换 | 非法时 |
+|---|---|---|
+| publish | DRAFT→PUBLISHED；PUBLISHED→PUBLISHED；DISABLED→**DISABLED**（发布≠上线） | — |
+| disable | 仅 PUBLISHED→DISABLED | DRAFT / DISABLED → 409 MS016 |
+| enable | 仅 DISABLED→PUBLISHED | DRAFT（无激活快照）→ 409 MS016 |
+| rollback | 需存在目标版本快照 | 版本不存在 → 404 MS017 |
+
+**diff 业务字段比较（关键设计）：**
+
+- 比较对象为**业务字段**（toolType/name/enabled/config/scopeType/referenceId 等），**排除 id 与审计字段**（created_at/updated_at/created_by/updated_by）
+- 原因：快照反序列化（`parseContent`）不保留审计字段；回滚恢复会刷新时间戳（`@CreationTimestamp` / `@UpdateTimestamp`）—— 全字段比较必然误报
+- prebuilt 配置变更并入 `modified_tools`（工具名 = toolType），保证「有变更必有明细」
+- `service_info` 仅比较 name/description
 
 #### 数据范围管理（Data Scope）
 
@@ -354,7 +393,13 @@ SemanticSearchService.search(keywords, dsIds, subjectIds)
 ```
 McpService
   ├─ id (UUID), code (唯一), name, description, status (DRAFT|PUBLISHED|DISABLED)
+  ├─ activeVersionId, activeVersionNumber   ← 指向当前对外响应的快照
   └─ endpointPath = "/{code}/mcp" (运行时推导，不存 DB)
+
+McpServiceSnapshot (per service, 多个, 版本号单调递增)
+  ├─ serviceId, versionNumber (v1, v2, v3...), releaseNote
+  ├─ content: JSON { serviceInfo, dataScopes, prebuiltTools, customTools, prompts }（发布时全量打包）
+  └─ 只读：MCP endpoint 仅读取 active 快照，不访问草稿
 
 McpServiceDataScope (per service, 多个)
   ├─ serviceId, scopeType (DATA_SOURCE|SUBJECT), referenceId, referenceName
@@ -391,6 +436,17 @@ McpPrompt (per service, 多个, UNIQUE(service_id, name))
 | `GET` | `/v1/mcp-services` | 分页列表，支持 `keyword`、`status` 过滤 |
 | `GET` | `/v1/mcp-services/{id}/data-scope` | 查询数据范围列表 |
 | `PUT` | `/v1/mcp-services/{id}/data-scope` | 全量保存数据范围 |
+
+#### 发布与版本管理
+
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| `POST` | `/v1/mcp-services/{id}/publish` | 发布。打包草稿生成快照 vN+1 并激活。DRAFT→PUBLISHED；DISABLED 时保持 DISABLED。Body：`{ release_note? }` |
+| `POST` | `/v1/mcp-services/{id}/rollback` | 回滚。目标快照内容全量写回草稿（基础信息/Data Scope/Tools/Prompts）→ 生成新快照 vN+1。Body：`{ target_version_number, release_note? }` |
+| `POST` | `/v1/mcp-services/{id}/disable` | 停用。仅 PUBLISHED→DISABLED，不产生新快照 |
+| `POST` | `/v1/mcp-services/{id}/enable` | 启用。仅 DISABLED→PUBLISHED，不产生新快照 |
+| `GET` | `/v1/mcp-services/{id}/snapshots` | 版本历史列表，倒序。返回元信息（版本号/Release Note/时间），**不含快照正文 content** |
+| `GET` | `/v1/mcp-services/{id}/diff` | 草稿 vs 激活快照差异：`has_changes` + 变更明细（基础信息/Data Scope/Tools/Prompts） |
 
 #### Tool 管理
 
@@ -480,10 +536,30 @@ StatementResult.writeFailure(errorMessage)           // WRITE 失败
 | `MS013` | SQL 操作违反策略 (403) |
 | `MS014` | 数据源或表不在 scope 内 (400) |
 | `MS015` | 工具已禁用 (400) |
+| `MS016` | 服务状态转换非法（仅 PUBLISHED 可停用 / 仅 DISABLED 可启用）(409) |
+| `MS017` | 服务版本不存在（回滚目标版本缺失）(404) |
 
 > **注**：工具测试（US-07）使用独立的 `ToolError` 枚举 + `ToolExecuteException`，不经过 `ErrorCode`。`ToolExecuteException` 在 `McpToolTestService` 中 catch 并转为 `ToolTestResponse`，不进入 `GlobalExceptionHandler`。
 
 ### 2.7 关键设计决策
+
+#### 草稿-快照隔离（版本管理核心）
+
+- **草稿区**：实时配置数据表（服务信息/Data Scope/Tools/Prompts），用户自由修改、自动保存，不影响线上
+- **激活快照**：发布时全量打包生成的只读快照，`active_version_id` 指针指向当前对外响应版本，版本号单调递增
+- **回滚语义**：目标版本内容全量写回草稿（含基础信息）→ 重新发布生成 vN+1。回滚后草稿 = 线上 = 目标版本内容，diff 无变化；历史保留回滚事件（Release Note "Rollback to vN"）
+- **发布 ≠ 上线**：DISABLED 状态下发布只更新快照，不改变状态，需手动启用才恢复对外
+
+#### diff 只比较业务字段
+
+- 快照反序列化不保留审计字段、回滚恢复刷新时间戳 → 全字段 JSON 比较必然误报「已修改」
+- diff 比较业务字段（toolType/name/enabled/config/scopeType/referenceId），排除 id 与审计字段
+- prebuilt 变更并入 `modified_tools`（工具名 = toolType），保证有变更必有明细
+
+#### 快照列表不暴露 content
+
+- `GET /snapshots` 经 Assembler 转换为元信息 VO（版本号/Release Note/时间），domain 不泄漏到 API 边界
+- 快照全文 content（含 SQL 模板等内部配置）保留在 domain 层，未来如需版本详情走独立接口
 
 #### Service Code 与 Endpoint
 
@@ -572,7 +648,7 @@ src/
 │   ├── mcp-prompt.ts               # Prompt 类型（McpPromptVO, McpPromptPayload）+ API
 │   └── template-preview.ts         # 模板预览/提取 API
 ├── components/mcp-service/
-│   ├── ToolsTab.vue                # 容器：子 Tab 切换（预置/自定义）
+│   ├── ToolsTab.vue                # 容器：子 Tab 切换（预置/自定义），保存后 emit refresh
 │   ├── PrebuiltToolList.vue        # 预置工具卡片列表 + 测试按钮
 │   ├── ExecuteSqlConfigDialog.vue  # EXECUTE_SQL 权限配置弹窗
 │   ├── CustomToolList.vue          # 自定义工具列表 + 测试按钮
@@ -583,6 +659,8 @@ src/
 │   ├── PromptDialog.vue            # Prompt 创建/编辑弹窗（含模板编辑器、参数提取）
 │   ├── TemplatePreviewDialog.vue   # 模板预览弹窗（TEXT/SQL 双模式）
 │   ├── ToolTestDialog.vue          # 工具测试弹窗（左右分栏：参数 / 结果）
+│   ├── DebugPublishTab.vue         # 版本管理 Tab（原「调试发布」）：版本历史 + 回滚 + Endpoint
+│   ├── DiffSummaryList.vue         # 变更摘要组件（popover 与发布弹窗共用，支持截断）
 │   ├── ParameterInput.vue          # 共享参数输入组件（按类型渲染不同控件）
 │   └── SqlSecurityConfig.vue       # SQL 安全配置组件（权限 pill + 限流）
 ├── components/common/editors/
@@ -617,6 +695,8 @@ src/
 | `TemplatePreviewDialog` | 通用模板预览弹窗。显示原始模板 → 参数输入 → 渲染结果。支持 TEXT 和 SQL 双模式。Copy 按钮复制结果。 |
 | `ToolTestDialog` | **工具测试弹窗**（左右分栏布局）：左侧参数输入区、右侧结果展示区。按工具类型渲染不同表单（EXECUTE_SQL: SqlEditor + 数据源下拉；PARAMETERIZED_SQL: ParameterInput 动态表单；GET_TABLE_INFO: schema/table 下拉选择器；SEARCH_METADATA: el-input-tag 关键词输入）。结果按 response.data.type 分发渲染（SELECT 表格、WRITE 卡片、TABLE_METADATA 表列表、SEARCH_HIT 术语卡片 + 数据源分组表卡片）。 |
 | `ParameterInput` | **共享参数输入组件**。按 `ToolParameter.type` 渲染：String → el-input，Number → el-input type="number"，Boolean → el-switch，DateTime → el-date-picker type="datetime"，Array → el-input-tag，default → el-input。被 ToolTestDialog 和 TemplatePreviewDialog 共用。 |
+| `DebugPublishTab` | **版本管理 Tab**（原「调试发布」）。展示当前版本 Tag + MCP Endpoint 复制 + 版本历史表格（Live Tag / Release Note / 回滚按钮）。纯展示 + 回滚：发布/停用/启用已移至详情页右上角。回滚确认弹窗明示「未发布的草稿修改将被覆盖」。 |
+| `DiffSummaryList` | **变更摘要组件**。props：`items`（label/detail/added/modified/deleted）+ `limit?`（截断数）+ `title?`。内置 max-height 滚动。popover（hover 感知，截断 5 项）与发布弹窗（完整展示）共用。 |
 | `SqlSecurityConfig` | 可复用的 SQL 安全配置组件。权限 pill（SELECT/INSERT/UPDATE/DELETE/DDL/MULTI）+ maxRows + timeout。 |
 | `SqlEditor` | CodeMirror 6 + `@codemirror/lang-sql`。纯 SQL 语法高亮编辑器，用于 EXECUTE_SQL 工具测试的 SQL 输入。 |
 | `PromptTemplateEditor` | CodeMirror 6 包装。支持：模板语法高亮（`{{}}`、`{{#if}}`）、智能补全、自动闭合、bracket matching、行包裹。 |
@@ -624,6 +704,11 @@ src/
 
 ### 3.3 交互细节
 
+- **详情页右上角（服务级状态操作区）**：DRAFT → [发布]；PUBLISHED → [发布变更]（仅 has_changes，hover 弹出变更摘要 popover）+ [停用]；DISABLED → [启用] + [发布变更]。删除入口统一在列表页
+- **变更感知三级递进**：① hover「发布变更」→ popover 摘要（截断 5 项）② 发布弹窗 → 完整变更摘要 + release note + 确认 ③ 版本管理 Tab → 版本历史/回滚
+- **草稿修改联动**：Tools / Prompts / DataScope / 基础信息保存后 emit refresh → 父页刷新 service + diff →「发布变更」按钮实时出现
+- **发布弹窗文案按状态区分**：DRAFT 首次发布 / PUBLISHED 覆盖线上 / DISABLED 提示「发布后仍保持停用，需启用才对外」
+- **回滚确认弹窗**：明示「将回滚至 vN，当前未发布的草稿修改将被 vN 内容覆盖」
 - **预置工具区**：开关 + EXECUTE_SQL 的 Setting 图标 + 「测试」按钮。无删除、无编辑名称。
 - **自定义工具区**：Edit/Delete 图标 + 「测试」按钮。hover 变色（Edit 蓝色，Delete 红色）。
 - **配置弹窗**：权限 pills 切换（选中态紫色 → 蓝色高亮）。安全警告黄色提示。
@@ -676,6 +761,24 @@ ToolTestDialog
     ├─ GET_TABLE_INFO:  GET /data-sources/{id}/table-infos → schema/table 下拉选项
     ├─ ALL:             POST /tools/{toolId}/test { arguments } → ToolTestResponse
     └─ 结果分发:        data.type → SELECT table / WRITE card / TABLE_METADATA list / SEARCH_HIT groups
+
+详情页（发布与版本管理）
+    ├─ 右上角按钮区（页面级）:
+    │    ├─ 发布 → POST /publish { release_note }（弹窗内嵌变更摘要）
+    │    ├─ 停用 → POST /disable（确认弹窗）
+    │    ├─ 启用 → POST /enable
+    │    └─ 变更摘要 popover ← GET /diff（页面级 diff 状态）
+    │
+    └─ 版本管理 Tab（DebugPublishTab）:
+         ├─ GET /snapshots → 版本历史表格（Live Tag / 回滚）
+         ├─ 回滚 → POST /rollback { target_version_number }（确认弹窗）
+         └─ 回滚成功 → emit refresh → 父页刷新 service + diff → Tab 重载版本历史
+
+数据流（状态提升）:
+    index.vue 持有 service + diff（真相源）
+    ├─ 右上角操作 → refreshAll() = loadService() + loadDiff()
+    ├─ ToolsTab / PromptsTab / DataScopeTab 保存后 emit refresh → refreshAll
+    └─ DebugPublishTab（props: service）内部加载 snapshots，回滚后 emit refresh
 ```
 
 ---
@@ -721,6 +824,24 @@ mcpService.prompt:
   content, contentPlaceholder, contentRequired, nameRequired
   parameters, noParams, paramCount
   deleteConfirm, previewRender
+
+mcpService（发布与版本管理）:
+  publish, publishChanges, disable, enable, rollback
+  publishSuccess, publishSuccessDisabled, disableSuccess, enableSuccess, rollbackSuccess
+  publishConfirmTitle, publishChangesConfirmTitle
+  publishConfirmDesc, publishChangesConfirmDesc, publishDisabledConfirmDesc
+  publishSummaryTitle, releaseNote, releaseNotePlaceholder, confirmPublish
+  hasUnpublishedChanges, hasUnpublishedChangesDesc
+  disableConfirmTitle, disableConfirmMsg
+  rollbackConfirmTitle, rollbackConfirmMsg
+  versionHistory, versionNumber, releaseNote, activeTag
+  changeAdded, changeModified, changeDeleted, moreChanges
+
+mcpService.tab:
+  basic, dataScope, tools, resources, prompts, security, version（版本管理）, logs
+
+mcpService.status:
+  draft, published, disabled
 ```
 
 ---
@@ -743,8 +864,9 @@ mcpService.prompt:
 | `SqlAnalyzerTest` | 75 条参数化用例：DML/DDL/MERGE/METADATA/TRANSACTION/SET 类型识别、表提取（含子查询/CTE）、多语句检测、事务预扫描、容错、注释绕过 |
 | `TableMetadataServiceTest` | 单表/批量元数据查询、样本值合并（8 用例） |
 | `SemanticSearchServiceTest` | ES 搜索编排、术语关联展开、数据源分组（4 用例） |
+| `McpServicePublishServiceTest` | 发布/二次发布版本递增、停用/启用、diff（未发布草稿/已修改草稿/审计字段不误报/prebuilt 变更明细）、回滚（内容写回草稿+新快照/目标不存在）、状态机前置条件、停用中发布（16 用例） |
 
-**后端总计：553 测试，0 失败。**
+**后端总计：596 测试，0 失败。**
 
 ---
 
@@ -760,11 +882,11 @@ mcpService.prompt:
 | US-5.5 | 模板引擎基础设施 | ✅ 已实现 | Handlebars 风格 Parser + Text/SQL Renderer |
 | US-06 | 管理服务 Token | ❌ V1 暂缓 | 统一在应用层认证，MCP 模块不单独设计 |
 | US-07 | 调试 Tool 调用 | ✅ 已实现 | 工具测试弹窗、4 种 Executor、scope 校验、异常处理、前端结果渲染 |
-| US-08 | 发布与停用 MCP 服务 | ❌ 未实现 | 前端占位按钮（comingSoon），无后端 publish/disable/enable 接口 |
+| US-08 | 发布与版本管理 | ✅ 已实现 | 草稿-快照隔离、发布/发布变更、停用/启用、版本历史与回滚、草稿 vs 线上 diff。**遗留**：MCP Endpoint（JSON-RPC/SSE）未实现，见 US-08「遗留任务」 |
 | US-09 | 查看服务调用日志 | ❌ 未实现 | 无 `mcp_audit_log` 表和对应接口 |
-| US-10 | 删除 MCP 服务 | ❌ 未实现 | 列表页和详情页有删除按钮但仅弹 info（comingSoon），无后端接口 |
+| US-10 | 删除 MCP 服务 | ❌ 未实现 | 列表页有删除按钮但仅弹 info（comingSoon），无后端接口 |
 
-> **说明**：详情页侧边导航的 `security`、`debug`、`logs` Tab 均为占位，点击显示 `comingSoon` 空状态。发布/停用/启用/删除按钮同理。
+> **说明**：详情页侧边导航的 `security`、`logs` Tab 均为占位；`version`（版本管理）Tab 已实现。发布/停用/启用操作位于详情页右上角，删除仍在列表页待 US-10。
 
 ---
 
@@ -777,6 +899,7 @@ mcpService.prompt:
 - [US-05 需求文档](../prd/us/US-05.md)
 - [US-5.5 需求文档](../prd/us/US-5.5.md)
 - [US-07 需求文档](../prd/us/US-07.md)
+- [US-08 需求文档](../prd/us/US-08.md)
 - [MCP Builder PRD](../prd/2026-05-11-mcp-builder-prd.md)
 - [US-03 实施计划](../superpowers/plans/2026-05-21-us-03-mcp-tool.md)
 - [SQL 分析工具设计](../superpowers/specs/2026-06-19-sql-analyzer-design.md)
