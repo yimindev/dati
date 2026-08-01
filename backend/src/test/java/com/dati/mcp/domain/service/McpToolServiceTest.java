@@ -20,6 +20,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.Captor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -52,6 +53,9 @@ class McpToolServiceTest {
 
     @Mock
     private TemplateParser templateParser;
+
+    @Captor
+    ArgumentCaptor<List<McpCustomToolPO>> captor;
 
     @InjectMocks
     private McpToolService mcpToolService;
@@ -356,7 +360,7 @@ class McpToolServiceTest {
     // ── 全量替换（回滚恢复草稿用）──
 
     @Test
-    @DisplayName("replaceCustomTools - deletes existing and inserts snapshot content")
+    @DisplayName("replaceCustomTools - deletes existing and inserts restored content")
     void replaceCustomTools_replacesAll() {
         McpCustomTool restoredTool = TestFixtures.createTestCustomTool();
         restoredTool.setName("restored_tool");
@@ -364,9 +368,9 @@ class McpToolServiceTest {
         mcpToolService.replaceCustomTools(TestFixtures.TEST_MCP_SERVICE_ID, List.of(restoredTool));
 
         verify(customToolDAO).deleteAllByServiceId(TestFixtures.TEST_MCP_SERVICE_ID);
-        ArgumentCaptor<List> captor = ArgumentCaptor.forClass(List.class);
         verify(customToolDAO).saveAll(captor.capture());
         assertThat(captor.getValue()).hasSize(1);
-        assertThat(((McpCustomToolPO) captor.getValue().getFirst()).getName()).isEqualTo("restored_tool");
+        assertThat(captor.getValue().getFirst().getName()).isEqualTo("restored_tool");
     }
+
 }

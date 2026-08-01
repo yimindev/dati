@@ -322,7 +322,6 @@ export default {
     listSubtitle: "Manage and publish MCP services",
     detailTitle: "Service Detail",
     createTitle: "Create MCP Service",
-    editTitle: "Edit MCP Service",
     status: {
       label: "Status",
       all: "All statuses",
@@ -337,7 +336,13 @@ export default {
     serviceList: "Service List",
     overview: "Overview",
     basicSubtitle: "Name, description, and endpoint",
-    dialogNote: "After creation, configure data scope, tools, and release policy in detail.",
+    dialogNote: "Configure data scope during creation; tools and publishing are managed in the detail page.",
+    create: {
+      dataScopeSection: "Data Scope",
+      dataScopeRequired: "Please add at least one data scope",
+      addDataScope: "Add Data Scope",
+      emptyDataScope: "No data scope yet. An MCP service needs at least one data source or subject.",
+    },
     activeFilters: "{count} filters",
     emptyList: "No MCP services",
     emptyDescription: "No description",

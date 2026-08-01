@@ -14,7 +14,6 @@ const router = useRouter();
 const loading = ref(false);
 const serviceList = ref<McpServiceVO[]>([]);
 const dialogVisible = ref(false);
-const currentService = ref<McpServiceVO | null>(null);
 const searchKeyword = ref("");
 const statusFilter = ref("");
 
@@ -79,12 +78,6 @@ const handlePageSizeChange = (ps: number) => {
 };
 
 const handleCreate = () => {
-  currentService.value = null;
-  dialogVisible.value = true;
-};
-
-const handleEdit = (service: McpServiceVO) => {
-  currentService.value = { ...service };
   dialogVisible.value = true;
 };
 
@@ -190,16 +183,11 @@ onMounted(() => {
       <McpServiceTable
         :data="serviceList"
         @detail="handleDetail"
-        @edit="handleEdit"
         @delete="handleDelete"
       />
     </DataTableShell>
 
-    <McpServiceDialog
-      v-model="dialogVisible"
-      :service="currentService"
-      @success="handleDialogSuccess"
-    />
+    <McpServiceDialog v-model="dialogVisible" @success="handleDialogSuccess" />
   </div>
 </template>
 

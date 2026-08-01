@@ -175,10 +175,10 @@ class McpServiceControllerTest {
     }
 
     @Test
-    @DisplayName("Create MCP service - success")
+    @DisplayName("Create MCP service - success with data scopes")
     void createMcpService_shouldReturnId() throws Exception {
         // given
-        when(mcpServiceService.createMcpService(any())).thenReturn(TestFixtures.TEST_MCP_SERVICE_ID);
+        when(mcpServiceService.createMcpService(any(), any())).thenReturn(TestFixtures.TEST_MCP_SERVICE_ID);
         doNothing().when(mcpServiceAssembler).fillUsersFromRequest(any());
 
         // when & then
@@ -188,11 +188,29 @@ class McpServiceControllerTest {
                     {
                       "code": "test-mcp-service",
                       "name": "Test MCP Service",
-                      "description": "Test MCP service for unit tests"
+                      "description": "Test MCP service for unit tests",
+                      "data_scopes": [
+                        {"scope_type": "DATA_SOURCE", "reference_id": "ds-001"}
+                      ]
                     }
                     """))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.id").value(TestFixtures.TEST_MCP_SERVICE_ID));
+    }
+
+    @Test
+    @DisplayName("Create MCP service - missing data scopes rejected (400)")
+    void createMcpService_withoutDataScopes_shouldReturn400() throws Exception {
+        // when & then
+        mockMvc.perform(post("/v1/mcp-services")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "code": "test-mcp-service",
+                      "name": "Test MCP Service"
+                    }
+                    """))
+            .andExpect(status().isBadRequest());
     }
 
     @Test

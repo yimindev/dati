@@ -8,9 +8,11 @@ import com.dati.datasource.repository.po.DataSourcePO;
 import com.dati.datasource.repository.po.TableInfoPO;
 import com.dati.db.DbType;
 import com.dati.mcp.domain.model.McpCustomTool;
+import com.dati.mcp.domain.model.McpDataScopeType;
 import com.dati.mcp.domain.model.McpPrompt;
 import com.dati.mcp.domain.model.PromptParameter;
 import com.dati.mcp.domain.model.McpService;
+import com.dati.mcp.domain.model.McpServiceDataScope;
 import com.dati.mcp.domain.model.McpServiceStatus;
 import com.dati.mcp.domain.model.McpToolType;
 import com.dati.mcp.domain.model.ToolConfig;
@@ -147,6 +149,14 @@ public class TestFixtures {
         po.setUpdatedBy(TEST_USER_ID);
         po.setUpdatedAt(Instant.now());
         return po;
+    }
+
+    public static McpServiceDataScope createTestDataScope() {
+        McpServiceDataScope scope = new McpServiceDataScope();
+        scope.setServiceId(TEST_MCP_SERVICE_ID);
+        scope.setScopeType(McpDataScopeType.DATA_SOURCE);
+        scope.setReferenceId(TEST_DATASOURCE_ID);
+        return scope;
     }
 
     public static McpCustomTool createTestCustomTool() {

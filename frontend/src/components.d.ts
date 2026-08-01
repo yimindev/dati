@@ -69,6 +69,7 @@ declare module 'vue' {
     PromptTemplateEditor: typeof import('./components/common/editors/PromptTemplateEditor.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
+    ScopePicker: typeof import('./components/mcp-service/ScopePicker.vue')['default']
     SqlEditor: typeof import('./components/common/editors/SqlEditor.vue')['default']
     SqlSecurityConfig: typeof import('./components/mcp-service/SqlSecurityConfig.vue')['default']
     SqlTemplateEditor: typeof import('./components/common/editors/SqlTemplateEditor.vue')['default']

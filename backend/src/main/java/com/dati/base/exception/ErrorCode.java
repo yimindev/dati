@@ -52,6 +52,8 @@ public enum ErrorCode {
     MS_TOOL_DISABLED("MS015", 400, "Tool is disabled: {0}"),
     MS_SERVICE_STATUS_INVALID("MS016", 409, "Invalid status transition for MCP service: {0}"),
     MS_SERVICE_VERSION_NOT_FOUND("MS017", 404, "MCP service version not found: {0}"),
+    MS_SERVICE_DATA_SCOPE_REQUIRED("MS018", 400, "Data scope is required when creating MCP service"),
+    MS_SERVICE_DATA_SCOPE_EMPTY("MS019", 400, "Data scope is empty, cannot publish MCP service: {0}"),
 
     // ── Authentication module (AUTH) ──────────────────────
 

@@ -76,6 +76,7 @@ class McpServiceDataScopeServiceTest {
         assertThat(saved.get(1).getScopeType()).isEqualTo(McpDataScopeType.SUBJECT);
     }
 
+
     @Test
     @DisplayName("Save data scope - empty list clears existing")
     void saveDataScope_empty_shouldDeleteAll() {

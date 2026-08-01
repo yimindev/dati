@@ -210,3 +210,10 @@ bugs:
       InvalidDefinitionException，返回 500 Internal server error。
       影响 TC-MCP-008（发布/Diff）和 TC-MCP-009（启用/停用）两个新用例。
       根因：单元测试中 prebuilt_tools 返回空列表未覆盖此路径。
+  - id: BUG-20260801-001
+    title: rollback 带数据范围的服务返回 500（StaleObjectState）
+    module: MCP 服务管理
+    severity: high
+    fixed_at: 2026-08-01
+    description: |
+      回滚时 McpServiceDataScopeMapper.toPO 经 copyBaseInfo 保留了快照中的旧 id，saveDataScope 先 deleteAllByServiceId 再 saveAll，同事务内对已删除行做 UPDATE → ObjectOptimisticLockingFailureException。custom tools / prompts 的 replace* 恢复路径同样保留 id，存在相同隐患。TC-MCP-010 step4 复现：POST /v1/mcp-services/{id}/rollback 返回 500 CM003。由 create-with-data-scope(MS018) 引入快照含 data scope 后暴露；之前无 data scope 的用例（旧报告 08-01）不触发。

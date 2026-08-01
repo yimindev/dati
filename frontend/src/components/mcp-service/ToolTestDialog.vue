@@ -7,7 +7,7 @@ import {
   Plus,
   Delete,
   CircleCheckFilled,
-  Collection,
+  Menu as IconMenu,
   Coin,
   CircleCloseFilled,
 } from "@element-plus/icons-vue";
@@ -700,7 +700,7 @@ const dbTypeColor = (t: string) =>
             <div v-if="(response.data as SearchHit).terms?.length" class="mb-6">
               <div class="result-section-header">
                 <el-icon class="text-[var(--ep-color-primary)]"
-                  ><Collection
+                  ><IconMenu
                 /></el-icon>
                 <span
                   >{{ t("mcpService.toolTest.matchTerms") }} ({{

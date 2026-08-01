@@ -3,10 +3,6 @@ package com.dati.mcp.domain.service;
 import com.dati.base.exception.DatiException;
 import com.dati.base.exception.ErrorCode;
 import com.dati.common.JsonUtils;
-import com.dati.mcp.domain.model.McpCustomTool;
-import com.dati.mcp.domain.model.McpPrebuiltToolConfig;
-import com.dati.mcp.domain.model.McpPrompt;
-import com.dati.mcp.domain.model.McpServiceDataScope;
 import com.dati.mcp.domain.model.McpServiceSnapshot;
 import com.dati.mcp.domain.model.McpServiceStatus;
 import com.dati.mcp.repository.dao.McpServiceDAO;
@@ -22,7 +18,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -52,6 +47,19 @@ public class McpServicePublishService {
         McpServicePO servicePO = mcpServiceDAO.findById(serviceId)
                 .orElseThrow(() -> new DatiException(ErrorCode.MS_SERVICE_NOT_FOUND, serviceId));
 
+        if (dataScopeService.getDataScope(serviceId).isEmpty()) {
+            throw new DatiException(ErrorCode.MS_SERVICE_DATA_SCOPE_EMPTY, serviceId);
+        }
+
+        return doPublish(servicePO, releaseNote);
+    }
+
+    /**
+     * 发布核心：不做数据范围校验。
+     * 回滚内部发布目标快照可能是 MS018 规则前的空范围历史版本，恢复该状态是合法操作。
+     */
+    private McpServiceSnapshot doPublish(McpServicePO servicePO, String releaseNote) {
+        String serviceId = servicePO.getId();
         McpServiceSnapshot.SnapshotContent content = buildCurrentSnapshotContent(servicePO);
 
         Integer maxVersion = snapshotDAO.findMaxVersionNumberByServiceId(serviceId);
@@ -151,18 +159,18 @@ public class McpServicePublishService {
         }
 
         // 3. Custom Tools Diff
-        Map<String, McpCustomTool> activeCustomTools = activeContent.getCustomTools() != null
-                ? activeContent.getCustomTools().stream().collect(Collectors.toMap(McpCustomTool::getName, Function.identity(), (a, b) -> a))
+        Map<String, McpServiceSnapshot.CustomToolDraft> activeCustomTools = activeContent.getCustomTools() != null
+                ? activeContent.getCustomTools().stream().collect(Collectors.toMap(McpServiceSnapshot.CustomToolDraft::name, Function.identity(), (a, b) -> a))
                 : Map.of();
-        Map<String, McpCustomTool> currentCustomTools = currentContent.getCustomTools() != null
-                ? currentContent.getCustomTools().stream().collect(Collectors.toMap(McpCustomTool::getName, Function.identity(), (a, b) -> a))
+        Map<String, McpServiceSnapshot.CustomToolDraft> currentCustomTools = currentContent.getCustomTools() != null
+                ? currentContent.getCustomTools().stream().collect(Collectors.toMap(McpServiceSnapshot.CustomToolDraft::name, Function.identity(), (a, b) -> a))
                 : Map.of();
 
         List<String> addedTools = new ArrayList<>();
         List<String> modifiedTools = new ArrayList<>();
         List<String> deletedTools = new ArrayList<>();
 
-        for (Map.Entry<String, McpCustomTool> entry : currentCustomTools.entrySet()) {
+        for (Map.Entry<String, McpServiceSnapshot.CustomToolDraft> entry : currentCustomTools.entrySet()) {
             if (!activeCustomTools.containsKey(entry.getKey())) {
                 addedTools.add(entry.getKey());
             } else {
@@ -178,8 +186,8 @@ public class McpServicePublishService {
         }
 
         // Prebuilt tools check（仅比较业务字段，忽略 id/审计字段）
-        List<McpPrebuiltToolConfig> activePrebuilt = activeContent.getPrebuiltTools();
-        List<McpPrebuiltToolConfig> currentPrebuilt = currentContent.getPrebuiltTools();
+        List<McpServiceSnapshot.PrebuiltToolDraft> activePrebuilt = activeContent.getPrebuiltTools();
+        List<McpServiceSnapshot.PrebuiltToolDraft> currentPrebuilt = currentContent.getPrebuiltTools();
         boolean prebuiltChanged = !Objects.equals(prebuiltKeys(activePrebuilt), prebuiltKeys(currentPrebuilt));
         if (prebuiltChanged) {
             // prebuilt 变更没有单独的增删改列表，将具体工具名并入 modified_tools
@@ -195,18 +203,18 @@ public class McpServicePublishService {
         }
 
         // 4. Prompts Diff
-        Map<String, McpPrompt> activePrompts = activeContent.getPrompts() != null
-                ? activeContent.getPrompts().stream().collect(Collectors.toMap(McpPrompt::getName, Function.identity(), (a, b) -> a))
+        Map<String, McpServiceSnapshot.PromptDraft> activePrompts = activeContent.getPrompts() != null
+                ? activeContent.getPrompts().stream().collect(Collectors.toMap(McpServiceSnapshot.PromptDraft::name, Function.identity(), (a, b) -> a))
                 : Map.of();
-        Map<String, McpPrompt> currentPrompts = currentContent.getPrompts() != null
-                ? currentContent.getPrompts().stream().collect(Collectors.toMap(McpPrompt::getName, Function.identity(), (a, b) -> a))
+        Map<String, McpServiceSnapshot.PromptDraft> currentPrompts = currentContent.getPrompts() != null
+                ? currentContent.getPrompts().stream().collect(Collectors.toMap(McpServiceSnapshot.PromptDraft::name, Function.identity(), (a, b) -> a))
                 : Map.of();
 
         List<String> addedPrompts = new ArrayList<>();
         List<String> modifiedPrompts = new ArrayList<>();
         List<String> deletedPrompts = new ArrayList<>();
 
-        for (Map.Entry<String, McpPrompt> entry : currentPrompts.entrySet()) {
+        for (Map.Entry<String, McpServiceSnapshot.PromptDraft> entry : currentPrompts.entrySet()) {
             if (!activePrompts.containsKey(entry.getKey())) {
                 addedPrompts.add(entry.getKey());
             } else {
@@ -260,42 +268,51 @@ public class McpServicePublishService {
             mcpServiceDAO.save(servicePO);
         }
 
-        // 2. 数据范围写回草稿
-        dataScopeService.saveDataScope(serviceId, content.getDataScopes());
+        // 2. 数据范围写回草稿（Draft → Model 重建，无 id，先删后存安全）
+        dataScopeService.saveDataScope(serviceId,
+                content.getDataScopes() == null ? List.of()
+                        : content.getDataScopes().stream().map(McpServiceSnapshotMapper::toDataScope).toList());
 
         // 3. Tools 写回草稿
-        toolService.replaceCustomTools(serviceId, content.getCustomTools());
+        toolService.replaceCustomTools(serviceId,
+                content.getCustomTools() == null ? List.of()
+                        : content.getCustomTools().stream().map(McpServiceSnapshotMapper::toCustomTool).toList());
         if (content.getPrebuiltTools() != null) {
-            content.getPrebuiltTools().forEach(cfg -> toolService.updatePrebuiltTool(serviceId, cfg.getToolType(), cfg));
+            content.getPrebuiltTools().forEach(cfg ->
+                    toolService.updatePrebuiltTool(serviceId, cfg.toolType(), McpServiceSnapshotMapper.toPrebuiltTool(cfg)));
         }
 
         // 4. Prompts 写回草稿
-        promptService.replacePrompts(serviceId, content.getPrompts());
+        promptService.replacePrompts(serviceId,
+                content.getPrompts() == null ? List.of()
+                        : content.getPrompts().stream().map(McpServiceSnapshotMapper::toPrompt).toList());
 
         // 5. 重新发布生成新快照 vN+1（保留回滚审计痕迹）
+        // 不走 publish()：目标快照可能是空数据范围的历史版本，恢复该状态是合法操作（MS019 仅约束主动发布）
         String note = "Rollback to v" + targetVersionNumber
                 + (releaseNote != null && !releaseNote.isBlank() ? ": " + releaseNote : "");
-        return publish(serviceId, note);
+        return doPublish(servicePO, note);
     }
 
     /**
-     * 业务字段比较 key：diff 只关注配置内容差异，忽略 id / 审计字段
-     * （快照反序列化不保留审计字段，且回滚恢复会刷新时间戳，全字段比较必然误报）。
+     * 业务字段比较 key：diff 只关注配置内容差异。
+     * 快照内容为 Draft（纯业务字段，无 id/审计字段），key 天然只含业务字段。
      */
-    private List<String> dataScopeKeys(List<McpServiceDataScope> scopes) {
+    private List<String> dataScopeKeys(List<McpServiceSnapshot.DataScopeDraft> scopes) {
         return scopes == null ? List.of() : scopes.stream()
-                .map(s -> s.getScopeType() + "|" + s.getReferenceId())
+                .map(s -> s.scopeType() + "|" + s.referenceId())
                 .toList();
     }
 
-    private List<String> prebuiltKeys(List<McpPrebuiltToolConfig> tools) {
+    private List<String> prebuiltKeys(List<McpServiceSnapshot.PrebuiltToolDraft> tools) {
         return tools == null ? List.of() : tools.stream()
-                .map(t -> t.getToolType() + "|" + t.isEnabled() + "|" + JsonUtils.toJson(t.getConfig()))
+                .map(t -> t.toolType() + "|" + t.enabled() + "|" + JsonUtils.toJson(t.config()))
                 .toList();
     }
 
     /** 返回配置发生变化的 prebuilt 工具名（toolType），用于 diff 明细展示 */
-    private List<String> changedPrebuiltTypes(List<McpPrebuiltToolConfig> active, List<McpPrebuiltToolConfig> current) {
+    private List<String> changedPrebuiltTypes(List<McpServiceSnapshot.PrebuiltToolDraft> active,
+                                              List<McpServiceSnapshot.PrebuiltToolDraft> current) {
         List<String> changed = new ArrayList<>();
         List<String> activeKeys = prebuiltKeys(active);
         List<String> currentKeys = prebuiltKeys(current);
@@ -304,23 +321,23 @@ public class McpServicePublishService {
             String a = i < activeKeys.size() ? activeKeys.get(i) : null;
             String c = i < currentKeys.size() ? currentKeys.get(i) : null;
             if (!Objects.equals(a, c)) {
-                McpPrebuiltToolConfig cfg = i < current.size() ? current.get(i) : (i < active.size() ? active.get(i) : null);
-                if (cfg != null && cfg.getToolType() != null) {
-                    changed.add(cfg.getToolType().name());
+                McpServiceSnapshot.PrebuiltToolDraft cfg = i < current.size() ? current.get(i) : (i < active.size() ? active.get(i) : null);
+                if (cfg != null && cfg.toolType() != null) {
+                    changed.add(cfg.toolType().name());
                 }
             }
         }
         return changed;
     }
 
-    private String customToolKey(McpCustomTool t) {
-        return t.getToolType() + "|" + t.getName() + "|" + t.getTitle() + "|" + t.getDescription()
-                + "|" + t.isEnabled() + "|" + JsonUtils.toJson(t.getConfig());
+    private String customToolKey(McpServiceSnapshot.CustomToolDraft t) {
+        return t.toolType() + "|" + t.name() + "|" + t.title() + "|" + t.description()
+                + "|" + t.enabled() + "|" + JsonUtils.toJson(t.config());
     }
 
-    private String promptKey(McpPrompt p) {
-        return p.getName() + "|" + p.getDescription() + "|" + p.getContent()
-                + "|" + JsonUtils.toJson(p.getParameters()) + "|" + p.isEnabled();
+    private String promptKey(McpServiceSnapshot.PromptDraft p) {
+        return p.name() + "|" + p.description() + "|" + p.content()
+                + "|" + JsonUtils.toJson(p.parameters()) + "|" + p.enabled();
     }
 
     private McpServiceSnapshot.SnapshotContent buildCurrentSnapshotContent(McpServicePO servicePO) {
@@ -332,17 +349,21 @@ public class McpServicePublishService {
         serviceInfo.setDescription(servicePO.getDescription());
         serviceInfo.setCode(servicePO.getCode());
 
-        List<McpServiceDataScope> dataScopes = dataScopeService.getDataScope(serviceId);
+        List<McpServiceSnapshot.DataScopeDraft> dataScopes = dataScopeService.getDataScope(serviceId).stream()
+                .map(McpServiceSnapshotMapper::toDataScopeDraft)
+                .toList();
 
         ToolsResult toolsResult = toolService.listTools(serviceId);
-        List<McpPrebuiltToolConfig> prebuiltTools = toolsResult.prebuilt() != null
-                ? toolsResult.prebuilt()
+        List<McpServiceSnapshot.PrebuiltToolDraft> prebuiltTools = toolsResult.prebuilt() != null
+                ? toolsResult.prebuilt().stream().map(McpServiceSnapshotMapper::toPrebuiltToolDraft).toList()
                 : List.of();
-        List<McpCustomTool> customTools = toolsResult.custom() != null
-                ? toolsResult.custom()
+        List<McpServiceSnapshot.CustomToolDraft> customTools = toolsResult.custom() != null
+                ? toolsResult.custom().stream().map(McpServiceSnapshotMapper::toCustomToolDraft).toList()
                 : List.of();
 
-        List<McpPrompt> prompts = promptService.listPrompts(serviceId);
+        List<McpServiceSnapshot.PromptDraft> prompts = promptService.listPrompts(serviceId).stream()
+                .map(McpServiceSnapshotMapper::toPromptDraft)
+                .toList();
 
         McpServiceSnapshot.SnapshotContent content = new McpServiceSnapshot.SnapshotContent();
         content.setServiceInfo(serviceInfo);

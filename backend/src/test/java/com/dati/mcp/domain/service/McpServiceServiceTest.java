@@ -3,15 +3,20 @@ package com.dati.mcp.domain.service;
 import com.dati.TestFixtures;
 import com.dati.base.exception.DatiException;
 import com.dati.base.exception.ErrorCode;
+import com.dati.mcp.domain.model.McpDataScopeType;
 import com.dati.mcp.domain.model.McpService;
+import com.dati.mcp.domain.model.McpServiceDataScope;
 import com.dati.mcp.domain.model.McpServiceStatus;
 import com.dati.mcp.repository.dao.McpServiceDAO;
+import com.dati.mcp.repository.dao.McpServiceDataScopeDAO;
 import com.dati.mcp.repository.po.McpServicePO;
+import com.dati.mcp.repository.po.McpServiceDataScopePO;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Captor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -26,10 +31,12 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import org.mockito.ArgumentCaptor;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("McpServiceService unit tests")
@@ -37,6 +44,12 @@ class McpServiceServiceTest {
 
     @Mock
     private McpServiceDAO mcpServiceDAO;
+
+    @Mock
+    private McpServiceDataScopeDAO dataScopeDAO;
+
+    @Captor
+    ArgumentCaptor<List<McpServiceDataScopePO>> captor;
 
     @InjectMocks
     private McpServiceService mcpServiceService;
@@ -51,7 +64,7 @@ class McpServiceServiceTest {
     }
 
     @Test
-    @DisplayName("Create MCP service - success")
+    @DisplayName("Create MCP service - success with data scopes")
     void createMcpService_shouldReturnId() {
         // given
         McpServicePO savedPO = new McpServicePO();
@@ -61,11 +74,42 @@ class McpServiceServiceTest {
         when(mcpServiceDAO.save(any(McpServicePO.class))).thenReturn(savedPO);
 
         // when
-        String result = mcpServiceService.createMcpService(testService);
+        String result = mcpServiceService.createMcpService(testService, List.of(TestFixtures.createTestDataScope()));
 
         // then
         assertThat(result).isEqualTo(TestFixtures.TEST_MCP_SERVICE_ID);
         verify(mcpServiceDAO).save(any(McpServicePO.class));
+        verify(dataScopeDAO).saveAll(anyList());
+    }
+
+    @Test
+    @DisplayName("Create MCP service - persists data scopes with service id")
+    void createMcpService_withScopes_persistsScopes() {
+        // given
+        McpServicePO savedPO = new McpServicePO();
+        savedPO.setId(TestFixtures.TEST_MCP_SERVICE_ID);
+        when(mcpServiceDAO.save(any(McpServicePO.class))).thenReturn(savedPO);
+        McpServiceDataScope scope = new McpServiceDataScope();
+        scope.setScopeType(McpDataScopeType.DATA_SOURCE);
+        scope.setReferenceId(TestFixtures.TEST_DATASOURCE_ID);
+
+        // when
+        mcpServiceService.createMcpService(testService, List.of(scope));
+
+        // then
+        assertThat(scope.getServiceId()).isEqualTo(TestFixtures.TEST_MCP_SERVICE_ID);
+        verify(dataScopeDAO).saveAll(captor.capture());
+        assertThat(captor.getValue()).hasSize(1);
+        assertThat(captor.getValue().getFirst().getServiceId()).isEqualTo(TestFixtures.TEST_MCP_SERVICE_ID);
+        assertThat(captor.getValue().getFirst().getReferenceId()).isEqualTo(TestFixtures.TEST_DATASOURCE_ID);
+    }
+
+    @Test
+    @DisplayName("Create MCP service - empty data scopes rejected")
+    void createMcpService_emptyScopes_throws() {
+        DatiException ex = assertThrows(DatiException.class,
+            () -> mcpServiceService.createMcpService(testService, List.of()));
+        assertThat(ex.getCode()).isEqualTo(ErrorCode.MS_SERVICE_DATA_SCOPE_REQUIRED);
     }
 
     @Test
@@ -201,7 +245,7 @@ class McpServiceServiceTest {
             service.setCode(null);
 
             DatiException ex = assertThrows(DatiException.class,
-                () -> mcpServiceService.createMcpService(service));
+                () -> mcpServiceService.createMcpService(service, List.of()));
             assertThat(ex.getCode()).isEqualTo(ErrorCode.MS_SERVICE_CODE_REQUIRED);
         }
 
@@ -212,7 +256,7 @@ class McpServiceServiceTest {
             service.setCode("   ");
 
             DatiException ex = assertThrows(DatiException.class,
-                () -> mcpServiceService.createMcpService(service));
+                () -> mcpServiceService.createMcpService(service, List.of()));
             assertThat(ex.getCode()).isEqualTo(ErrorCode.MS_SERVICE_CODE_REQUIRED);
         }
 
@@ -223,7 +267,7 @@ class McpServiceServiceTest {
             service.setCode("TestService");
 
             DatiException ex = assertThrows(DatiException.class,
-                () -> mcpServiceService.createMcpService(service));
+                () -> mcpServiceService.createMcpService(service, List.of()));
             assertThat(ex.getCode()).isEqualTo(ErrorCode.MS_SERVICE_CODE_INVALID);
         }
 
@@ -234,7 +278,7 @@ class McpServiceServiceTest {
             service.setCode("test service!");
 
             DatiException ex = assertThrows(DatiException.class,
-                () -> mcpServiceService.createMcpService(service));
+                () -> mcpServiceService.createMcpService(service, List.of()));
             assertThat(ex.getCode()).isEqualTo(ErrorCode.MS_SERVICE_CODE_INVALID);
         }
 
@@ -245,7 +289,7 @@ class McpServiceServiceTest {
             service.setCode("我的服务");
 
             DatiException ex = assertThrows(DatiException.class,
-                () -> mcpServiceService.createMcpService(service));
+                () -> mcpServiceService.createMcpService(service, List.of()));
             assertThat(ex.getCode()).isEqualTo(ErrorCode.MS_SERVICE_CODE_INVALID);
         }
 
@@ -256,7 +300,7 @@ class McpServiceServiceTest {
             service.setCode("-test");
 
             DatiException ex = assertThrows(DatiException.class,
-                () -> mcpServiceService.createMcpService(service));
+                () -> mcpServiceService.createMcpService(service, List.of()));
             assertThat(ex.getCode()).isEqualTo(ErrorCode.MS_SERVICE_CODE_INVALID);
         }
 
@@ -267,7 +311,7 @@ class McpServiceServiceTest {
             service.setCode("test-");
 
             DatiException ex = assertThrows(DatiException.class,
-                () -> mcpServiceService.createMcpService(service));
+                () -> mcpServiceService.createMcpService(service, List.of()));
             assertThat(ex.getCode()).isEqualTo(ErrorCode.MS_SERVICE_CODE_INVALID);
         }
 
@@ -278,7 +322,7 @@ class McpServiceServiceTest {
             service.setCode("a".repeat(65));
 
             DatiException ex = assertThrows(DatiException.class,
-                () -> mcpServiceService.createMcpService(service));
+                () -> mcpServiceService.createMcpService(service, List.of()));
             assertThat(ex.getCode()).isEqualTo(ErrorCode.MS_SERVICE_CODE_INVALID);
         }
 
@@ -290,7 +334,7 @@ class McpServiceServiceTest {
             when(mcpServiceDAO.existsByCode("duplicate-code")).thenReturn(true);
 
             DatiException ex = assertThrows(DatiException.class,
-                () -> mcpServiceService.createMcpService(service));
+                () -> mcpServiceService.createMcpService(service, List.of()));
             assertThat(ex.getCode()).isEqualTo(ErrorCode.MS_SERVICE_CODE_EXISTS);
         }
 
@@ -306,7 +350,7 @@ class McpServiceServiceTest {
                 return po;
             });
 
-            String id = mcpServiceService.createMcpService(service);
+            String id = mcpServiceService.createMcpService(service, List.of(TestFixtures.createTestDataScope()));
             assertThat(id).isEqualTo(TestFixtures.TEST_MCP_SERVICE_ID);
         }
     }

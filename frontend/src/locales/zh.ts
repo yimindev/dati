@@ -322,7 +322,6 @@ export default {
     listSubtitle: "管理和发布 MCP 服务",
     detailTitle: "服务详情",
     createTitle: "创建 MCP 服务",
-    editTitle: "编辑 MCP 服务",
     status: {
       label: "状态",
       all: "全部状态",
@@ -337,7 +336,13 @@ export default {
     serviceList: "服务列表",
     overview: "服务概览",
     basicSubtitle: "名称、描述与访问地址",
-    dialogNote: "创建后可进入详情配置数据范围、工具与发布策略。",
+    dialogNote: "创建时可配置数据范围；创建后可在详情中管理工具与发布策略。",
+    create: {
+      dataScopeSection: "数据范围",
+      dataScopeRequired: "请至少添加一个数据范围",
+      addDataScope: "添加数据范围",
+      emptyDataScope: "尚未添加数据范围，MCP 服务需至少一个数据源或主题",
+    },
     activeFilters: "已筛选 {count} 项",
     emptyList: "暂无 MCP 服务",
     emptyDescription: "暂无描述",

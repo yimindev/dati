@@ -35,6 +35,7 @@ export interface McpServicePayload {
   code?: string;
   name: string;
   description?: string;
+  data_scopes?: DataScopeItem[];
 }
 
 export function createMcpService(body: McpServicePayload, signal?: AbortSignal): Promise<IdResponse> {

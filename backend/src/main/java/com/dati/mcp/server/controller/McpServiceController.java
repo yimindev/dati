@@ -15,6 +15,7 @@ import com.dati.mcp.server.assembler.McpDataScopeAssembler;
 import com.dati.mcp.server.assembler.McpServiceAssembler;
 import com.dati.mcp.server.pojo.DataScopeRequest;
 import com.dati.mcp.server.pojo.DataScopeResponse;
+import com.dati.mcp.server.pojo.McpServiceCreateRequest;
 import com.dati.mcp.server.pojo.McpServiceDiffVO;
 import com.dati.mcp.server.pojo.McpServiceSnapshotVO;
 import com.dati.mcp.server.pojo.McpServiceVO;
@@ -59,9 +60,19 @@ public class McpServiceController {
     }
 
     @PostMapping
-    public IdResponse createMcpService(@Valid @RequestBody McpService service) {
+    public IdResponse createMcpService(@Valid @RequestBody McpServiceCreateRequest request) {
+        McpService service = new McpService();
+        service.setCode(request.getCode());
+        service.setName(request.getName());
+        service.setDescription(request.getDescription());
+        List<McpServiceDataScope> scopes = request.getDataScopes().stream().map(item -> {
+            McpServiceDataScope scope = new McpServiceDataScope();
+            scope.setScopeType(item.getScopeType());
+            scope.setReferenceId(item.getReferenceId());
+            return scope;
+        }).toList();
         mcpServiceAssembler.fillUsersFromRequest(service);
-        return new IdResponse(mcpServiceService.createMcpService(service));
+        return new IdResponse(mcpServiceService.createMcpService(service, scopes));
     }
 
     @PutMapping("/{id}")

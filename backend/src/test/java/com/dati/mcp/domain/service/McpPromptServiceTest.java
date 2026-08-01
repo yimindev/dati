@@ -15,6 +15,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.Captor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -42,6 +43,9 @@ class McpPromptServiceTest {
 
     @Mock
     private TemplateParser templateParser;
+
+    @Captor
+    ArgumentCaptor<List<McpPromptPO>> captor;
 
     @InjectMocks
     private McpPromptService promptService;
@@ -234,7 +238,7 @@ class McpPromptServiceTest {
     }
 
     @Test
-    @DisplayName("replacePrompts - deletes existing and inserts snapshot content")
+    @DisplayName("replacePrompts - deletes existing and inserts restored content")
     void replacePrompts_replacesAll() {
         McpPrompt restoredPrompt = TestFixtures.createTestMcpPrompt();
         restoredPrompt.setName("restored_prompt");
@@ -242,9 +246,9 @@ class McpPromptServiceTest {
         promptService.replacePrompts(TestFixtures.TEST_MCP_SERVICE_ID, List.of(restoredPrompt));
 
         verify(promptDAO).deleteAllByServiceId(TestFixtures.TEST_MCP_SERVICE_ID);
-        ArgumentCaptor<List> captor = ArgumentCaptor.forClass(List.class);
         verify(promptDAO).saveAll(captor.capture());
         assertThat(captor.getValue()).hasSize(1);
-        assertThat(((McpPromptPO) captor.getValue().getFirst()).getName()).isEqualTo("restored_prompt");
+        assertThat(captor.getValue().getFirst().getName()).isEqualTo("restored_prompt");
     }
+
 }

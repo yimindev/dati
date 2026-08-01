@@ -3,21 +3,26 @@
 使用 test-data.yaml 中配置的测试数据集。所有具体值引用数据集 `e2e` 段下的路径。
 共享种子数据源（`seeded_datasource_name`）和种子主题（`seeded_subject_name`）由 TC-SEM-000 创建，本模块用例按名称查找复用。
 
+> **创建服务约定**：创建请求必须携带 `data_scopes`（至少 1 条，绑定种子数据源/主题）：
+> `{"code": "...", "name": "...", "data_scopes": [{"scope_type": "DATA_SOURCE", "reference_id": "<datasourceId>"}]}`
+> 不带 `data_scopes` → 400；服务数据范围为空时调用 `/publish` → 400
+
 ---
 
 ## TC-MCP-001 创建、查询、更新、删除 MCP 服务
 **级别：** P0
 **前置：** 已登录
 
-1. **创建 MCP 服务**：name 自定，description 自定，`code` 自定（必填）
+1. **创建 MCP 服务**：name 自定，description 自定，`code` 自定（必填），携带 `data_scopes` 绑定种子数据源
 2. 验证返回 200，`id` 为 UUID
-3. 在服务列表中搜该 name，确认能找到
-4. 验证列表项：name/description/code 与创建一致，`status`=DRAFT
+3. **创建不带数据范围的服务**（body 无 `data_scopes`）→ 预期 400
+4. 在服务列表中搜该 name，确认能找到
+5. 验证列表项：name/description/code 与创建一致，`status`=DRAFT
    - `created_by`/`updated_by`/`created_user_name`/`updated_user_name` 不为 null
    - `created_at`/`updated_at` 合理
-5. **部分更新**：仅改 description（不传 name/code 等其他字段）
-6. 查详情验证 description 已更新，`updated_at > created_at`，name/code/status 未变
-7. **删除服务**，查列表确认已删
+6. **部分更新**：仅改 description（不传 name/code 等其他字段）
+7. 查详情验证 description 已更新，`updated_at > created_at`，name/code/status 未变
+8. **删除服务**，查列表确认已删
 
 ---
 
@@ -26,13 +31,13 @@
 **前置：** 已登录，种子数据源已就绪（TC-SEM-000）
 **数据：** `chinook.e2e.{seeded_datasource_name, mcp.data_scope_type}`
 
-1. 搜索 `seeded_datasource_name` 获取 datasourceId，创建 MCP 服务
-2. **配置数据范围**：使用 `mcp.data_scope_type` 类型，reference_id 填 datasourceId
-   - 注意：请求 body 字段使用 snake_case（`scope_type`、`reference_id`）
-3. 验证返回 200
-4. **查数据范围**：验证 items 含刚配置的记录
+1. 搜索 `seeded_datasource_name` 获取 datasourceId，创建 MCP 服务（携带 `data_scopes` 绑定该数据源）
+2. **查数据范围**：验证 items 含刚配置的记录
    - `scope_type` 匹配，`reference_id` 匹配，`reference_name` 非空
    - `resolved_data_sources` 包含数据源名称
+3. **更新数据范围（PUT 全量替换）**：使用 `mcp.data_scope_type` 类型，reference_id 填另一数据源或同一数据源
+   - 注意：请求 body 字段使用 snake_case（`scope_type`、`reference_id`）
+4. 验证返回 200，再次查数据范围：items 为替换后的记录
 5. 删除服务（清理）
 
 ---
@@ -41,7 +46,7 @@
 **级别：** P1
 **前置：** 已登录
 
-1. 创建 MCP 服务
+1. 创建 MCP 服务（携带 `data_scopes` 绑定种子数据源）
 2. **创建 Prompt**：name 自定，content 自定（如 `chinook.e2e.mcp.prompt_content_example`），`enabled`=true
 3. 验证返回 200，含 id
 4. 查 Prompt 列表，确认 name/content/enabled 与创建一致
@@ -57,7 +62,7 @@
 **前置：** 已登录，种子数据源已就绪
 **数据：** `chinook.e2e.{seeded_datasource_name, mcp.tool}`
 
-1. 搜索 `seeded_datasource_name` 获取 datasourceId，创建 MCP 服务
+1. 搜索 `seeded_datasource_name` 获取 datasourceId，创建 MCP 服务（携带 `data_scopes` 绑定该数据源）
 2. **创建 Tool**：type=`mcp.tool.type`
    - config 中包含 data_source_id（填种子 datasourceId）、sql_template、parameters（参考 `mcp.tool.config`）
    - 注意：请求 body 使用 snake_case（`tool_type`、`data_source_id`、`sql_template`）
@@ -75,7 +80,7 @@
 **前置：** 已登录，种子数据源已就绪
 **数据：** `chinook.e2e.{seeded_datasource_name, mcp.tool}`
 
-1. 搜索种子数据源 → 创建 MCP 服务 → 配置 data scope（绑定数据源）
+1. 搜索种子数据源 → 创建 MCP 服务（携带 `data_scopes` 绑定该数据源）
 2. 创建 Tool（PARAMETERIZED_SQL，sql_template 使用 `mcp.tool.config.sql_template`）
 3. **测试 Tool**：传入参数（如 genre_name=`chinook.e2e.datasource.column_values.sample_values[0]`）
 4. 验证：状态码 200，响应含执行结果（非空、非 500）
@@ -107,7 +112,7 @@
 **级别：** P0
 **前置：** 已登录
 
-1. **创建 MCP 服务**：code 自定，name 自定，初始状态 `status` 为 DRAFT
+1. **创建 MCP 服务**：code 自定，name 自定，携带 `data_scopes` 绑定种子数据源，初始状态 `status` 为 DRAFT
 2. **查询未发布 Diff**：调用 `GET /v1/mcp-services/{id}/diff`
    - 验证 `has_changes` 为 `true`
 3. **首次发布服务**：调用 `POST /v1/mcp-services/{id}/publish`（Body: `{"release_note": "Initial v1"}`）
@@ -131,7 +136,7 @@
 **级别：** P1
 **前置：** 已登录
 
-1. **创建并发布服务**：创建 MCP 服务，调用 `/publish` 成功发布，确认 `status` 为 PUBLISHED
+1. **创建并发布服务**：创建 MCP 服务（携带 `data_scopes`），调用 `/publish` 成功发布，确认 `status` 为 PUBLISHED
 2. **停用服务**：调用 `POST /v1/mcp-services/{id}/disable`
    - 验证返回 200
    - 查服务详情，验证 `status` 变为 DISABLED，`active_version_number` 保持已有版本号
@@ -146,7 +151,7 @@
 **级别：** P0
 **前置：** 已登录
 
-1. **创建并发布 v1**：创建 MCP 服务（description 记为 `desc_v1`），调用 `/publish`（`{"release_note": "Initial v1"}`）
+1. **创建并发布 v1**：创建 MCP 服务（description 记为 `desc_v1`，携带 `data_scopes` 绑定种子数据源），调用 `/publish`（`{"release_note": "Initial v1"}`）
    - 验证 `status`=PUBLISHED，`active_version_number`=1
 2. **修改并发布 v2**：`PUT /v1/mcp-services/{id}` 更新 description 为 `desc_v2`，调用 `/publish`（`{"release_note": "Release v2"}`）
    - 验证 `active_version_number`=2
@@ -172,7 +177,7 @@
 **级别：** P1
 **前置：** 已登录
 
-1. **创建服务**：初始状态 DRAFT
+1. **创建服务**：携带 `data_scopes` 绑定种子数据源，初始状态 DRAFT
 2. **DRAFT 状态非法操作**：
    - 调用 `POST /v1/mcp-services/{id}/disable` → 预期错误（409）
    - 调用 `POST /v1/mcp-services/{id}/enable` → 预期错误（409）
@@ -192,7 +197,7 @@
 **级别：** P1
 **前置：** 已登录
 
-1. **创建并发布服务**：`POST /publish` → PUBLISHED，`active_version_number`=1
+1. **创建并发布服务**：创建携带 `data_scopes` 的服务，`POST /publish` → PUBLISHED，`active_version_number`=1
 2. **修改 prebuilt 工具配置**：调用 `PUT /v1/mcp-services/{id}/tools/SEARCH_METADATA`
    - Body 注意：`config` 为 **JSON 字符串**（`{"tool_type": "SEARCH_METADATA", "enabled": true, "config": "{\"timeout\": 60}"}`）
 3. **查询 Diff**：

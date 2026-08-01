@@ -10,7 +10,7 @@
 MCP Service 管理模块提供 **MCP（Model Context Protocol）服务的生命周期管理**。
 
 **已实现能力：**
-- 创建服务（`DRAFT`）、编辑基础信息、分页列表、详情查看
+- 创建服务（`DRAFT`）、编辑基础信息、分页列表、详情查看。**创建即含数据范围**（必填，事务内创建服务 + 数据范围）
 - Service Code（唯一标识）+ Endpoint 路径运行时推导（`/{code}/mcp`）
 - 数据范围配置（数据源 + 主题引用模式，全量替换保存）
 - 预置工具开关与配置（SEARCH_METADATA / GET_TABLE_INFO / EXECUTE_SQL）
@@ -430,7 +430,7 @@ McpPrompt (per service, 多个, UNIQUE(service_id, name))
 
 | 方法 | 路径 | 说明 |
 |---|---|---|
-| `POST` | `/v1/mcp-services` | 创建服务（需传 `code`，自动设为 `DRAFT`） |
+| `POST` | `/v1/mcp-services` | 创建服务（需传 `code`，自动设为 `DRAFT`；`data_scopes` 必填非空，事务内创建服务与数据范围） |
 | `PUT` | `/v1/mcp-services/{id}` | 编辑基础信息（name / description） |
 | `GET` | `/v1/mcp-services/{id}` | 详情（含 `endpoint_path`、`tool_count`） |
 | `GET` | `/v1/mcp-services` | 分页列表，支持 `keyword`、`status` 过滤 |
@@ -538,10 +538,18 @@ StatementResult.writeFailure(errorMessage)           // WRITE 失败
 | `MS015` | 工具已禁用 (400) |
 | `MS016` | 服务状态转换非法（仅 PUBLISHED 可停用 / 仅 DISABLED 可启用）(409) |
 | `MS017` | 服务版本不存在（回滚目标版本缺失）(404) |
+| `MS018` | 创建服务时数据范围必填（服务层兜底，HTTP 层由 `@NotEmpty` 拦截返回通用 400） (400) |
+| `MS019` | 发布时数据范围为空 (400) |
 
 > **注**：工具测试（US-07）使用独立的 `ToolError` 枚举 + `ToolExecuteException`，不经过 `ErrorCode`。`ToolExecuteException` 在 `McpToolTestService` 中 catch 并转为 `ToolTestResponse`，不进入 `GlobalExceptionHandler`。
 
 ### 2.7 关键设计决策
+
+#### 创建即含数据范围
+
+- 创建弹窗一步完成基本信息 + 数据范围（必填），`POST /v1/mcp-services` 携带 `data_scopes`，后端 `@Transactional` 内创建服务与数据范围（MS018 兜底）
+- 数据范围选择器抽为 `ScopePicker` 组件，创建弹窗与详情页「数据范围」Tab 共用
+- 发布时兜底校验：数据范围为空 → MS019（防旧数据/异常状态绕过创建校验）
 
 #### 草稿-快照隔离（版本管理核心）
 
@@ -648,6 +656,7 @@ src/
 │   ├── mcp-prompt.ts               # Prompt 类型（McpPromptVO, McpPromptPayload）+ API
 │   └── template-preview.ts         # 模板预览/提取 API
 ├── components/mcp-service/
+│   ├── ScopePicker.vue             # 共享数据范围选择器（创建弹窗 + 数据范围 Tab 共用）
 │   ├── ToolsTab.vue                # 容器：子 Tab 切换（预置/自定义），保存后 emit refresh
 │   ├── PrebuiltToolList.vue        # 预置工具卡片列表 + 测试按钮
 │   ├── ExecuteSqlConfigDialog.vue  # EXECUTE_SQL 权限配置弹窗
@@ -688,7 +697,7 @@ src/
 | `ExecuteSqlConfigDialog` | 权限勾选组（SELECT ~ MULTI）+ maxRows + timeout。 |
 | `CustomToolList` | 搜索栏 + 工具列表。编辑/删除图标。显示数据源名称。`el-switch` 开关。每张卡片操作区有「测试」按钮。 |
 | `CustomToolDialog` | el-dialog 弹窗表单。el-form 校验（name/desc/SQL/数据源必填）。参数编辑器 + 权限勾选。 |
-| `DataScopeTab` | 数据范围管理。显示已添加列表（数据源/主题 Tag），支持删除。**添加弹窗**：Tab 切换（数据源/主题）、分页列表、搜索、多选 + 已添加去重、全量提交。含已发布提示。 |
+| `DataScopeTab` | 数据范围管理。显示已添加列表（数据源/主题 Tag），支持删除。**选择器为独立 `ScopePicker` 组件**（数据源/主题双 Tab、分页、搜索、多选 + 已添加去重、全量提交）。含已发布提示。 |
 | `PromptsTab` | Prompt 管理 Tab 容器。加载 Prompt 列表，集成 `PromptList`。 |
 | `PromptList` | 搜索栏 + 列表。每个条目显示 name、description、参数计数、开关、编辑/删除图标。 |
 | `PromptDialog` | 创建/编辑弹窗。**基本信息**（name/description）。**模板内容**：使用 `PromptTemplateEditor`（CodeMirror）。**参数列表**：el-table 编辑（name/required/description）+ 「提取参数」按钮调用 `/v1/template/extract` 自动填充。底部「测试渲染」按钮打开预览。 |

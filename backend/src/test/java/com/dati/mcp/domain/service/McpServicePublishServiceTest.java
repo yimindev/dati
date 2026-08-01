@@ -14,6 +14,7 @@ import com.dati.mcp.domain.model.McpToolType;
 import com.dati.mcp.domain.model.ToolConfig;
 import com.dati.mcp.repository.dao.McpServiceDAO;
 import com.dati.mcp.repository.dao.McpServiceSnapshotDAO;
+import com.dati.mcp.repository.mapper.McpServiceSnapshotMapper;
 import com.dati.mcp.repository.po.McpServicePO;
 import com.dati.mcp.repository.po.McpServiceSnapshotPO;
 import com.dati.mcp.server.pojo.McpServiceDiffVO;
@@ -70,7 +71,7 @@ class McpServicePublishServiceTest {
     void publish_FirstTime_CreatesV1Snapshot() {
         when(mcpServiceDAO.findById(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(Optional.of(testServicePO));
         when(snapshotDAO.findMaxVersionNumberByServiceId(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(null);
-        when(dataScopeService.getDataScope(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(Collections.emptyList());
+        when(dataScopeService.getDataScope(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(List.of(TestFixtures.createTestDataScope()));
         when(toolService.listTools(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(new ToolsResult(Collections.emptyList(), Collections.emptyList()));
         when(promptService.listPrompts(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(Collections.emptyList());
 
@@ -100,7 +101,7 @@ class McpServicePublishServiceTest {
 
         when(mcpServiceDAO.findById(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(Optional.of(testServicePO));
         when(snapshotDAO.findMaxVersionNumberByServiceId(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(1);
-        when(dataScopeService.getDataScope(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(Collections.emptyList());
+        when(dataScopeService.getDataScope(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(List.of(TestFixtures.createTestDataScope()));
         when(toolService.listTools(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(new ToolsResult(Collections.emptyList(), Collections.emptyList()));
         when(promptService.listPrompts(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(Collections.emptyList());
 
@@ -184,7 +185,7 @@ class McpServicePublishServiceTest {
 
         McpCustomTool tool = TestFixtures.createTestCustomTool();
         McpPrompt prompt = TestFixtures.createTestMcpPrompt();
-        when(dataScopeService.getDataScope(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(Collections.emptyList());
+        when(dataScopeService.getDataScope(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(List.of(TestFixtures.createTestDataScope()));
         when(toolService.listTools(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(new ToolsResult(Collections.emptyList(), List.of(tool)));
         when(promptService.listPrompts(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(List.of(prompt));
 
@@ -204,6 +205,18 @@ class McpServicePublishServiceTest {
 
         assertThatThrownBy(() -> publishService.publish("non-exist", "note"))
                 .isInstanceOf(DatiException.class);
+    }
+
+    @Test
+    @DisplayName("Publish service - empty data scope rejected (MS019)")
+    void publish_EmptyDataScope_Throws() {
+        when(mcpServiceDAO.findById(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(Optional.of(testServicePO));
+        when(dataScopeService.getDataScope(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(Collections.emptyList());
+
+        assertThatThrownBy(() -> publishService.publish(TestFixtures.TEST_MCP_SERVICE_ID, "note"))
+                .isInstanceOf(DatiException.class)
+                .extracting(e -> ((DatiException) e).getCode())
+                .isEqualTo(ErrorCode.MS_SERVICE_DATA_SCOPE_EMPTY);
     }
 
     // ── diff：审计字段差异不应误报变更 ──
@@ -232,7 +245,7 @@ class McpServicePublishServiceTest {
         snapshotPrebuilt.setToolType(McpToolType.SEARCH_METADATA);
         snapshotPrebuilt.setEnabled(true);
         snapshotPrebuilt.setConfig(new ToolConfig.SearchMetadataConfig());
-        content.setPrebuiltTools(List.of(snapshotPrebuilt));
+        content.setPrebuiltTools(List.of(McpServiceSnapshotMapper.toPrebuiltToolDraft(snapshotPrebuilt)));
 
         McpServiceSnapshotPO snapshotPO = new McpServiceSnapshotPO();
         snapshotPO.setId("snap-001");
@@ -252,7 +265,7 @@ class McpServicePublishServiceTest {
 
         when(mcpServiceDAO.findById(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(Optional.of(testServicePO));
         when(snapshotDAO.findById("snap-001")).thenReturn(Optional.of(snapshotPO));
-        when(dataScopeService.getDataScope(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(Collections.emptyList());
+        when(dataScopeService.getDataScope(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(List.of(TestFixtures.createTestDataScope()));
         when(toolService.listTools(TestFixtures.TEST_MCP_SERVICE_ID))
                 .thenReturn(new ToolsResult(List.of(currentPrebuilt), Collections.emptyList()));
         when(promptService.listPrompts(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(Collections.emptyList());
@@ -278,7 +291,7 @@ class McpServicePublishServiceTest {
         sInfo.setDescription("Test MCP service for unit tests");
         sInfo.setCode("test-mcp-service");
         content.setServiceInfo(sInfo);
-        content.setDataScopes(Collections.emptyList());
+        content.setDataScopes(List.of(McpServiceSnapshotMapper.toDataScopeDraft(TestFixtures.createTestDataScope())));
         content.setCustomTools(Collections.emptyList());
         content.setPrompts(Collections.emptyList());
         McpPrebuiltToolConfig prebuilt = new McpPrebuiltToolConfig();
@@ -287,7 +300,7 @@ class McpServicePublishServiceTest {
         prebuilt.setToolType(McpToolType.SEARCH_METADATA);
         prebuilt.setEnabled(true);
         prebuilt.setConfig(new ToolConfig.SearchMetadataConfig());
-        content.setPrebuiltTools(List.of(prebuilt));
+        content.setPrebuiltTools(List.of(McpServiceSnapshotMapper.toPrebuiltToolDraft(prebuilt)));
 
         McpServiceSnapshotPO snapshotPO = new McpServiceSnapshotPO();
         snapshotPO.setId("snap-001");
@@ -307,7 +320,7 @@ class McpServicePublishServiceTest {
 
         when(mcpServiceDAO.findById(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(Optional.of(testServicePO));
         when(snapshotDAO.findById("snap-001")).thenReturn(Optional.of(snapshotPO));
-        when(dataScopeService.getDataScope(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(Collections.emptyList());
+        when(dataScopeService.getDataScope(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(List.of(TestFixtures.createTestDataScope()));
         when(toolService.listTools(TestFixtures.TEST_MCP_SERVICE_ID))
                 .thenReturn(new ToolsResult(List.of(currentPrebuilt), Collections.emptyList()));
         when(promptService.listPrompts(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(Collections.emptyList());
@@ -332,11 +345,11 @@ class McpServicePublishServiceTest {
         sInfo.setDescription("Test MCP service for unit tests");
         sInfo.setCode("test-mcp-service");
         content.setServiceInfo(sInfo);
-        content.setDataScopes(Collections.emptyList());
+        content.setDataScopes(List.of(McpServiceSnapshotMapper.toDataScopeDraft(TestFixtures.createTestDataScope())));
         content.setPrebuiltTools(Collections.emptyList());
         content.setPrompts(Collections.emptyList());
         McpCustomTool snapshotTool = TestFixtures.createTestCustomTool();
-        content.setCustomTools(List.of(snapshotTool));
+        content.setCustomTools(List.of(McpServiceSnapshotMapper.toCustomToolDraft(snapshotTool)));
 
         McpServiceSnapshotPO snapshotPO = new McpServiceSnapshotPO();
         snapshotPO.setId("snap-001");
@@ -351,7 +364,7 @@ class McpServicePublishServiceTest {
 
         when(mcpServiceDAO.findById(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(Optional.of(testServicePO));
         when(snapshotDAO.findById("snap-001")).thenReturn(Optional.of(snapshotPO));
-        when(dataScopeService.getDataScope(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(Collections.emptyList());
+        when(dataScopeService.getDataScope(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(List.of(TestFixtures.createTestDataScope()));
         when(toolService.listTools(TestFixtures.TEST_MCP_SERVICE_ID))
                 .thenReturn(new ToolsResult(Collections.emptyList(), List.of(currentTool)));
         when(promptService.listPrompts(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(Collections.emptyList());
@@ -380,7 +393,7 @@ class McpServicePublishServiceTest {
         scope.setServiceId(TestFixtures.TEST_MCP_SERVICE_ID);
         scope.setScopeType(McpDataScopeType.DATA_SOURCE);
         scope.setReferenceId("ds-001");
-        content.setDataScopes(List.of(scope));
+        content.setDataScopes(List.of(McpServiceSnapshotMapper.toDataScopeDraft(scope)));
         content.setPrebuiltTools(Collections.emptyList());
         content.setCustomTools(Collections.emptyList());
         content.setPrompts(Collections.emptyList());
@@ -434,16 +447,16 @@ class McpServicePublishServiceTest {
         scope.setServiceId(TestFixtures.TEST_MCP_SERVICE_ID);
         scope.setScopeType(McpDataScopeType.DATA_SOURCE);
         scope.setReferenceId("ds-001");
-        v1Content.setDataScopes(List.of(scope));
+        v1Content.setDataScopes(List.of(McpServiceSnapshotMapper.toDataScopeDraft(scope)));
 
         v1Content.setPrebuiltTools(Collections.emptyList());
         McpCustomTool v1Tool = TestFixtures.createTestCustomTool();
         v1Tool.setDescription("v1 tool description");
-        v1Content.setCustomTools(List.of(v1Tool));
+        v1Content.setCustomTools(List.of(McpServiceSnapshotMapper.toCustomToolDraft(v1Tool)));
 
         McpPrompt v1Prompt = TestFixtures.createTestMcpPrompt();
         v1Prompt.setDescription("v1 prompt description");
-        v1Content.setPrompts(List.of(v1Prompt));
+        v1Content.setPrompts(List.of(McpServiceSnapshotMapper.toPromptDraft(v1Prompt)));
 
         McpServiceSnapshotPO v1SnapshotPO = new McpServiceSnapshotPO();
         v1SnapshotPO.setId("snap-001");
@@ -455,7 +468,7 @@ class McpServicePublishServiceTest {
         when(snapshotDAO.findByServiceIdAndVersionNumber(TestFixtures.TEST_MCP_SERVICE_ID, 1)).thenReturn(Optional.of(v1SnapshotPO));
         when(snapshotDAO.findMaxVersionNumberByServiceId(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(2);
         // publish 内部 buildCurrentSnapshotContent 读取（已恢复的）草稿
-        when(dataScopeService.getDataScope(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(Collections.emptyList());
+        when(dataScopeService.getDataScope(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(List.of(TestFixtures.createTestDataScope()));
         when(toolService.listTools(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(new ToolsResult(Collections.emptyList(), Collections.emptyList()));
         when(promptService.listPrompts(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(Collections.emptyList());
         when(snapshotDAO.save(any(McpServiceSnapshotPO.class))).thenAnswer(inv -> {
@@ -479,6 +492,53 @@ class McpServicePublishServiceTest {
         assertThat(testServicePO.getActiveVersionNumber()).isEqualTo(3);
         assertThat(testServicePO.getActiveVersionId()).isEqualTo("snap-003");
         assertThat(testServicePO.getStatus()).isEqualTo(McpServiceStatus.PUBLISHED);
+    }
+
+    @Test
+    @DisplayName("Rollback to legacy snapshot with empty data scope - succeeds (MS019 not applied internally)")
+    void rollback_ToEmptyDataScopeSnapshot_Succeeds() {
+        testServicePO.setStatus(McpServiceStatus.PUBLISHED);
+        testServicePO.setActiveVersionId("snap-002");
+        testServicePO.setActiveVersionNumber(2);
+
+        // v1 快照：空数据范围（MS018 规则前的历史快照）
+        McpServiceSnapshot.SnapshotContent v1Content = new McpServiceSnapshot.SnapshotContent();
+        McpServiceSnapshot.ServiceInfo v1Info = new McpServiceSnapshot.ServiceInfo();
+        v1Info.setId(TestFixtures.TEST_MCP_SERVICE_ID);
+        v1Info.setName("Test MCP Service");
+        v1Info.setDescription("Legacy v1");
+        v1Info.setCode("test-mcp-service");
+        v1Content.setServiceInfo(v1Info);
+        v1Content.setDataScopes(Collections.emptyList());
+        v1Content.setPrebuiltTools(Collections.emptyList());
+        v1Content.setCustomTools(Collections.emptyList());
+        v1Content.setPrompts(Collections.emptyList());
+
+        McpServiceSnapshotPO v1SnapshotPO = new McpServiceSnapshotPO();
+        v1SnapshotPO.setId("snap-001");
+        v1SnapshotPO.setServiceId(TestFixtures.TEST_MCP_SERVICE_ID);
+        v1SnapshotPO.setVersionNumber(1);
+        v1SnapshotPO.setSnapshotContent(com.dati.common.JsonUtils.toJson(v1Content));
+
+        when(mcpServiceDAO.findById(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(Optional.of(testServicePO));
+        when(snapshotDAO.findByServiceIdAndVersionNumber(TestFixtures.TEST_MCP_SERVICE_ID, 1)).thenReturn(Optional.of(v1SnapshotPO));
+        when(snapshotDAO.findMaxVersionNumberByServiceId(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(2);
+        // 恢复后草稿数据范围为空（v1 内容写回）
+        when(dataScopeService.getDataScope(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(Collections.emptyList());
+        when(toolService.listTools(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(new ToolsResult(Collections.emptyList(), Collections.emptyList()));
+        when(promptService.listPrompts(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(Collections.emptyList());
+        when(snapshotDAO.save(any(McpServiceSnapshotPO.class))).thenAnswer(inv -> {
+            McpServiceSnapshotPO po = inv.getArgument(0);
+            po.setId("snap-003");
+            return po;
+        });
+        when(mcpServiceDAO.save(any(McpServicePO.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        McpServiceSnapshot snapshot = publishService.rollback(TestFixtures.TEST_MCP_SERVICE_ID, 1, null);
+
+        assertThat(snapshot.getVersionNumber()).isEqualTo(3);
+        assertThat(snapshot.getReleaseNote()).isEqualTo("Rollback to v1");
+        assertThat(testServicePO.getActiveVersionNumber()).isEqualTo(3);
     }
 
     @Test
@@ -522,7 +582,7 @@ class McpServicePublishServiceTest {
 
         when(mcpServiceDAO.findById(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(Optional.of(testServicePO));
         when(snapshotDAO.findMaxVersionNumberByServiceId(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(1);
-        when(dataScopeService.getDataScope(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(Collections.emptyList());
+        when(dataScopeService.getDataScope(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(List.of(TestFixtures.createTestDataScope()));
         when(toolService.listTools(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(new ToolsResult(Collections.emptyList(), Collections.emptyList()));
         when(promptService.listPrompts(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(Collections.emptyList());
         when(snapshotDAO.save(any(McpServiceSnapshotPO.class))).thenAnswer(inv -> {

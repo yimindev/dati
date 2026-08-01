@@ -8,16 +8,13 @@ const { t } = useI18n();
 
 interface Props {
   modelValue: McpServicePayload;
-  isEdit?: boolean;
 }
 
 interface Emits {
   (e: "update:modelValue", value: McpServicePayload): void;
 }
 
-withDefaults(defineProps<Props>(), {
-  isEdit: false,
-});
+defineProps<Props>();
 defineEmits<Emits>();
 
 const formRef = ref<FormInstance>();
@@ -91,7 +88,6 @@ defineExpose({
         :placeholder="'my-service'"
         maxlength="64"
         show-word-limit
-        :disabled="isEdit"
       />
       <div class="form-hint">{{ t("mcpService.codeHint") }}</div>
     </el-form-item>

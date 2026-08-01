@@ -13,7 +13,6 @@ interface Props {
 
 interface Emits {
   (e: "detail", service: McpServiceVO): void;
-  (e: "edit", service: McpServiceVO): void;
   (e: "delete", service: McpServiceVO): void;
 }
 
@@ -152,9 +151,6 @@ const handleCopy = async (endpointPath: string) => {
         <div class="flex items-center justify-end gap-2">
           <el-button type="primary" link @click="$emit('detail', row)">
             {{ t("common.detail") }}
-          </el-button>
-          <el-button type="primary" link @click="$emit('edit', row)">
-            {{ t("common.edit") }}
           </el-button>
           <el-button type="danger" link @click="$emit('delete', row)">
             {{ t("common.delete") }}

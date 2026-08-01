@@ -43,8 +43,11 @@ public class McpServiceSnapshotMapper {
     }
 
     /**
-     * 手动反序列化快照内容，根据 {@code tool_type} 显式确定 {@link ToolConfig} 具体类。
-     * <p>不依赖 {@code @JsonTypeInfo}，避免污染其他反序列化路径（如 Mapper/Assembler）。</p>
+     * 手动反序列化快照内容为 Draft（纯业务字段）类型。
+     * <p>config 根据 {@code tool_type} 显式路由到具体 {@link ToolConfig} 实现类
+     * （不依赖 {@code @JsonTypeInfo}，避免污染其他反序列化路径）。
+     * Draft 上的 {@code @JsonIgnoreProperties(ignoreUnknown = true)} 兼容历史快照
+     * （早期格式含 id / 审计字段，反序列化时静默忽略）。</p>
      */
     private static McpServiceSnapshot.SnapshotContent parseContent(String json) {
         ObjectNode root = (ObjectNode) JsonUtils.parseJson(json);
@@ -56,18 +59,18 @@ public class McpServiceSnapshotMapper {
                 root.get("service_info").toString(), McpServiceSnapshot.ServiceInfo.class));
         }
 
-        // data_scopes
+        // data_scopes — Draft record（ignoreUnknown 忽略旧格式的 id/审计字段）
         if (root.has("data_scopes")) {
-            List<McpServiceDataScope> scopes = new ArrayList<>();
+            List<McpServiceSnapshot.DataScopeDraft> scopes = new ArrayList<>();
             for (JsonNode n : root.get("data_scopes")) {
-                scopes.add(JsonUtils.fromJson(n.toString(), McpServiceDataScope.class));
+                scopes.add(JsonUtils.fromJson(n.toString(), McpServiceSnapshot.DataScopeDraft.class));
             }
             content.setDataScopes(scopes);
         }
 
         // prebuilt_tools — config 根据 tool_type 显式反序列化
         if (root.has("prebuilt_tools")) {
-            List<McpPrebuiltToolConfig> tools = new ArrayList<>();
+            List<McpServiceSnapshot.PrebuiltToolDraft> tools = new ArrayList<>();
             for (JsonNode n : root.get("prebuilt_tools")) {
                 tools.add(buildPrebuiltTool((ObjectNode) n));
             }
@@ -76,18 +79,18 @@ public class McpServiceSnapshotMapper {
 
         // custom_tools — 同上
         if (root.has("custom_tools")) {
-            List<McpCustomTool> tools = new ArrayList<>();
+            List<McpServiceSnapshot.CustomToolDraft> tools = new ArrayList<>();
             for (JsonNode n : root.get("custom_tools")) {
                 tools.add(buildCustomTool((ObjectNode) n));
             }
             content.setCustomTools(tools);
         }
 
-        // prompts — simple POJO
+        // prompts — Draft record
         if (root.has("prompts")) {
-            List<McpPrompt> prompts = new ArrayList<>();
+            List<McpServiceSnapshot.PromptDraft> prompts = new ArrayList<>();
             for (JsonNode n : root.get("prompts")) {
-                prompts.add(JsonUtils.fromJson(n.toString(), McpPrompt.class));
+                prompts.add(JsonUtils.fromJson(n.toString(), McpServiceSnapshot.PromptDraft.class));
             }
             content.setPrompts(prompts);
         }
@@ -95,44 +98,38 @@ public class McpServiceSnapshotMapper {
         return content;
     }
 
-    private static McpPrebuiltToolConfig buildPrebuiltTool(ObjectNode node) {
-        McpPrebuiltToolConfig tool = new McpPrebuiltToolConfig();
-        if (node.has("id") && !node.get("id").isNull())
-            tool.setId(node.get("id").asText());
-        if (node.has("service_id") && !node.get("service_id").isNull())
-            tool.setServiceId(node.get("service_id").asText());
-        if (node.has("tool_type") && !node.get("tool_type").isNull())
-            tool.setToolType(McpToolType.valueOf(node.get("tool_type").asText()));
-        if (node.has("enabled") && !node.get("enabled").isNull())
-            tool.setEnabled(node.get("enabled").asBoolean());
-        // 根据 tool_type 显式选择具体类反序列化 config
-        if (node.has("config") && !node.get("config").isNull() && tool.getToolType() != null) {
-            tool.setConfig(deserializeConfig(node.get("config").toString(), tool.getToolType()));
+    private static McpServiceSnapshot.PrebuiltToolDraft buildPrebuiltTool(ObjectNode node) {
+        McpToolType toolType = node.has("tool_type") && !node.get("tool_type").isNull()
+                ? McpToolType.valueOf(node.get("tool_type").asText()) : null;
+        boolean enabled = node.has("enabled") && !node.get("enabled").isNull()
+                && node.get("enabled").asBoolean();
+        ToolConfig config = null;
+        if (node.has("config") && !node.get("config").isNull() && toolType != null) {
+            config = deserializeConfig(node.get("config").toString(), toolType);
         }
-        return tool;
+        return new McpServiceSnapshot.PrebuiltToolDraft(
+                textOrNull(node, "service_id"), toolType, enabled, config);
     }
 
-    private static McpCustomTool buildCustomTool(ObjectNode node) {
-        McpCustomTool tool = new McpCustomTool();
-        if (node.has("id") && !node.get("id").isNull())
-            tool.setId(node.get("id").asText());
-        if (node.has("name") && !node.get("name").isNull())
-            tool.setName(node.get("name").asText());
-        if (node.has("description") && !node.get("description").isNull())
-            tool.setDescription(node.get("description").asText());
-        if (node.has("service_id") && !node.get("service_id").isNull())
-            tool.setServiceId(node.get("service_id").asText());
-        if (node.has("tool_type") && !node.get("tool_type").isNull())
-            tool.setToolType(McpToolType.valueOf(node.get("tool_type").asText()));
-        if (node.has("title") && !node.get("title").isNull())
-            tool.setTitle(node.get("title").asText());
-        if (node.has("enabled") && !node.get("enabled").isNull())
-            tool.setEnabled(node.get("enabled").asBoolean());
-        // 根据 tool_type 显式选择具体类反序列化 config
-        if (node.has("config") && !node.get("config").isNull() && tool.getToolType() != null) {
-            tool.setConfig(deserializeConfig(node.get("config").toString(), tool.getToolType()));
+    private static McpServiceSnapshot.CustomToolDraft buildCustomTool(ObjectNode node) {
+        McpToolType toolType = node.has("tool_type") && !node.get("tool_type").isNull()
+                ? McpToolType.valueOf(node.get("tool_type").asText()) : null;
+        ToolConfig config = null;
+        if (node.has("config") && !node.get("config").isNull() && toolType != null) {
+            config = deserializeConfig(node.get("config").toString(), toolType);
         }
-        return tool;
+        return new McpServiceSnapshot.CustomToolDraft(
+                textOrNull(node, "service_id"),
+                textOrNull(node, "name"),
+                toolType,
+                textOrNull(node, "title"),
+                textOrNull(node, "description"),
+                node.has("enabled") && !node.get("enabled").isNull() && node.get("enabled").asBoolean(),
+                config);
+    }
+
+    private static String textOrNull(ObjectNode node, String field) {
+        return node.has(field) && !node.get(field).isNull() ? node.get(field).asText() : null;
     }
 
     /** 根据已知的 {@link McpToolType} 选择正确的 {@link ToolConfig} 实现类反序列化。 */
@@ -143,6 +140,71 @@ public class McpServiceSnapshotMapper {
             case EXECUTE_SQL     -> JsonUtils.fromJson(configJson, ToolConfig.ExecuteSqlConfig.class);
             case PARAMETERIZED_SQL -> JsonUtils.fromJson(configJson, ToolConfig.ParamSqlConfig.class);
         };
+    }
+
+    // ── Draft → Model（回滚恢复草稿用；Draft 无 id，重建即 INSERT，天然避免 stale-update）──
+
+    public static McpServiceDataScope toDataScope(McpServiceSnapshot.DataScopeDraft draft) {
+        McpServiceDataScope scope = new McpServiceDataScope();
+        scope.setServiceId(draft.serviceId());
+        scope.setScopeType(draft.scopeType());
+        scope.setReferenceId(draft.referenceId());
+        return scope;
+    }
+
+    public static McpPrebuiltToolConfig toPrebuiltTool(McpServiceSnapshot.PrebuiltToolDraft draft) {
+        McpPrebuiltToolConfig tool = new McpPrebuiltToolConfig();
+        tool.setServiceId(draft.serviceId());
+        tool.setToolType(draft.toolType());
+        tool.setEnabled(draft.enabled());
+        tool.setConfig(draft.config());
+        return tool;
+    }
+
+    public static McpCustomTool toCustomTool(McpServiceSnapshot.CustomToolDraft draft) {
+        McpCustomTool tool = new McpCustomTool();
+        tool.setServiceId(draft.serviceId());
+        tool.setName(draft.name());
+        tool.setToolType(draft.toolType());
+        tool.setTitle(draft.title());
+        tool.setDescription(draft.description());
+        tool.setEnabled(draft.enabled());
+        tool.setConfig(draft.config());
+        return tool;
+    }
+
+    public static McpPrompt toPrompt(McpServiceSnapshot.PromptDraft draft) {
+        McpPrompt prompt = new McpPrompt();
+        prompt.setServiceId(draft.serviceId());
+        prompt.setName(draft.name());
+        prompt.setDescription(draft.description());
+        prompt.setEnabled(draft.enabled());
+        prompt.setContent(draft.content());
+        prompt.setParameters(draft.parameters());
+        return prompt;
+    }
+
+    // ── Model → Draft（发布打包用；仅业务字段入快照）──
+
+    public static McpServiceSnapshot.DataScopeDraft toDataScopeDraft(McpServiceDataScope scope) {
+        return new McpServiceSnapshot.DataScopeDraft(scope.getServiceId(), scope.getScopeType(), scope.getReferenceId());
+    }
+
+    public static McpServiceSnapshot.PrebuiltToolDraft toPrebuiltToolDraft(McpPrebuiltToolConfig tool) {
+        return new McpServiceSnapshot.PrebuiltToolDraft(
+                tool.getServiceId(), tool.getToolType(), tool.isEnabled(), tool.getConfig());
+    }
+
+    public static McpServiceSnapshot.CustomToolDraft toCustomToolDraft(McpCustomTool tool) {
+        return new McpServiceSnapshot.CustomToolDraft(
+                tool.getServiceId(), tool.getName(), tool.getToolType(), tool.getTitle(),
+                tool.getDescription(), tool.isEnabled(), tool.getConfig());
+    }
+
+    public static McpServiceSnapshot.PromptDraft toPromptDraft(McpPrompt prompt) {
+        return new McpServiceSnapshot.PromptDraft(
+                prompt.getServiceId(), prompt.getName(), prompt.getDescription(), prompt.isEnabled(),
+                prompt.getContent(), prompt.getParameters());
     }
 
 }
