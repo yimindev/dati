@@ -39,7 +39,7 @@ const loadDatasources = async () => {
     datasourceList.value = response.data || [];
     total.value = response.total ?? 0;
   } catch (error) {
-    console.error("加载数据源失败:", error);
+    console.error("Failed to load data source:", error);
     ElMessage.error(t("common.loadFailed"));
   } finally {
     loading.value = false;
@@ -115,7 +115,7 @@ const handleTestConnection = async (datasource: DatasourceVO) => {
       ElMessage.error(t("datasource.testFailed"));
     }
   } catch (error) {
-    console.error("测试连接失败:", error);
+    console.error("Failed to test connection:", error);
     ElMessage.error(t("datasource.testFailed"));
   } finally {
     loading.value = false;
@@ -140,7 +140,7 @@ const handleDelete = async (datasource: DatasourceVO) => {
     await loadDatasources();
   } catch (error) {
     if (error !== "cancel") {
-      console.error("删除失败:", error);
+      console.error("Failed to delete:", error);
       ElMessage.error(t("common.operationFailed"));
     }
   }

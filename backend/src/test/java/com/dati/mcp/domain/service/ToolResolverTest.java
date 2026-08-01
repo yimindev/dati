@@ -24,7 +24,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-@DisplayName("ToolResolver 单元测试")
+@DisplayName("ToolResolver unit tests")
 class ToolResolverTest {
 
     @Mock
@@ -37,7 +37,7 @@ class ToolResolverTest {
     private ToolResolver toolResolver;
 
     @Test
-    @DisplayName("resolve - 预置工具有 DB 配置时返回 DB 记录")
+    @DisplayName("resolve - returns DB record when prebuilt tool has config")
     void resolvePrebuiltWithDbConfig() {
         McpPrebuiltToolConfigPO po = new McpPrebuiltToolConfigPO();
         po.setServiceId(TestFixtures.TEST_MCP_SERVICE_ID);
@@ -55,7 +55,7 @@ class ToolResolverTest {
     }
 
     @Test
-    @DisplayName("resolve - 预置工具无 DB 记录时返回默认配置")
+    @DisplayName("resolve - returns default config when prebuilt tool has no DB record")
     void resolvePrebuiltWithoutDbConfig() {
         when(prebuiltDAO.findByServiceIdAndToolType(TestFixtures.TEST_MCP_SERVICE_ID, McpToolType.EXECUTE_SQL))
                 .thenReturn(Optional.empty());
@@ -68,7 +68,7 @@ class ToolResolverTest {
     }
 
     @Test
-    @DisplayName("resolve - 预置工具已禁用时抛出 MS_TOOL_DISABLED")
+    @DisplayName("resolve - throws MS_TOOL_DISABLED when prebuilt tool disabled")
     void resolvePrebuiltDisabled() {
         McpPrebuiltToolConfigPO po = new McpPrebuiltToolConfigPO();
         po.setServiceId(TestFixtures.TEST_MCP_SERVICE_ID);
@@ -85,7 +85,7 @@ class ToolResolverTest {
     }
 
     @Test
-    @DisplayName("resolve - 自定义工具找到且启用时返回正确信息")
+    @DisplayName("resolve - returns correct info when custom tool found and enabled")
     void resolveCustomFoundAndEnabled() {
         McpCustomToolPO po = new McpCustomToolPO();
         po.setId("ct-001");
@@ -106,7 +106,7 @@ class ToolResolverTest {
     }
 
     @Test
-    @DisplayName("resolve - 自定义工具未找到时抛出 MS_TOOL_NOT_FOUND")
+    @DisplayName("resolve - throws MS_TOOL_NOT_FOUND when custom tool not found")
     void resolveCustomNotFound() {
         when(customToolDAO.findByServiceIdAndId(TestFixtures.TEST_MCP_SERVICE_ID, "unknown_tool"))
                 .thenReturn(Optional.empty());
@@ -118,7 +118,7 @@ class ToolResolverTest {
     }
 
     @Test
-    @DisplayName("resolve - 自定义工具已禁用时抛出 ToolExecuteException")
+    @DisplayName("resolve - throws ToolExecuteException when custom tool disabled")
     void resolveCustomDisabled() {
         McpCustomToolPO po = new McpCustomToolPO();
         po.setId("ct-002");
@@ -138,7 +138,7 @@ class ToolResolverTest {
     }
 
     @Test
-    @DisplayName("resolve - PARAMETERIZED_SQL 走自定义工具路径，不调用 prebuiltDAO")
+    @DisplayName("resolve - PARAMETERIZED_SQL uses custom tool path, prebuiltDAO not called")
     void resolveParameterizedSqlGoesToCustomPath() {
         McpCustomToolPO po = new McpCustomToolPO();
         po.setId("ct-003");

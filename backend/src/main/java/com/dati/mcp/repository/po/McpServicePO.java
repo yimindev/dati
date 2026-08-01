@@ -30,4 +30,10 @@ public class McpServicePO extends BaseResourcePO {
     @Column(length = 20)
     private McpServiceStatus status;
 
+    @Column(name = "active_version_id")
+    private String activeVersionId;
+
+    @Column(name = "active_version_number")
+    private Integer activeVersionNumber;
+
 }

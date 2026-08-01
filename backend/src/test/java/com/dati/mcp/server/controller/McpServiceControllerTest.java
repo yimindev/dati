@@ -5,7 +5,9 @@ import com.dati.base.pojo.PageResponse;
 import com.dati.mcp.domain.model.McpDataScopeType;
 import com.dati.mcp.domain.model.McpService;
 import com.dati.mcp.domain.model.McpServiceDataScope;
+import com.dati.mcp.domain.model.McpServiceSnapshot;
 import com.dati.mcp.domain.service.McpServiceDataScopeService;
+import com.dati.mcp.domain.service.McpServicePublishService;
 import com.dati.mcp.domain.service.McpServiceService;
 import com.dati.mcp.server.assembler.McpDataScopeAssembler;
 import com.dati.mcp.server.assembler.McpServiceAssembler;
@@ -32,6 +34,7 @@ import java.util.Set;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.when;
@@ -44,7 +47,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WebMvcTest(McpServiceController.class)
 @ActiveProfiles("test")
 @AutoConfigureMockMvc(addFilters = false)
-@DisplayName("McpServiceController 集成测试")
+@DisplayName("McpServiceController integration tests")
 class McpServiceControllerTest {
 
     @Autowired
@@ -65,6 +68,9 @@ class McpServiceControllerTest {
     @MockitoBean
     private McpDataScopeAssembler dataScopeAssembler;
 
+    @MockitoBean
+    private McpServicePublishService publishService;
+
     private McpService testService;
 
     @BeforeEach
@@ -73,7 +79,103 @@ class McpServiceControllerTest {
     }
 
     @Test
-    @DisplayName("创建 MCP 服务 - 成功")
+    @DisplayName("Publish MCP service - success")
+    void publishService_shouldReturnSnapshotId() throws Exception {
+        McpServiceSnapshot snapshot = new McpServiceSnapshot();
+        snapshot.setId("snap-001");
+        snapshot.setVersionNumber(1);
+        when(publishService.publish(anyString(), any())).thenReturn(snapshot);
+
+        mockMvc.perform(post("/v1/mcp-services/{id}/publish", TestFixtures.TEST_MCP_SERVICE_ID)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                { "release_note": "Initial Release" }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value("snap-001"));
+    }
+
+    @Test
+    @DisplayName("Disable MCP service - success")
+    void disableService_shouldReturnId() throws Exception {
+        doNothing().when(publishService).disable(anyString());
+
+        mockMvc.perform(post("/v1/mcp-services/{id}/disable", TestFixtures.TEST_MCP_SERVICE_ID))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(TestFixtures.TEST_MCP_SERVICE_ID));
+    }
+
+    @Test
+    @DisplayName("Enable MCP service - success")
+    void enableService_shouldReturnId() throws Exception {
+        doNothing().when(publishService).enable(anyString());
+
+        mockMvc.perform(post("/v1/mcp-services/{id}/enable", TestFixtures.TEST_MCP_SERVICE_ID))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(TestFixtures.TEST_MCP_SERVICE_ID));
+    }
+
+    @Test
+    @DisplayName("Query draft diff - success")
+    void getServiceDiff_shouldReturnDiff() throws Exception {
+        com.dati.mcp.server.pojo.McpServiceDiffVO diff = new com.dati.mcp.server.pojo.McpServiceDiffVO();
+        diff.setHasChanges(true);
+        diff.setToolsChanged(true);
+        diff.setAddedTools(List.of("new_tool"));
+        when(publishService.getDiff(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(diff);
+
+        mockMvc.perform(get("/v1/mcp-services/{id}/diff", TestFixtures.TEST_MCP_SERVICE_ID))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.has_changes").value(true))
+                .andExpect(jsonPath("$.tools_changed").value(true))
+                .andExpect(jsonPath("$.added_tools[0]").value("new_tool"));
+    }
+
+    @Test
+    @DisplayName("Query version snapshot list - success")
+    void getSnapshots_shouldReturnList() throws Exception {
+        McpServiceSnapshot snapshot = new McpServiceSnapshot();
+        snapshot.setId("snap-001");
+        snapshot.setServiceId(TestFixtures.TEST_MCP_SERVICE_ID);
+        snapshot.setVersionNumber(1);
+        snapshot.setReleaseNote("Initial v1");
+        snapshot.setContent(new McpServiceSnapshot.SnapshotContent());
+        when(publishService.getSnapshots(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(List.of(snapshot));
+
+        com.dati.mcp.server.pojo.McpServiceSnapshotVO vo = new com.dati.mcp.server.pojo.McpServiceSnapshotVO();
+        vo.setId("snap-001");
+        vo.setServiceId(TestFixtures.TEST_MCP_SERVICE_ID);
+        vo.setVersionNumber(1);
+        vo.setReleaseNote("Initial v1");
+        when(mcpServiceAssembler.toSnapshotVO(snapshot)).thenReturn(vo);
+
+        mockMvc.perform(get("/v1/mcp-services/{id}/snapshots", TestFixtures.TEST_MCP_SERVICE_ID))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].version_number").value(1))
+                .andExpect(jsonPath("$[0].release_note").value("Initial v1"))
+                .andExpect(jsonPath("$[0].content").doesNotExist());
+    }
+
+    @Test
+    @DisplayName("Rollback MCP service - success")
+    void rollbackService_shouldReturnSnapshotId() throws Exception {
+        McpServiceSnapshot snapshot = new McpServiceSnapshot();
+        snapshot.setId("snap-003");
+        snapshot.setVersionNumber(3);
+        when(publishService.rollback(eq(TestFixtures.TEST_MCP_SERVICE_ID), eq(1), any()))
+                .thenReturn(snapshot);
+
+        mockMvc.perform(post("/v1/mcp-services/{id}/rollback", TestFixtures.TEST_MCP_SERVICE_ID)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                { "target_version_number": 1, "release_note": "恢复" }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value("snap-003"));
+    }
+
+    @Test
+    @DisplayName("Create MCP service - success")
     void createMcpService_shouldReturnId() throws Exception {
         // given
         when(mcpServiceService.createMcpService(any())).thenReturn(TestFixtures.TEST_MCP_SERVICE_ID);
@@ -94,7 +196,7 @@ class McpServiceControllerTest {
     }
 
     @Test
-    @DisplayName("更新 MCP 服务 - 成功")
+    @DisplayName("Update MCP service - success")
     void updateMcpService_shouldReturnId() throws Exception {
         // given
         doNothing().when(mcpServiceAssembler).fillUpdateUserFromRequest(any());
@@ -109,7 +211,7 @@ class McpServiceControllerTest {
     }
 
     @Test
-    @DisplayName("查询 MCP 服务详情 - 成功")
+    @DisplayName("Query MCP service detail - success")
     void getMcpService_shouldReturnDetail() throws Exception {
         // given
         when(mcpServiceService.getMcpService(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(testService);
@@ -133,7 +235,7 @@ class McpServiceControllerTest {
     }
 
     @Test
-    @DisplayName("分页查询 MCP 服务 - 成功")
+    @DisplayName("Paged query MCP services - success")
     void listMcpServices_shouldReturnPagedResults() throws Exception {
         // given
         Page<McpService> page = new PageImpl<>(List.of(testService));
@@ -155,7 +257,7 @@ class McpServiceControllerTest {
     }
 
     @Test
-    @DisplayName("分页查询 MCP 服务 - 带关键词和状态")
+    @DisplayName("Paged query MCP services - with keyword and status")
     void listMcpServices_withKeywordAndStatus() throws Exception {
         // given
         Page<McpService> page = new PageImpl<>(List.of(testService));
@@ -179,7 +281,7 @@ class McpServiceControllerTest {
     }
 
     @Test
-    @DisplayName("查询数据范围 - 通过 Assembler 组装响应")
+    @DisplayName("Query data scope - response assembled via Assembler")
     void getDataScope_shouldReturnItems() throws Exception {
         McpServiceDataScope scope = new McpServiceDataScope();
         scope.setId("scope-001");
@@ -213,7 +315,7 @@ class McpServiceControllerTest {
     }
 
     @Test
-    @DisplayName("保存数据范围 - 成功")
+    @DisplayName("Save data scope - success")
     void saveDataScope_shouldReturnId() throws Exception {
         doNothing().when(dataScopeService).saveDataScope(anyString(), any());
 

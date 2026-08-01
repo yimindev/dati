@@ -78,7 +78,7 @@ const handleSubmit = async () => {
 
     emit("success");
   } catch (error) {
-    console.error("提交失败:", error);
+    console.error("Failed to submit:", error);
     ElMessage.error(t("common.operationFailed"));
   } finally {
     submitting.value = false;

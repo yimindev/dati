@@ -38,7 +38,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-@DisplayName("McpToolService 单元测试")
+@DisplayName("McpToolService unit tests")
 class McpToolServiceTest {
 
     @Mock
@@ -74,7 +74,7 @@ class McpToolServiceTest {
     // ── 列表 ──
 
     @Test
-    @DisplayName("列表 - 无 DB 记录时返回预置工具默认值 + 空自定义列表")
+    @DisplayName("List - returns prebuilt defaults and empty custom list when no DB records")
     void listTools_noConfig_returnsDefaults() {
         when(prebuiltDAO.findAllByServiceId(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(List.of());
         when(customToolDAO.findAllByServiceIdOrderByCreatedAtDesc(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(List.of());
@@ -85,7 +85,7 @@ class McpToolServiceTest {
     }
 
     @Test
-    @DisplayName("列表 - 包含 DB 中已配置的预置工具和自定义工具")
+    @DisplayName("List - includes configured prebuilt and custom tools from DB")
     void listTools_withConfig_returnsAll() {
         McpPrebuiltToolConfigPO esPO = new McpPrebuiltToolConfigPO();
         esPO.setId("pre-cfg-001");
@@ -106,7 +106,7 @@ class McpToolServiceTest {
     // ── 更新预置工具 ──
 
     @Test
-    @DisplayName("更新预置工具 - 无记录时创建新行")
+    @DisplayName("Update prebuilt tool - creates new row when no record")
     void updatePrebuiltTool_noRecord_createsNew() {
         when(prebuiltDAO.findByServiceIdAndToolType(TestFixtures.TEST_MCP_SERVICE_ID, McpToolType.EXECUTE_SQL))
             .thenReturn(Optional.empty());
@@ -130,7 +130,7 @@ class McpToolServiceTest {
     }
 
     @Test
-    @DisplayName("更新预置工具 - 有记录时更新")
+    @DisplayName("Update prebuilt tool - updates existing row")
     void updatePrebuiltTool_existing_updates() {
         McpPrebuiltToolConfigPO existing = new McpPrebuiltToolConfigPO();
         existing.setId("pre-cfg-001");
@@ -151,7 +151,7 @@ class McpToolServiceTest {
     // ── 创建自定义工具 ──
 
     @Test
-    @DisplayName("创建自定义工具 - 成功")
+    @DisplayName("Create custom tool - success")
     void createCustomTool_success() {
         when(mcpServiceDAO.existsById(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(true);
         when(customToolDAO.existsByServiceIdAndName(TestFixtures.TEST_MCP_SERVICE_ID, "list_tasks")).thenReturn(false);
@@ -167,7 +167,7 @@ class McpToolServiceTest {
     }
 
     @Test
-    @DisplayName("创建自定义工具 - name 格式不合法抛出异常")
+    @DisplayName("Create custom tool - throws on invalid name format")
     void createCustomTool_invalidName_throws() {
         when(mcpServiceDAO.existsById(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(true);
         testCustomTool.setName("invalid name!");
@@ -180,7 +180,7 @@ class McpToolServiceTest {
     }
 
     @Test
-    @DisplayName("创建自定义工具 - name 重复抛出异常")
+    @DisplayName("Create custom tool - throws on duplicate name")
     void createCustomTool_nameExists_throws() {
         when(mcpServiceDAO.existsById(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(true);
         when(customToolDAO.existsByServiceIdAndName(TestFixtures.TEST_MCP_SERVICE_ID, "list_tasks")).thenReturn(true);
@@ -192,7 +192,7 @@ class McpToolServiceTest {
     }
 
     @Test
-    @DisplayName("创建自定义工具 - 服务不存在抛出异常")
+    @DisplayName("Create custom tool - throws when service not found")
     void createCustomTool_serviceNotFound_throws() {
         when(mcpServiceDAO.existsById(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(false);
 
@@ -203,7 +203,7 @@ class McpToolServiceTest {
     }
 
     @Test
-    @DisplayName("创建 Parameterized SQL — 模板语法错误（{{ 不闭合）→ 拒绝")
+    @DisplayName("Create Parameterized SQL - template syntax error (unclosed {{) → rejected")
     void createCustomTool_templateSyntaxError_throws() {
         when(mcpServiceDAO.existsById(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(true);
         when(customToolDAO.existsByServiceIdAndName(TestFixtures.TEST_MCP_SERVICE_ID, "list_tasks")).thenReturn(false);
@@ -223,7 +223,7 @@ class McpToolServiceTest {
     }
 
     @Test
-    @DisplayName("创建 Parameterized SQL — 参数名不一致：模板引用未定义参数 → 拒绝")
+    @DisplayName("Create Parameterized SQL - template references undefined parameter → rejected")
     void createCustomTool_undefinedParameter_throws() {
         when(mcpServiceDAO.existsById(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(true);
         when(customToolDAO.existsByServiceIdAndName(TestFixtures.TEST_MCP_SERVICE_ID, "list_tasks")).thenReturn(false);
@@ -246,7 +246,7 @@ class McpToolServiceTest {
     }
 
     @Test
-    @DisplayName("创建 Parameterized SQL — 有效模板语法通过校验")
+    @DisplayName("Create Parameterized SQL - valid template passes validation")
     void createCustomTool_validTemplate_succeeds() {
         when(mcpServiceDAO.existsById(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(true);
         when(customToolDAO.existsByServiceIdAndName(TestFixtures.TEST_MCP_SERVICE_ID, "list_tasks")).thenReturn(false);
@@ -266,7 +266,7 @@ class McpToolServiceTest {
     }
 
     @Test
-    @DisplayName("创建 Parameterized SQL — 空模板应拒绝")
+    @DisplayName("Create Parameterized SQL - empty template rejected")
     void createCustomTool_emptyTemplate_rejected() {
         when(mcpServiceDAO.existsById(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(true);
         when(customToolDAO.existsByServiceIdAndName(TestFixtures.TEST_MCP_SERVICE_ID, "empty_tool")).thenReturn(false);
@@ -287,7 +287,7 @@ class McpToolServiceTest {
     // ── 更新自定义工具 ──
 
     @Test
-    @DisplayName("更新自定义工具 - 成功（含 enabled 开关）")
+    @DisplayName("Update custom tool - success (with enabled flag)")
     void updateCustomTool_success() {
         when(customToolDAO.findByServiceIdAndId(TestFixtures.TEST_MCP_SERVICE_ID, TestFixtures.TEST_MCP_CUSTOM_TOOL_ID))
             .thenReturn(Optional.of(testCustomToolPO));
@@ -305,7 +305,7 @@ class McpToolServiceTest {
     }
 
     @Test
-    @DisplayName("更新自定义工具 - 不存在抛出异常")
+    @DisplayName("Update custom tool - throws when not found")
     void updateCustomTool_notFound_throws() {
         when(customToolDAO.findByServiceIdAndId(TestFixtures.TEST_MCP_SERVICE_ID, TestFixtures.TEST_MCP_CUSTOM_TOOL_ID))
             .thenReturn(Optional.empty());
@@ -319,7 +319,7 @@ class McpToolServiceTest {
     // ── 删除自定义工具 ──
 
     @Test
-    @DisplayName("删除自定义工具 - 成功")
+    @DisplayName("Delete custom tool - success")
     void deleteCustomTool_success() {
         when(customToolDAO.findByServiceIdAndId(TestFixtures.TEST_MCP_SERVICE_ID, TestFixtures.TEST_MCP_CUSTOM_TOOL_ID))
             .thenReturn(Optional.of(testCustomToolPO));
@@ -330,7 +330,7 @@ class McpToolServiceTest {
     }
 
     @Test
-    @DisplayName("删除自定义工具 - 不存在抛出异常")
+    @DisplayName("Delete custom tool - throws when not found")
     void deleteCustomTool_notFound_throws() {
         when(customToolDAO.findByServiceIdAndId(TestFixtures.TEST_MCP_SERVICE_ID, TestFixtures.TEST_MCP_CUSTOM_TOOL_ID))
             .thenReturn(Optional.empty());
@@ -344,12 +344,29 @@ class McpToolServiceTest {
     // ── 计数 ──
 
     @Test
-    @DisplayName("countToolsByServiceId - 返回预置+自定义的已启用总数")
+    @DisplayName("countToolsByServiceId - returns total of prebuilt + custom")
     void countToolsByServiceId_returnsTotal() {
         when(customToolDAO.countByServiceId(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(2L);
 
         long result = mcpToolService.countToolsByServiceId(TestFixtures.TEST_MCP_SERVICE_ID);
 
         assertThat(result).isEqualTo(5L);
+    }
+
+    // ── 全量替换（回滚恢复草稿用）──
+
+    @Test
+    @DisplayName("replaceCustomTools - deletes existing and inserts snapshot content")
+    void replaceCustomTools_replacesAll() {
+        McpCustomTool restoredTool = TestFixtures.createTestCustomTool();
+        restoredTool.setName("restored_tool");
+
+        mcpToolService.replaceCustomTools(TestFixtures.TEST_MCP_SERVICE_ID, List.of(restoredTool));
+
+        verify(customToolDAO).deleteAllByServiceId(TestFixtures.TEST_MCP_SERVICE_ID);
+        ArgumentCaptor<List> captor = ArgumentCaptor.forClass(List.class);
+        verify(customToolDAO).saveAll(captor.capture());
+        assertThat(captor.getValue()).hasSize(1);
+        assertThat(((McpCustomToolPO) captor.getValue().getFirst()).getName()).isEqualTo("restored_tool");
     }
 }

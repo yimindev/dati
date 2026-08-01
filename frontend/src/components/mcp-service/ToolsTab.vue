@@ -8,6 +8,7 @@ import CustomToolList from "./CustomToolList.vue";
 
 const { t } = useI18n();
 const props = defineProps<{ serviceId: string }>();
+const emit = defineEmits<{ (e: "refresh"): void }>();
 
 const loading = ref(false);
 const prebuiltTools = ref<McpToolVO[]>([]);
@@ -24,6 +25,11 @@ const loadTools = async () => {
   } finally {
     loading.value = false;
   }
+};
+
+const handleListRefresh = async () => {
+  await loadTools();
+  emit("refresh");
 };
 
 defineExpose({ loadTools });
@@ -61,14 +67,14 @@ onMounted(loadTools);
       v-if="activeSubTab === 'prebuilt'"
       :tools="prebuiltTools"
       :service-id="props.serviceId"
-      @refresh="loadTools"
+      @refresh="handleListRefresh"
     />
 
     <CustomToolList
       v-else
       :tools="customTools"
       :service-id="props.serviceId"
-      @refresh="loadTools"
+      @refresh="handleListRefresh"
     />
   </div>
 </template>

@@ -13,6 +13,8 @@ public class McpServiceMapper {
             po.setCode(service.getCode());
         }
         po.setStatus(service.getStatus());
+        po.setActiveVersionId(service.getActiveVersionId());
+        po.setActiveVersionNumber(service.getActiveVersionNumber());
         return po;
     }
 
@@ -21,6 +23,8 @@ public class McpServiceMapper {
         MapperUtils.copyBaseResourceInfo(po, service);
         service.setCode(po.getCode());
         service.setStatus(po.getStatus());
+        service.setActiveVersionId(po.getActiveVersionId());
+        service.setActiveVersionNumber(po.getActiveVersionNumber());
         return service;
     }
 

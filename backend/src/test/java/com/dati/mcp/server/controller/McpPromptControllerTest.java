@@ -33,7 +33,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WebMvcTest(McpPromptController.class)
 @ActiveProfiles("test")
 @AutoConfigureMockMvc(addFilters = false)
-@DisplayName("McpPromptController 集成测试")
+@DisplayName("McpPromptController integration tests")
 class McpPromptControllerTest {
 
     @Autowired private MockMvc mockMvc;
@@ -50,14 +50,14 @@ class McpPromptControllerTest {
         when(promptAssembler.toVOList(any())).thenReturn(List.of(vo));
     }
 
-    @Test @DisplayName("GET /prompts - 列表")
+    @Test @DisplayName("GET /prompts - list")
     void list() throws Exception {
         mockMvc.perform(get("/v1/mcp-services/{id}/prompts", TestFixtures.TEST_MCP_SERVICE_ID))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$[0].id").value(TestFixtures.TEST_MCP_PROMPT_ID));
     }
 
-    @Test @DisplayName("POST /prompts - 创建")
+    @Test @DisplayName("POST /prompts - create")
     void create() throws Exception {
         when(promptService.createPrompt(eq(TestFixtures.TEST_MCP_SERVICE_ID), any()))
             .thenReturn(TestFixtures.TEST_MCP_PROMPT_ID);
@@ -68,7 +68,7 @@ class McpPromptControllerTest {
             .andExpect(jsonPath("$.id").value(TestFixtures.TEST_MCP_PROMPT_ID));
     }
 
-    @Test @DisplayName("PUT /prompts/{id} - 更新")
+    @Test @DisplayName("PUT /prompts/{id} - update")
     void update() throws Exception {
         when(promptAssembler.toModel(any(McpPromptRequest.class))).thenReturn(new McpPrompt());
         doNothing().when(promptService).updatePrompt(any());
@@ -79,7 +79,7 @@ class McpPromptControllerTest {
             .andExpect(jsonPath("$.id").value(TestFixtures.TEST_MCP_PROMPT_ID));
     }
 
-    @Test @DisplayName("DELETE /prompts/{id} - 删除")
+    @Test @DisplayName("DELETE /prompts/{id} - delete")
     void deletePrompt() throws Exception {
         doNothing().when(promptService).deletePrompt(TestFixtures.TEST_MCP_SERVICE_ID, TestFixtures.TEST_MCP_PROMPT_ID);
         mockMvc.perform(delete("/v1/mcp-services/{id}/prompts/{pid}", TestFixtures.TEST_MCP_SERVICE_ID, TestFixtures.TEST_MCP_PROMPT_ID))

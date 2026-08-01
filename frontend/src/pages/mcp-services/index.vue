@@ -44,7 +44,7 @@ const loadServices = async () => {
     serviceList.value = response.data || [];
     total.value = response.total ?? 0;
   } catch (error) {
-    console.error("加载 MCP 服务列表失败:", error);
+    console.error("Failed to load MCP services:", error);
     ElMessage.error(t("common.loadFailed"));
   } finally {
     loading.value = false;
@@ -109,7 +109,7 @@ const handleDelete = async (service: McpServiceVO) => {
     ElMessage.info(t("mcpService.comingSoon"));
   } catch (error) {
     if (error !== "cancel") {
-      console.error("删除失败:", error);
+      console.error("Failed to delete:", error);
     }
   }
 };

@@ -11,4 +11,6 @@ public interface McpPromptDAO extends JpaRepository<McpPromptPO, String> {
     Optional<McpPromptPO> findByServiceIdAndId(String serviceId, String id);
     boolean existsByServiceIdAndName(String serviceId, String name);
     boolean existsByServiceIdAndNameAndIdNot(String serviceId, String name, String id);
+
+    void deleteAllByServiceId(String serviceId);
 }

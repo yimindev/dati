@@ -6,14 +6,20 @@ import com.dati.base.pojo.PageReq;
 import com.dati.base.pojo.PageResponse;
 import com.dati.mcp.domain.model.McpService;
 import com.dati.mcp.domain.model.McpServiceDataScope;
+import com.dati.mcp.domain.model.McpServiceSnapshot;
 import com.dati.mcp.domain.model.McpServiceStatus;
 import com.dati.mcp.domain.service.McpServiceDataScopeService;
+import com.dati.mcp.domain.service.McpServicePublishService;
 import com.dati.mcp.domain.service.McpServiceService;
 import com.dati.mcp.server.assembler.McpDataScopeAssembler;
 import com.dati.mcp.server.assembler.McpServiceAssembler;
 import com.dati.mcp.server.pojo.DataScopeRequest;
 import com.dati.mcp.server.pojo.DataScopeResponse;
+import com.dati.mcp.server.pojo.McpServiceDiffVO;
+import com.dati.mcp.server.pojo.McpServiceSnapshotVO;
 import com.dati.mcp.server.pojo.McpServiceVO;
+import com.dati.mcp.server.pojo.PublishRequest;
+import com.dati.mcp.server.pojo.RollbackRequest;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Sort;
@@ -23,11 +29,11 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import java.util.List;
-import java.util.Set;
-
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
+import java.util.Set;
 
 @Slf4j
 @RestController
@@ -38,15 +44,18 @@ public class McpServiceController {
     private final McpServiceAssembler mcpServiceAssembler;
     private final McpServiceDataScopeService dataScopeService;
     private final McpDataScopeAssembler dataScopeAssembler;
+    private final McpServicePublishService publishService;
 
     public McpServiceController(McpServiceService mcpServiceService,
                                 McpServiceAssembler mcpServiceAssembler,
                                 McpServiceDataScopeService dataScopeService,
-                                McpDataScopeAssembler dataScopeAssembler) {
+                                McpDataScopeAssembler dataScopeAssembler,
+                                McpServicePublishService publishService) {
         this.mcpServiceService = mcpServiceService;
         this.mcpServiceAssembler = mcpServiceAssembler;
         this.dataScopeService = dataScopeService;
         this.dataScopeAssembler = dataScopeAssembler;
+        this.publishService = publishService;
     }
 
     @PostMapping
@@ -97,6 +106,45 @@ public class McpServiceController {
         }).toList();
         dataScopeService.saveDataScope(id, scopes);
         return new IdResponse(id);
+    }
+
+    @PostMapping("/{id}/publish")
+    public IdResponse publishService(@PathVariable String id,
+                                      @RequestBody(required = false) PublishRequest request) {
+        String note = request != null ? request.getReleaseNote() : null;
+        McpServiceSnapshot snapshot = publishService.publish(id, note);
+        return new IdResponse(snapshot.getId());
+    }
+
+    @PostMapping("/{id}/disable")
+    public IdResponse disableService(@PathVariable String id) {
+        publishService.disable(id);
+        return new IdResponse(id);
+    }
+
+    @PostMapping("/{id}/enable")
+    public IdResponse enableService(@PathVariable String id) {
+        publishService.enable(id);
+        return new IdResponse(id);
+    }
+
+    @GetMapping("/{id}/diff")
+    public McpServiceDiffVO getServiceDiff(@PathVariable String id) {
+        return publishService.getDiff(id);
+    }
+
+    @GetMapping("/{id}/snapshots")
+    public List<McpServiceSnapshotVO> getSnapshots(@PathVariable String id) {
+        return publishService.getSnapshots(id).stream()
+                .map(mcpServiceAssembler::toSnapshotVO)
+                .toList();
+    }
+
+    @PostMapping("/{id}/rollback")
+    public IdResponse rollbackService(@PathVariable String id,
+                                       @Valid @RequestBody RollbackRequest request) {
+        McpServiceSnapshot snapshot = publishService.rollback(id, request.getTargetVersionNumber(), request.getReleaseNote());
+        return new IdResponse(snapshot.getId());
     }
 
 }

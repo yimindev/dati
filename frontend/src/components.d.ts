@@ -17,6 +17,8 @@ declare module 'vue' {
     DatasourceForm: typeof import('./components/datasource/DatasourceForm.vue')['default']
     DatasourceTable: typeof import('./components/datasource/DatasourceTable.vue')['default']
     DataTableShell: typeof import('./components/common/DataTableShell.vue')['default']
+    DebugPublishTab: typeof import('./components/mcp-service/DebugPublishTab.vue')['default']
+    DiffSummaryList: typeof import('./components/mcp-service/DiffSummaryList.vue')['default']
     ElAlert: typeof import('element-plus/es')['ElAlert']
     ElAvatar: typeof import('element-plus/es')['ElAvatar']
     ElBreadcrumb: typeof import('element-plus/es')['ElBreadcrumb']

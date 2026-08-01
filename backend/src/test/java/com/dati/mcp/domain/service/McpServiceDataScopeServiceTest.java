@@ -29,7 +29,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-@DisplayName("McpServiceDataScopeService 单元测试")
+@DisplayName("McpServiceDataScopeService unit tests")
 class McpServiceDataScopeServiceTest {
 
     @Mock
@@ -61,7 +61,7 @@ class McpServiceDataScopeServiceTest {
     }
 
     @Test
-    @DisplayName("保存数据范围 - 全量替换，先删后插")
+    @DisplayName("Save data scope - full replace, delete then insert")
     void saveDataScope_shouldDeleteThenSave() {
         List<McpServiceDataScope> scopes = List.of(testDataSourceScope, testSubjectScope);
         when(dataScopeDAO.saveAll(any())).thenReturn(List.of());
@@ -77,7 +77,7 @@ class McpServiceDataScopeServiceTest {
     }
 
     @Test
-    @DisplayName("保存数据范围 - 空列表也应清空")
+    @DisplayName("Save data scope - empty list clears existing")
     void saveDataScope_empty_shouldDeleteAll() {
         dataScopeService.saveDataScope(TestFixtures.TEST_MCP_SERVICE_ID, List.of());
 
@@ -86,7 +86,7 @@ class McpServiceDataScopeServiceTest {
     }
 
     @Test
-    @DisplayName("查询数据范围 - 返回纯模型列表（无名称）")
+    @DisplayName("Query data scope - returns plain model list (no names)")
     void getDataScope_shouldReturnModels() {
         McpServiceDataScopePO po1 = McpServiceDataScopeMapper.toPO(testDataSourceScope);
         when(dataScopeDAO.findAllByServiceId(TestFixtures.TEST_MCP_SERVICE_ID))
@@ -100,7 +100,7 @@ class McpServiceDataScopeServiceTest {
     }
 
     @Test
-    @DisplayName("查询数据范围 - 无记录返回空列表")
+    @DisplayName("Query data scope - returns empty list when no records")
     void getDataScope_noRecords_shouldReturnEmpty() {
         when(dataScopeDAO.findAllByServiceId(TestFixtures.TEST_MCP_SERVICE_ID))
                 .thenReturn(List.of());
@@ -111,7 +111,7 @@ class McpServiceDataScopeServiceTest {
     }
 
     @Test
-    @DisplayName("解析数据源 ID - 只含 DATA_SOURCE 类型直接返回")
+    @DisplayName("Resolve data source IDs - returns directly when only DATA_SOURCE")
     void getResolvedDataSourceIds_onlyDataSource_shouldReturnDirectIds() {
         McpServiceDataScopePO po1 = McpServiceDataScopeMapper.toPO(testDataSourceScope);
         when(dataScopeDAO.findAllByServiceId(TestFixtures.TEST_MCP_SERVICE_ID))
@@ -124,7 +124,7 @@ class McpServiceDataScopeServiceTest {
     }
 
     @Test
-    @DisplayName("解析数据源 ID - 穿透 SUBJECT 获取 datasourceId")
+    @DisplayName("Resolve data source IDs - resolves datasourceId through SUBJECT")
     void getResolvedDataSourceIds_throughSubject_shouldResolve() {
         McpServiceDataScopePO subjectScopePO = McpServiceDataScopeMapper.toPO(testSubjectScope);
         when(dataScopeDAO.findAllByServiceId(TestFixtures.TEST_MCP_SERVICE_ID))
@@ -142,7 +142,7 @@ class McpServiceDataScopeServiceTest {
     }
 
     @Test
-    @DisplayName("解析数据源 ID - 直接引用和主题穿透的去重")
+    @DisplayName("Resolve data source IDs - deduplicates direct refs and subject resolution")
     void getResolvedDataSourceIds_shouldDeduplicate() {
         McpServiceDataScopePO dsScopePO = McpServiceDataScopeMapper.toPO(testDataSourceScope);
         McpServiceDataScopePO subjectScopePO = McpServiceDataScopeMapper.toPO(testSubjectScope);
@@ -163,7 +163,7 @@ class McpServiceDataScopeServiceTest {
     }
 
     @Test
-    @DisplayName("解析数据源 ID - 空 scope 返回空集合")
+    @DisplayName("Resolve data source IDs - empty scope returns empty set")
     void getResolvedDataSourceIds_empty_shouldReturnEmpty() {
         when(dataScopeDAO.findAllByServiceId(TestFixtures.TEST_MCP_SERVICE_ID))
                 .thenReturn(List.of());

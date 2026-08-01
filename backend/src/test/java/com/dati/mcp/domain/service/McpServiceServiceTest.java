@@ -32,7 +32,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-@DisplayName("McpServiceService 单元测试")
+@DisplayName("McpServiceService unit tests")
 class McpServiceServiceTest {
 
     @Mock
@@ -51,7 +51,7 @@ class McpServiceServiceTest {
     }
 
     @Test
-    @DisplayName("创建 MCP 服务 - 成功")
+    @DisplayName("Create MCP service - success")
     void createMcpService_shouldReturnId() {
         // given
         McpServicePO savedPO = new McpServicePO();
@@ -69,7 +69,7 @@ class McpServiceServiceTest {
     }
 
     @Test
-    @DisplayName("更新 MCP 服务 - 成功")
+    @DisplayName("Update MCP service - success")
     void updateMcpService_shouldUpdateSuccessfully() {
         // given
         when(mcpServiceDAO.findById(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(Optional.of(testServicePO));
@@ -84,7 +84,7 @@ class McpServiceServiceTest {
     }
 
     @Test
-    @DisplayName("更新 MCP 服务 - 不存在时抛出异常")
+    @DisplayName("Update MCP service - throws when not found")
     void updateMcpService_shouldThrowWhenNotFound() {
         // given
         when(mcpServiceDAO.findById(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(Optional.empty());
@@ -99,7 +99,7 @@ class McpServiceServiceTest {
     }
 
     @Test
-    @DisplayName("查询 MCP 服务详情 - 成功")
+    @DisplayName("Query MCP service detail - success")
     void getMcpService_shouldReturnService() {
         // given
         when(mcpServiceDAO.findById(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(Optional.of(testServicePO));
@@ -113,7 +113,7 @@ class McpServiceServiceTest {
     }
 
     @Test
-    @DisplayName("查询 MCP 服务详情 - 不存在时抛出异常")
+    @DisplayName("Query MCP service detail - throws when not found")
     void getMcpService_shouldThrowWhenNotFound() {
         // given
         when(mcpServiceDAO.findById(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(Optional.empty());
@@ -126,7 +126,7 @@ class McpServiceServiceTest {
     }
 
     @Test
-    @DisplayName("分页查询 - 无筛选条件")
+    @DisplayName("Paged query - no filters")
     void listMcpServices_withoutFilter() {
         // given
         Pageable pageable = PageRequest.of(0, 10);
@@ -143,7 +143,7 @@ class McpServiceServiceTest {
     }
 
     @Test
-    @DisplayName("分页查询 - 有关键词")
+    @DisplayName("Paged query - with keyword")
     void listMcpServices_withKeyword() {
         // given
         Pageable pageable = PageRequest.of(0, 10);
@@ -159,7 +159,7 @@ class McpServiceServiceTest {
     }
 
     @Test
-    @DisplayName("分页查询 - 有状态筛选")
+    @DisplayName("Paged query - with status filter")
     void listMcpServices_withStatus() {
         // given
         Pageable pageable = PageRequest.of(0, 10);
@@ -175,7 +175,7 @@ class McpServiceServiceTest {
     }
 
     @Test
-    @DisplayName("分页查询 - 有关键词和状态")
+    @DisplayName("Paged query - with keyword and status")
     void listMcpServices_withKeywordAndStatus() {
         // given
         Pageable pageable = PageRequest.of(0, 10);
@@ -195,7 +195,7 @@ class McpServiceServiceTest {
     class CodeValidation {
 
         @Test
-        @DisplayName("code 为空应抛出 MS_SERVICE_CODE_REQUIRED")
+        @DisplayName("Blank code throws MS_SERVICE_CODE_REQUIRED")
         void shouldRejectNullCode() {
             McpService service = TestFixtures.createTestMcpService();
             service.setCode(null);
@@ -206,7 +206,7 @@ class McpServiceServiceTest {
         }
 
         @Test
-        @DisplayName("code 为空白应抛出 MS_SERVICE_CODE_REQUIRED")
+        @DisplayName("Whitespace code throws MS_SERVICE_CODE_REQUIRED")
         void shouldRejectBlankCode() {
             McpService service = TestFixtures.createTestMcpService();
             service.setCode("   ");
@@ -217,7 +217,7 @@ class McpServiceServiceTest {
         }
 
         @Test
-        @DisplayName("code 包含大写字母应抛出 MS_SERVICE_CODE_INVALID")
+        @DisplayName("Code with uppercase letters throws MS_SERVICE_CODE_INVALID")
         void shouldRejectUpperCase() {
             McpService service = TestFixtures.createTestMcpService();
             service.setCode("TestService");
@@ -228,7 +228,7 @@ class McpServiceServiceTest {
         }
 
         @Test
-        @DisplayName("code 包含特殊字符应抛出 MS_SERVICE_CODE_INVALID")
+        @DisplayName("Code with special characters throws MS_SERVICE_CODE_INVALID")
         void shouldRejectSpecialChars() {
             McpService service = TestFixtures.createTestMcpService();
             service.setCode("test service!");
@@ -239,7 +239,7 @@ class McpServiceServiceTest {
         }
 
         @Test
-        @DisplayName("code 包含中文字符应抛出 MS_SERVICE_CODE_INVALID")
+        @DisplayName("Code with Chinese characters throws MS_SERVICE_CODE_INVALID")
         void shouldRejectChineseChars() {
             McpService service = TestFixtures.createTestMcpService();
             service.setCode("我的服务");
@@ -250,7 +250,7 @@ class McpServiceServiceTest {
         }
 
         @Test
-        @DisplayName("code 以连字符开头应抛出 MS_SERVICE_CODE_INVALID")
+        @DisplayName("Code starting with hyphen throws MS_SERVICE_CODE_INVALID")
         void shouldRejectLeadingHyphen() {
             McpService service = TestFixtures.createTestMcpService();
             service.setCode("-test");
@@ -261,7 +261,7 @@ class McpServiceServiceTest {
         }
 
         @Test
-        @DisplayName("code 以连字符结尾应抛出 MS_SERVICE_CODE_INVALID")
+        @DisplayName("Code ending with hyphen throws MS_SERVICE_CODE_INVALID")
         void shouldRejectTrailingHyphen() {
             McpService service = TestFixtures.createTestMcpService();
             service.setCode("test-");
@@ -272,7 +272,7 @@ class McpServiceServiceTest {
         }
 
         @Test
-        @DisplayName("code 长度超过 64 应抛出 MS_SERVICE_CODE_INVALID")
+        @DisplayName("Code longer than 64 chars throws MS_SERVICE_CODE_INVALID")
         void shouldRejectTooLong() {
             McpService service = TestFixtures.createTestMcpService();
             service.setCode("a".repeat(65));
@@ -283,7 +283,7 @@ class McpServiceServiceTest {
         }
 
         @Test
-        @DisplayName("code 已存在应抛出 MS_SERVICE_CODE_EXISTS")
+        @DisplayName("Existing code throws MS_SERVICE_CODE_EXISTS")
         void shouldRejectDuplicateCode() {
             McpService service = TestFixtures.createTestMcpService();
             service.setCode("duplicate-code");
@@ -295,7 +295,7 @@ class McpServiceServiceTest {
         }
 
         @Test
-        @DisplayName("合法 code 创建成功")
+        @DisplayName("Valid code creates successfully")
         void shouldAcceptValidCode() {
             McpService service = TestFixtures.createTestMcpService();
             service.setCode("my-service-01");
@@ -316,7 +316,7 @@ class McpServiceServiceTest {
     class CodeProtection {
 
         @Test
-        @DisplayName("更新时 code 字段应被忽略（不被修改）")
+        @DisplayName("Code field is ignored on update (not modified)")
         void shouldNotUpdateCode() {
             McpServicePO existingPO = TestFixtures.createTestMcpServicePO();
             existingPO.setCode("original-code");

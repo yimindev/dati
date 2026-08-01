@@ -174,7 +174,7 @@ const loadValues = async () => {
 
     valuesDialogVisible.value = true;
   } catch (error) {
-    console.error("加载列值失败:", error);
+    console.error("Failed to load column values:", error);
     ElMessage.error(t("common.loadFailed"));
   } finally {
     if (queryId === valuesQuerySeq.value) {
@@ -223,7 +223,7 @@ const handleToggleValueMatching = async (row: TableColumnVO, newValue: string | 
     ElMessage.success(newValue ? t('column.valueMatchingEnabled') : t('column.valueMatchingDisabled'));
   } catch (error) {
     row.extract_value_enabled = !newValue;
-    console.error('保存值匹配状态失败:', error);
+    console.error('Failed to save value matching status:', error);
     ElMessage.error(t('common.operationFailed'));
   } finally {
     togglingColumnIds.value.delete(row.id);
@@ -250,7 +250,7 @@ const loadColumns = async () => {
     columnList.value = resp.data || [];
     total.value = resp.total ?? 0;
   } catch (error) {
-    console.error("加载列信息失败:", error);
+    console.error("Failed to load column info:", error);
     ElMessage.error(t("common.loadFailed"));
   } finally {
     loading.value = false;
@@ -326,7 +326,7 @@ const handleSaveMetadata = async () => {
     metadataDialogVisible.value = false;
     await loadColumns();
   } catch (error) {
-    console.error("保存列元数据失败:", error);
+    console.error("Failed to save column metadata:", error);
     ElMessage.error(t("common.operationFailed"));
   }
 };
@@ -373,7 +373,7 @@ const handleConfirmExtract = async (overwrite: boolean) => {
     valuesPage.value = 1;
     await loadValues();
   } catch (error) {
-    console.error("抽取列值失败:", error);
+    console.error("Failed to extract column values:", error);
     ElMessage.error(t("column.extractFailed"));
   } finally {
     extractingValues.value = false;
@@ -551,7 +551,7 @@ const handleSaveValues = async () => {
     valuesDialogVisible.value = false;
     resetValueDialogState();
   } catch (error) {
-    console.error("保存列值失败:", error);
+    console.error("Failed to save column values:", error);
     ElMessage.error(t("common.operationFailed"));
   } finally {
     savingValues.value = false;

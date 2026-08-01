@@ -27,7 +27,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-@DisplayName("ScopeValidator 单元测试")
+@DisplayName("ScopeValidator unit tests")
 class ScopeValidatorTest {
 
     @Mock
@@ -64,7 +64,7 @@ class ScopeValidatorTest {
     }
 
     @Test
-    @DisplayName("scopeItems 为空 → 抛 TOOL_SCOPE_VIOLATION")
+    @DisplayName("Empty scopeItems → throws TOOL_SCOPE_VIOLATION")
     void shouldRejectEmptyScope() {
         assertThatThrownBy(() -> validator.validate(List.of(), DS_ID, Set.of(), null))
             .isInstanceOf(ToolExecuteException.class)
@@ -73,7 +73,7 @@ class ScopeValidatorTest {
     }
 
     @Test
-    @DisplayName("DATA_SOURCE 覆盖 dsId → 通过（无表级检查）")
+    @DisplayName("DATA_SOURCE covers dsId → passes (no table-level check)")
     void shouldPassWhenDataSourceScopeCovers() {
         assertThatCode(() ->
             validator.validate(List.of(dataSourceScope(DS_ID)), DS_ID, Set.of(), null))
@@ -81,7 +81,7 @@ class ScopeValidatorTest {
     }
 
     @Test
-    @DisplayName("SUBJECT 覆盖 dsId → 通过（无表级检查）")
+    @DisplayName("SUBJECT covers dsId → passes (no table-level check)")
     void shouldPassWhenSubjectScopeCovers() {
         Page<TableInfoPO> page = new PageImpl<>(List.of(table()));
         when(subjectTableDAO.findTablesBySubjectId(anyString(), any(Pageable.class))).thenReturn(page);
@@ -92,7 +92,7 @@ class ScopeValidatorTest {
     }
 
     @Test
-    @DisplayName("dsId 不被任何 scope 覆盖 → 抛 ToolExecuteException")
+    @DisplayName("dsId not covered by any scope → throws ToolExecuteException")
     void shouldRejectWhenDsNotInScope() {
         assertThatThrownBy(() ->
             validator.validate(List.of(dataSourceScope("ds-other")), DS_ID, Set.of(), null))
@@ -102,7 +102,7 @@ class ScopeValidatorTest {
     }
 
     @Test
-    @DisplayName("SQL 无 schema + 有 defaultSchema → 解析后匹配允许的表")
+    @DisplayName("SQL without schema + defaultSchema set → resolved and matched against allowed tables")
     void shouldResolveSchemaUsingDefaultSchema() {
         when(tableInfoDAO.findByDataSourceId(DS_ID))
             .thenReturn(List.of(table()));
@@ -115,7 +115,7 @@ class ScopeValidatorTest {
     }
 
     @Test
-    @DisplayName("SQL 无 schema + defaultSchema 也为 null → 无法解析，抛 SCOPE_VIOLATION")
+    @DisplayName("SQL without schema + null defaultSchema → unresolvable, throws SCOPE_VIOLATION")
     void shouldRejectUnqualifiedTableWhenDefaultSchemaNull() {
         when(tableInfoDAO.findByDataSourceId(DS_ID))
             .thenReturn(List.of(table()));

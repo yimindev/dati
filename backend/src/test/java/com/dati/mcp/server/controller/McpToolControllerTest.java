@@ -38,7 +38,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WebMvcTest(McpToolController.class)
 @ActiveProfiles("test")
 @AutoConfigureMockMvc(addFilters = false)
-@DisplayName("McpToolController 集成测试")
+@DisplayName("McpToolController integration tests")
 class McpToolControllerTest {
 
     @Autowired
@@ -86,7 +86,7 @@ class McpToolControllerTest {
     }
 
     @Test
-    @DisplayName("GET /tools - 分组返回预置和自定义工具")
+    @DisplayName("GET /tools - returns prebuilt and custom tools grouped")
     void listTools_shouldReturnGrouped() throws Exception {
         mockMvc.perform(get("/v1/mcp-services/{serviceId}/tools", TestFixtures.TEST_MCP_SERVICE_ID))
             .andExpect(status().isOk())
@@ -97,7 +97,7 @@ class McpToolControllerTest {
     }
 
     @Test
-    @DisplayName("PUT /tools/{toolId} - 更新预置工具（enabled 开关）")
+    @DisplayName("PUT /tools/{toolId} - update prebuilt tool (enabled flag)")
     void updateTool_togglePrebuilt() throws Exception {
         doNothing().when(mcpToolService).updatePrebuiltTool(eq(TestFixtures.TEST_MCP_SERVICE_ID), any(), any());
 
@@ -109,7 +109,7 @@ class McpToolControllerTest {
     }
 
     @Test
-    @DisplayName("PUT /tools/{toolId} - 更新自定义工具")
+    @DisplayName("PUT /tools/{toolId} - update custom tool")
     void updateTool_custom() throws Exception {
         when(mcpToolAssembler.toModel(any(com.dati.mcp.server.pojo.CustomToolRequest.class))).thenReturn(new McpCustomTool());
         doNothing().when(mcpToolService).updateCustomTool(any());
@@ -122,7 +122,7 @@ class McpToolControllerTest {
     }
 
     @Test
-    @DisplayName("POST /tools - 创建自定义工具")
+    @DisplayName("POST /tools - create custom tool")
     void createTool_shouldReturnId() throws Exception {
         when(mcpToolService.createCustomTool(eq(TestFixtures.TEST_MCP_SERVICE_ID), any()))
             .thenReturn(TestFixtures.TEST_MCP_CUSTOM_TOOL_ID);
@@ -135,7 +135,7 @@ class McpToolControllerTest {
     }
 
     @Test
-    @DisplayName("DELETE /tools/{toolId} - 删除自定义工具")
+    @DisplayName("DELETE /tools/{toolId} - delete custom tool")
     void deleteTool_shouldReturnId() throws Exception {
         doNothing().when(mcpToolService).deleteCustomTool(TestFixtures.TEST_MCP_SERVICE_ID, TestFixtures.TEST_MCP_CUSTOM_TOOL_ID);
 
@@ -145,7 +145,7 @@ class McpToolControllerTest {
     }
 
     @Test
-    @DisplayName("POST /tools/{toolId}/test - 工具测试返回 ToolTestResponse")
+    @DisplayName("POST /tools/{toolId}/test - returns ToolTestResponse")
     void testTool_shouldReturnToolTestResponse() throws Exception {
         SqlExecution data = new SqlExecution("SELECT 1", List.of(), null);
         ToolTestResponse mockResp = new ToolTestResponse(true, 42, data, null);
@@ -165,7 +165,7 @@ class McpToolControllerTest {
     }
 
     @Test
-    @DisplayName("POST /tools/{toolId}/test - 工具测试返回失败响应")
+    @DisplayName("POST /tools/{toolId}/test - returns failure response")
     void testTool_shouldReturnErrorResponse() throws Exception {
         ToolTestError error = new ToolTestError("SCOPE_ERROR", "Data source not in scope");
         ToolTestResponse mockResp = new ToolTestResponse(false, 15, null, error);

@@ -17,4 +17,6 @@ public interface McpCustomToolDAO extends JpaRepository<McpCustomToolPO, String>
     boolean existsByServiceIdAndNameAndIdNot(String serviceId, String name, String id);
 
     long countByServiceId(String serviceId);
+
+    void deleteAllByServiceId(String serviceId);
 }

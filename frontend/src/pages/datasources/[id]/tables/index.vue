@@ -71,7 +71,7 @@ const loadTables = async () => {
     tableList.value = response.data || [];
     total.value = response.total ?? 0;
   } catch (error) {
-    console.error("加载表列表失败:", error);
+    console.error("Failed to load table list:", error);
     ElMessage.error(t("common.loadFailed"));
   } finally {
     loading.value = false;
@@ -112,7 +112,7 @@ const handleOpenAddTableDialog = async () => {
       await handleSchemaChange(defaultSchema.value);
     }
   } catch (error) {
-    console.error("加载 schema 列表失败:", error);
+    console.error("Failed to load schema list:", error);
     ElMessage.error(t("common.loadFailed"));
   } finally {
     schemaLoading.value = false;
@@ -130,7 +130,7 @@ const handleSchemaChange = async (schema: string) => {
     availableTables.value = await getTables(datasourceId.value, schema);
     selectedTables.value = [];
   } catch (error) {
-    console.error("加载表列表失败:", error);
+    console.error("Failed to load table list:", error);
     ElMessage.error(t("common.loadFailed"));
   } finally {
     tablesLoading.value = false;
@@ -151,7 +151,7 @@ const handleBatchAdd = async () => {
     addTableDialogVisible.value = false;
     await loadTables();
   } catch (error) {
-    console.error("批量添加表失败:", error);
+    console.error("Failed to add tables in batch:", error);
     ElMessage.error(t("tableInfo.addFailed"));
   } finally {
     addTableLoading.value = false;
@@ -174,7 +174,7 @@ const confirmSyncColumns = async () => {
     ElMessage.success(t("tableInfo.syncSuccess"));
     syncDialogVisible.value = false;
   } catch (error) {
-    console.error("同步列信息失败:", error);
+    console.error("Failed to sync column info:", error);
     ElMessage.error(t("tableInfo.syncFailed"));
   }
 };
@@ -195,7 +195,7 @@ const handleRemoveTable = async (table: TableInfoVO) => {
     await loadTables();
   } catch (error) {
     if (error !== "cancel") {
-      console.error("删除表失败:", error);
+      console.error("Failed to delete table:", error);
       ElMessage.error(t("tableInfo.removeFailed"));
     }
   }
@@ -250,7 +250,7 @@ const handleSaveMetadata = async () => {
     metadataDialogVisible.value = false;
     await loadTables();
   } catch (error) {
-    console.error("保存元数据失败:", error);
+    console.error("Failed to save metadata:", error);
     ElMessage.error(t("common.operationFailed"));
   }
 };

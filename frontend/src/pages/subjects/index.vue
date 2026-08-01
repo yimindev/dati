@@ -37,7 +37,7 @@ const loadSubjects = async () => {
     subjectList.value = response.data || [];
     total.value = response.total ?? 0;
   } catch (error) {
-    console.error("加载主题失败:", error);
+    console.error("Failed to load subjects:", error);
     ElMessage.error(t("common.loadFailed"));
   } finally {
     loading.value = false;
@@ -99,7 +99,7 @@ const handleDelete = async (subject: SubjectVO) => {
     await loadSubjects();
   } catch (error) {
     if (error !== "cancel") {
-      console.error("删除失败:", error);
+      console.error("Failed to delete:", error);
       ElMessage.error(t("common.operationFailed"));
     }
   }

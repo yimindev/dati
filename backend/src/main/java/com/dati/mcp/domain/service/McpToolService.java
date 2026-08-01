@@ -160,6 +160,20 @@ public class McpToolService {
         customToolDAO.delete(po);
     }
 
+    // ── 全量替换（回滚恢复草稿用）──
+
+    /** 删除该服务全部自定义工具并以给定列表全量替换（内容来自已发布快照，跳过名称/模板校验） */
+    @Transactional
+    public void replaceCustomTools(String serviceId, List<McpCustomTool> tools) {
+        customToolDAO.deleteAllByServiceId(serviceId);
+        if (tools != null && !tools.isEmpty()) {
+            List<McpCustomToolPO> pos = tools.stream()
+                    .map(McpCustomToolMapper::toPO)
+                    .toList();
+            customToolDAO.saveAll(pos);
+        }
+    }
+
     // ── 计数 ──
 
     @Transactional(readOnly = true)

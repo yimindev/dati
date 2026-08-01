@@ -16,4 +16,6 @@ public class McpServiceVO extends BaseResourceVO {
 
     private int toolCount;
 
+    private Integer activeVersionNumber;
+
 }

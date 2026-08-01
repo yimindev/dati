@@ -12,4 +12,8 @@ public class McpService extends BaseResource {
 
     private McpServiceStatus status;
 
+    private String activeVersionId;
+
+    private Integer activeVersionNumber;
+
 }

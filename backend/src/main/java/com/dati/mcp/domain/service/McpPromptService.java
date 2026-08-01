@@ -84,6 +84,18 @@ public class McpPromptService {
             .stream().map(McpPromptMapper::toModel).toList();
     }
 
+    /** 删除该服务全部 Prompt 并以给定列表全量替换（内容来自已发布快照，跳过模板校验） */
+    @Transactional
+    public void replacePrompts(String serviceId, List<McpPrompt> prompts) {
+        promptDAO.deleteAllByServiceId(serviceId);
+        if (prompts != null && !prompts.isEmpty()) {
+            List<McpPromptPO> pos = prompts.stream()
+                    .map(McpPromptMapper::toPO)
+                    .toList();
+            promptDAO.saveAll(pos);
+        }
+    }
+
     private void validateServiceExists(String serviceId) {
         if (!mcpServiceDAO.existsById(serviceId)) {
             throw new DatiException(ErrorCode.MS_SERVICE_NOT_FOUND, serviceId);

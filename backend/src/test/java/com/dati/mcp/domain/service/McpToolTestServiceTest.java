@@ -26,7 +26,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-@DisplayName("McpToolTestService 单元测试")
+@DisplayName("McpToolTestService unit tests")
 class McpToolTestServiceTest {
 
     @Mock
@@ -47,7 +47,7 @@ class McpToolTestServiceTest {
     }
 
     @Test
-    @DisplayName("正常执行成功 → 返回 success=true 且含 data")
+    @DisplayName("Successful execution → returns success=true with data")
     void shouldReturnSuccessResponse() {
         ToolResolver.ResolvedTool resolved = new ToolResolver.ResolvedTool(
             McpToolType.EXECUTE_SQL, true, new ExecuteSqlConfig(), true);
@@ -66,7 +66,7 @@ class McpToolTestServiceTest {
     }
 
     @Test
-    @DisplayName("executor 抛 RuntimeException → 上抛不捕获")
+    @DisplayName("executor throws RuntimeException → propagated, not caught")
     void shouldNotCatchRuntimeException() {
         ToolResolver.ResolvedTool resolved = new ToolResolver.ResolvedTool(
             McpToolType.EXECUTE_SQL, true, new ExecuteSqlConfig(), true);
@@ -91,7 +91,7 @@ class McpToolTestServiceTest {
         "SQL_POLICY_VIOLATION, PERMISSION_DENIED",
         "SQL_EXECUTION_ERROR, SQL_ERROR",
     })
-    @DisplayName("ToolExecuteException → errorCategory 映射正确")
+    @DisplayName("ToolExecuteException → errorCategory mapped correctly")
     void shouldMapToolExecuteExceptionToCorrectCategory(ToolError toolError, String expectedCategory) {
         ToolResolver.ResolvedTool resolved = new ToolResolver.ResolvedTool(
             McpToolType.EXECUTE_SQL, true, new ExecuteSqlConfig(), true);

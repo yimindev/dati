@@ -50,6 +50,8 @@ public enum ErrorCode {
     MS_SQL_POLICY_VIOLATION("MS013", 403, "SQL operation not allowed by policy: {0}"),
     MS_SCOPE_ERROR("MS014", 400, "Data source or table not in scope: {0}"),
     MS_TOOL_DISABLED("MS015", 400, "Tool is disabled: {0}"),
+    MS_SERVICE_STATUS_INVALID("MS016", 409, "Invalid status transition for MCP service: {0}"),
+    MS_SERVICE_VERSION_NOT_FOUND("MS017", 404, "MCP service version not found: {0}"),
 
     // ── Authentication module (AUTH) ──────────────────────
 

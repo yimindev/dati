@@ -100,3 +100,105 @@
 
 1. 用不存在的 UUID 删除 MCP 服务
 2. 预期返回错误（404），不能返回 200 或 500
+
+---
+
+## TC-MCP-008 MCP 服务发布、版本号递增与草稿 Diff 对比
+**级别：** P0
+**前置：** 已登录
+
+1. **创建 MCP 服务**：code 自定，name 自定，初始状态 `status` 为 DRAFT
+2. **查询未发布 Diff**：调用 `GET /v1/mcp-services/{id}/diff`
+   - 验证 `has_changes` 为 `true`
+3. **首次发布服务**：调用 `POST /v1/mcp-services/{id}/publish`（Body: `{"release_note": "Initial v1"}`）
+   - 验证返回 200，`id` 为生成的快照 UUID
+   - 查服务详情 `GET /v1/mcp-services/{id}`，验证 `status` 为 PUBLISHED，`active_version_number` 为 1
+   - 调用 `GET /v1/mcp-services/{id}/diff`，验证 `has_changes` 为 `false`
+4. **查询快照列表**：调用 `GET /v1/mcp-services/{id}/snapshots`
+   - 验证返回快照数组含 1 条记录，`version_number` 为 1，`release_note` 为 "Initial v1"
+5. **产生草稿变更**：更新服务 name/description（调用 `PUT /v1/mcp-services/{id}`）或添加 Tool
+6. **再次查询 Diff**：调用 `GET /v1/mcp-services/{id}/diff`
+   - 验证 `has_changes` 为 `true`，`basic_info_changed` 或 `tools_changed` 为 `true`
+7. **发布变更**：调用 `POST /v1/mcp-services/{id}/publish`（Body: `{"release_note": "Release v2"}`）
+   - 验证返回 200
+   - 查服务详情，验证 `status` 为 PUBLISHED，`active_version_number` 为 2
+   - 调用 `GET /v1/mcp-services/{id}/diff`，验证 `has_changes` 为 `false`
+8. 删除服务（清理）
+
+---
+
+## TC-MCP-009 服务停用与重新启用
+**级别：** P1
+**前置：** 已登录
+
+1. **创建并发布服务**：创建 MCP 服务，调用 `/publish` 成功发布，确认 `status` 为 PUBLISHED
+2. **停用服务**：调用 `POST /v1/mcp-services/{id}/disable`
+   - 验证返回 200
+   - 查服务详情，验证 `status` 变为 DISABLED，`active_version_number` 保持已有版本号
+3. **重新启用服务**：调用 `POST /v1/mcp-services/{id}/enable`
+   - 验证返回 200
+   - 查服务详情，验证 `status` 恢复为 PUBLISHED
+4. 删除服务（清理）
+
+---
+
+## TC-MCP-010 版本回滚完整链路
+**级别：** P0
+**前置：** 已登录
+
+1. **创建并发布 v1**：创建 MCP 服务（description 记为 `desc_v1`），调用 `/publish`（`{"release_note": "Initial v1"}`）
+   - 验证 `status`=PUBLISHED，`active_version_number`=1
+2. **修改并发布 v2**：`PUT /v1/mcp-services/{id}` 更新 description 为 `desc_v2`，调用 `/publish`（`{"release_note": "Release v2"}`）
+   - 验证 `active_version_number`=2
+3. **产生未发布草稿**：再次更新 description 为 `desc_v3_draft`
+   - 调用 `GET /diff`，验证 `has_changes`=true
+4. **回滚到 v1**：调用 `POST /v1/mcp-services/{id}/rollback`（Body: `{"target_version_number": 1}`）
+   - 验证返回 200，`id` 为新快照 UUID（≠ v1 快照 id）
+   - 查服务详情：`active_version_number`=**3**（回滚生成新版本，不是回到 1），`status` 仍为 PUBLISHED
+   - 查详情 description == `desc_v1`（**草稿已被 v1 内容覆盖**）
+   - 调用 `GET /diff`，验证 `has_changes`=**false**（回滚后草稿与线上一致，审计字段差异不误报）
+5. **快照列表**：调用 `GET /v1/mcp-services/{id}/snapshots`
+   - 验证返回 3 条记录，倒序 v3/v2/v1
+   - v3 的 `release_note` 以 "Rollback to v1" 开头
+   - **验证响应只含版本元信息（版本号/备注/时间），不携带快照正文内容**（列表接口不应暴露草稿配置全文）
+6. **回滚到不存在的版本**：调用 `POST /v1/mcp-services/{id}/rollback`（Body: `{"target_version_number": 99}`）
+   - 预期返回错误（404 语义），不能返回 200
+   - 查服务详情：`active_version_number` 仍为 3，description 仍为 `desc_v1`（线上与草稿均不变）
+7. 删除服务（清理）
+
+---
+
+## TC-MCP-011 发布 ≠ 上线 与状态机前置条件
+**级别：** P1
+**前置：** 已登录
+
+1. **创建服务**：初始状态 DRAFT
+2. **DRAFT 状态非法操作**：
+   - 调用 `POST /v1/mcp-services/{id}/disable` → 预期错误（409）
+   - 调用 `POST /v1/mcp-services/{id}/enable` → 预期错误（409）
+3. **首次发布**：`POST /publish` → `status`=PUBLISHED，`active_version_number`=1
+4. **停用**：`POST /disable` → `status`=DISABLED
+5. **停用状态下发布变更**：更新 description，调用 `POST /publish`
+   - 验证返回 200
+   - 查服务详情：**`status` 仍为 DISABLED**（发布 ≠ 上线，不自动恢复对外）
+   - `active_version_number` 递增为 2（快照已更新）
+6. **启用**：`POST /enable` → `status` 恢复为 PUBLISHED
+   - 线上快照为停用期间发布的新版本（`active_version_number`=2）
+7. 删除服务（清理）
+
+---
+
+## TC-MCP-012 diff 业务字段比较：prebuilt 配置变更检测
+**级别：** P1
+**前置：** 已登录
+
+1. **创建并发布服务**：`POST /publish` → PUBLISHED，`active_version_number`=1
+2. **修改 prebuilt 工具配置**：调用 `PUT /v1/mcp-services/{id}/tools/SEARCH_METADATA`
+   - Body 注意：`config` 为 **JSON 字符串**（`{"tool_type": "SEARCH_METADATA", "enabled": true, "config": "{\"timeout\": 60}"}`）
+3. **查询 Diff**：
+   - 验证 `has_changes`=true，`tools_changed`=true
+   - **`modified_tools` 包含 "SEARCH_METADATA"**（prebuilt 变更能定位到具体工具）
+   - `added_tools`/`deleted_tools` 为空
+4. **改回原配置**：再次 `PUT /tools/SEARCH_METADATA`，`config` 恢复为 `{"timeout": 30}`
+   - 调用 `GET /diff`：验证 `has_changes`=**false**（业务字段一致即无变更；DB 记录 `updated_at` 已变但**审计字段差异不误报**）
+5. 删除服务（清理）

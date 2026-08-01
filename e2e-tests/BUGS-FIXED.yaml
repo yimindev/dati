@@ -196,3 +196,17 @@ bugs:
     fixed_at: 2026-07-26
     description: |
       TC-DS-011: 调用 PUT /columns/{columnId} 只传 description/aliases/extract_value_enabled 时（不传 name），name 字段被设为 null，导致 ES 中对应 FIELD 文档的 field 属性也为 null，后续列值抽取失效。API 应做部分更新（merge）而非全量替换。按 openapi，name 是 ColumnInfoVO 的普通属性非 required，说明行为应为部分更新。
+  - id: BUG-20260729-001
+    title: 发布服务时 ToolConfig 接口无法反序列化导致 500
+    module: MCP 服务管理
+    severity: high
+    fixed_at: 2026-07-29
+    description: |
+      POST /v1/mcp-services/{id}/publish 时，McpServicePublishService.publish()
+      在保存快照后调用 McpServiceSnapshotMapper.toModel() 回读，
+      Jackson 反序列化 SnapshotContent 时遇到 McpPrebuiltToolConfig.config
+      字段（类型为接口 ToolConfig），因 ToolConfig 缺少 @JsonTypeInfo/
+      @JsonSubTypes 注解，Jackson 无法确定具体实现类，抛出
+      InvalidDefinitionException，返回 500 Internal server error。
+      影响 TC-MCP-008（发布/Diff）和 TC-MCP-009（启用/停用）两个新用例。
+      根因：单元测试中 prebuilt_tools 返回空列表未覆盖此路径。

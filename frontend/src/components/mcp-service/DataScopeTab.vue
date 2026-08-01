@@ -15,6 +15,8 @@ const props = defineProps<{
   serviceStatus?: string;
 }>();
 
+const emit = defineEmits<{ (e: "refresh"): void }>();
+
 type ScopeType = DataScopeItem["scope_type"];
 type ScopeOption = {
   label: string;
@@ -168,8 +170,9 @@ const handleConfirmAdd = async () => {
     await saveDataScope(props.serviceId, { items: [...items.value, ...nextItems] });
     await loadDataScope();
     addDialogVisible.value = false;
+    emit("refresh");
   } catch (error) {
-    console.error("添加数据范围失败:", error);
+    console.error("Failed to add data scope:", error);
     ElMessage.error(t("common.operationFailed"));
   } finally {
     saving.value = false;
@@ -192,6 +195,7 @@ const handleRemove = async (index: number) => {
   try {
     await saveDataScope(props.serviceId, { items: items.value.filter((_, i) => i !== index) });
     await loadDataScope();
+    emit("refresh");
   } finally {
     saving.value = false;
   }

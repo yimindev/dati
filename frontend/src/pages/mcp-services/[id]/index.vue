@@ -6,22 +6,30 @@ meta:
 <script setup lang="ts">
 import { onMounted, ref, computed } from "vue";
 import { useRoute } from "vue-router";
-import { ElMessage } from "element-plus";
+import { ElMessage, ElMessageBox } from "element-plus";
 import { useI18n } from "vue-i18n";
 import {
+  Clock,
   DataAnalysis,
-  Delete,
   Document,
   DocumentCopy,
   Key,
-  Monitor,
   Operation,
   SwitchButton,
   VideoPlay,
 } from "@element-plus/icons-vue";
-import type { McpServiceVO } from "~/api/mcp-service";
-import { getMcpService, updateMcpService } from "~/api/mcp-service";
+import type { McpServiceDiffVO, McpServiceVO } from "~/api/mcp-service";
+import {
+  disableMcpService,
+  enableMcpService,
+  getMcpService,
+  getMcpServiceDiff,
+  publishMcpService,
+  updateMcpService,
+} from "~/api/mcp-service";
 import DataScopeTab from "~/components/mcp-service/DataScopeTab.vue";
+import DebugPublishTab from "~/components/mcp-service/DebugPublishTab.vue";
+import DiffSummaryList from "~/components/mcp-service/DiffSummaryList.vue";
 import PromptsTab from "~/components/mcp-service/PromptsTab.vue";
 import ToolsTab from "~/components/mcp-service/ToolsTab.vue";
 import { formatDateTime } from "~/composables";
@@ -33,6 +41,11 @@ const serviceId = route.params.id;
 const loading = ref(false);
 const saving = ref(false);
 const service = ref<McpServiceVO | null>(null);
+const diff = ref<McpServiceDiffVO | null>(null);
+const publishing = ref(false);
+const statusChanging = ref(false);
+const publishDialogVisible = ref(false);
+const releaseNote = ref("");
 
 const formData = ref({
   name: "",
@@ -47,7 +60,7 @@ const tabs = [
   { key: "tools", label: t("mcpService.tab.tools"), iconClass: "icon-[codicon--developer-tools]" },
   { key: "prompts", label: t("mcpService.tab.prompts"), iconClass: "icon-[fluent--prompt-16-regular]" },
   { key: "security", label: t("mcpService.tab.security"), icon: Key },
-  { key: "debug", label: t("mcpService.tab.debug"), icon: Monitor },
+  { key: "version", label: t("mcpService.tab.version"), icon: Clock },
   { key: "logs", label: t("mcpService.tab.logs"), icon: Operation },
 ];
 
@@ -88,6 +101,43 @@ const isDirty = computed(() =>
     formData.value.description.trim() !== (service.value.description || "")),
 );
 
+/** 变更摘要（右上角 popover + 发布弹窗共用） */
+const diffSummary = computed(() => {
+  const d = diff.value;
+  if (!d) return [];
+  const items: {
+    label: string;
+    added?: string[];
+    modified?: string[];
+    deleted?: string[];
+    detail?: string;
+  }[] = [];
+
+  if (d.basic_info_changed) {
+    items.push({ label: t("mcpService.tab.basic"), detail: t("common.modified") });
+  }
+  if (d.data_scope_changed) {
+    items.push({ label: t("mcpService.tab.dataScope"), detail: t("common.modified") });
+  }
+  if (d.tools_changed) {
+    items.push({
+      label: t("mcpService.tab.tools"),
+      added: d.added_tools || [],
+      modified: d.modified_tools || [],
+      deleted: d.deleted_tools || [],
+    });
+  }
+  if (d.prompts_changed) {
+    items.push({
+      label: t("mcpService.tab.prompts"),
+      added: d.added_prompts || [],
+      modified: d.modified_prompts || [],
+      deleted: d.deleted_prompts || [],
+    });
+  }
+  return items;
+});
+
 const serviceMeta = computed(() => [
   {
     label: t("common.id"),
@@ -124,12 +174,93 @@ const loadService = async () => {
     formData.value.name = data.name;
     formData.value.description = data.description || "";
   } catch (error) {
-    console.error("加载服务详情失败:", error);
+    console.error("Failed to load service detail:", error);
     ElMessage.error(t("common.loadFailed"));
   } finally {
     loading.value = false;
   }
 };
+
+const loadDiff = async () => {
+  try {
+    diff.value = await getMcpServiceDiff(serviceId);
+  } catch (error) {
+    console.error("Failed to load service diff:", error);
+  }
+};
+
+const refreshAll = async () => {
+  await Promise.all([loadService(), loadDiff()]);
+};
+
+// ── 发布 / 停用 / 启用（页面级状态操作）──
+
+const openPublishDialog = () => {
+  releaseNote.value = "";
+  publishDialogVisible.value = true;
+};
+
+const confirmPublish = async () => {
+  try {
+    publishing.value = true;
+    await publishMcpService(serviceId, { release_note: releaseNote.value.trim() });
+    ElMessage.success(
+      service.value?.status === "DISABLED"
+        ? t("mcpService.publishSuccessDisabled")
+        : t("mcpService.publishSuccess"),
+    );
+    publishDialogVisible.value = false;
+    await refreshAll();
+  } catch (error: any) {
+    console.error("Failed to publish:", error);
+    ElMessage.error(error?.message || t("common.operationFailed"));
+  } finally {
+    publishing.value = false;
+  }
+};
+
+const handleDisable = async () => {
+  try {
+    await ElMessageBox.confirm(
+      t("mcpService.disableConfirmMsg"),
+      t("mcpService.disableConfirmTitle"),
+      {
+        confirmButtonText: t("common.confirm"),
+        cancelButtonText: t("common.cancel"),
+        type: "warning",
+      },
+    );
+    statusChanging.value = true;
+    await disableMcpService(serviceId);
+    ElMessage.success(t("mcpService.disableSuccess"));
+    await refreshAll();
+  } catch (error: any) {
+    if (error !== "cancel") {
+      console.error("Failed to disable:", error);
+      ElMessage.error(error?.message || t("common.operationFailed"));
+    }
+  } finally {
+    statusChanging.value = false;
+  }
+};
+
+const handleEnable = async () => {
+  try {
+    statusChanging.value = true;
+    await enableMcpService(serviceId);
+    ElMessage.success(t("mcpService.enableSuccess"));
+    await refreshAll();
+  } catch (error: any) {
+    console.error("Failed to enable:", error);
+    ElMessage.error(error?.message || t("common.operationFailed"));
+  } finally {
+    statusChanging.value = false;
+  }
+};
+
+onMounted(() => {
+  refreshAll();
+});
 
 const handleSave = async () => {
   if (!formData.value.name.trim()) {
@@ -143,9 +274,9 @@ const handleSave = async () => {
       description: formData.value.description.trim() || undefined,
     });
     ElMessage.success(t("common.saveSuccess"));
-    await loadService();
+    await refreshAll();
   } catch (error) {
-    console.error("保存失败:", error);
+    console.error("Failed to save:", error);
     ElMessage.error(t("common.operationFailed"));
   } finally {
     saving.value = false;
@@ -166,72 +297,85 @@ const handleCopy = async (text: string | number) => {
 const handleCopyEndpoint = async () => {
   await handleCopy(endpointUrl.value);
 };
-
-const handlePublish = () => {
-  ElMessage.info(t("mcpService.comingSoon"));
-};
-
-const handleDisable = () => {
-  ElMessage.info(t("mcpService.comingSoon"));
-};
-
-const handleEnable = () => {
-  ElMessage.info(t("mcpService.comingSoon"));
-};
-
-const handleDelete = () => {
-  ElMessage.info(t("mcpService.comingSoon"));
-};
-
-onMounted(() => {
-  loadService();
-});
 </script>
 
 <template>
   <div v-loading="loading" class="mcp-detail-page">
-    <div class="detail-header flex items-start justify-between gap-4">
-      <el-breadcrumb separator="/">
-        <el-breadcrumb-item :to="{ path: '/mcp-services' }">
-          {{ t("mcpService.title") }}
-        </el-breadcrumb-item>
-        <el-breadcrumb-item>{{ service?.name || serviceId }}</el-breadcrumb-item>
-      </el-breadcrumb>
+    <div class="detail-header flex items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <el-breadcrumb separator="/">
+          <el-breadcrumb-item :to="{ path: '/mcp-services' }">
+            {{ t("mcpService.title") }}
+          </el-breadcrumb-item>
+          <el-breadcrumb-item>{{ service?.name || serviceId }}</el-breadcrumb-item>
+        </el-breadcrumb>
+        <el-tag v-if="service" :type="statusType(service.status)" size="small" effect="plain">
+          {{ statusLabel(service.status) }}
+        </el-tag>
+        <el-tag v-if="service?.active_version_number" type="primary" size="small" effect="light" class="font-mono">
+          v{{ service.active_version_number }}
+        </el-tag>
+      </div>
 
       <div class="detail-actions flex items-center gap-3">
+        <!-- DRAFT：首次发布 -->
         <el-button
           v-if="service?.status === 'DRAFT'"
           type="primary"
           :icon="VideoPlay"
-          @click="handlePublish"
+          :loading="publishing"
+          @click="openPublishDialog"
         >
           {{ t("mcpService.publish") }}
         </el-button>
-        <el-button
-          v-if="service?.status === 'PUBLISHED'"
-          type="warning"
-          :icon="SwitchButton"
-          @click="handleDisable"
-        >
-          {{ t("mcpService.disable") }}
-        </el-button>
-        <el-button
-          v-if="service?.status === 'DISABLED'"
-          type="success"
-          :icon="VideoPlay"
-          @click="handleEnable"
-        >
-          {{ t("mcpService.enable") }}
-        </el-button>
-        <el-button
-          v-if="service?.status === 'DRAFT'"
-          type="danger"
-          plain
-          :icon="Delete"
-          @click="handleDelete"
-        >
-          {{ t("common.delete") }}
-        </el-button>
+
+        <!-- PUBLISHED：发布变更（有变更时）+ 停用 -->
+        <template v-if="service?.status === 'PUBLISHED'">
+          <el-popover
+            v-if="diff?.has_changes"
+            placement="bottom-end"
+            :width="300"
+            trigger="hover"
+          >
+            <template #reference>
+              <el-button type="primary" :icon="VideoPlay" :loading="publishing" @click="openPublishDialog">
+                {{ t("mcpService.publishChanges") }}
+              </el-button>
+            </template>
+            <DiffSummaryList :items="diffSummary" :limit="5" :title="t('mcpService.hasUnpublishedChanges')" />
+          </el-popover>
+          <el-button
+            type="warning"
+            plain
+            :icon="SwitchButton"
+            :loading="statusChanging"
+            @click="handleDisable"
+          >
+            {{ t("mcpService.disable") }}
+          </el-button>
+        </template>
+
+        <!-- DISABLED：启用 + 发布变更（有变更时） -->
+        <template v-if="service?.status === 'DISABLED'">
+          <el-button
+            type="success"
+            :icon="VideoPlay"
+            :loading="statusChanging"
+            @click="handleEnable"
+          >
+            {{ t("mcpService.enable") }}
+          </el-button>
+          <el-button
+            v-if="diff?.has_changes"
+            type="primary"
+            plain
+            :icon="VideoPlay"
+            :loading="publishing"
+            @click="openPublishDialog"
+          >
+            {{ t("mcpService.publishChanges") }}
+          </el-button>
+        </template>
       </div>
     </div>
 
@@ -288,12 +432,13 @@ onMounted(() => {
                 v-if="service?.status === 'PUBLISHED'"
                 :label="t('mcpService.endpointUrl')"
               >
-                <div class="endpoint-copy w-full">
-                  <el-input :model-value="endpointUrl" readonly />
-                  <el-tooltip :content="t('common.copy')" placement="top">
-                    <el-button :icon="DocumentCopy" @click="handleCopyEndpoint" />
-                  </el-tooltip>
-                </div>
+                <el-input :model-value="endpointUrl" readonly class="font-mono">
+                  <template #append>
+                    <el-tooltip :content="t('common.copy')" placement="top">
+                      <el-button :icon="DocumentCopy" @click="handleCopyEndpoint" />
+                    </el-tooltip>
+                  </template>
+                </el-input>
               </el-form-item>
             </el-form>
           </section>
@@ -329,13 +474,20 @@ onMounted(() => {
         </div>
 
         <div v-else-if="activeTab === 'scope'" class="scope-panel p-[18px]">
-          <DataScopeTab :service-id="serviceId" :service-status="service?.status" />
+          <DataScopeTab :service-id="serviceId" :service-status="service?.status" @refresh="refreshAll" />
         </div>
         <div v-else-if="activeTab === 'tools'" class="scope-panel p-[18px]">
-          <ToolsTab :service-id="serviceId" @refresh="loadService" />
+          <ToolsTab :service-id="serviceId" @refresh="refreshAll" />
         </div>
         <div v-else-if="activeTab === 'prompts'" class="scope-panel p-[18px]">
-          <PromptsTab :service-id="serviceId" />
+          <PromptsTab :service-id="serviceId" @refresh="refreshAll" />
+        </div>
+        <div v-else-if="activeTab === 'version'" class="scope-panel p-[18px]">
+          <DebugPublishTab
+            :service-id="serviceId"
+            :service="service"
+            @refresh="refreshAll"
+          />
         </div>
         <div v-else class="coming-soon flex items-center justify-center min-h-[420px]">
           <el-empty :description="t('mcpService.comingSoon')">
@@ -346,6 +498,57 @@ onMounted(() => {
         </div>
       </main>
     </div>
+
+    <!-- Publish Confirmation Dialog -->
+    <el-dialog
+      v-model="publishDialogVisible"
+      :title="service?.status === 'PUBLISHED' ? t('mcpService.publishChangesConfirmTitle') : t('mcpService.publishConfirmTitle')"
+      width="520px"
+      append-to-body
+    >
+      <div class="flex flex-col gap-4">
+        <p class="text-sm text-[var(--ep-text-color-regular)] m-0">
+          {{ service?.status === 'PUBLISHED'
+              ? t('mcpService.publishChangesConfirmDesc')
+              : service?.status === 'DISABLED'
+                ? t('mcpService.publishDisabledConfirmDesc')
+                : t('mcpService.publishConfirmDesc') }}
+        </p>
+
+        <!-- 将发布内容摘要 -->
+        <div
+          v-if="diffSummary.length"
+          class="rounded-lg p-3 bg-[var(--ep-fill-color-lighter)] border border-[var(--ep-border-color-lighter)] flex flex-col gap-2"
+        >
+          <div class="text-xs font-semibold text-[var(--ep-text-color-primary)] mb-0.5 border-b border-[var(--ep-border-color-lighter)] pb-1.5">
+            {{ t("mcpService.publishSummaryTitle") }}
+          </div>
+          <DiffSummaryList :items="diffSummary" />
+        </div>
+
+        <el-form label-position="top">
+          <el-form-item :label="t('mcpService.releaseNote')">
+            <el-input
+              v-model="releaseNote"
+              type="textarea"
+              :rows="3"
+              maxlength="200"
+              show-word-limit
+              :placeholder="t('mcpService.releaseNotePlaceholder')"
+            />
+          </el-form-item>
+        </el-form>
+      </div>
+
+      <template #footer>
+        <div class="dialog-footer flex justify-end gap-3">
+          <el-button @click="publishDialogVisible = false">{{ t("common.cancel") }}</el-button>
+          <el-button type="primary" :loading="publishing" @click="confirmPublish">
+            {{ t("mcpService.confirmPublish") }}
+          </el-button>
+        </div>
+      </template>
+    </el-dialog>
   </div>
 </template>
 

@@ -19,7 +19,7 @@ import java.util.Map;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@DisplayName("TemplatePreviewController 单元测试")
+@DisplayName("TemplatePreviewController unit tests")
 class TemplatePreviewControllerTest {
 
     private MockMvc mockMvc;
@@ -41,7 +41,7 @@ class TemplatePreviewControllerTest {
     // ===== Text 模式 =====
 
     @Test
-    @DisplayName("Text — 简单变量替换")
+    @DisplayName("Text - simple variable substitution")
     void testTextModeSimple() throws Exception {
         Map<String, Object> body = Map.of(
                 "mode", "TEXT",
@@ -57,7 +57,7 @@ class TemplatePreviewControllerTest {
     }
 
     @Test
-    @DisplayName("Text — {{#if}} 条件成立")
+    @DisplayName("Text - {{#if}} condition true")
     void testTextModeIfBlock() throws Exception {
         Map<String, Object> body = Map.of(
                 "mode", "TEXT",
@@ -73,7 +73,7 @@ class TemplatePreviewControllerTest {
     }
 
     @Test
-    @DisplayName("Text — {{#if}} 条件不成立时跳过")
+    @DisplayName("Text - {{#if}} condition false, skipped")
     void testTextModeIfBlockSkipped() throws Exception {
         Map<String, Object> body = Map.of(
                 "mode", "TEXT",
@@ -91,7 +91,7 @@ class TemplatePreviewControllerTest {
     // ===== SQL 模式 — 按值类型格式化 =====
 
     @Test
-    @DisplayName("SQL — 字符串值加引号")
+    @DisplayName("SQL - string values quoted")
     void testSqlStringValueQuoted() throws Exception {
         Map<String, Object> body = Map.of(
                 "mode", "SQL",
@@ -107,7 +107,7 @@ class TemplatePreviewControllerTest {
     }
 
     @Test
-    @DisplayName("SQL — 数值不加引号")
+    @DisplayName("SQL - numbers not quoted")
     void testSqlNumberValueUnquoted() throws Exception {
         Map<String, Object> body = Map.of(
                 "mode", "SQL",
@@ -123,7 +123,7 @@ class TemplatePreviewControllerTest {
     }
 
     @Test
-    @DisplayName("SQL — 布尔值不加引号")
+    @DisplayName("SQL - booleans not quoted")
     void testSqlBooleanValueUnquoted() throws Exception {
         Map<String, Object> body = Map.of(
                 "mode", "SQL",
@@ -139,7 +139,7 @@ class TemplatePreviewControllerTest {
     }
 
     @Test
-    @DisplayName("SQL — null 值输出 NULL")
+    @DisplayName("SQL - null value renders NULL")
     void testSqlNullValue() throws Exception {
         Map<String, Object> body = Map.of(
                 "mode", "SQL",
@@ -155,7 +155,7 @@ class TemplatePreviewControllerTest {
     }
 
     @Test
-    @DisplayName("SQL — 数组数值内联，无引号")
+    @DisplayName("SQL - numeric arrays inlined without quotes")
     void testSqlArrayNumbers() throws Exception {
         Map<String, Object> body = Map.of(
                 "mode", "SQL",
@@ -171,7 +171,7 @@ class TemplatePreviewControllerTest {
     }
 
     @Test
-    @DisplayName("SQL — 数组字符串，每个元素加引号")
+    @DisplayName("SQL - string arrays, each element quoted")
     void testSqlArrayStrings() throws Exception {
         Map<String, Object> body = Map.of(
                 "mode", "SQL",
@@ -189,7 +189,7 @@ class TemplatePreviewControllerTest {
     // ===== SQL 模式 — {{{var}}} 原始变量 =====
 
     @Test
-    @DisplayName("SQL — {{{var}}} 原始变量直接内联")
+    @DisplayName("SQL - {{{var}}} raw variable inlined directly")
     void testSqlRawVar() throws Exception {
         Map<String, Object> body = Map.of(
                 "mode", "SQL",
@@ -205,7 +205,7 @@ class TemplatePreviewControllerTest {
     }
 
     @Test
-    @DisplayName("SQL — {{{var:default}}} 无值时走默认")
+    @DisplayName("SQL - {{{var:default}}} uses default when missing")
     void testSqlRawDefault() throws Exception {
         Map<String, Object> body = Map.of(
                 "mode", "SQL",
@@ -239,7 +239,7 @@ class TemplatePreviewControllerTest {
     // ===== SQL 模式 — 完整模板 =====
 
     @Test
-    @DisplayName("SQL — 完整模板：table({{{}}}) + where + if + sort({{{}}}) + limit")
+    @DisplayName("SQL - full template: table({{{}}}) + where + if + sort({{{}}}) + limit")
     void testSqlModeFullTemplate() throws Exception {
         Map<String, Object> body = Map.of(
                 "mode", "SQL",
@@ -262,7 +262,7 @@ class TemplatePreviewControllerTest {
     // ===== 错误处理 =====
 
     @Test
-    @DisplayName("模板语法错误 → 400")
+    @DisplayName("Template syntax error → 400")
     void testSyntaxError() throws Exception {
         Map<String, Object> body = Map.of(
                 "mode", "TEXT",
@@ -279,7 +279,7 @@ class TemplatePreviewControllerTest {
     }
 
     @Test
-    @DisplayName("mode 为空 → 400")
+    @DisplayName("Empty mode → 400")
     void testModeEmpty() throws Exception {
         Map<String, Object> body = Map.of(
                 "mode", "",
@@ -294,7 +294,7 @@ class TemplatePreviewControllerTest {
     }
 
     @Test
-    @DisplayName("未知 mode → 400")
+    @DisplayName("Unknown mode → 400")
     void testUnknownMode() throws Exception {
         Map<String, Object> body = Map.of(
                 "mode", "json",
@@ -311,7 +311,7 @@ class TemplatePreviewControllerTest {
     // ===== 参数提取 =====
 
     @Test
-    @DisplayName("提取参数 — 包含普通、默认及 Raw 变量")
+    @DisplayName("Extract params - includes plain, default and raw variables")
     void testExtractVariables() throws Exception {
         Map<String, Object> body = Map.of(
                 "template", "SELECT * FROM {{{table}}} WHERE id = {{id}} AND name = {{name:default}}"
@@ -329,7 +329,7 @@ class TemplatePreviewControllerTest {
     }
 
     @Test
-    @DisplayName("提取参数 — 处理 if/where 块中的变量")
+    @DisplayName("Extract params - handles variables in if/where blocks")
     void testExtractVariablesInBlocks() throws Exception {
         Map<String, Object> body = Map.of(
                 "template", "SELECT * FROM tasks {{#where}}{{#if status}}AND status = {{status}}{{/if}}{{/where}}"
@@ -345,7 +345,7 @@ class TemplatePreviewControllerTest {
     }
 
     @Test
-    @DisplayName("提取参数 — 语法错误 → 400")
+    @DisplayName("Extract params - syntax error → 400")
     void testExtractVariablesSyntaxError() throws Exception {
         Map<String, Object> body = Map.of(
                 "template", "{{unclosed"
@@ -358,7 +358,7 @@ class TemplatePreviewControllerTest {
     }
 
     @Test
-    @DisplayName("提取参数 — 空模板 → 400")
+    @DisplayName("Extract params - empty template → 400")
     void testExtractVariablesEmptyTemplate() throws Exception {
         Map<String, Object> body = Map.of(
                 "template", ""
@@ -371,7 +371,7 @@ class TemplatePreviewControllerTest {
     }
 
     @Test
-    @DisplayName("提取参数 — 纯静态模板（无变量） → 空集合")
+    @DisplayName("Extract params - static template (no variables) → empty set")
     void testExtractVariablesStaticTemplate() throws Exception {
         Map<String, Object> body = Map.of(
                 "template", "SELECT 1"
@@ -386,7 +386,7 @@ class TemplatePreviewControllerTest {
     }
 
     @Test
-    @DisplayName("提取参数 — 空白模板（仅空格） → 400")
+    @DisplayName("Extract params - blank template (whitespace only) → 400")
     void testExtractVariablesBlankTemplate() throws Exception {
         Map<String, Object> body = Map.of(
                 "template", "   "

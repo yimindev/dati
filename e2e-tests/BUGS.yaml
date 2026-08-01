@@ -8,7 +8,7 @@ bugs:
     module: MCP 服务管理
     source_case: TC-MCP-001
     severity: high
-    found_at: 2026-07-23
+    found_at: 2026-08-01
     description: |
       McpServiceController 没有 @DeleteMapping，所有 DELETE /v1/mcp-services/{id} 请求返回 500。
       应实现删除端点和对应业务逻辑（考虑级联删除 prompts、custom tools、data scopes）。
