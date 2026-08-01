@@ -11,7 +11,7 @@ import java.util.Map;
 import static java.util.Collections.singletonMap;
 import static org.junit.jupiter.api.Assertions.*;
 
-@DisplayName("SqlRenderer 单元测试")
+@DisplayName("SqlRenderer unit tests")
 class SqlRendererTest {
 
     private HandlebarsStyleParser parser;
@@ -21,27 +21,27 @@ class SqlRendererTest {
     void setUp() { parser = new HandlebarsStyleParser(); renderer = new SqlRenderer(); }
 
     // ---- 纯文本 ----
-    @Test @DisplayName("纯文本 → 原样，无 binding")
+    @Test @DisplayName("plain text → as-is, no binding")
     void testPlainText() {
         PreparedSql r = renderer.render(parser.parse("SELECT * FROM t"), Map.of());
         assertEquals("SELECT * FROM t", r.sql()); assertTrue(r.bindings().isEmpty());
     }
 
-    @Test @DisplayName("空模板 → 空")
+    @Test @DisplayName("empty template → empty")
     void testEmpty() {
         PreparedSql r = renderer.render(parser.parse(""), Map.of());
         assertEquals("", r.sql()); assertTrue(r.bindings().isEmpty());
     }
 
     // ---- 转义 ----
-    @Test @DisplayName("\\{{var}} → 字面量 {{var}}，无 binding")
+    @Test @DisplayName("\\{{var}} → literal {{var}}, no binding")
     void testEscapeVar() {
         PreparedSql r = renderer.render(parser.parse("\\{{var}}"), Map.of());
         assertEquals("{{var}}", r.sql());
         assertTrue(r.bindings().isEmpty());
     }
 
-    @Test @DisplayName("\\{{}} 与真实变量混合")
+    @Test @DisplayName("escaped \\{{}} mixed with real variables")
     void testEscapeMixed() {
         PreparedSql r = renderer.render(parser.parse("\\{{x}} = {{y}}"), Map.of("y", 42));
         assertEquals("{{x}} = ?", r.sql());
@@ -59,7 +59,7 @@ class SqlRendererTest {
         assertEquals(42, r.bindings().getFirst().value());
     }
 
-    @Test @DisplayName("多个变量 → bindings 按模板顺序")
+    @Test @DisplayName("multiple variables → bindings in template order")
     void testMultipleVars() {
         PreparedSql r = renderer.render(parser.parse("{{t}} WHERE a={{a}} AND b={{b}}"), Map.of("t","tasks","a",1,"b",2));
         assertEquals("? WHERE a=? AND b=?", r.sql());
@@ -69,7 +69,7 @@ class SqlRendererTest {
         assertEquals("b", r.bindings().get(2).name());
     }
 
-    @Test @DisplayName("同一变量多次 → 每个出现独立 binding")
+    @Test @DisplayName("same variable repeated → independent binding per occurrence")
     void testDuplicateVar() {
         PreparedSql r = renderer.render(parser.parse("a={{x}} AND b={{x}}"), Map.of("x", 99));
         assertEquals("a=? AND b=?", r.sql());
@@ -96,64 +96,64 @@ class SqlRendererTest {
         assertEquals("LIMIT ?", r.sql()); assertEquals("20", r.bindings().getFirst().value());
     }
 
-    @Test @DisplayName("{{var:default}} 有值 → binding = 实际值")
+    @Test @DisplayName("{{var:default}} with value → binding = actual value")
     void testDefaultOverridden() {
         PreparedSql r = renderer.render(parser.parse("LIMIT {{limit:20}}"), Map.of("limit", 50));
         assertEquals("LIMIT ?", r.sql()); assertEquals(50, r.bindings().getFirst().value());
     }
 
     // ---- {{#if}} ----
-    @Test @DisplayName("{{#if}} true → body 出现，变量绑定")
+    @Test @DisplayName("{{#if}} true → body appears, variables bound")
     void testIfTrue() {
         PreparedSql r = renderer.render(parser.parse("WHERE 1=1 {{#if s}}AND s={{s}}{{/if}}"), Map.of("s", "active"));
         assertEquals("WHERE 1=1 AND s=?", r.sql());
         assertEquals("s", r.bindings().getFirst().name());
     }
 
-    @Test @DisplayName("{{#if}} null → body 消失")
+    @Test @DisplayName("{{#if}} null → body gone")
     void testIfNull() {
         PreparedSql r = renderer.render(parser.parse("WHERE 1=1 {{#if s}}AND s={{s}}{{/if}}"), singletonMap("s", null));
         assertEquals("WHERE 1=1 ", r.sql()); assertTrue(r.bindings().isEmpty());
     }
 
-    @Test @DisplayName("{{#if}} missing → body 消失")
+    @Test @DisplayName("{{#if}} missing → body gone")
     void testIfMissing() {
         PreparedSql r = renderer.render(parser.parse("WHERE 1=1 {{#if s}}AND s={{s}}{{/if}}"), Map.of());
         assertEquals("WHERE 1=1 ", r.sql()); assertTrue(r.bindings().isEmpty());
     }
 
-    @Test @DisplayName("{{#if}} 决定 binding 是否出现")
+    @Test @DisplayName("{{#if}} decides whether binding appears")
     void testVarOnlyIfTrue() {
         PreparedSql r = renderer.render(parser.parse("{{#if a}}{{a}}{{/if}}{{#if b}}{{b}}{{/if}}"), Map.of("a", 1));
         assertEquals("?", r.sql()); assertEquals(1, r.bindings().size());
     }
 
-    @Test @DisplayName("{{#if}} 条件为空字符串 → body 跳过")
+    @Test @DisplayName("{{#if}} empty string condition → body skipped")
     void testIfEmptyStringFalsy() {
         PreparedSql r = renderer.render(parser.parse("WHERE 1=1 {{#if s}}AND s={{s}}{{/if}}"), Map.of("s", ""));
         assertEquals("WHERE 1=1 ", r.sql()); assertTrue(r.bindings().isEmpty());
     }
 
-    @Test @DisplayName("{{#if}} 条件为空集合 → body 跳过")
+    @Test @DisplayName("{{#if}} empty collection condition → body skipped")
     void testIfEmptyListFalsy() {
         PreparedSql r = renderer.render(parser.parse("WHERE 1=1 {{#if ids}}AND id IN ({{ids}}){{/if}}"), Map.of("ids", List.of()));
         assertEquals("WHERE 1=1 ", r.sql()); assertTrue(r.bindings().isEmpty());
     }
 
-    @Test @DisplayName("{{#if}} 条件为空数组 → body 跳过")
+    @Test @DisplayName("{{#if}} empty array condition → body skipped")
     void testIfEmptyArrayFalsy() {
         PreparedSql r = renderer.render(parser.parse("WHERE 1=1 {{#if ids}}AND id IN ({{ids}}){{/if}}"), Map.of("ids", new int[]{}));
         assertEquals("WHERE 1=1 ", r.sql()); assertTrue(r.bindings().isEmpty());
     }
 
-    @Test @DisplayName("{{#if}} 条件为 0 → truthy")
+    @Test @DisplayName("{{#if}} condition 0 → truthy")
     void testIfZeroTruthy() {
         PreparedSql r = renderer.render(parser.parse("WHERE 1=1 {{#if n}}AND n={{n}}{{/if}}"), Map.of("n", 0));
         assertEquals("WHERE 1=1 AND n=?", r.sql()); assertEquals(1, r.bindings().size());
         assertEquals(0, r.bindings().getFirst().value());
     }
 
-    @Test @DisplayName("{{#if}} 条件为 false → truthy")
+    @Test @DisplayName("{{#if}} condition false → truthy")
     void testIfFalseTruthy() {
         PreparedSql r = renderer.render(parser.parse("WHERE 1=1 {{#if flag}}AND flag={{flag}}{{/if}}"), Map.of("flag", false));
         assertEquals("WHERE 1=1 AND flag=?", r.sql()); assertEquals(1, r.bindings().size());
@@ -161,7 +161,7 @@ class SqlRendererTest {
     }
 
     // ---- 嵌套 {{#if}} ----
-    @Test @DisplayName("嵌套 {{#if}} 两层都成立 → 内层 SQL 渲染")
+    @Test @DisplayName("nested {{#if}} both true → inner SQL rendered")
     void testNestedIfBothTrue() {
         PreparedSql r = renderer.render(parser.parse("{{#if a}}{{#if b}}AND b={{b}}{{/if}}{{/if}}"), Map.of("a", 1, "b", 2));
         assertEquals("AND b=?", r.sql());
@@ -169,21 +169,21 @@ class SqlRendererTest {
         assertEquals(2, r.bindings().getFirst().value());
     }
 
-    @Test @DisplayName("嵌套 {{#if}} 外层成立内层跳过 → 空")
+    @Test @DisplayName("nested {{#if}} outer true inner skipped → empty")
     void testNestedIfInnerSkipped() {
         PreparedSql r = renderer.render(parser.parse("{{#if a}}{{#if b}}AND b={{b}}{{/if}}{{/if}}"), Map.of("a", 1));
         assertEquals("", r.sql());
         assertTrue(r.bindings().isEmpty());
     }
 
-    @Test @DisplayName("嵌套 {{#if}} 外层跳过 → 空")
+    @Test @DisplayName("nested {{#if}} outer skipped → empty")
     void testNestedIfOuterSkipped() {
         PreparedSql r = renderer.render(parser.parse("{{#if a}}{{#if b}}AND b={{b}}{{/if}}{{/if}}"), Map.of());
         assertEquals("", r.sql());
         assertTrue(r.bindings().isEmpty());
     }
 
-    @Test @DisplayName("嵌套 {{#if}} 内层变量绑定")
+    @Test @DisplayName("nested {{#if}} inner variable bound")
     void testNestedIfInnerBinding() {
         PreparedSql r = renderer.render(parser.parse("{{#if a}}x={{x}}{{#if b}} AND b={{b}}{{/if}}{{/if}}"), Map.of("a", 1, "x", 10, "b", 20));
         assertEquals("x=? AND b=?", r.sql());
@@ -193,38 +193,38 @@ class SqlRendererTest {
     }
 
     // ---- {{#where}} ----
-    @Test @DisplayName("{{#where}} 全跳过 → WHERE 消失")
+    @Test @DisplayName("{{#where}} all skipped → WHERE gone")
     void testWhereAllSkipped() {
         PreparedSql r = renderer.render(parser.parse("SELECT * FROM t {{#where}}{{#if s}}AND s={{s}}{{/if}}{{/where}}"), Map.of());
         assertEquals("SELECT * FROM t ", r.sql()); assertTrue(r.bindings().isEmpty());
     }
 
-    @Test @DisplayName("{{#where}} 首个 AND 裁剪")
+    @Test @DisplayName("{{#where}} leading AND trimmed")
     void testWhereFirstAnd() {
         PreparedSql r = renderer.render(parser.parse("SELECT * FROM t {{#where}}  AND d={{d}} {{#if s}}AND s={{s}}{{/if}}{{/where}}"),
             Map.of("d", 123, "s", "active"));
         assertEquals("SELECT * FROM t WHERE d=? AND s=?", r.sql()); assertEquals(2, r.bindings().size());
     }
 
-    @Test @DisplayName("{{#where}} 首个 OR 裁剪")
+    @Test @DisplayName("{{#where}} leading OR trimmed")
     void testWhereFirstOr() {
         PreparedSql r = renderer.render(parser.parse("SELECT {{#where}}  OR a={{a}} OR b={{b}}{{/where}}"), Map.of("a", 1, "b", 2));
         assertEquals("SELECT WHERE a=? OR b=?", r.sql());
     }
 
-    @Test @DisplayName("{{#where}} 首个非 AND/OR → 原样")
+    @Test @DisplayName("{{#where}} first token non-AND/OR → as-is")
     void testWhereNoPrefix() {
         PreparedSql r = renderer.render(parser.parse("SELECT {{#where}}d={{d}}{{/where}}"), Map.of("d", 5));
         assertEquals("SELECT WHERE d=?", r.sql());
     }
 
-    @Test @DisplayName("{{#where}} 混合：直接内容 + {{#if}}，if 跳过")
+    @Test @DisplayName("{{#where}} mixed: direct content + {{#if}}, if skipped")
     void testWhereMixedIfSkipped() {
         PreparedSql r = renderer.render(parser.parse("{{#where}}d={{d}}{{#if s}}AND s={{s}}{{/if}}{{/where}}"), Map.of("d", 10));
         assertEquals("WHERE d=?", r.sql()); assertEquals(1, r.bindings().size());
     }
 
-    @Test @DisplayName("{{#where}} 内多个 {{#if}}，部分跳过不产生空行")
+    @Test @DisplayName("{{#where}} with multiple {{#if}}, partial skips produce no blank lines")
     void testWhereMultipleIfNoBlankLines() {
         String tpl = """
                 SELECT * FROM invoice i
@@ -247,31 +247,31 @@ class SqlRendererTest {
     }
 
     // ---- Array 展开 ----
-    @Test @DisplayName("Array → 多个 ?")
+    @Test @DisplayName("Array → multiple ?")
     void testArray() {
         PreparedSql r = renderer.render(parser.parse("IN ({{ids}})"), Map.of("ids", List.of(1, 2, 3)));
         assertEquals("IN (?, ?, ?)", r.sql()); assertEquals(3, r.bindings().size());
     }
 
-    @Test @DisplayName("空 Array → IN ()，无 binding")
+    @Test @DisplayName("empty Array → IN () without binding")
     void testEmptyArray() {
         PreparedSql r = renderer.render(parser.parse("IN ({{ids}})"), Map.of("ids", List.of()));
         assertEquals("IN ()", r.sql()); assertTrue(r.bindings().isEmpty());
     }
 
-    @Test @DisplayName("单元素 Array → 单 ?")
+    @Test @DisplayName("single-element Array → single ?")
     void testSingleArray() {
         PreparedSql r = renderer.render(parser.parse("IN ({{ids}})"), Map.of("ids", List.of(42)));
         assertEquals("IN (?)", r.sql()); assertEquals(1, r.bindings().size());
     }
 
-    @Test @DisplayName("非 Array 值 → 单 ?")
+    @Test @DisplayName("non-Array value → single ?")
     void testNonArray() {
         PreparedSql r = renderer.render(parser.parse("WHERE id = {{id}}"), Map.of("id", 100));
         assertEquals("WHERE id = ?", r.sql()); assertEquals(1, r.bindings().size());
     }
 
-    @Test @DisplayName("Array 与普通变量混合 → bindings 顺序正确")
+    @Test @DisplayName("Array mixed with plain variables → bindings in correct order")
     void testArrayMixed() {
         PreparedSql r = renderer.render(parser.parse("WHERE a={{a}} AND b IN ({{b}})"), Map.of("a", 1, "b", List.of(10,20)));
         assertEquals("WHERE a=? AND b IN (?, ?)", r.sql());
@@ -282,7 +282,7 @@ class SqlRendererTest {
     }
 
     // ---- 原始类型数组展开 ----
-    @Test @DisplayName("int[] → 多个 ?")
+    @Test @DisplayName("int[] → multiple ?")
     void testIntArray() {
         PreparedSql r = renderer.render(parser.parse("IN ({{ids}})"), Map.of("ids", new int[]{1, 2, 3}));
         assertEquals("IN (?, ?, ?)", r.sql());
@@ -292,7 +292,7 @@ class SqlRendererTest {
         assertEquals(3, r.bindings().get(2).value());
     }
 
-    @Test @DisplayName("long[] → 多个 ?")
+    @Test @DisplayName("long[] → multiple ?")
     void testLongArray() {
         PreparedSql r = renderer.render(parser.parse("IN ({{ids}})"), Map.of("ids", new long[]{10L, 20L}));
         assertEquals("IN (?, ?)", r.sql());
@@ -301,7 +301,7 @@ class SqlRendererTest {
         assertEquals(20L, r.bindings().get(1).value());
     }
 
-    @Test @DisplayName("double[] → 多个 ?")
+    @Test @DisplayName("double[] → multiple ?")
     void testDoubleArray() {
         PreparedSql r = renderer.render(parser.parse("IN ({{vals}})"), Map.of("vals", new double[]{1.5, 2.5}));
         assertEquals("IN (?, ?)", r.sql());
@@ -310,7 +310,7 @@ class SqlRendererTest {
         assertEquals(2.5, r.bindings().get(1).value());
     }
 
-    @Test @DisplayName("boolean[] → 多个 ?")
+    @Test @DisplayName("boolean[] → multiple ?")
     void testBooleanArray() {
         PreparedSql r = renderer.render(parser.parse("IN ({{flags}})"), Map.of("flags", new boolean[]{true, false}));
         assertEquals("IN (?, ?)", r.sql());
@@ -319,7 +319,7 @@ class SqlRendererTest {
         assertEquals(false, r.bindings().get(1).value());
     }
 
-    @Test @DisplayName("Integer[]（Object[]）→ 多个 ?")
+    @Test @DisplayName("Integer[] (Object[]) → multiple ?")
     void testIntegerArray() {
         PreparedSql r = renderer.render(parser.parse("IN ({{ids}})"), Map.of("ids", new Integer[]{100, 200}));
         assertEquals("IN (?, ?)", r.sql());
@@ -328,7 +328,7 @@ class SqlRendererTest {
         assertEquals(200, r.bindings().get(1).value());
     }
 
-    @Test @DisplayName("String[] → 多个 ?")
+    @Test @DisplayName("String[] → multiple ?")
     void testStringArray() {
         PreparedSql r = renderer.render(parser.parse("IN ({{vals}})"), Map.of("vals", new String[]{"a", "b", "c"}));
         assertEquals("IN (?, ?, ?)", r.sql());
@@ -338,7 +338,7 @@ class SqlRendererTest {
         assertEquals("c", r.bindings().get(2).value());
     }
 
-    @Test @DisplayName("空 int[] → IN ()，无 binding")
+    @Test @DisplayName("empty int[] → IN () without binding")
     void testEmptyIntArray() {
         PreparedSql r = renderer.render(parser.parse("IN ({{ids}})"), Map.of("ids", new int[]{}));
         assertEquals("IN ()", r.sql());
@@ -346,7 +346,7 @@ class SqlRendererTest {
     }
 
     // ---- 综合 ----
-    @Test @DisplayName("完整参数化 SQL：table + where + if + sort + limit")
+    @Test @DisplayName("full parameterized SQL: table + where + if + sort + limit")
     void testFullSql() {
         CompiledTemplate t = parser.parse(
             "SELECT * FROM {{table}} {{#where}}  {{#if s}}AND s={{s}}{{/if}}  {{#if p}}AND p={{p}}{{/if}}{{/where}} ORDER BY {{sort:id}} LIMIT {{limit:20}}");
@@ -362,7 +362,7 @@ class SqlRendererTest {
     }
 
     // ---- SQL 注入防护 ----
-    @Test @DisplayName("恶意值不在 SQL 字符串中")
+    @Test @DisplayName("malicious value not present in SQL string")
     void testInjectionPrevention() {
         String evil = "' OR '1'='1' --";
         PreparedSql r = renderer.render(parser.parse("WHERE s = {{s}}"), Map.of("s", evil));
@@ -371,7 +371,7 @@ class SqlRendererTest {
         assertEquals(evil, r.bindings().getFirst().value());
     }
 
-    @Test @DisplayName("表名注入防护")
+    @Test @DisplayName("table name injection guard")
     void testTableInjection() {
         String evil = "t; DROP TABLE users;--";
         PreparedSql r = renderer.render(parser.parse("SELECT * FROM {{t}}"), Map.of("t", evil));
@@ -381,55 +381,55 @@ class SqlRendererTest {
 
     // ── {{{var}}} 原始变量（三重大括号）──
 
-    @Test @DisplayName("{{{var}}} 值存在 → 直接内联到 SQL，无 binding")
+    @Test @DisplayName("{{{var}}} value present → inlined directly into SQL, no binding")
     void testRawVarDirectInline() {
         PreparedSql r = renderer.render(parser.parse("FROM {{{table}}}"), Map.of("table", "users"));
         assertEquals("FROM users", r.sql());
         assertTrue(r.bindings().isEmpty());
     }
 
-    @Test @DisplayName("{{{var}}} 值为 null → 输出空字符串")
+    @Test @DisplayName("{{{var}}} null value → renders empty string")
     void testRawVarNull() {
         PreparedSql r = renderer.render(parser.parse("FROM {{{table}}}"), singletonMap("table", null));
         assertEquals("FROM ", r.sql());
         assertTrue(r.bindings().isEmpty());
     }
 
-    @Test @DisplayName("{{{var}}} 参数缺失 → 输出空字符串")
+    @Test @DisplayName("{{{var}}} param missing → renders empty string")
     void testRawVarMissing() {
         PreparedSql r = renderer.render(parser.parse("FROM {{{table}}}"), Map.of());
         assertEquals("FROM ", r.sql());
         assertTrue(r.bindings().isEmpty());
     }
 
-    @Test @DisplayName("{{{var:default}}} null → 内联 default")
+    @Test @DisplayName("{{{var:default}}} null → inlines default")
     void testRawVarDefaultNull() {
         PreparedSql r = renderer.render(parser.parse("ORDER BY {{{sort:id}}}"), singletonMap("sort", null));
         assertEquals("ORDER BY id", r.sql());
         assertTrue(r.bindings().isEmpty());
     }
 
-    @Test @DisplayName("{{{var:default}}} 有值 → 内联实际值")
+    @Test @DisplayName("{{{var:default}}} with value → inlines actual value")
     void testRawVarDefaultOverridden() {
         PreparedSql r = renderer.render(parser.parse("ORDER BY {{{sort:id}}}"), Map.of("sort", "name"));
         assertEquals("ORDER BY name", r.sql());
         assertTrue(r.bindings().isEmpty());
     }
 
-    @Test @DisplayName("{{{var}}} 值为 Array → TemplateRenderException")
+    @Test @DisplayName("{{{var}}} value is Array → TemplateRenderException")
     void testRawVarArrayThrows() {
         assertThrows(TemplateRenderException.class, () ->
             renderer.render(parser.parse("IN ({{{ids}}})"), Map.of("ids", List.of(1, 2, 3))));
     }
 
-    @Test @DisplayName("{{{var}}} 值非 Array → 正常内联")
+    @Test @DisplayName("{{{var}}} non-Array value → inlined normally")
     void testRawVarNonArray() {
         PreparedSql r = renderer.render(parser.parse("FETCH NEXT {{{limit}}} ROWS ONLY"), Map.of("limit", 50));
         assertEquals("FETCH NEXT 50 ROWS ONLY", r.sql());
         assertTrue(r.bindings().isEmpty());
     }
 
-    @Test @DisplayName("混合 {{{var}}} + {{var}} → 正确的 SQL 和 binding 顺序")
+    @Test @DisplayName("mixed {{{var}}} + {{var}} → correct SQL and binding order")
     void testMixedRawAndSafe() {
         PreparedSql r = renderer.render(parser.parse(
             "SELECT {{{col1}}}, {{{col2}}} FROM {{{table}}} WHERE id = {{id}} AND status = {{status}}"),
@@ -440,7 +440,7 @@ class SqlRendererTest {
         assertEquals("status", r.bindings().get(1).name());
     }
 
-    @Test @DisplayName("{{{var}}} 在 {{#if}} 块内 → 条件成立时内联")
+    @Test @DisplayName("{{{var}}} inside {{#if}} block → inlined when condition true")
     void testRawVarInIfTrue() {
         PreparedSql r = renderer.render(parser.parse(
             "SELECT * FROM t {{#if sort}}ORDER BY {{{col}}} {{{dir}}}{{/if}}"),
@@ -449,7 +449,7 @@ class SqlRendererTest {
         assertTrue(r.bindings().isEmpty());
     }
 
-    @Test @DisplayName("{{{var}}} 在 {{#if}} 块内 → 条件不成立时消失")
+    @Test @DisplayName("{{{var}}} inside {{#if}} block → gone when condition false")
     void testRawVarInIfFalse() {
         PreparedSql r = renderer.render(parser.parse(
             "SELECT * FROM t {{#if sort}}ORDER BY {{{col}}} {{{dir}}}{{/if}}"),
@@ -458,7 +458,7 @@ class SqlRendererTest {
         assertTrue(r.bindings().isEmpty());
     }
 
-    @Test @DisplayName("{{{var}}} 在 {{#where}} 内 → AND/OR 裁剪正常工作")
+    @Test @DisplayName("{{{var}}} inside {{#where}} → AND/OR trimming works")
     void testRawVarInWhere() {
         PreparedSql r = renderer.render(parser.parse(
             "SELECT * FROM t {{#where}}dept_id = {{dept_id}}{{#if status}}AND status = {{status}}{{/if}}{{/where}} ORDER BY {{{col}}} {{{dir}}}"),
@@ -467,7 +467,7 @@ class SqlRendererTest {
         assertEquals(1, r.bindings().size());
     }
 
-    @Test @DisplayName("完整场景：表名 + 列名 + 排序 + 安全变量")
+    @Test @DisplayName("full scenario: table + column + sort + safe variables")
     void testFullScenario() {
         PreparedSql r = renderer.render(parser.parse(
             "SELECT {{{cols}}} FROM {{{table}}} WHERE dept_id = {{dept_id}} ORDER BY {{{sort}}} {{{dir}}} LIMIT {{{limit}}}"),
@@ -477,7 +477,7 @@ class SqlRendererTest {
         assertEquals(42, r.bindings().getFirst().value());
     }
 
-    @Test @DisplayName("{{{var}}} 注入风险：用户显式选择 raw 模式，值直接拼入 SQL")
+    @Test @DisplayName("{{{var}}} injection risk: raw mode inlines value directly into SQL")
     void testRawVarInjectionIsUserChoice() {
         String evil = "t; DROP TABLE users;--";
         PreparedSql r = renderer.render(parser.parse("SELECT * FROM {{{table}}}"), Map.of("table", evil));

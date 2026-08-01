@@ -43,7 +43,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WebMvcTest(DataSourceController.class)
 @ActiveProfiles("test")
 @AutoConfigureMockMvc(addFilters = false)
-@DisplayName("DataSourceController 集成测试")
+@DisplayName("DataSourceController integration tests")
 class DataSourceControllerTest {
 
     @Autowired
@@ -69,7 +69,7 @@ class DataSourceControllerTest {
     }
 
     @Test
-    @DisplayName("测试连接 - 成功")
+    @DisplayName("Test connection - success")
     void testConnection_shouldReturnTrue() throws Exception {
         // given
         when(dataSourceService.testConnection(any())).thenReturn(true);
@@ -83,7 +83,7 @@ class DataSourceControllerTest {
     }
 
     @Test
-    @DisplayName("测试连接 - 失败")
+    @DisplayName("Test connection - failure")
     void testConnection_shouldReturnFalse() throws Exception {
         // given
         when(dataSourceService.testConnection(any())).thenReturn(false);
@@ -97,7 +97,7 @@ class DataSourceControllerTest {
     }
 
     @Test
-    @DisplayName("添加数据源 - 成功")
+    @DisplayName("Add data source - success")
     void addDataSource_shouldReturnId() throws Exception {
         // given
         when(dataSourceService.addDataSource(any())).thenReturn("new-ds-id");
@@ -112,7 +112,7 @@ class DataSourceControllerTest {
     }
 
     @Test
-    @DisplayName("更新数据源 - 成功")
+    @DisplayName("Update data source - success")
     void updateDataSource_shouldReturnId() throws Exception {
         // given
         doNothing().when(dsAssembler).fillUpdateUserFromRequest(any());
@@ -127,7 +127,7 @@ class DataSourceControllerTest {
     }
 
     @Test
-    @DisplayName("删除数据源 - 成功")
+    @DisplayName("Delete data source - success")
     void deleteDataSource_shouldReturnId() throws Exception {
         // given
         doNothing().when(dataSourceService).deleteDataSource(TestFixtures.TEST_DATASOURCE_ID);
@@ -139,7 +139,7 @@ class DataSourceControllerTest {
     }
 
     @Test
-    @DisplayName("分页查询数据源 - 成功")
+    @DisplayName("Paged query data sources - success")
     void listDataSources_shouldReturnPagedResults() throws Exception {
         // given
         Page<DataSource> page = new PageImpl<>(List.of(testDataSource));
@@ -161,7 +161,7 @@ class DataSourceControllerTest {
     }
 
     @Test
-    @DisplayName("获取Schemas - 成功")
+    @DisplayName("Get schemas - success")
     void getSchemas_shouldReturnSchemaList() throws Exception {
         // given
         when(jdbcMetaService.getSchemas(TestFixtures.TEST_DATASOURCE_ID, null))
@@ -176,7 +176,7 @@ class DataSourceControllerTest {
     }
 
     @Test
-    @DisplayName("获取Tables - 成功")
+    @DisplayName("Get tables - success")
     void getTables_shouldReturnTableList() throws Exception {
         // given
         when(jdbcMetaService.getTables(TestFixtures.TEST_DATASOURCE_ID, null, "public"))
@@ -193,7 +193,7 @@ class DataSourceControllerTest {
     }
 
     @Test
-    @DisplayName("获取Columns - 成功")
+    @DisplayName("Get columns - success")
     void getColumns_shouldReturnColumnList() throws Exception {
         // given
         Column column = new Column("id", "INTEGER", "Primary key");
@@ -210,7 +210,7 @@ class DataSourceControllerTest {
     }
 
     @Test
-    @DisplayName("获取单个数据源 - 返回 default_schema")
+    @DisplayName("Get single data source - returns default_schema")
     void getDataSource_shouldReturnWithDefaultSchema() throws Exception {
         // given
         when(dataSourceService.getDataSource(TestFixtures.TEST_DATASOURCE_ID)).thenReturn(Optional.of(testDataSource));
@@ -229,7 +229,7 @@ class DataSourceControllerTest {
     }
 
     @Test
-    @DisplayName("执行SQL - 成功")
+    @DisplayName("Execute SQL - success")
     void executeSql_shouldReturnResults() throws Exception {
         // given
         Map<String, Object> row = Map.of("id", 1, "name", "test");

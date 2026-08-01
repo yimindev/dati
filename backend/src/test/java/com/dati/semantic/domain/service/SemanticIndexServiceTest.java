@@ -26,7 +26,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-@DisplayName("SemanticIndexService 单元测试")
+@DisplayName("SemanticIndexService unit tests")
 class SemanticIndexServiceTest {
 
     @Mock
@@ -39,7 +39,7 @@ class SemanticIndexServiceTest {
     ArgumentCaptor<List<SemanticSearchDocument>> captor;
 
     @Test
-    @DisplayName("保存文档 - 首次保存应设置 createdTime 和 updatedTime")
+    @DisplayName("Save document - sets createdTime and updatedTime on first save")
     void save_shouldSetCreatedTimeAndUpdatedTimeWhenFirstSave() {
         // given
         SemanticSearchDocument doc = SemanticSearchDocument.builder()
@@ -68,7 +68,7 @@ class SemanticIndexServiceTest {
     }
 
     @Test
-    @DisplayName("保存文档 - 更新时应保持 createdTime 不变，仅更新 updatedTime")
+    @DisplayName("Save document - keeps createdTime, only updates updatedTime on update")
     void save_shouldKeepCreatedTimeWhenUpdating() {
         // given
         LocalDateTime originalCreatedTime = LocalDateTime.now().minusDays(1);
@@ -99,7 +99,7 @@ class SemanticIndexServiceTest {
     }
 
     @Test
-    @DisplayName("批量保存文档 - 应正确设置所有文档的时间戳")
+    @DisplayName("Batch save documents - sets timestamps on all documents")
     void saveBatch_shouldSetTimeForAllDocuments() {
         // given
         LocalDateTime yesterday = LocalDateTime.now().minusDays(1);
@@ -137,7 +137,7 @@ class SemanticIndexServiceTest {
     }
 
     @Test
-    @DisplayName("根据 tableId 删除文档 - 应调用 DAO 批量删除方法")
+    @DisplayName("Delete documents by tableId - calls DAO batch delete method")
     void deleteByEntityTableId_shouldCallDaoDeleteMethod() {
         // given
         String tableId = "table-001";
@@ -150,7 +150,7 @@ class SemanticIndexServiceTest {
     }
 
     @Test
-    @DisplayName("根据 tableIds 批量删除文档 - 应调用 DAO 批量删除方法")
+    @DisplayName("Batch delete documents by tableIds - calls DAO batch delete method")
     void deleteByEntityTableIds_shouldCallDaoBatchDeleteMethod() {
         // given
         List<String> tableIds = List.of("table-001", "table-002");
@@ -163,7 +163,7 @@ class SemanticIndexServiceTest {
     }
 
     @Test
-    @DisplayName("根据 subjectId 删除文档 - 应调用 DAO 删除方法")
+    @DisplayName("Delete documents by subjectId - calls DAO delete method")
     void deleteByEntity_SubjectId_shouldCallDaoDeleteMethod() {
         // given
         String subjectId = "subject-001";
@@ -176,7 +176,7 @@ class SemanticIndexServiceTest {
     }
 
     @Test
-    @DisplayName("根据 ID 删除文档 - 应调用 DAO 删除方法")
+    @DisplayName("Delete documents by ID - calls DAO delete method")
     void deleteById_shouldCallDaoDeleteMethod() {
         // given
         String id = "term:123";
@@ -189,7 +189,7 @@ class SemanticIndexServiceTest {
     }
 
     @Test
-    @DisplayName("分页查询文档 - keyword 为 null 时应调用无 keyword 的查询方法")
+    @DisplayName("Paged query documents - null keyword calls no-keyword query")
     void findByTableFieldAndTypePaginated_withNullKeyword_shouldCallQueryWithoutKeyword() {
         // given
         String tableId = "table1";
@@ -214,7 +214,7 @@ class SemanticIndexServiceTest {
     }
 
     @Test
-    @DisplayName("分页查询文档 - keyword 为空字符串时应调用无 keyword 的查询方法")
+    @DisplayName("Paged query documents - empty string keyword calls no-keyword query")
     void findByTableFieldAndTypePaginated_withEmptyKeyword_shouldCallQueryWithoutKeyword() {
         // given
         String tableId = "table1";
@@ -238,7 +238,7 @@ class SemanticIndexServiceTest {
     }
 
     @Test
-    @DisplayName("分页查询文档 - keyword 有值时应调用带 keyword 的查询方法")
+    @DisplayName("Paged query documents - non-empty keyword calls keyword query")
     void findByTableFieldAndTypePaginated_withKeyword_shouldCallQueryWithKeyword() {
         // given
         String tableId = "table1";

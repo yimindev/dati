@@ -42,7 +42,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WebMvcTest(ColumnController.class)
 @ActiveProfiles("test")
 @AutoConfigureMockMvc(addFilters = false)
-@DisplayName("ColumnController 集成测试")
+@DisplayName("ColumnController integration tests")
 class ColumnControllerTest {
 
     @Autowired
@@ -68,7 +68,7 @@ class ColumnControllerTest {
     }
 
     @Test
-    @DisplayName("分页查询列 - 成功")
+    @DisplayName("Paged query columns - success")
     void getColumns_shouldReturnPagedResults() throws Exception {
         // given
         Page<ColumnInfo> page = new PageImpl<>(List.of(testColumnInfo));
@@ -97,7 +97,7 @@ class ColumnControllerTest {
     }
 
     @Test
-    @DisplayName("分页查询列 - 带关键词")
+    @DisplayName("Paged query columns - with keyword")
     void getColumns_withKeyword_shouldReturnFilteredResults() throws Exception {
         // given
         Page<ColumnInfo> page = new PageImpl<>(List.of(testColumnInfo));
@@ -122,7 +122,7 @@ class ColumnControllerTest {
     }
 
     @Test
-    @DisplayName("更新列 - 成功")
+    @DisplayName("Update column - success")
     void updateColumn_shouldReturnId() throws Exception {
         // given
         ColumnInfoVO requestVo = new ColumnInfoVO();
@@ -148,7 +148,7 @@ class ColumnControllerTest {
     }
 
     @Test
-    @DisplayName("同步列 - 成功（默认不覆盖）")
+    @DisplayName("Sync columns - success (no overwrite by default)")
     void syncColumns_shouldReturnTableId() throws Exception {
         // given
         doNothing().when(columnService).syncColumns(TestFixtures.TEST_DATASOURCE_ID, TestFixtures.TEST_TABLE_ID, false);
@@ -163,7 +163,7 @@ class ColumnControllerTest {
     }
 
     @Test
-    @DisplayName("同步列 - 指定覆盖已有内容")
+    @DisplayName("Sync columns - explicit overwrite of existing content")
     void syncColumns_withOverwriteExistingTrue_shouldPassTrueToService() throws Exception {
         // given
         doNothing().when(columnService).syncColumns(TestFixtures.TEST_DATASOURCE_ID, TestFixtures.TEST_TABLE_ID, true);
@@ -179,7 +179,7 @@ class ColumnControllerTest {
     }
 
     @Test
-    @DisplayName("更新列 - 验证ID参数传递")
+    @DisplayName("Update column - verifies ID param is passed")
     void updateColumn_shouldPassCorrectId() throws Exception {
         // given
         ColumnInfoVO requestVo = new ColumnInfoVO();
@@ -200,7 +200,7 @@ class ColumnControllerTest {
     }
 
     @Test
-    @DisplayName("分页查询列 - 验证路径参数传递")
+    @DisplayName("Paged query columns - verifies path params are passed")
     void getColumns_shouldPassCorrectPathParams() throws Exception {
         // given
         Page<ColumnInfo> page = new PageImpl<>(List.of());
@@ -218,7 +218,7 @@ class ColumnControllerTest {
     }
 
     @Test
-    @DisplayName("分页查询列值 - 成功")
+    @DisplayName("Paged query column values - success")
     void getValues_shouldReturnPagedResults() throws Exception {
         // given
         ColumnValueVO vo = new ColumnValueVO();

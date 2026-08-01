@@ -185,6 +185,7 @@ customToolDAO.delete(po);
 
 ## Key Rules
 
+- **English only in code artifacts**: Log messages (`@Slf4j`), test `@DisplayName`, and code comments use English. Chinese is allowed only in user-facing text (i18n messages, PRD docs).
 - **Naming**: `PascalCase` classes, `camelCase` methods, `lowercase` packages.
 - **Braces**: Always use braces `{}` for `if` / `for` / `while` blocks, even for single statements. One-liners are not allowed.
 - **Injection**: Constructor injection only (`private final`).

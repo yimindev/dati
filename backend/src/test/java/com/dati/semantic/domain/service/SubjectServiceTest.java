@@ -38,7 +38,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-@DisplayName("SubjectService 单元测试")
+@DisplayName("SubjectService unit tests")
 class SubjectServiceTest {
 
     @Mock
@@ -76,7 +76,7 @@ class SubjectServiceTest {
     }
 
     @Test
-    @DisplayName("createSubject - 应保存 SubjectPO 并索引 ES 文档")
+    @DisplayName("createSubject - saves SubjectPO and indexes ES document")
     void createSubject_shouldSaveAndIndex() {
         String name = "New Subject";
         String description = "New Description";
@@ -117,7 +117,7 @@ class SubjectServiceTest {
     }
 
     @Test
-    @DisplayName("updateSubject - 应更新 SubjectPO 并重新索引 ES 文档")
+    @DisplayName("updateSubject - updates SubjectPO and re-indexes ES document")
     void updateSubject_shouldUpdateAndReindex() {
         String id = "subject-001";
         String newName = "Updated Subject";
@@ -147,7 +147,7 @@ class SubjectServiceTest {
     }
 
     @Test
-    @DisplayName("updateSubject - Subject 不存在时应抛出异常")
+    @DisplayName("updateSubject - throws when Subject not found")
     void updateSubject_shouldThrowWhenNotFound() {
         String id = "non-existent";
         when(subjectDAO.findById(id)).thenReturn(Optional.empty());
@@ -161,7 +161,7 @@ class SubjectServiceTest {
     }
 
     @Test
-    @DisplayName("deleteSubject - 应删除 SubjectPO 和 ES 文档")
+    @DisplayName("deleteSubject - deletes SubjectPO and ES document")
     void deleteSubject_shouldDeleteSubjectAndEsDocs() {
         String id = "subject-001";
         when(subjectDAO.existsById(id)).thenReturn(true);
@@ -173,7 +173,7 @@ class SubjectServiceTest {
     }
 
     @Test
-    @DisplayName("deleteSubject - Subject 不存在时应抛出异常")
+    @DisplayName("deleteSubject - throws when Subject not found")
     void deleteSubject_shouldThrowWhenNotFound() {
         String id = "non-existent";
         when(subjectDAO.existsById(id)).thenReturn(false);
@@ -184,7 +184,7 @@ class SubjectServiceTest {
     }
 
     @Test
-    @DisplayName("addTableToSubject - 应验证 table 属于同一 datasource")
+    @DisplayName("addTableToSubject - validates table belongs to same datasource")
     void addTableToSubject_shouldValidateDatasource() {
         String subjectId = "subject-001";
         String tableId = "table-001";
@@ -204,7 +204,7 @@ class SubjectServiceTest {
     }
 
     @Test
-    @DisplayName("addTableToSubject - 关联已存在时应抛出异常")
+    @DisplayName("addTableToSubject - throws when relation already exists")
     void addTableToSubject_shouldThrowWhenAlreadyAssociated() {
         String subjectId = "subject-001";
         String tableId = "table-001";
@@ -221,7 +221,7 @@ class SubjectServiceTest {
     }
 
     @Test
-    @DisplayName("addTableToSubject - 有效添加应保存关联")
+    @DisplayName("addTableToSubject - saves relation on valid add")
     void addTableToSubject_shouldSaveAssociation() {
         String subjectId = "subject-001";
         String tableId = "table-001";
@@ -238,7 +238,7 @@ class SubjectServiceTest {
     }
 
     @Test
-    @DisplayName("removeTableFromSubject - 应删除关联")
+    @DisplayName("removeTableFromSubject - deletes the relation")
     void removeTableFromSubject_shouldDeleteAssociation() {
         String subjectId = "subject-001";
         String tableId = "table-001";
@@ -257,7 +257,7 @@ class SubjectServiceTest {
     }
 
     @Test
-    @DisplayName("removeTableFromSubject - 关联不存在时应抛出异常")
+    @DisplayName("removeTableFromSubject - throws when relation not found")
     void removeTableFromSubject_shouldThrowWhenNotFound() {
         String subjectId = "subject-001";
         String tableId = "table-001";
@@ -272,7 +272,7 @@ class SubjectServiceTest {
 
     @ParameterizedTest
     @NullAndEmptySource
-    @DisplayName("getSubjects - keyword 为 null 或空时应查所有")
+    @DisplayName("getSubjects - null or empty keyword queries all")
     void getSubjects_withNullOrEmptyKeyword_shouldReturnAll(String keyword) {
         Pageable pageable = PageRequest.of(0, 10);
 
@@ -287,7 +287,7 @@ class SubjectServiceTest {
     }
 
     @Test
-    @DisplayName("getSubjects - keyword 非空时应按 ID 前缀或名称模糊匹配")
+    @DisplayName("getSubjects - non-empty keyword matches by ID prefix or name")
     void getSubjects_withKeyword_shouldReturnMatchingSubjects() {
         String keyword = "Test";
         Pageable pageable = PageRequest.of(0, 10);
@@ -302,7 +302,7 @@ class SubjectServiceTest {
     }
 
     @Test
-    @DisplayName("getTablesBySubjectId (分页) - keyword 为空时应调用 findTablesBySubjectId")
+    @DisplayName("getTablesBySubjectId (paged) - empty keyword calls findTablesBySubjectId")
     void getTablesBySubjectId_paginated_withoutKeyword_shouldReturnAll() {
         String subjectId = "subject-001";
         Pageable pageable = PageRequest.of(0, 10);
@@ -333,7 +333,7 @@ class SubjectServiceTest {
     }
 
     @Test
-    @DisplayName("getTablesBySubjectId (分页) - keyword 非空时应按名称过滤")
+    @DisplayName("getTablesBySubjectId (paged) - non-empty keyword filters by name")
     void getTablesBySubjectId_paginated_withKeyword_shouldFilterByName() {
         String subjectId = "subject-001";
         String keyword = "user";
@@ -357,7 +357,7 @@ class SubjectServiceTest {
     }
 
     @Test
-    @DisplayName("getTablesBySubjectId (分页) - Subject 不存在时应抛出异常")
+    @DisplayName("getTablesBySubjectId (paged) - throws when Subject not found")
     void getTablesBySubjectId_paginated_shouldThrowWhenSubjectNotFound() {
         String subjectId = "non-existent";
         Pageable pageable = PageRequest.of(0, 10);

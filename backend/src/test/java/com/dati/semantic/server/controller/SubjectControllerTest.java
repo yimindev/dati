@@ -39,7 +39,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WebMvcTest(SubjectController.class)
 @ActiveProfiles("test")
 @AutoConfigureMockMvc(addFilters = false)
-@DisplayName("SubjectController 集成测试")
+@DisplayName("SubjectController integration tests")
 class SubjectControllerTest {
 
     @Autowired
@@ -58,7 +58,7 @@ class SubjectControllerTest {
     private TableAssembler tableAssembler;
 
     @Test
-    @DisplayName("创建 Subject - 参数校验失败返回 400")
+    @DisplayName("Create Subject - validation failure returns 400")
     void createSubject_withInvalidRequest_shouldReturn400() throws Exception {
         CreateSubjectRequest request = new CreateSubjectRequest();
         request.setName("");
@@ -71,7 +71,7 @@ class SubjectControllerTest {
     }
 
     @Test
-    @DisplayName("创建 Subject - 成功返回 201")
+    @DisplayName("Create Subject - returns 201")
     void createSubject_shouldReturn201() throws Exception {
         CreateSubjectRequest request = new CreateSubjectRequest();
         request.setName("Test Subject");
@@ -105,7 +105,7 @@ class SubjectControllerTest {
     }
 
     @Test
-    @DisplayName("获取 Subject Tables - 分页 + keyword 返回 200")
+    @DisplayName("Get Subject Tables - paged + keyword returns 200")
     void getSubjectTables_shouldReturn200() throws Exception {
         TableInfo tableInfo = new TableInfo();
         tableInfo.setId("table-001");
@@ -145,7 +145,7 @@ class SubjectControllerTest {
     }
 
     @Test
-    @DisplayName("删除 Subject - 成功返回 200")
+    @DisplayName("Delete Subject - returns 200")
     void deleteSubject_shouldReturn200() throws Exception {
         doNothing().when(subjectService).deleteSubject("subject-001");
 
@@ -155,7 +155,7 @@ class SubjectControllerTest {
     }
 
     @Test
-    @DisplayName("添加 Table 到 Subject - 成功返回 200")
+    @DisplayName("Add Table to Subject - returns 200")
     void addTableToSubject_shouldReturn200() throws Exception {
         AddTableToSubjectRequest request = new AddTableToSubjectRequest();
         request.setTableId("table-001");
@@ -170,7 +170,7 @@ class SubjectControllerTest {
     }
 
     @Test
-    @DisplayName("删除 Subject 的 Table - 成功返回 200")
+    @DisplayName("Delete Subject Table - returns 200")
     void removeTableFromSubject_shouldReturn200() throws Exception {
         doNothing().when(subjectService).removeTableFromSubject("subject-001", "table-001");
 
@@ -180,7 +180,7 @@ class SubjectControllerTest {
     }
 
     @Test
-    @DisplayName("查询 Subject 列表 - 带 keyword 参数返回 200")
+    @DisplayName("Query Subject list - with keyword returns 200")
     void getSubjects_withKeyword_shouldReturn200() throws Exception {
         Subject subject = new Subject();
         subject.setId("subject-001");

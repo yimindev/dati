@@ -16,7 +16,7 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @ExtendWith(MockitoExtension.class)
-@DisplayName("SemanticSearchService 单元测试")
+@DisplayName("SemanticSearchService unit tests")
 class SemanticSearchServiceTest {
 
     @InjectMocks
@@ -41,7 +41,7 @@ class SemanticSearchServiceTest {
     }
 
     @Test
-    @DisplayName("匹配值 < 5 条时放在首位，随机值补齐到 5")
+    @DisplayName("matched values (< 5) placed first, random values fill up to 5")
     void matchedValuesLeadAndRandomFill() {
         List<SemanticSearchDocument> docs = List.of(
                 valueDoc("t1", "name", "Alice"),
@@ -63,7 +63,7 @@ class SemanticSearchServiceTest {
     }
 
     @Test
-    @DisplayName("匹配值 >= 5 条时丢弃随机值，仅保留匹配值")
+    @DisplayName("matched values (>= 5) drop random values, keep matches only")
     void matchedValuesOverFiveDiscardRandom() {
         List<SemanticSearchDocument> docs = List.of(
                 valueDoc("t1", "status", "A"), valueDoc("t1", "status", "B"),
@@ -79,7 +79,7 @@ class SemanticSearchServiceTest {
     }
 
     @Test
-    @DisplayName("无匹配值时保持原样")
+    @DisplayName("keeps values unchanged when no match")
     void noMatchesUnchanged() {
         List<TableMeta> metas = List.of(
                 meta("t1", "users", List.of(col("id", List.of("1", "2", "3", "4", "5")))));
@@ -91,7 +91,7 @@ class SemanticSearchServiceTest {
     }
 
     @Test
-    @DisplayName("多张表的匹配值各自合并")
+    @DisplayName("matched values from multiple tables merged separately")
     void multipleTablesEachOwnMatches() {
         List<SemanticSearchDocument> docs = List.of(
                 valueDoc("t1", "name", "Alice"),

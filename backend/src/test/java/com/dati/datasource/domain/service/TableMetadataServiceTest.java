@@ -23,7 +23,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-@DisplayName("TableMetadataService 单元测试")
+@DisplayName("TableMetadataService unit tests")
 class TableMetadataServiceTest {
 
     private static final String DS_ID = "ds-001";
@@ -73,7 +73,7 @@ class TableMetadataServiceTest {
     // ── tests ──
 
     @Test
-    @DisplayName("表存在且有列和维度值时返回完整元数据")
+    @DisplayName("table with columns and dimension values returns full metadata")
     void tableFoundWithColumnsAndValues() {
         when(tableInfoDAO.findByDataSourceId(DS_ID))
                 .thenReturn(List.of(table()));
@@ -112,7 +112,7 @@ class TableMetadataServiceTest {
     }
 
     @Test
-    @DisplayName("schema=null 匹配任意 schema 的表")
+    @DisplayName("schema=null matches tables of any schema")
     void nullSchemaMatchesAny() {
         when(tableInfoDAO.findByDataSourceId(DS_ID))
                 .thenReturn(List.of(table()));
@@ -129,7 +129,7 @@ class TableMetadataServiceTest {
     }
 
     @Test
-    @DisplayName("表存在但无维度值时列仍正常返回")
+    @DisplayName("table without dimension values still returns columns")
     void tableFoundWithoutValues() {
         when(tableInfoDAO.findByDataSourceId(DS_ID))
                 .thenReturn(List.of(table()));
@@ -147,7 +147,7 @@ class TableMetadataServiceTest {
     }
 
     @Test
-    @DisplayName("维度值超过 5 条时截断为 5")
+    @DisplayName("dimension values truncated to 5 when exceeding 5")
     void valuesTruncatedToFive() {
         when(tableInfoDAO.findByDataSourceId(DS_ID))
                 .thenReturn(List.of(table()));
@@ -173,7 +173,7 @@ class TableMetadataServiceTest {
     }
 
     @Test
-    @DisplayName("keyword 为空或 null 的文档被过滤")
+    @DisplayName("documents with empty or null keyword are filtered")
     void emptyKeywordsFiltered() {
         when(tableInfoDAO.findByDataSourceId(DS_ID))
                 .thenReturn(List.of(table()));
@@ -194,7 +194,7 @@ class TableMetadataServiceTest {
     }
 
     @Test
-    @DisplayName("表不存在时返回空")
+    @DisplayName("returns empty when table not found")
     void tableNotFound() {
         when(tableInfoDAO.findByDataSourceId(DS_ID))
                 .thenReturn(List.of());
@@ -206,7 +206,7 @@ class TableMetadataServiceTest {
     }
 
     @Test
-    @DisplayName("schema 不匹配时返回空")
+    @DisplayName("returns empty when schema does not match")
     void schemaMismatchReturnsEmpty() {
         when(tableInfoDAO.findByDataSourceId(DS_ID))
                 .thenReturn(List.of(table()));
@@ -218,7 +218,7 @@ class TableMetadataServiceTest {
     }
 
     @Test
-    @DisplayName("getTableMetasByIds - 批量查表含别名和列")
+    @DisplayName("getTableMetasByIds - batch query includes aliases and columns")
     void getTableMetasByIds_withAliasesAndColumns() {
         when(tableInfoDAO.findAllById(java.util.Set.of(TABLE_ID)))
                 .thenReturn(List.of(table()));

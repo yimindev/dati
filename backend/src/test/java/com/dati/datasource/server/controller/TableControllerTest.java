@@ -32,7 +32,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WebMvcTest(TableController.class)
 @ActiveProfiles("test")
 @AutoConfigureMockMvc(addFilters = false)
-@DisplayName("TableController 集成测试")
+@DisplayName("TableController integration tests")
 class TableControllerTest {
 
     @Autowired
@@ -55,7 +55,7 @@ class TableControllerTest {
     }
 
     @Test
-    @DisplayName("分页查询表 - 成功")
+    @DisplayName("Paged query tables - success")
     void getTables_shouldReturnPagedResults() throws Exception {
         // given
         Page<TableInfo> page = new PageImpl<>(List.of(testTableInfo));
@@ -81,7 +81,7 @@ class TableControllerTest {
     }
 
     @Test
-    @DisplayName("分页查询表 - 带关键词")
+    @DisplayName("Paged query tables - with keyword")
     void getTables_withKeyword_shouldReturnFilteredResults() throws Exception {
         // given
         Page<TableInfo> page = new PageImpl<>(List.of(testTableInfo));
@@ -105,7 +105,7 @@ class TableControllerTest {
     }
 
     @Test
-    @DisplayName("获取已添加的表名列表 - 成功")
+    @DisplayName("Get added table name list - success")
     void getAddedTableNames_shouldReturnTableNames() throws Exception {
         // given
         when(tableService.getAddedTableNames(TestFixtures.TEST_DATASOURCE_ID))
@@ -120,7 +120,7 @@ class TableControllerTest {
     }
 
     @Test
-    @DisplayName("批量添加表 - 成功")
+    @DisplayName("Batch add tables - success")
     void batchAddTables_shouldReturnCount() throws Exception {
         // given
         List<AddTableRequest> requests = List.of(
@@ -140,7 +140,7 @@ class TableControllerTest {
     }
 
     @Test
-    @DisplayName("批量添加表 - 空列表")
+    @DisplayName("Batch add tables - empty list")
     void batchAddTables_withEmptyList_shouldReturnZero() throws Exception {
         // given
         when(tableService.batchAddTables(eq(TestFixtures.TEST_DATASOURCE_ID), any()))
@@ -155,7 +155,7 @@ class TableControllerTest {
     }
 
     @Test
-    @DisplayName("删除表 - 成功")
+    @DisplayName("Delete table - success")
     void deleteTable_shouldReturnOk() throws Exception {
         // given
         doNothing().when(tableService).deleteTable(TestFixtures.TEST_TABLE_ID);
@@ -170,7 +170,7 @@ class TableControllerTest {
     }
 
     @Test
-    @DisplayName("删除表 - 验证datasourceId参数传递但不影响删除逻辑")
+    @DisplayName("Delete table - datasourceId param passed but does not affect deletion")
     void deleteTable_shouldIgnoreDatasourceId() throws Exception {
         // given
         doNothing().when(tableService).deleteTable(TestFixtures.TEST_TABLE_ID);

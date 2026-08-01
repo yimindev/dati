@@ -42,7 +42,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-@DisplayName("ColumnService 单元测试")
+@DisplayName("ColumnService unit tests")
 class ColumnServiceTest {
 
     @Mock
@@ -72,7 +72,7 @@ class ColumnServiceTest {
     }
 
     @Test
-    @DisplayName("分页查询列 - 无关键词")
+    @DisplayName("Paged query columns - without keyword")
     void getColumns_withoutKeyword() {
         // given
         PageReq pageReq = new PageReq();
@@ -92,7 +92,7 @@ class ColumnServiceTest {
     }
 
     @Test
-    @DisplayName("分页查询列 - 有关键词")
+    @DisplayName("Paged query columns - with keyword")
     void getColumns_withKeyword() {
         // given
         PageReq pageReq = new PageReq();
@@ -111,7 +111,7 @@ class ColumnServiceTest {
     }
 
     @Test
-    @DisplayName("更新列 - 成功")
+    @DisplayName("Update column - success")
     void updateColumn_shouldUpdateSuccessfully() {
         // given
         ColumnInfoPO existingPO = TestFixtures.createTestColumnInfoPO();
@@ -150,7 +150,7 @@ class ColumnServiceTest {
     }
 
     @Test
-    @DisplayName("更新列 - 禁用值匹配时清理 FIELD_VALUE 类型数据")
+    @DisplayName("Update column - clears FIELD_VALUE data when value matching disabled")
     void updateColumn_disableValueMatching_shouldClearFieldValues() {
         // given
         ColumnInfoPO existingPO = TestFixtures.createTestColumnInfoPO();
@@ -173,7 +173,7 @@ class ColumnServiceTest {
     }
 
     @Test
-    @DisplayName("更新列 - 保持禁用时不清除数据")
+    @DisplayName("Update column - keeps data when staying disabled")
     void updateColumn_keepDisabled_shouldNotClearValues() {
         // given
         ColumnInfoPO existingPO = TestFixtures.createTestColumnInfoPO();
@@ -196,7 +196,7 @@ class ColumnServiceTest {
     }
 
     @Test
-    @DisplayName("更新列 - 列不存在时抛出异常")
+    @DisplayName("Update column - throws when column not found")
     void updateColumn_shouldThrowWhenNotFound() {
         // given
         when(columnInfoDAO.findById(TestFixtures.TEST_COLUMN_ID)).thenReturn(Optional.empty());
@@ -209,7 +209,7 @@ class ColumnServiceTest {
     }
 
     @Test
-    @DisplayName("同步列 - 成功")
+    @DisplayName("Sync columns - success")
     void syncColumns_shouldSyncSuccessfully() throws SQLException {
         // given
         when(tableInfoDAO.findById(TestFixtures.TEST_TABLE_ID)).thenReturn(Optional.of(testTableInfoPO));
@@ -243,7 +243,7 @@ class ColumnServiceTest {
     }
 
     @Test
-    @DisplayName("同步列 - 表不存在时抛出异常")
+    @DisplayName("Sync columns - throws when table not found")
     void syncColumns_shouldThrowWhenTableNotFound() {
         // given
         when(tableInfoDAO.findById(TestFixtures.TEST_TABLE_ID)).thenReturn(Optional.empty());
@@ -257,7 +257,7 @@ class ColumnServiceTest {
     }
 
     @Test
-    @DisplayName("同步列 - 数据源获取列失败时抛出异常")
+    @DisplayName("Sync columns - throws when datasource column fetch fails")
     void syncColumns_shouldThrowWhenDataSourceFails() throws SQLException {
         // given
         when(tableInfoDAO.findById(TestFixtures.TEST_TABLE_ID)).thenReturn(Optional.of(testTableInfoPO));
@@ -271,7 +271,7 @@ class ColumnServiceTest {
     }
 
     @Test
-    @DisplayName("同步列 - 无用户时应处理空用户")
+    @DisplayName("Sync columns - handles empty user")
     void syncColumns_shouldHandleNullUser() throws SQLException {
         // given
         when(tableInfoDAO.findById(TestFixtures.TEST_TABLE_ID)).thenReturn(Optional.of(testTableInfoPO));
@@ -299,7 +299,7 @@ class ColumnServiceTest {
     }
 
     @Test
-    @DisplayName("同步列 - DB comment 为空时应保留旧的 description（flag=true）")
+    @DisplayName("Sync columns - keeps old description when DB comment empty (flag=true)")
     void syncColumns_shouldPreserveOldDescriptionWhenDbCommentEmptyEvenIfFlagTrue() throws SQLException {
         // given
         when(tableInfoDAO.findById(TestFixtures.TEST_TABLE_ID)).thenReturn(Optional.of(testTableInfoPO));
@@ -339,7 +339,7 @@ class ColumnServiceTest {
     }
 
     @Test
-    @DisplayName("同步列 - 已存在列 + flag=true + DB comment 有内容时应用 DB comment 覆盖")
+    @DisplayName("Sync columns - existing column + flag=true + DB comment present applies DB comment")
     void syncColumns_shouldOverwriteWhenFlagTrueAndDbCommentExists() throws SQLException {
         // given
         when(tableInfoDAO.findById(TestFixtures.TEST_TABLE_ID)).thenReturn(Optional.of(testTableInfoPO));
@@ -379,7 +379,7 @@ class ColumnServiceTest {
     }
 
     @Test
-    @DisplayName("同步列 - 已存在列 + flag=false 时应保留旧的 description")
+    @DisplayName("Sync columns - existing column + flag=false keeps old description")
     void syncColumns_shouldPreserveWhenFlagFalse() throws SQLException {
         // given
         when(tableInfoDAO.findById(TestFixtures.TEST_TABLE_ID)).thenReturn(Optional.of(testTableInfoPO));
@@ -419,7 +419,7 @@ class ColumnServiceTest {
     }
 
     @Test
-    @DisplayName("同步列 - 新列时无论 flag 值都使用 DB comment")
+    @DisplayName("Sync columns - new column always uses DB comment regardless of flag")
     void syncColumns_newColumn_shouldUseDbCommentRegardlessOfFlag() throws SQLException {
         // given
         when(tableInfoDAO.findById(TestFixtures.TEST_TABLE_ID)).thenReturn(Optional.of(testTableInfoPO));

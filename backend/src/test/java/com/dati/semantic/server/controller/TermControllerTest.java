@@ -38,7 +38,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WebMvcTest(TermController.class)
 @ActiveProfiles("test")
 @AutoConfigureMockMvc(addFilters = false)
-@DisplayName("TermController 集成测试")
+@DisplayName("TermController integration tests")
 class TermControllerTest {
 
     @Autowired
@@ -54,7 +54,7 @@ class TermControllerTest {
     private TermAssembler termAssembler;
 
     @Test
-    @DisplayName("创建 Term - 成功返回 201")
+    @DisplayName("Create Term - returns 201")
     void createTerm_shouldReturn201() throws Exception {
         CreateTermRequest request = new CreateTermRequest();
         request.setName("Test Term");
@@ -87,7 +87,7 @@ class TermControllerTest {
     }
 
     @Test
-    @DisplayName("获取 Term - 成功返回 200")
+    @DisplayName("Get Term - returns 200")
     void getTerm_shouldReturn200() throws Exception {
         Term term = new Term();
         term.setId("term-001");
@@ -137,7 +137,7 @@ class TermControllerTest {
     }
 
     @Test
-    @DisplayName("删除 Term - 成功返回 200")
+    @DisplayName("Delete Term - returns 200")
     void deleteTerm_shouldReturn200() throws Exception {
         doNothing().when(termService).deleteTerm("term-001");
 
@@ -147,7 +147,7 @@ class TermControllerTest {
     }
 
     @Test
-    @DisplayName("更新 Term - 成功返回 200")
+    @DisplayName("Update Term - returns 200")
     void updateTerm_shouldReturn200() throws Exception {
         com.dati.semantic.server.pojo.request.UpdateTermRequest request = new com.dati.semantic.server.pojo.request.UpdateTermRequest();
         request.setName("Updated Term");
@@ -180,7 +180,7 @@ class TermControllerTest {
     }
 
     @Test
-    @DisplayName("关联 Term 关系 - 成功返回 200")
+    @DisplayName("Link Term relation - returns 200")
     void linkTermRelation_shouldReturn200() throws Exception {
         com.dati.semantic.server.pojo.request.LinkTermRelationRequest request = new com.dati.semantic.server.pojo.request.LinkTermRelationRequest();
         request.setEntityType(com.dati.semantic.domain.SemanticEntityType.FIELD);
@@ -197,7 +197,7 @@ class TermControllerTest {
     }
 
     @Test
-    @DisplayName("取消关联 Term 关系 - 成功返回 200")
+    @DisplayName("Unlink Term relation - returns 200")
     void unlinkTermRelation_shouldReturn200() throws Exception {
         doNothing().when(termService).unlinkEntity(anyString(), anyString(), anyString());
 
@@ -207,7 +207,7 @@ class TermControllerTest {
     }
 
     @Test
-    @DisplayName("获取 Subject 下的 Terms - 分页 + keyword 返回 200")
+    @DisplayName("Get Terms of Subject - paged + keyword returns 200")
     void getTermsBySubject_shouldReturn200() throws Exception {
         Term term1 = new Term();
         term1.setId("term-001");

@@ -44,7 +44,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-@DisplayName("DataSourceService 单元测试")
+@DisplayName("DataSourceService unit tests")
 class DataSourceServiceTest {
 
     @Mock
@@ -75,7 +75,7 @@ class DataSourceServiceTest {
     }
 
     @Test
-    @DisplayName("添加数据源 - 成功，探测真实 schema 并单次保存")
+    @DisplayName("Add data source - success, probes real schema and saves once")
     void addDataSource_shouldReturnId() throws SQLException {
         // given
         ArgumentCaptor<DataSourcePO> captor = ArgumentCaptor.forClass(DataSourcePO.class);
@@ -93,7 +93,7 @@ class DataSourceServiceTest {
     }
 
     @Test
-    @DisplayName("添加数据源 - 忽略客户端传入的伪造 defaultSchema，使用真实探测结果")
+    @DisplayName("Add data source - ignores forged defaultSchema, uses real probe result")
     void addDataSource_shouldIgnoreClientSuppliedFakeSchema() throws SQLException {
         // given：TestFixtures 中的 testDataSource 自带 defaultSchema="public"，属于客户端伪造值
         ArgumentCaptor<DataSourcePO> captor = ArgumentCaptor.forClass(DataSourcePO.class);
@@ -110,7 +110,7 @@ class DataSourceServiceTest {
     }
 
     @Test
-    @DisplayName("添加数据源 - SQLException 转为 DatiException，且不保存")
+    @DisplayName("Add data source - SQLException converts to DatiException, not saved")
     void addDataSource_shouldThrowDatiException_whenSQLException() throws SQLException {
         // given
         when(jdbcMetaService.resolveCurrentSchema(any(JdbcConnector.class), eq(DbType.MYSQL)))
@@ -122,7 +122,7 @@ class DataSourceServiceTest {
     }
 
     @Test
-    @DisplayName("添加数据源 - Hikari 连接初始化失败等价路径转为 DatiException，且不保存")
+    @DisplayName("Add data source - Hikari init failure path converts to DatiException, not saved")
     void addDataSource_shouldThrowDatiException_whenConnectionInitializationFails() throws SQLException {
         // given：等价于 HikariPoolManager 将连接池初始化失败转换后的 SQLException
         when(jdbcMetaService.resolveCurrentSchema(any(JdbcConnector.class), eq(DbType.MYSQL)))
@@ -134,7 +134,7 @@ class DataSourceServiceTest {
     }
 
     @Test
-    @DisplayName("添加数据源 - 不支持的数据库类型转为 DatiException，且不保存")
+    @DisplayName("Add data source - unsupported DB type converts to DatiException, not saved")
     void addDataSource_shouldThrowDatiException_whenUnsupportedType() throws SQLException {
         // given
         when(jdbcMetaService.resolveCurrentSchema(any(JdbcConnector.class), eq(DbType.MYSQL)))
@@ -146,7 +146,7 @@ class DataSourceServiceTest {
     }
 
     @Test
-    @DisplayName("添加数据源 - 探测结果为 null 时转为 DatiException，且不保存")
+    @DisplayName("Add data source - null probe result converts to DatiException, not saved")
     void addDataSource_shouldThrowDatiException_whenSchemaIsNull() throws SQLException {
         // given
         when(jdbcMetaService.resolveCurrentSchema(any(JdbcConnector.class), eq(DbType.MYSQL)))
@@ -158,7 +158,7 @@ class DataSourceServiceTest {
     }
 
     @Test
-    @DisplayName("添加数据源 - 探测结果为空字符串时转为 DatiException，且不保存")
+    @DisplayName("Add data source - blank probe result converts to DatiException, not saved")
     void addDataSource_shouldThrowDatiException_whenSchemaIsEmpty() throws SQLException {
         // given
         when(jdbcMetaService.resolveCurrentSchema(any(JdbcConnector.class), eq(DbType.MYSQL)))
@@ -170,7 +170,7 @@ class DataSourceServiceTest {
     }
 
     @Test
-    @DisplayName("更新数据源 - 成功")
+    @DisplayName("Update data source - success")
     void updateDataSource_shouldUpdateSuccessfully() {
         // given
         when(dataSourceDAO.findById(TestFixtures.TEST_DATASOURCE_ID)).thenReturn(Optional.of(testDataSourcePO));
@@ -185,7 +185,7 @@ class DataSourceServiceTest {
     }
 
     @Test
-    @DisplayName("更新数据源 - 数据源不存在时抛出 DS_NOT_FOUND 异常")
+    @DisplayName("Update data source - throws DS_NOT_FOUND when not found")
     void updateDataSource_shouldThrowWhenNotFound() {
         // given
         when(dataSourceDAO.findById(TestFixtures.TEST_DATASOURCE_ID)).thenReturn(Optional.empty());
@@ -199,7 +199,7 @@ class DataSourceServiceTest {
     }
 
     @Test
-    @DisplayName("删除数据源 - 成功，无关联表")
+    @DisplayName("Delete data source - success, no linked tables")
     void deleteDataSource_shouldDeleteSuccessfully_withNoTables() {
         // given
         when(dataSourceDAO.findById(TestFixtures.TEST_DATASOURCE_ID)).thenReturn(Optional.of(testDataSourcePO));
@@ -217,7 +217,7 @@ class DataSourceServiceTest {
     }
 
     @Test
-    @DisplayName("删除数据源 - 成功，有关联表")
+    @DisplayName("Delete data source - success, with linked tables")
     void deleteDataSource_shouldDeleteSuccessfully_withTables() {
         // given
         TableInfoPO tableInfoPO = TestFixtures.createTestTableInfoPO();
@@ -237,7 +237,7 @@ class DataSourceServiceTest {
     }
 
     @Test
-    @DisplayName("删除数据源 - 不存在时抛出 DS_NOT_FOUND 异常")
+    @DisplayName("Delete data source - throws DS_NOT_FOUND when not found")
     void deleteDataSource_shouldThrowWhenNotFound() {
         // given
         when(dataSourceDAO.findById(TestFixtures.TEST_DATASOURCE_ID)).thenReturn(Optional.empty());
@@ -251,7 +251,7 @@ class DataSourceServiceTest {
     }
 
     @Test
-    @DisplayName("分页查询数据源 - 无关键词")
+    @DisplayName("Paged query data sources - without keyword")
     void listDataSources_withoutKeyword() {
         // given
         Pageable pageable = PageRequest.of(0, 10);
@@ -268,7 +268,7 @@ class DataSourceServiceTest {
     }
 
     @Test
-    @DisplayName("分页查询数据源 - 有关键词")
+    @DisplayName("Paged query data sources - with keyword")
     void listDataSources_withKeyword() {
         // given
         Pageable pageable = PageRequest.of(0, 10);
@@ -284,7 +284,7 @@ class DataSourceServiceTest {
     }
 
     @Test
-    @DisplayName("获取单个数据源 - 成功返回带 defaultSchema")
+    @DisplayName("Get single data source - success returns defaultSchema")
     void getDataSource_shouldReturnWithDefaultSchema() {
         testDataSourcePO.setDefaultSchema("public");
         when(dataSourceDAO.findById(TestFixtures.TEST_DATASOURCE_ID)).thenReturn(Optional.of(testDataSourcePO));
@@ -295,7 +295,7 @@ class DataSourceServiceTest {
     }
 
     @Test
-    @DisplayName("获取单个数据源 - 不存在时返回空 Optional")
+    @DisplayName("Get single data source - returns empty Optional when not found")
     void getDataSource_shouldReturnEmptyWhenNotFound() {
         when(dataSourceDAO.findById(TestFixtures.TEST_DATASOURCE_ID)).thenReturn(Optional.empty());
 
@@ -304,7 +304,7 @@ class DataSourceServiceTest {
     }
 
     @Test
-    @DisplayName("批量获取数据源名称映射 - 按 ID 查询")
+    @DisplayName("Batch get datasource name map - queries by IDs")
     void getDataSourceNameMap_shouldReturnIdToNameMap() {
         DataSourcePO po1 = new DataSourcePO();
         po1.setId("ds-1");
@@ -324,14 +324,14 @@ class DataSourceServiceTest {
     }
 
     @Test
-    @DisplayName("批量获取数据源名称映射 - 空集合返回空 Map")
+    @DisplayName("Batch get datasource name map - empty set returns empty map")
     void getDataSourceNameMap_withEmptyIds_shouldReturnEmptyMap() {
         Map<String, String> result = dataSourceService.getDataSourceNameMap(List.of());
         assertThat(result).isEmpty();
     }
 
     @Test
-    @DisplayName("测试连接 - 成功")
+    @DisplayName("Test connection - success")
     void testConnection_shouldReturnTrue() {
         // given
         JdbcConnector connector = new JdbcConnector(testDataSource);
@@ -348,7 +348,7 @@ class DataSourceServiceTest {
     }
 
     @Test
-    @DisplayName("更新数据源 - URL 变化时重新探测 defaultSchema，并单次保存")
+    @DisplayName("Update data source - re-probes defaultSchema on URL change, saves once")
     void updateDataSource_reDetectsWhenUrlChanges() throws SQLException {
         testDataSourcePO.setJdbcUrl("jdbc:mysql://old-host:3306/db");
         testDataSource.setJdbcUrl("jdbc:mysql://new-host:3306/db");
@@ -369,7 +369,7 @@ class DataSourceServiceTest {
     }
 
     @Test
-    @DisplayName("更新数据源 - username 变化时重新探测 defaultSchema")
+    @DisplayName("Update data source - re-probes defaultSchema on username change")
     void updateDataSource_reDetectsWhenUsernameChanges() throws SQLException {
         testDataSource.setUsername("new_user");
         when(dataSourceDAO.findById(TestFixtures.TEST_DATASOURCE_ID)).thenReturn(Optional.of(testDataSourcePO));
@@ -386,7 +386,7 @@ class DataSourceServiceTest {
     }
 
     @Test
-    @DisplayName("更新数据源 - password 变化时重新探测 defaultSchema")
+    @DisplayName("Update data source - re-probes defaultSchema on password change")
     void updateDataSource_reDetectsWhenPasswordChanges() throws SQLException {
         testDataSource.setPassword("new_password");
         when(dataSourceDAO.findById(TestFixtures.TEST_DATASOURCE_ID)).thenReturn(Optional.of(testDataSourcePO));
@@ -403,7 +403,7 @@ class DataSourceServiceTest {
     }
 
     @Test
-    @DisplayName("更新数据源 - type 变化时重新探测 defaultSchema")
+    @DisplayName("Update data source - re-probes defaultSchema on type change")
     void updateDataSource_reDetectsWhenTypeChanges() throws SQLException {
         testDataSource.setType(DbType.POSTGRESQL);
         when(dataSourceDAO.findById(TestFixtures.TEST_DATASOURCE_ID)).thenReturn(Optional.of(testDataSourcePO));
@@ -420,7 +420,7 @@ class DataSourceServiceTest {
     }
 
     @Test
-    @DisplayName("更新数据源 - 非连接字段变化时不探测、不关闭连接池")
+    @DisplayName("Update data source - non-connection field change: no probe, pool kept")
     void updateDataSource_doesNotDetect_whenOnlyNonConnectionFieldsChange() {
         testDataSource.setName("Renamed Source");
         testDataSource.setDescription("new description");
@@ -436,7 +436,7 @@ class DataSourceServiceTest {
     }
 
     @Test
-    @DisplayName("更新数据源 - 连接信息探测失败(SQLException)时不修改、不保存原数据")
+    @DisplayName("Update data source - probe failure (SQLException): no modify, no save")
     void updateDataSource_shouldNotSave_whenDetectionThrowsSQLException() throws SQLException {
         testDataSource.setJdbcUrl("jdbc:mysql://new-host:3306/db");
         String originalJdbcUrl = testDataSourcePO.getJdbcUrl();
@@ -452,7 +452,7 @@ class DataSourceServiceTest {
     }
 
     @Test
-    @DisplayName("更新数据源 - 不支持的数据库类型时不修改、不保存原数据")
+    @DisplayName("Update data source - unsupported DB type: no modify, no save")
     void updateDataSource_shouldNotSave_whenDetectionThrowsUnsupportedType() throws SQLException {
         testDataSource.setType(DbType.POSTGRESQL);
         when(dataSourceDAO.findById(TestFixtures.TEST_DATASOURCE_ID)).thenReturn(Optional.of(testDataSourcePO));
@@ -466,7 +466,7 @@ class DataSourceServiceTest {
     }
 
     @Test
-    @DisplayName("更新数据源 - 探测结果为空时不修改、不保存原数据")
+    @DisplayName("Update data source - empty probe result: no modify, no save")
     void updateDataSource_shouldNotSave_whenSchemaIsBlank() throws SQLException {
         testDataSource.setJdbcUrl("jdbc:mysql://new-host:3306/db");
         when(dataSourceDAO.findById(TestFixtures.TEST_DATASOURCE_ID)).thenReturn(Optional.of(testDataSourcePO));
@@ -480,7 +480,7 @@ class DataSourceServiceTest {
     }
 
     @Test
-    @DisplayName("更新数据源 - 探测成功后使用变更前的旧凭据关闭旧连接池")
+    @DisplayName("Update data source - closes old pool with pre-change credentials after probe")
     void updateDataSource_closesOldPool_withOldCredentials() throws SQLException {
         JdbcConnector expectedOldConnector = new JdbcConnector(
             testDataSourcePO.getJdbcUrl(), testDataSourcePO.getUserName(), testDataSourcePO.getEncryptedPassword());
@@ -498,7 +498,7 @@ class DataSourceServiceTest {
     }
 
     @Test
-    @DisplayName("更新数据源 - 保存失败时不关闭旧连接池")
+    @DisplayName("Update data source - keeps old pool open when save fails")
     void updateDataSource_doesNotClosePool_whenSaveFails() throws SQLException {
         testDataSource.setJdbcUrl("jdbc:mysql://new-host:3306/db");
         when(dataSourceDAO.findById(TestFixtures.TEST_DATASOURCE_ID)).thenReturn(Optional.of(testDataSourcePO));

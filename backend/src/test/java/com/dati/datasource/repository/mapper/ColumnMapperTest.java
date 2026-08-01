@@ -10,11 +10,11 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@DisplayName("ColumnMapper 单元测试")
+@DisplayName("ColumnMapper unit tests")
 class ColumnMapperTest {
 
     @Test
-    @DisplayName("测试 extractValueEnabled 字段转换 - PO 到 Model")
+    @DisplayName("extractValueEnabled field conversion - PO to Model")
     void testColumnInfoExtractValueFields() {
         ColumnInfoPO po = new ColumnInfoPO();
         po.setExtractValueEnabled(true);
@@ -25,7 +25,7 @@ class ColumnMapperTest {
     }
 
     @Test
-    @DisplayName("测试 extractValueEnabled 字段转换 - Model 到 PO")
+    @DisplayName("extractValueEnabled field conversion - Model to PO")
     void testColumnInfoPOExtractValueFields() {
         ColumnInfo info = new ColumnInfo();
         info.setExtractValueEnabled(true);
@@ -36,7 +36,7 @@ class ColumnMapperTest {
     }
 
     @Test
-    @DisplayName("测试默认值转换 - PO 到 Model")
+    @DisplayName("default value conversion - PO to Model")
     void testDefaultValuesToModel() {
         ColumnInfoPO po = new ColumnInfoPO();
 
@@ -47,7 +47,7 @@ class ColumnMapperTest {
     }
 
     @Test
-    @DisplayName("测试默认值转换 - Model 到 PO")
+    @DisplayName("default value conversion - Model to PO")
     void testDefaultValuesToPO() {
         ColumnInfo info = new ColumnInfo();
 

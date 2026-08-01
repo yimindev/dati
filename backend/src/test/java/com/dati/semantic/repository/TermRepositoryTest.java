@@ -18,7 +18,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 @DataJpaTest
 @ActiveProfiles("test")
-@DisplayName("TermRepository 测试")
+@DisplayName("TermRepository tests")
 class TermRepositoryTest {
 
     @Autowired
@@ -28,7 +28,7 @@ class TermRepositoryTest {
     private TermRelationDAO termRelationDAO;
 
     @Test
-    @DisplayName("保存 TermPO - 成功")
+    @DisplayName("Save TermPO - success")
     void save_shouldPersistTermPO() {
         TermPO termPO = new TermPO();
         termPO.setSubjectId("test-subject-id");
@@ -44,7 +44,7 @@ class TermRepositoryTest {
     }
 
     @Test
-    @DisplayName("保存 TermRelationPO - 成功")
+    @DisplayName("Save TermRelationPO - success")
     void save_shouldPersistTermRelationPO() {
         TermRelationPO termRelationPO = new TermRelationPO();
         termRelationPO.setTermId("test-term-id");
@@ -60,7 +60,7 @@ class TermRepositoryTest {
     }
 
     @Test
-    @DisplayName("根据 termId 查询 TermRelationPO - 成功")
+    @DisplayName("Query TermRelationPO by termId - success")
     void findByTermId_shouldReturnTermRelationPO() {
         TermRelationPO termRelationPO = new TermRelationPO();
         termRelationPO.setTermId("term-456");
@@ -77,7 +77,7 @@ class TermRepositoryTest {
     }
 
     @Test
-    @DisplayName("根据 termId 和 tableId 和 fieldName 查询 - 成功")
+    @DisplayName("Query by termId and tableId and fieldName - success")
     void findByTermIdAndTableIdAndFieldName_shouldReturnTermRelationPO() {
         TermRelationPO termRelationPO = new TermRelationPO();
         termRelationPO.setTermId("term-789");
@@ -94,7 +94,7 @@ class TermRepositoryTest {
     }
 
     @Test
-    @DisplayName("根据 termId 和 tableId 查询 - 成功")
+    @DisplayName("Query by termId and tableId - success")
     void findByTermIdAndTableId_shouldReturnTermRelationPO() {
         TermRelationPO termRelationPO = new TermRelationPO();
         termRelationPO.setTermId("term-999");
@@ -109,7 +109,7 @@ class TermRepositoryTest {
     }
 
     @Test
-    @DisplayName("删除 TermRelationPO by termId - 成功")
+    @DisplayName("Delete TermRelationPO by termId - success")
     void deleteByTermId_shouldRemoveTermRelationPO() {
         TermRelationPO termRelationPO = new TermRelationPO();
         termRelationPO.setTermId("term-to-delete");
@@ -124,7 +124,7 @@ class TermRepositoryTest {
     }
 
     @Test
-    @DisplayName("删除 TermRelationPO by termId and tableId - 成功")
+    @DisplayName("Delete TermRelationPO by termId and tableId - success")
     void deleteByTermIdAndTableId_shouldRemoveTermRelationPO() {
         TermRelationPO termRelationPO = new TermRelationPO();
         termRelationPO.setTermId("term-to-delete-2");

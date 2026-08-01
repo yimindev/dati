@@ -32,7 +32,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-@DisplayName("TermService 单元测试")
+@DisplayName("TermService unit tests")
 class TermServiceTest {
 
     @Mock
@@ -51,7 +51,7 @@ class TermServiceTest {
     private TermService termService;
 
     @Test
-    @DisplayName("createTerm - 应保存Term到DB并索引到ES")
+    @DisplayName("createTerm - saves Term to DB and indexes to ES")
     void createTerm_shouldSaveToDbAndIndexToES() {
         String subjectId = "subject-001";
         String name = "客户";
@@ -83,7 +83,7 @@ class TermServiceTest {
     }
 
     @Test
-    @DisplayName("linkEntity - entityType=FIELD但fieldName为空应抛出异常")
+    @DisplayName("linkEntity - throws when entityType=FIELD but fieldName is empty")
     void linkEntity_shouldThrowWhenFieldTypeWithoutFieldName() {
         String termId = "term-001";
         String tableId = "table-001";
@@ -100,7 +100,7 @@ class TermServiceTest {
     }
 
     @Test
-    @DisplayName("unlinkEntity - fieldName为null应删除TABLE级别关联")
+    @DisplayName("unlinkEntity - null fieldName deletes TABLE-level relation")
     void unlinkEntity_shouldDeleteTableRelation() {
         String termId = "term-001";
         String tableId = "table-001";
@@ -111,7 +111,7 @@ class TermServiceTest {
     }
 
     @Test
-    @DisplayName("unlinkEntity - fieldName非空应删除FIELD级别关联")
+    @DisplayName("unlinkEntity - non-empty fieldName deletes FIELD-level relation")
     void unlinkEntity_shouldDeleteFieldRelation() {
         String termId = "term-001";
         String tableId = "table-001";
@@ -133,7 +133,7 @@ class TermServiceTest {
     }
 
     @Test
-    @DisplayName("getTermsBySubject - keyword 非空时应按 ID 前缀或名称模糊匹配")
+    @DisplayName("getTermsBySubject - non-empty keyword matches by ID prefix or name")
     void getTermsBySubject_withKeyword_shouldReturnMatchingTerms() {
         String subjectId = "subject-001";
         String keyword = "客户";
@@ -157,7 +157,7 @@ class TermServiceTest {
     }
 
     @Test
-    @DisplayName("getTermsBySubject - keyword 为空时应查所有")
+    @DisplayName("getTermsBySubject - empty keyword queries all")
     void getTermsBySubject_withNullKeyword_shouldReturnAll() {
         String subjectId = "subject-001";
         Pageable pageable = PageRequest.of(0, 10);
@@ -185,7 +185,7 @@ class TermServiceTest {
     }
 
     @Test
-    @DisplayName("getTermsWithSubject - 批量查术语跨主题")
+    @DisplayName("getTermsWithSubject - batch query terms across subjects")
     void getTermsWithSubject_multipleSubjects() {
         TermPO t1 = new TermPO();
         t1.setId("t1"); t1.setSubjectId("s1"); t1.setName("活跃用户");

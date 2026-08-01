@@ -12,7 +12,7 @@ class ColumnAssemblerTest {
     private final ColumnAssembler columnAssembler = new ColumnAssembler();
 
     @Test
-    @DisplayName("测试 extractValueEnabled 字段转换 - Model 到 VO")
+    @DisplayName("extractValueEnabled field conversion - Model to VO")
     void testAssemblerWithExtractValueFields() {
         ColumnInfo info = new ColumnInfo();
         info.setExtractValueEnabled(true);
@@ -22,7 +22,7 @@ class ColumnAssemblerTest {
     }
 
     @Test
-    @DisplayName("测试 extractValueEnabled 字段转换 - VO 到 Model")
+    @DisplayName("extractValueEnabled field conversion - VO to Model")
     void testAssemblerWithExtractValueFieldsReverse() {
         ColumnInfoVO vo = new ColumnInfoVO();
         vo.setExtractValueEnabled(true);

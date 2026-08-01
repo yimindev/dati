@@ -40,7 +40,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-@DisplayName("TableService 单元测试")
+@DisplayName("TableService unit tests")
 class TableServiceTest {
 
     @Mock
@@ -66,7 +66,7 @@ class TableServiceTest {
     }
 
     @Test
-    @DisplayName("分页查询表 - 无关键词")
+    @DisplayName("Paged query tables - without keyword")
     void getTables_withoutKeyword() {
         // given
         PageReq pageReq = new PageReq();
@@ -86,7 +86,7 @@ class TableServiceTest {
     }
 
     @Test
-    @DisplayName("分页查询表 - 有关键词")
+    @DisplayName("Paged query tables - with keyword")
     void getTables_withKeyword() {
         // given
         PageReq pageReq = new PageReq();
@@ -106,7 +106,7 @@ class TableServiceTest {
     }
 
     @Test
-    @DisplayName("获取已添加的表名列表")
+    @DisplayName("Get added table name list")
     void getAddedTableNames_shouldReturnTableNames() {
         // given
         when(tableInfoDAO.findByDataSourceId(TestFixtures.TEST_DATASOURCE_ID))
@@ -120,7 +120,7 @@ class TableServiceTest {
     }
 
     @Test
-    @DisplayName("批量添加表 - 成功")
+    @DisplayName("Batch add tables - success")
     void batchAddTables_shouldAddTablesWithColumns() throws SQLException {
         // given
         when(jdbcMetaService.getTables(TestFixtures.TEST_DATASOURCE_ID, null, "public"))
@@ -158,7 +158,7 @@ class TableServiceTest {
     }
 
     @Test
-    @DisplayName("批量添加表 - 同步列失败时应抛出异常")
+    @DisplayName("Batch add tables - throws when column sync fails")
     void batchAddTables_shouldThrowWhenSyncColumnsFails() throws SQLException {
         // given
         AddTableRequest request = new AddTableRequest();
@@ -186,7 +186,7 @@ class TableServiceTest {
     }
 
     @Test
-    @DisplayName("批量添加表 - 空列表应返回空结果")
+    @DisplayName("Batch add tables - empty list returns empty result")
     void batchAddTables_withEmptyList_shouldReturnEmpty() {
         // when
         List<String> result = tableService.batchAddTables(TestFixtures.TEST_DATASOURCE_ID, Collections.emptyList());
@@ -197,7 +197,7 @@ class TableServiceTest {
     }
 
     @Test
-    @DisplayName("删除表 - 成功")
+    @DisplayName("Delete table - success")
     void deleteTable_shouldDeleteTableAndColumnsAndESDocuments() {
         // given
         when(tableInfoDAO.existsById(TestFixtures.TEST_TABLE_ID)).thenReturn(true);
@@ -212,7 +212,7 @@ class TableServiceTest {
     }
 
     @Test
-    @DisplayName("批量删除表 - 成功")
+    @DisplayName("Batch delete tables - success")
     void deleteTables_shouldDeleteTablesAndColumnsAndESDocuments() {
         // given
         List<String> tableIds = List.of(TestFixtures.TEST_TABLE_ID, "table_2");
@@ -227,7 +227,7 @@ class TableServiceTest {
     }
 
     @Test
-    @DisplayName("批量删除表 - 空列表")
+    @DisplayName("Batch delete tables - empty list")
     void deleteTables_withEmptyList_shouldNotCallDAO() {
         // when
         tableService.deleteTables(Collections.emptyList());

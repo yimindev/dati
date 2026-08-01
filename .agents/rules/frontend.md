@@ -183,6 +183,11 @@ export const useXxxStore = defineStore('xxx', () => {
 
 Every async operation: try/catch with `console.error` + `ElMessage.error`. Always `finally { loading.value = false }`.
 
+## Console Logging
+
+- `console.error` / `console.log` messages use **English only** — never Chinese (logs are developer-facing artifacts).
+- User-facing text always goes through i18n `t('key')`, never hardcoded in logs.
+
 ## Key Rules Summary
 
 | Rule | Detail |

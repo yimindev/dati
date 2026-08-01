@@ -39,7 +39,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-@DisplayName("ColumnValueService 单元测试")
+@DisplayName("ColumnValueService unit tests")
 class ColumnValueServiceTest {
 
     @Mock
@@ -99,7 +99,7 @@ class ColumnValueServiceTest {
     class ExtractValuesTests {
 
         @Test
-        @DisplayName("正常流程：提取多个不重复值，生成对应 ES 文档")
+        @DisplayName("normal flow: extracts multiple distinct values and creates ES documents")
         void extractValues_normalCase() throws SQLException {
             when(columnInfoDAO.findById("col1")).thenReturn(Optional.of(testColumnPO));
             when(tableInfoDAO.findById("table1")).thenReturn(Optional.of(testTablePO));
@@ -120,7 +120,7 @@ class ColumnValueServiceTest {
         }
 
         @Test
-        @DisplayName("跳过 null 值")
+        @DisplayName("skips null values")
         void extractValues_skipsNullValues() throws SQLException {
             when(columnInfoDAO.findById("col1")).thenReturn(Optional.of(testColumnPO));
             when(tableInfoDAO.findById("table1")).thenReturn(Optional.of(testTablePO));
@@ -138,7 +138,7 @@ class ColumnValueServiceTest {
         }
 
         @Test
-        @DisplayName("长值截断：超过 256 字符的值被截断")
+        @DisplayName("long value truncation: values over 256 chars are truncated")
         void extractValues_truncatesLongValues() throws SQLException {
             when(columnInfoDAO.findById("col1")).thenReturn(Optional.of(testColumnPO));
             when(tableInfoDAO.findById("table1")).thenReturn(Optional.of(testTablePO));
@@ -153,7 +153,7 @@ class ColumnValueServiceTest {
         }
 
         @Test
-        @DisplayName("覆盖模式：先删除已有值再抽取")
+        @DisplayName("overwrite mode: deletes existing values before extraction")
         void extractValues_overwriteMode() throws SQLException {
             SemanticSearchDocument existingDoc = createValueDoc("existing_id", List.of("old_value"));
             when(columnInfoDAO.findById("col1")).thenReturn(Optional.of(testColumnPO));
@@ -170,7 +170,7 @@ class ColumnValueServiceTest {
         }
 
         @Test
-        @DisplayName("columnId 不存在时抛出 IllegalArgumentException")
+        @DisplayName("throws IllegalArgumentException when columnId not found")
         void extractValues_columnNotFound() {
             when(columnInfoDAO.findById("invalid")).thenReturn(Optional.empty());
 
@@ -185,7 +185,7 @@ class ColumnValueServiceTest {
     class SaveValuesTests {
 
         @Test
-        @DisplayName("新增值：创建新 ES 文档，keywords 包含值和同义词")
+        @DisplayName("add value: creates new ES document, keywords include value and synonyms")
         void saveValues_addNewValue() {
             when(columnInfoDAO.findById("col1")).thenReturn(Optional.of(testColumnPO));
             when(tableInfoDAO.findById("table1")).thenReturn(Optional.of(testTablePO));
@@ -205,7 +205,7 @@ class ColumnValueServiceTest {
         }
 
         @Test
-        @DisplayName("删除值：根据 deletedIds 调用 deleteById")
+        @DisplayName("delete values: calls deleteById with deletedIds")
         void saveValues_deleteValues() {
             columnValueService.saveValues("col1", null, List.of("id1", "id2"));
 
@@ -215,7 +215,7 @@ class ColumnValueServiceTest {
         }
 
         @Test
-        @DisplayName("混合场景：同时删除旧值和新增新值")
+        @DisplayName("mixed scenario: deletes old values and adds new values together")
         void saveValues_mixedOperations() {
             when(columnInfoDAO.findById("col1")).thenReturn(Optional.of(testColumnPO));
             when(tableInfoDAO.findById("table1")).thenReturn(Optional.of(testTablePO));
@@ -232,7 +232,7 @@ class ColumnValueServiceTest {
         }
 
         @Test
-        @DisplayName("空操作：values 和 deletedIds 都为空时不做任何操作")
+        @DisplayName("no-op: values and deletedIds both empty, nothing happens")
         void saveValues_emptyInput() {
             columnValueService.saveValues("col1", null, null);
 
@@ -246,7 +246,7 @@ class ColumnValueServiceTest {
     class GetValuesTests {
 
         @Test
-        @DisplayName("正常返回：分页结构，解析 keywords 提取值和同义词")
+        @DisplayName("normal return: paged structure, parses keywords for values and synonyms")
         void getValues_normal() {
             SemanticSearchDocument doc1 = createValueDoc("doc1", List.of("北京", "帝都"));
             SemanticSearchDocument doc2 = createValueDoc("doc2", List.of("上海"));
@@ -273,7 +273,7 @@ class ColumnValueServiceTest {
         }
 
         @Test
-        @DisplayName("columnId 不存在时抛出 DatiException")
+        @DisplayName("throws DatiException when columnId not found")
         void getValues_columnNotFound() {
             when(columnInfoDAO.findById("invalid")).thenReturn(Optional.empty());
 
@@ -283,7 +283,7 @@ class ColumnValueServiceTest {
         }
 
         @Test
-        @DisplayName("分页+搜索：验证参数正确传递")
+        @DisplayName("pagination + search: verifies parameters are passed correctly")
         void getValues_withPaginationAndKeyword() {
             PageReq pageReq = new PageReq();
             pageReq.setPage(2);
