@@ -41,7 +41,6 @@ public interface ToolConfig {
         private String dataSourceId;
         private String sqlTemplate;
         private List<ToolParameter> parameters = new ArrayList<>();
-        private SqlPolicy sqlPolicy = new SqlPolicy();
         private int timeout = 30;
         private int maxRows = 1000;
     }

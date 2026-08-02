@@ -13,7 +13,6 @@ import com.dati.db.JdbcConnector;
 import com.dati.db.analysis.SqlAnalysisResult;
 import com.dati.db.analysis.SqlAnalyzer;
 import com.dati.mcp.domain.model.McpToolType;
-import com.dati.mcp.domain.model.SqlPolicy;
 import com.dati.mcp.domain.model.ToolConfig.ParamSqlConfig;
 import com.dati.mcp.domain.model.ToolError;
 import com.dati.mcp.domain.model.ToolParameter;
@@ -55,15 +54,14 @@ public class ParameterizedSqlExecutor implements ToolExecutor {
     public ToolTestData execute(ToolExecutionContext ctx) {
         ParamSqlConfig config = (ParamSqlConfig) ctx.config();
         String dsId = config.getDataSourceId();
-        SqlPolicy policy = config.getSqlPolicy();
 
         CompiledTemplate compiled = templateParser.parse(config.getSqlTemplate());
         PreparedSql prepared = sqlRenderer.render(compiled, ctx.arguments());
         String sql = prepared.sql();
 
+        // No runtime SQL policy for PARAMETERIZED_SQL: the template is authored at
+        // config time, so operation-type permissions would be self-restriction.
         SqlAnalysisResult analysis = SqlAnalyzer.analyze(sql);
-
-        policy.validate(analysis);
 
         DataSource dataSource = dataSourceService.getDataSource(dsId)
             .orElseThrow(() -> new ToolExecuteException(ToolError.DATA_SOURCE_NOT_FOUND, dsId));

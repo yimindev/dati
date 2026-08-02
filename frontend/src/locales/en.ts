@@ -432,7 +432,7 @@ export default {
       emptyCustom: "No custom tools yet",
       basicInfo: "Basic Info",
       execConfig: "Execution Config",
-      security: "Security & Limits",
+      execLimit: "Execution Limits",
       toolName: "Tool Name",
       toolTitle: "Display Name",
       titlePlaceholder: "e.g. Get User Stats",

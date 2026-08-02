@@ -3,7 +3,6 @@ import { computed, reactive, ref, watch } from "vue";
 import { ElMessage, type FormInstance, type FormRules } from "element-plus";
 import { useI18n } from "vue-i18n";
 import { Delete, Plus } from "@element-plus/icons-vue";
-import SqlSecurityConfig from "./SqlSecurityConfig.vue";
 import type { McpToolVO, ToolParameter } from "~/api/mcp-tool";
 import { createCustomTool, updateTool } from "~/api/mcp-tool";
 import { getDataScope } from "~/api/mcp-service";
@@ -51,14 +50,6 @@ const form = reactive({
   dataSourceId: "",
   sqlTemplate: "",
   parameters: [] as ToolParameter[],
-  allowSelect: true,
-  allowInsert: false,
-  allowUpdate: false,
-  allowDelete: false,
-  allowDdl: false,
-  allowMetadata: false,
-  allowTransaction: false,
-  allowSet: false,
   maxRows: 1000,
   timeout: 30,
 });
@@ -72,16 +63,6 @@ const loadForm = () => {
     form.dataSourceId = cfg?.data_source_id || "";
     form.sqlTemplate = cfg?.sql_template || "";
     form.parameters = cfg?.parameters ? [...cfg.parameters] : [];
-    if (cfg?.sql_policy) {
-      form.allowSelect = cfg.sql_policy.allow_select;
-      form.allowInsert = cfg.sql_policy.allow_insert;
-      form.allowUpdate = cfg.sql_policy.allow_update;
-      form.allowDelete = cfg.sql_policy.allow_delete;
-      form.allowDdl = cfg.sql_policy.allow_ddl;
-      form.allowMetadata = cfg.sql_policy.allow_metadata ?? false;
-      form.allowTransaction = cfg.sql_policy.allow_transaction ?? false;
-      form.allowSet = cfg.sql_policy.allow_set ?? false;
-    }
     form.maxRows = cfg?.max_rows ?? 1000;
     form.timeout = cfg?.timeout ?? 30;
   } else {
@@ -92,14 +73,6 @@ const loadForm = () => {
       dataSourceId: "",
       sqlTemplate: "",
       parameters: [],
-      allowSelect: true,
-      allowInsert: false,
-      allowUpdate: false,
-      allowDelete: false,
-      allowDdl: false,
-      allowMetadata: false,
-      allowTransaction: false,
-      allowSet: false,
       maxRows: 1000,
       timeout: 30,
     });
@@ -183,17 +156,6 @@ const handleSave = async () => {
       data_source_id: form.dataSourceId,
       sql_template: form.sqlTemplate,
       parameters: form.parameters,
-      sql_policy: {
-        allow_select: form.allowSelect,
-        allow_insert: form.allowInsert,
-        allow_update: form.allowUpdate,
-        allow_delete: form.allowDelete,
-        allow_ddl: form.allowDdl,
-        allow_metadata: form.allowMetadata,
-        allow_transaction: form.allowTransaction,
-        allow_set: form.allowSet,
-        allow_multi: false,
-      },
       timeout: form.timeout,
       max_rows: form.maxRows,
     });
@@ -335,22 +297,19 @@ const handleSave = async () => {
         </el-table>
       </section>
 
-      <!-- Security -->
+      <!-- Execution Limits -->
       <section class="flex flex-col">
-        <h4 class="m-0 mb-4 text-sm font-semibold text-[var(--ep-text-color-primary)] flex items-center gap-2">{{ t("mcpService.tool.security") }}</h4>
-        <SqlSecurityConfig
-          v-model:allow-select="form.allowSelect"
-          v-model:allow-insert="form.allowInsert"
-          v-model:allow-update="form.allowUpdate"
-          v-model:allow-delete="form.allowDelete"
-          v-model:allow-ddl="form.allowDdl"
-          v-model:allow-metadata="form.allowMetadata"
-          v-model:allow-transaction="form.allowTransaction"
-          v-model:allow-set="form.allowSet"
-          v-model:max-rows="form.maxRows"
-          v-model:timeout="form.timeout"
-          :show-annotations="true"
-        />
+        <h4 class="m-0 mb-4 text-sm font-semibold text-[var(--ep-text-color-primary)] flex items-center gap-2">{{ t("mcpService.tool.execLimit") }}</h4>
+        <div class="flex items-start gap-8">
+          <div class="w-44">
+            <label class="block mb-1.5 text-[var(--ep-text-color-primary)]">{{ t("mcpService.tool.maxRows") }}</label>
+            <el-input-number v-model="form.maxRows" :min="1" :max="100000" size="small" class="w-full" />
+          </div>
+          <div class="w-44">
+            <label class="block mb-1.5 text-[var(--ep-text-color-primary)]">{{ t("mcpService.tool.timeout") }} (s)</label>
+            <el-input-number v-model="form.timeout" :min="1" :max="300" size="small" class="w-full" />
+          </div>
+        </div>
       </section>
     </el-form>
     </div>

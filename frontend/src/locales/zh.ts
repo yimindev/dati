@@ -432,7 +432,7 @@ export default {
       emptyCustom: "暂无自定义工具",
       basicInfo: "基本信息",
       execConfig: "执行配置",
-      security: "安全与限制",
+      execLimit: "执行限制",
       toolName: "标识名 (Name)",
       toolTitle: "显示名",
       titlePlaceholder: "如: 获取用户统计",

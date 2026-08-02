@@ -410,7 +410,7 @@ McpToolType (enum)
   ├─ SEARCH_METADATA ─→ SearchMetadataConfig { timeout }
   ├─ GET_TABLE_INFO  ─→ GetTableInfoConfig { timeout }
   ├─ EXECUTE_SQL     ─→ ExecuteSqlConfig { sqlPolicy, timeout, maxRows }
-  └─ PARAMETERIZED_SQL → ParamSqlConfig { dataSourceId, sqlTemplate, parameters[], sqlPolicy, timeout, maxRows }
+  └─ PARAMETERIZED_SQL → ParamSqlConfig { dataSourceId, sqlTemplate, parameters[], timeout, maxRows }
 
 McpPrebuiltToolConfig (per service, UNIQUE(service_id, tool_type))
   ├─ serviceId, toolType, enabled (default true), config (ToolConfig)
@@ -632,6 +632,13 @@ StatementResult.writeFailure(errorMessage)           // WRITE 失败
 - MCP 协议不支持工具执行的二次确认，故从 `ToolConfig.ExecuteSqlConfig` 和 `ParamSqlConfig` 中移除该字段。
 - 前端已同步移除确认弹窗逻辑和相关 UI。
 
+#### 参数化工具不做运行时 SQL 权限校验（sqlPolicy 已移除）
+
+- 信任模型：EXECUTE_SQL 的 `sqlPolicy` 是沙箱（LLM 运行时传任意 SQL）；PARAMETERIZED_SQL 的模板由作者配置时编写，运行时仅注入参数值，作者给自己写权限属于自我设限，逻辑冗余。
+- 已从 `ParamSqlConfig` 移除 `sqlPolicy` 字段与 `ParameterizedSqlExecutor` 中的 `policy.validate()` 调用（旧数据中残留的 `sql_policy` JSON 键被 `@JsonIgnoreProperties(ignoreUnknown=true)` 静默丢弃，无需迁移）。
+- 保留的护栏：`ScopeValidator` 表级 scope 校验（基于渲染后 SQL 的表引用）与 `timeout` / `maxRows` 执行限制。
+- 遗留：PARAMETERIZED_SQL 的 MCP annotations（readOnlyHint 等）待协议层实现时从模板静态分析推导。
+
 #### SQL 安全分析引擎独立于 MCP 模块
 
 - `com.dati.db.analysis` 包是数据库层的 SQL 分析工具，不依赖 MCP 模块。
@@ -698,7 +705,7 @@ src/
 | `PrebuiltToolList` | 卡片列表：工具名称、描述、EXECUTE_SQL 的 sql_policy meta 信息。Setting 图标打开配置弹窗。`el-switch` 开关。每张卡片右侧有「测试」按钮。 |
 | `ExecuteSqlConfigDialog` | 权限勾选组（SELECT ~ MULTI）+ maxRows + timeout。 |
 | `CustomToolList` | 搜索栏 + 工具列表。编辑/删除图标。显示数据源名称。`el-switch` 开关。每张卡片操作区有「测试」按钮。 |
-| `CustomToolDialog` | el-dialog 弹窗表单。el-form 校验（name/desc/SQL/数据源必填）。参数编辑器 + 权限勾选。 |
+| `CustomToolDialog` | el-dialog 弹窗表单。el-form 校验（name/desc/SQL/数据源必填）。参数编辑器 + 执行限制（maxRows/timeout）。无 SQL 权限配置（模板由作者编写，不做运行时策略校验）。 |
 | `DataScopeTab` | 数据范围管理。显示已添加列表（数据源/主题 Tag），支持删除。**选择器为独立 `ScopePicker` 组件**（数据源/主题双 Tab、分页、搜索、多选 + 已添加去重、全量提交）。含已发布提示。 |
 | `PromptsTab` | Prompt 管理 Tab 容器。加载 Prompt 列表，集成 `PromptList`。 |
 | `PromptList` | 搜索栏 + 列表。每个条目显示 name、description、参数计数、开关、编辑/删除图标。 |
