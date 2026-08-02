@@ -44,6 +44,7 @@ export default {
     add: "Add",
     search: "Search",
     testConnection: "Test Connection",
+    retry: "Retry",
     back: "Back",
     nextStep: "Next",
     refresh: "Refresh",
@@ -396,6 +397,8 @@ export default {
     createButton: "New Service",
     searchPlaceholder: "Enter name or ID",
     deleteConfirmMessage: 'Are you sure you want to delete MCP service "{name}"?',
+    deleteSubtitle: "MCP clients will no longer be able to call this service, and associated data will be removed",
+    deleteSuccess: "Service deleted",
     dataScope: {
       addScope: "Add Data Scope",
       addDialogTitle: "Add Data Scope",

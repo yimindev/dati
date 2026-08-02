@@ -38,6 +38,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -76,6 +77,18 @@ class McpServiceControllerTest {
     @BeforeEach
     void setUp() {
         testService = TestFixtures.createTestMcpService();
+    }
+
+    @Test
+    @DisplayName("Delete MCP service - success")
+    void deleteMcpService_shouldReturnId() throws Exception {
+        // given
+        doNothing().when(mcpServiceService).deleteMcpService(anyString());
+
+        // when & then
+        mockMvc.perform(delete("/v1/mcp-services/{id}", TestFixtures.TEST_MCP_SERVICE_ID))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(TestFixtures.TEST_MCP_SERVICE_ID));
     }
 
     @Test

@@ -207,3 +207,20 @@
 4. **改回原配置**：再次 `PUT /tools/SEARCH_METADATA`，`config` 恢复为 `{"timeout": 30}`
    - 调用 `GET /diff`：验证 `has_changes`=**false**（业务字段一致即无变更；DB 记录 `updated_at` 已变但**审计字段差异不误报**）
 5. 删除服务（清理）
+
+---
+
+## TC-MCP-013 删除服务：级联删除（US-10）
+**级别：** P1
+**前置：** 已登录，种子数据源已就绪（TC-SEM-000）
+
+1. **创建服务**：携带 `data_scopes` 绑定种子数据源
+2. **添加自定义工具**：`POST /v1/mcp-services/{id}/tools`，name 自定、`tool_type`=PARAMETERIZED_SQL、`config` 为 JSON 字符串（绑定种子数据源）
+3. **添加 Prompt**：`POST /v1/mcp-services/{serviceId}/prompts`，name 自定、content 自定
+4. **发布服务**：`POST /publish` → PUBLISHED、`active_version_number`=1（生成快照，验证快照也被级联删除）
+5. **级联删除**：`DELETE /v1/mcp-services/{id}` → 200，响应 `id` 与删除的服务 id 一致
+6. **验证删除结果**：
+   - 查服务详情 → 404
+   - 查服务列表（按 name 搜索）→ 无该服务
+   - 查询该服务的 prompts / snapshots → 均 404（custom tools 已级联清除，`GET /tools` 返回 200 但 `custom` 为空数组 —— 预置工具为代码内置默认值，属既有行为）
+   - 再次 `DELETE` 该 id → 404（幂等）

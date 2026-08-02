@@ -7,15 +7,20 @@ import com.dati.mcp.domain.model.McpDataScopeType;
 import com.dati.mcp.domain.model.McpService;
 import com.dati.mcp.domain.model.McpServiceDataScope;
 import com.dati.mcp.domain.model.McpServiceStatus;
+import com.dati.mcp.repository.dao.McpCustomToolDAO;
+import com.dati.mcp.repository.dao.McpPrebuiltToolConfigDAO;
+import com.dati.mcp.repository.dao.McpPromptDAO;
 import com.dati.mcp.repository.dao.McpServiceDAO;
 import com.dati.mcp.repository.dao.McpServiceDataScopeDAO;
-import com.dati.mcp.repository.po.McpServicePO;
+import com.dati.mcp.repository.dao.McpServiceSnapshotDAO;
 import com.dati.mcp.repository.po.McpServiceDataScopePO;
+import com.dati.mcp.repository.po.McpServicePO;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -36,7 +41,6 @@ import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import org.mockito.ArgumentCaptor;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("McpServiceService unit tests")
@@ -47,6 +51,18 @@ class McpServiceServiceTest {
 
     @Mock
     private McpServiceDataScopeDAO dataScopeDAO;
+
+    @Mock
+    private McpServiceSnapshotDAO snapshotDAO;
+
+    @Mock
+    private McpPrebuiltToolConfigDAO prebuiltToolConfigDAO;
+
+    @Mock
+    private McpCustomToolDAO customToolDAO;
+
+    @Mock
+    private McpPromptDAO promptDAO;
 
     @Captor
     ArgumentCaptor<List<McpServiceDataScopePO>> captor;
@@ -352,6 +368,42 @@ class McpServiceServiceTest {
 
             String id = mcpServiceService.createMcpService(service, List.of(TestFixtures.createTestDataScope()));
             assertThat(id).isEqualTo(TestFixtures.TEST_MCP_SERVICE_ID);
+        }
+    }
+
+    @Nested
+    @DisplayName("deleteMcpService - cascade delete")
+    class DeleteService {
+
+        @Test
+        @DisplayName("Deletes all child tables then the service itself")
+        void delete_shouldCascadeAllChildren() {
+            // given
+            when(mcpServiceDAO.existsById(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(true);
+
+            // when
+            mcpServiceService.deleteMcpService(TestFixtures.TEST_MCP_SERVICE_ID);
+
+            // then
+            verify(snapshotDAO).deleteAllByServiceId(TestFixtures.TEST_MCP_SERVICE_ID);
+            verify(dataScopeDAO).deleteAllByServiceId(TestFixtures.TEST_MCP_SERVICE_ID);
+            verify(prebuiltToolConfigDAO).deleteAllByServiceId(TestFixtures.TEST_MCP_SERVICE_ID);
+            verify(customToolDAO).deleteAllByServiceId(TestFixtures.TEST_MCP_SERVICE_ID);
+            verify(promptDAO).deleteAllByServiceId(TestFixtures.TEST_MCP_SERVICE_ID);
+            verify(mcpServiceDAO).deleteById(TestFixtures.TEST_MCP_SERVICE_ID);
+        }
+
+        @Test
+        @DisplayName("Service not found throws MS_SERVICE_NOT_FOUND")
+        void delete_shouldThrowWhenServiceNotFound() {
+            // given
+            when(mcpServiceDAO.existsById(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(false);
+
+            // when & then
+            DatiException ex = assertThrows(DatiException.class, () ->
+                    mcpServiceService.deleteMcpService(TestFixtures.TEST_MCP_SERVICE_ID));
+            assertThat(ex.getCode()).isEqualTo(ErrorCode.MS_SERVICE_NOT_FOUND);
+            verify(mcpServiceDAO, never()).deleteById(any());
         }
     }
 

@@ -4,7 +4,7 @@ import { ElMessage, ElMessageBox } from "element-plus";
 import { useI18n } from "vue-i18n";
 import { useRouter } from "vue-router";
 import type { McpServiceVO } from "~/api/mcp-service";
-import { listMcpServices } from "~/api/mcp-service";
+import { deleteMcpService, listMcpServices } from "~/api/mcp-service";
 import { Plus, Refresh, Search } from "@element-plus/icons-vue";
 import DataTableShell from "~/components/common/DataTableShell.vue";
 
@@ -98,11 +98,17 @@ const handleDelete = async (service: McpServiceVO) => {
         type: "warning",
       },
     );
-    // TODO: implement delete API in US-10
-    ElMessage.info(t("mcpService.comingSoon"));
-  } catch (error) {
-    if (error !== "cancel") {
-      console.error("Failed to delete:", error);
+    await deleteMcpService(service.id);
+    ElMessage.success(t("mcpService.deleteSuccess"));
+    // 删除的是当前页最后一条时回退一页，避免停留在空页
+    if (serviceList.value.length === 1 && page.value > 1) {
+      page.value -= 1;
+    }
+    loadServices();
+  } catch (error: any) {
+    if (error !== "cancel" && error !== "close") {
+      console.error("Failed to delete service:", error);
+      ElMessage.error(error?.message || t("common.operationFailed"));
     }
   }
 };

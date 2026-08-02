@@ -1,5 +1,5 @@
 import type { BaseResourceVO, IdResponse, PageResponse } from "~/api/types.ts";
-import { get, post, put } from "./http";
+import { del, get, post, put } from "./http";
 
 export interface McpServiceVO extends BaseResourceVO {
   code: string;
@@ -97,6 +97,10 @@ export function saveDataScope(
     body,
     signal,
   );
+}
+
+export function deleteMcpService(id: string, signal?: AbortSignal): Promise<IdResponse> {
+  return del<IdResponse>(`/v1/mcp-services/${encodeURIComponent(id)}`, undefined, signal);
 }
 
 export function publishMcpService(

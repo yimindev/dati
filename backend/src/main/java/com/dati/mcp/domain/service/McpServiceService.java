@@ -6,8 +6,12 @@ import com.dati.common.StringUtils;
 import com.dati.mcp.domain.model.McpService;
 import com.dati.mcp.domain.model.McpServiceDataScope;
 import com.dati.mcp.domain.model.McpServiceStatus;
+import com.dati.mcp.repository.dao.McpCustomToolDAO;
+import com.dati.mcp.repository.dao.McpPrebuiltToolConfigDAO;
+import com.dati.mcp.repository.dao.McpPromptDAO;
 import com.dati.mcp.repository.dao.McpServiceDAO;
 import com.dati.mcp.repository.dao.McpServiceDataScopeDAO;
+import com.dati.mcp.repository.dao.McpServiceSnapshotDAO;
 import com.dati.mcp.repository.mapper.McpServiceMapper;
 import com.dati.mcp.repository.mapper.McpServiceDataScopeMapper;
 import com.dati.mcp.repository.po.McpServicePO;
@@ -27,11 +31,23 @@ public class McpServiceService {
 
     private final McpServiceDAO mcpServiceDAO;
     private final McpServiceDataScopeDAO dataScopeDAO;
+    private final McpServiceSnapshotDAO snapshotDAO;
+    private final McpPrebuiltToolConfigDAO prebuiltToolConfigDAO;
+    private final McpCustomToolDAO customToolDAO;
+    private final McpPromptDAO promptDAO;
 
     public McpServiceService(McpServiceDAO mcpServiceDAO,
-                             McpServiceDataScopeDAO dataScopeDAO) {
+                             McpServiceDataScopeDAO dataScopeDAO,
+                             McpServiceSnapshotDAO snapshotDAO,
+                             McpPrebuiltToolConfigDAO prebuiltToolConfigDAO,
+                             McpCustomToolDAO customToolDAO,
+                             McpPromptDAO promptDAO) {
         this.mcpServiceDAO = mcpServiceDAO;
         this.dataScopeDAO = dataScopeDAO;
+        this.snapshotDAO = snapshotDAO;
+        this.prebuiltToolConfigDAO = prebuiltToolConfigDAO;
+        this.customToolDAO = customToolDAO;
+        this.promptDAO = promptDAO;
     }
 
     @Transactional
@@ -95,6 +111,27 @@ public class McpServiceService {
         }
         return mcpServiceDAO.searchByKeywordAndStatus(keyword, status, pageable)
                 .map(McpServiceMapper::toModel);
+    }
+
+    /**
+     * 级联删除服务及其全部子数据（快照/数据范围/预置工具/自定义工具/Prompt）。
+     * 已发布服务同样允许直接删除，无需先停用。
+     */
+    @Transactional
+    public void deleteMcpService(String serviceId) {
+        requireServiceExists(serviceId);
+        snapshotDAO.deleteAllByServiceId(serviceId);
+        dataScopeDAO.deleteAllByServiceId(serviceId);
+        prebuiltToolConfigDAO.deleteAllByServiceId(serviceId);
+        customToolDAO.deleteAllByServiceId(serviceId);
+        promptDAO.deleteAllByServiceId(serviceId);
+        mcpServiceDAO.deleteById(serviceId);
+    }
+
+    private void requireServiceExists(String serviceId) {
+        if (!mcpServiceDAO.existsById(serviceId)) {
+            throw new DatiException(ErrorCode.MS_SERVICE_NOT_FOUND, serviceId);
+        }
     }
 
 }

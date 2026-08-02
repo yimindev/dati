@@ -5,12 +5,13 @@ meta:
 
 <script setup lang="ts">
 import { onMounted, ref, computed } from "vue";
-import { useRoute } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 import { ElMessage, ElMessageBox } from "element-plus";
 import { useI18n } from "vue-i18n";
 import {
   Clock,
   DataAnalysis,
+  Delete,
   Document,
   DocumentCopy,
   Key,
@@ -20,6 +21,7 @@ import {
 } from "@element-plus/icons-vue";
 import type { McpServiceDiffVO, McpServiceVO } from "~/api/mcp-service";
 import {
+  deleteMcpService,
   disableMcpService,
   enableMcpService,
   getMcpService,
@@ -36,6 +38,7 @@ import { formatDateTime } from "~/composables";
 
 const { t } = useI18n();
 const route = useRoute("/mcp-services/[id]/");
+const router = useRouter();
 
 const serviceId = route.params.id;
 const loading = ref(false);
@@ -297,6 +300,29 @@ const handleCopy = async (text: string | number) => {
 const handleCopyEndpoint = async () => {
   await handleCopy(endpointUrl.value);
 };
+
+const handleDeleteService = async () => {
+  if (!service.value) return;
+  try {
+    await ElMessageBox.confirm(
+      t("mcpService.deleteConfirmMessage", { name: service.value.name }),
+      t("common.warning"),
+      {
+        confirmButtonText: t("common.confirm"),
+        cancelButtonText: t("common.cancel"),
+        type: "warning",
+      },
+    );
+    await deleteMcpService(serviceId);
+    ElMessage.success(t("mcpService.deleteSuccess"));
+    router.push("/mcp-services");
+  } catch (error: any) {
+    if (error !== "cancel" && error !== "close") {
+      console.error("Failed to delete service:", error);
+      ElMessage.error(error?.message || t("common.operationFailed"));
+    }
+  }
+};
 </script>
 
 <template>
@@ -441,6 +467,17 @@ const handleCopyEndpoint = async () => {
                 </el-input>
               </el-form-item>
             </el-form>
+
+            <!-- Danger zone: delete service -->
+            <el-divider class="mt-6 mb-4" />
+            <div class="flex items-center justify-between gap-3">
+              <span class="text-xs text-[var(--ep-text-color-secondary)]">
+                {{ t("mcpService.deleteSubtitle") }}
+              </span>
+              <el-button type="danger" plain :icon="Delete" @click="handleDeleteService">
+                {{ t("common.delete") }}
+              </el-button>
+            </div>
           </section>
 
           <aside class="panel min-w-0 p-[18px]">

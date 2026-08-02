@@ -217,3 +217,11 @@ bugs:
     fixed_at: 2026-08-01
     description: |
       回滚时 McpServiceDataScopeMapper.toPO 经 copyBaseInfo 保留了快照中的旧 id，saveDataScope 先 deleteAllByServiceId 再 saveAll，同事务内对已删除行做 UPDATE → ObjectOptimisticLockingFailureException。custom tools / prompts 的 replace* 恢复路径同样保留 id，存在相同隐患。TC-MCP-010 step4 复现：POST /v1/mcp-services/{id}/rollback 返回 500 CM003。由 create-with-data-scope(MS018) 引入快照含 data scope 后暴露；之前无 data scope 的用例（旧报告 08-01）不触发。
+  - id: BUG-009
+    title: MCP 服务无 DELETE 端点
+    module: MCP 服务管理
+    severity: high
+    fixed_at: 2026-08-02
+    description: |
+      McpServiceController 没有 @DeleteMapping，所有 DELETE /v1/mcp-services/{id} 请求返回 500。
+      应实现删除端点和对应业务逻辑（考虑级联删除 prompts、custom tools、data scopes）。

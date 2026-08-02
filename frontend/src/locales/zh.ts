@@ -44,6 +44,7 @@ export default {
     add: "添加",
     search: "搜索",
     testConnection: "测试连接",
+    retry: "重试",
     back: "返回",
     nextStep: "下一步",
     refresh: "刷新",
@@ -395,7 +396,9 @@ export default {
     },
     createButton: "新建服务",
     searchPlaceholder: "输入名称或 ID",
-    deleteConfirmMessage: '确定要删除 MCP 服务「{name}」吗？',
+    deleteConfirmMessage: "确定要删除 MCP 服务「{name}」吗？",
+    deleteSubtitle: "删除后 MCP Client 将无法再调用该服务，且关联数据将一并清除",
+    deleteSuccess: "服务已删除",
     dataScope: {
       addScope: "添加数据范围",
       addDialogTitle: "添加数据范围",

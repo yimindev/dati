@@ -1,6 +1,6 @@
 # MCP Service 管理 — 架构文档
 
-> 版本：v2.1（US-01–05, US-5.5, US-07, US-08 完整实现）
+> 版本：v2.2（US-01–05, US-5.5, US-07, US-08, US-10 完整实现）
 > 最后更新：2026-08-01
 
 ---
@@ -20,6 +20,7 @@ MCP Service 管理模块提供 **MCP（Model Context Protocol）服务的生命�
 - **SQL 安全分析引擎**（操作类型识别、表提取、多语句检测、事务/元数据/SET 分类）
 - **工具测试（Tool Test）**：参数输入 → 安全校验 → 执行 → 结果展示（支持 4 种工具类型、多语句 SQL、部分失败、scope 校验）
 - **发布与版本管理（US-08）**：草稿-快照隔离、发布/发布变更、停用/启用、版本历史与回滚、草稿 vs 线上 diff
+- **删除服务（US-10）**：事务级联删除（快照/数据范围/工具/Prompt），前端与全站删除操作一致（简单确认弹窗）
 
 > **遗留**：MCP JSON-RPC/SSE Endpoint（`/{code}/mcp` 对外暴露）未实现，详见 US-08「遗留任务」。
 
@@ -134,7 +135,7 @@ com.dati.semantic.domain.model/
 | `McpServiceStatus` | 枚举：`DRAFT` / `PUBLISHED` / `DISABLED` |
 | `McpServicePO` | 持久化对象，继承 `BasePO`。数据库约束：`code` 唯一索引 |
 | `McpServiceDAO` | JPA Repository。`existsByCode`、多条件模糊分页查询 |
-| `McpServiceService` | 创建时校验 code 格式（正则 `^[a-z0-9]([a-z0-9_-]{0,62}[a-z0-9])?$`）和唯一性；分页列表支持 keyword + status 过滤 |
+| `McpServiceService` | 创建时校验 code 格式（正则 `^[a-z0-9]([a-z0-9_-]{0,62}[a-z0-9])?$`）和唯一性；分页列表支持 keyword + status 过滤；级联删除 `deleteMcpService()`（事务内逐表删：快照→数据范围→预置工具→自定义工具→Prompt→服务） |
 | `McpServiceAssembler` | Model→VO。推导 `endpointPath = "/{code}/mcp"`；统计 `toolCount` 调用 `McpToolService.countToolsByServiceId()`；快照列表 VO 转换（`toSnapshotVO`，仅元信息不含 content） |
 | `McpServiceVO` | 响应：`code`、`status`、`endpoint_path`、`tool_count`、`active_version_number` |
 
@@ -436,6 +437,7 @@ McpPrompt (per service, 多个, UNIQUE(service_id, name))
 | `GET` | `/v1/mcp-services` | 分页列表，支持 `keyword`、`status` 过滤 |
 | `GET` | `/v1/mcp-services/{id}/data-scope` | 查询数据范围列表 |
 | `PUT` | `/v1/mcp-services/{id}/data-scope` | 全量保存数据范围 |
+| `DELETE` | `/v1/mcp-services/{id}` | **删除服务（US-10）**：级联删除快照/数据范围/预置工具/自定义工具/Prompt，返回 `IdResponse`。已发布服务可直接删除，无需先停用 |
 
 #### 发布与版本管理
 
@@ -722,6 +724,7 @@ src/
 - **自定义工具区**：Edit/Delete 图标 + 「测试」按钮。hover 变色（Edit 蓝色，Delete 红色）。
 - **配置弹窗**：权限 pills 切换（选中态紫色 → 蓝色高亮）。安全警告黄色提示。
 - **工具测试弹窗**：左右分栏布局（参数左 / 结果右）。`SqlEditor`（CodeMirror）用于 SQL 输入。PARAMETERIZED_SQL 使用 `ParameterInput` 动态表单，带 `el-form` 校验（required 字段显示红色星号）。GET_TABLE_INFO 的 schema/table 下拉框通过 `listTableInfos` API 拉取已有元数据。SEARCH_METADATA 的关键词用 `el-input-tag` 输入。执行结果按 `data.type` 分发渲染：SELECT → `el-table` + 行数提示；WRITE → 操作摘要卡片；TABLE_METADATA → 每表一个卡片（表名/列/别名/样本值）；SEARCH_HIT → 术语卡片 + 按数据源分组表卡片。关闭弹窗时自动清空表单和结果。
+- **删除确认（US-10）**：与全站其他删除操作一致 —— `ElMessageBox.confirm`（黄色警告图标 + 单句文案「确定要删除 MCP 服务「{name}」吗？」）。列表页删除成功 → 刷新列表（删除最后一条时回退一页）；详情页基础信息 Tab 底部 danger 区入口 → 删除成功跳转列表页。删除失败 toast 提示可重试。
 - **抽屉表单**：使用 Element Plus `el-form` 的 `FormRules` 校验，保存前 `validate()`，异常时 `clearValidate()`。
 - **错误处理**：统一 `catch (e: any)` + `e?.message` 展示后端错误信息。
 - **数据范围弹窗**：Tab 切换（数据源/主题）。分页加载 + 搜索防抖 300ms。已添加项显示灰色 + `el-tag type="info"` 禁用勾选。确认提交后全量替换。已发布服务显示警告提示。
@@ -846,6 +849,12 @@ mcpService（发布与版本管理）:
   versionHistory, versionNumber, releaseNote, activeTag
   changeAdded, changeModified, changeDeleted, moreChanges
 
+mcpService.delete（删除服务弹窗）:
+  title, subtitle, previewLoading, previewFailed
+  tools, prompts, countSuffix, emptyCascade
+  warning, confirmPlaceholder, confirmButton
+  deleteSuccess, deleteFailed, cancel
+
 mcpService.tab:
   basic, dataScope, tools, resources, prompts, security, version（版本管理）, logs
 
@@ -859,8 +868,8 @@ mcpService.status:
 
 | 测试类 | 覆盖 |
 |---|---|
-| `McpServiceServiceTest` | 服务 CRUD、code 校验、分页过滤（10 + 10 用例） |
-| `McpServiceControllerTest` | 端点集成测试（7 用例） |
+| `McpServiceServiceTest` | 服务 CRUD、code 校验、分页过滤、**删除影响清单组装（预置+自定义工具/prompts/服务不存在）、级联删除（5 子表 + 服务本身）**（15 用例） |
+| `McpServiceControllerTest` | 端点集成测试（**含 DELETE**，8 用例） |
 | `McpServiceDataScopeServiceTest` | 数据范围全量替换、空列表清空、查询、`getResolvedDataSourceIds`（8 用例） |
 | `McpToolServiceTest` | 预置列表（默认值回退）、自定义 CRUD、name 校验、计数（17 用例） |
 | `McpToolControllerTest` | 分组列表、预置/自定义更新、创建、删除、测试端点（7 用例） |
@@ -875,7 +884,7 @@ mcpService.status:
 | `SemanticSearchServiceTest` | ES 搜索编排、术语关联展开、数据源分组（4 用例） |
 | `McpServicePublishServiceTest` | 发布/二次发布版本递增、停用/启用、diff（未发布草稿/已修改草稿/审计字段不误报/prebuilt 变更明细）、回滚（内容写回草稿+新快照/目标不存在）、状态机前置条件、停用中发布（16 用例） |
 
-**后端总计：596 测试，0 失败。**
+**后端总计：608 测试，0 失败。**
 
 ---
 
@@ -893,9 +902,9 @@ mcpService.status:
 | US-07 | 调试 Tool 调用 | ✅ 已实现 | 工具测试弹窗、4 种 Executor、scope 校验、异常处理、前端结果渲染 |
 | US-08 | 发布与版本管理 | ✅ 已实现 | 草稿-快照隔离、发布/发布变更、停用/启用、版本历史与回滚、草稿 vs 线上 diff。**遗留**：MCP Endpoint（JSON-RPC/SSE）未实现，见 US-08「遗留任务」 |
 | US-09 | 查看服务调用日志 | ❌ 未实现 | 无 `mcp_audit_log` 表和对应接口 |
-| US-10 | 删除 MCP 服务 | ❌ 未实现 | 列表页有删除按钮但仅弹 info（comingSoon），无后端接口 |
+| US-10 | 删除 MCP 服务 | ✅ 已实现 | 事务级联删除（快照/数据范围/预置工具/自定义工具/Prompt），已发布服务可直接删除；前端与全站删除操作一致（`ElMessageBox.confirm` 简单确认）。**遗留**：「仅管理员可删除」待角色体系统一实现 |
 
-> **说明**：详情页侧边导航的 `security`、`logs` Tab 均为占位；`version`（版本管理）Tab 已实现。发布/停用/启用操作位于详情页右上角，删除仍在列表页待 US-10。
+> **说明**：详情页侧边导航的 `security`、`logs` Tab 均为占位；`version`（版本管理）Tab 已实现。发布/停用/启用操作位于详情页右上角，删除位于列表页行尾 + 详情页基础信息 Tab 底部 danger 区。
 
 ---
 

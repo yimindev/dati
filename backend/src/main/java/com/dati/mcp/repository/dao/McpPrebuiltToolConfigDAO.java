@@ -12,4 +12,6 @@ public interface McpPrebuiltToolConfigDAO extends JpaRepository<McpPrebuiltToolC
     List<McpPrebuiltToolConfigPO> findAllByServiceId(String serviceId);
 
     Optional<McpPrebuiltToolConfigPO> findByServiceIdAndToolType(String serviceId, McpToolType toolType);
+
+    void deleteAllByServiceId(String serviceId);
 }

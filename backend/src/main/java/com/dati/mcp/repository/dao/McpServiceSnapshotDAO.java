@@ -17,4 +17,5 @@ public interface McpServiceSnapshotDAO extends JpaRepository<McpServiceSnapshotP
     @Query("SELECT MAX(s.versionNumber) FROM McpServiceSnapshotPO s WHERE s.serviceId = :serviceId")
     Integer findMaxVersionNumberByServiceId(@Param("serviceId") String serviceId);
 
+    void deleteAllByServiceId(String serviceId);
 }

@@ -24,6 +24,7 @@ import com.dati.mcp.server.pojo.RollbackRequest;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Sort;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -57,6 +58,12 @@ public class McpServiceController {
         this.dataScopeService = dataScopeService;
         this.dataScopeAssembler = dataScopeAssembler;
         this.publishService = publishService;
+    }
+
+    @DeleteMapping("/{id}")
+    public IdResponse deleteMcpService(@PathVariable String id) {
+        mcpServiceService.deleteMcpService(id);
+        return new IdResponse(id);
     }
 
     @PostMapping
