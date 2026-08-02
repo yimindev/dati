@@ -6,6 +6,10 @@
 > **创建服务约定**：创建请求必须携带 `data_scopes`（至少 1 条，绑定种子数据源/主题）：
 > `{"code": "...", "name": "...", "data_scopes": [{"scope_type": "DATA_SOURCE", "reference_id": "<datasourceId>"}]}`
 > 不带 `data_scopes` → 400；服务数据范围为空时调用 `/publish` → 400
+>
+> **种子数据源约定**：种子数据源必须已设置 `default_schema`（如 `public`），否则 schema-less 表引用（`SELECT * FROM genre`）无法通过 `ScopeValidator` 表级解析，工具测试会误报 SCOPE_ERROR（2026-08-02 实测发现种子数据源 default_schema 为 null，已通过更新连接参数触发服务端探测修复）。
+>
+> **路径约定**：数据源接口路径为 `/v1/data-sources`（带连字符）、表列表为 `/v1/data-sources/{id}/tables`；术语列表为 `/v1/subjects/{subjectId}/terms`（无全局 `/v1/terms` 端点）。
 
 ---
 
@@ -224,3 +228,127 @@
    - 查服务列表（按 name 搜索）→ 无该服务
    - 查询该服务的 prompts / snapshots → 均 404（custom tools 已级联清除，`GET /tools` 返回 200 但 `custom` 为空数组 —— 预置工具为代码内置默认值，属既有行为）
    - 再次 `DELETE` 该 id → 404（幂等）
+
+---
+
+## TC-MCP-014 工具创建校验分支
+**级别：** P2
+**前置：** 已登录，种子数据源已就绪
+**数据：** `chinook.e2e.{seeded_datasource_name, mcp.tool}`
+
+1. 搜索 `seeded_datasource_name` 获取 datasourceId，创建 MCP 服务（携带 `data_scopes` 绑定该数据源）
+2. **name 格式非法**：POST `/v1/mcp-services/{id}/tools`，`tool_type`=PARAMETERIZED_SQL，`name`="Invalid Name"（含空格/大写，违反 `^[a-z0-9]([a-z0-9_-]{0,62}[a-z0-9])?$`），config 为合法 JSON 字符串（可复用 `mcp.tool.config` 结构）→ 预期 400（MS004 工具名称格式无效）
+3. **工具重名**：先创建合法工具（name=`qa_tool_dup`，config 复用 `mcp.tool.config`），再创建同名工具 → 预期 409（MS003 工具名称已存在）
+4. **模板语法错误**：创建工具，config.sql_template 为 `mcp.tool.config.sql_template` 的未闭合变体（去掉结尾 `}}`）→ 预期 400（MS008 模板语法错误）
+5. **模板引用未定义参数**：sql_template 含 `{{undef_var}}` 但 parameters 为空 → 预期 400（MS009 工具参数不匹配）
+6. **空模板**：sql_template 为空字符串或缺失 → 预期 400（实际 CM001 "sql_template is required in config"）
+7. **缺 tool_type**：请求体不传 `tool_type` → 预期 400（@NotNull 校验）
+8. 删除服务（清理）
+
+---
+
+## TC-MCP-015 预置工具开关与 EXECUTE_SQL 配置
+**级别：** P1
+**前置：** 已登录，种子数据源已就绪
+
+1. 搜索种子数据源 → 创建 MCP 服务（携带 `data_scopes` 绑定该数据源）
+2. **懒初始化默认配置**：GET `/v1/mcp-services/{id}/tools` → prebuilt 3 个，均 `enabled`=true；SEARCH_METADATA / GET_TABLE_INFO 的 config 为 `{"timeout": 30}`；EXECUTE_SQL config 含 `sql_policy.allow_select`=true（其余 false）、`timeout`=30、`max_rows`=1000（无 DB 记录时使用代码默认值）
+3. **更新 EXECUTE_SQL 配置**：PUT `/v1/mcp-services/{id}/tools/EXECUTE_SQL`，body：`{"tool_type": "EXECUTE_SQL", "enabled": true, "config": "{\"sql_policy\":{\"allow_select\":true,\"allow_update\":true,\"allow_multi\":true},\"timeout\":60,\"max_rows\":500}"}`（config 为 JSON 字符串）→ 200
+   - GET `/tools` 回读：EXECUTE_SQL config 与提交一致（`allow_update`=true、`allow_multi`=true、`timeout`=60、`max_rows`=500）
+4. **预置工具开关**：PUT `/tools/SEARCH_METADATA`，body：`{"tool_type": "SEARCH_METADATA", "enabled": false}` → 200；GET `/tools` 回读 SEARCH_METADATA `enabled`=false
+5. **disabled 工具测试被拦**：POST `/tools/SEARCH_METADATA/test`，args `{"keywords": ["Rock"]}` → HTTP 200（工具测试错误走 200 + error 结构，非 HTTP 错误码），`success`=false，`error.error_category`=PARAM_ERROR（TOOL_DISABLED）
+6. 删除服务（清理）
+
+---
+
+## TC-MCP-016 EXECUTE_SQL 工具测试
+**级别：** P0
+**前置：** 已登录，种子数据源已就绪
+**数据：** `chinook.e2e.{seeded_datasource_name, mcp.tool.exec_sql}`
+
+1. 搜索种子数据源 → 创建 MCP 服务（携带 `data_scopes` 绑定该数据源）
+2. **SELECT 成功**：POST `/tools/EXECUTE_SQL/test`，args `{"data_source_id": "<seedDsId>", "sql": "<mcp.tool.exec_sql.select>"}` → HTTP 200
+   - `success`=true，`execution_time_ms` 非负
+   - `data.type`=SQL_EXECUTION，`data.executed_sql` 与输入一致，`data.results` 非空
+   - results[0]：`type`=SELECT、`success`=true、`columns` 与 `<mcp.tool.exec_sql.select_columns>` 一致、`rows` 非空（种子数据 25 条流派）
+3. **策略拦截（DML）**：args sql 改为 `<mcp.tool.exec_sql.update>`（默认 policy 仅允许 SELECT）→ HTTP 200，`success`=false，`error.error_category`=PERMISSION_DENIED（策略在 SQL 分析层拦截，未实际执行，数据未变）
+4. **多语句拦截**：sql = `<mcp.tool.exec_sql.multi>`（默认 allow_multi=false，type=MULTI）→ HTTP 200，`success`=false，`error.error_category`=PERMISSION_DENIED
+5. **缺参**：args 仅 `{"data_source_id": "<seedDsId>"}`（缺 sql）→ HTTP 200，`success`=false，`error.error_category`=PARAM_ERROR（PARAM_MISSING）
+6. 删除服务（清理）
+
+---
+
+## TC-MCP-017 GET_TABLE_INFO 与 SEARCH_METADATA 测试
+**级别：** P1
+**前置：** 已登录，种子数据源已就绪（TC-SEM-000），ES 已索引（ES 查询前 `es_refresh`）
+**数据：** `chinook.e2e.{seeded_datasource_name, mcp.subject, datasource.nonexistent_table}`
+
+1. 搜索种子数据源 → 创建 MCP 服务（携带 `data_scopes` 绑定该数据源）
+2. **GET_TABLE_INFO（平台元数据路径）**：POST `/tools/GET_TABLE_INFO/test`，args `{"data_source_id": "<seedDsId>", "tables": [{"table": "<mcp.subject.term.relation_table>"}]}`（注意：参数为 `tables` 数组，非 inputSchema 中的 `table` 字符串）→ HTTP 200
+   - `success`=true，`data.type`=TABLE_METADATA，`data.tables` 非空
+   - tables[0]：`table`=`mcp.subject.term.relation_table`，`columns` 与 `mcp.subject.table_columns.<同表>` 一致（来自平台同步元数据，非 JDBC 直查）
+   - **不存在的表**：args tables 改为 `[{"table": "<datasource.nonexistent_table>"}]` → HTTP 200，`success`=true，`data.tables` 为空数组（静默跳过，不报错）
+3. **SEARCH_METADATA（ES 搜索路径）**：POST `/tools/SEARCH_METADATA/test`，args `{"keywords": ["<mcp.subject.field_value_search>"]}` → HTTP 200
+   - `success`=true，`data.type`=SEARCH_HIT，`data.keywords`=["<mcp.subject.field_value_search>"]
+   - `data.data_sources` 或 `data.terms` 至少一个非空（`mcp.subject.table_columns` 中对应表的维度值命中，按数据源分组返回）
+4. **空关键词**：args `{"keywords": []}` → HTTP 200，`success`=false，`error.error_category`=PARAM_ERROR（PARAM_MISSING）
+5. 删除服务（清理）
+
+---
+
+## TC-MCP-018 工具测试异常路径
+**级别：** P1
+**前置：** 已登录，种子数据源已就绪（TC-SEM-000）
+**数据：** `chinook.e2e.{seeded_datasource_name, mcp.subject}`
+
+> **注意**：种子主题（`seeded_subject_name`）包含全部种子表，无法触发表级违规。需**新建专用主题**（只添加 `<mcp.subject.dedicated_subject_table>` 一张表，测后删除）作为服务数据范围。
+
+1. 搜索种子数据源 → **创建专用主题**（name 自定，绑定种子数据源，只添加 `<mcp.subject.dedicated_subject_table>` 表）
+2. **创建 MCP 服务**，`data_scopes` 绑定该专用主题（`scope_type`=SUBJECT）
+3. **SUBJECT scope 展开**：GET `/v1/mcp-services/{id}/data-scope` → `resolved_data_sources` 含种子数据源（SUBJECT 展开为实际数据源 ID）
+4. **表级 scope 违规**：创建自定义工具（sql_template=`SELECT * FROM <mcp.subject.term.relation_table>`，config.data_source_id=种子 dsId）→ POST `/tools/{toolId}/test` → HTTP 200，`success`=false，`error.error_category`=SCOPE_ERROR（该表不在专用主题表集合内）
+5. **工具不存在**：POST `/tools/00000000-0000-0000-0000-000000000000/test` → HTTP 200，`success`=false，`error.error_category`=PARAM_ERROR（TOOL_NOT_FOUND）
+6. **disabled 自定义工具**：再创建一工具 → PUT `/tools/{id}` 设 `enabled`=false → POST `/tools/{id}/test` → HTTP 200，`success`=false，`error.error_category`=PARAM_ERROR（TOOL_DISABLED）
+7. 删除服务 + 删除专用主题（清理）
+
+---
+
+## TC-MCP-019 PARAMETERIZED_SQL 无策略拦截（回归锚点）
+**级别：** P1
+**前置：** 已登录，种子数据源已就绪
+**数据：** `chinook.e2e.{seeded_datasource_name, mcp.tool.update_template, mcp.tool.update_params}`
+
+> **背景**：PARAMETERIZED_SQL 的 SQL 模板由作者配置时编写，运行时仅注入参数值，已移除运行时 sqlPolicy（2026-08-02）。**旧行为**：UPDATE 模板会被默认策略（allow_update=false）拦截返回 PERMISSION_DENIED；**新行为**：直接执行。本用例锚定新行为，防止策略校验回归。
+
+1. 搜索种子数据源 → 创建 MCP 服务（携带 `data_scopes` 绑定该数据源）
+2. **创建 UPDATE 模板工具**：POST `/v1/mcp-services/{id}/tools`，name 自定，`tool_type`=PARAMETERIZED_SQL，config（JSON 字符串）：`data_source_id`=种子 dsId，`sql_template`=`mcp.tool.update_template`（`UPDATE genre SET name = name WHERE genreid = {{id}}`，no-op 不污染种子数据），`parameters`=`mcp.tool.update_params`（id/Number/required）
+3. **测试执行**：POST `/tools/{id}/test`，args `{"id": -1}` → HTTP 200
+   - `success`=**true**（不再被策略拦截），`execution_time_ms` 非负
+   - `data.type`=SQL_EXECUTION，`data.executed_sql` 含 `UPDATE genre`，`data.results` 非空
+   - results[0]：`type`=WRITE、`success`=true、`affected_rows`=0（WHERE genreid=-1 无匹配行，数据未变；注意 chinook 表列为 `genreid` 而非 `genre_id`）
+4. 删除服务（清理）
+
+---
+
+## TC-MCP-020 基于主题的 MCP 服务主路径：术语检索与关联展开
+**级别：** P0
+**前置：** 已登录，种子数据源/主题已就绪（TC-SEM-000），ES 索引完整（TABLE 3/FIELD 7/FIELD_VALUE 25/TERM 1/SUBJECT 1；索引缺失时按报告 mcp-service-2026-08-02 的环境修复流程重建：表 PUT + 列同步 + 值抽取）
+**数据：** `chinook.e2e.{seeded_datasource_name, seeded_subject_name, semantic.seed_term_name, mcp.subject}`
+
+> **背景**：MCP 服务的主路径是**关联主题**——把领域术语暴露给 LLM。核心链路：搜关键词 → ES 命中 TERM → `terms` 返回术语（含主题归属）→ TermRelation 展开关联表 → 表出现在 `data_sources`（关键词不含表名）。本用例全部步骤已于 2026-08-02 实测验证。
+
+1. 搜索种子主题（`seeded_subject_name`）获取 subjectId，搜索种子数据源获取 datasourceId
+2. **创建 MCP 服务绑定主题**：`data_scopes` 携带 `{"scope_type": "SUBJECT", "reference_id": "<subjectId>"}` → 200
+3. **SUBJECT scope 展开**：GET `/v1/mcp-services/{id}/data-scope` → `resolved_data_sources` 含种子数据源
+4. **搜术语名（核心）**：POST `/tools/SEARCH_METADATA/test`，args `{"keywords": ["<seed_term_name>"]}` → HTTP 200
+   - `success`=true，`data.type`=SEARCH_HIT
+   - **`data.terms` 非空**：terms[0].`name`=`mcp.subject.term.name`、`description`=`mcp.subject.term.description`、`subject_name`=`seeded_subject_name`（术语归属主题正确）
+   - **`data.data_sources` 含关联表**：`mcp.subject.term.relation_table` 出现在 tables 中——**关键词不含表名，靠 TermRelation（`mcp.subject.term.relation_field`）展开**
+5. **搜术语别名**：args `{"keywords": ["<mcp.subject.term.aliases[0]>"]}` → terms 含该术语，data_sources 含 `mcp.subject.term.relation_table`（TERM 文档 keywords 含别名）
+6. **搜维度值（FIELD_VALUE 路径）**：args `{"keywords": ["<mcp.subject.field_value_search>"]}` → success=true，data_sources 含 `mcp.subject.term.relation_table`，**terms 为空**（值命中 ≠ 术语命中）
+7. **搜表名**：args `{"keywords": ["<mcp.subject.table_search>"]}` → data_sources 含该表
+8. **主题外关键词（scope 过滤）**：args `{"keywords": ["<mcp.subject.outside_keyword>"]}` → success=true，`data.data_sources` 与 `data.terms` 均为空数组（不报错）
+9. **GET_TABLE_INFO 主题内表（正向）**：args `{"data_source_id": "<dsId>", "tables": [{"table": "<mcp.subject.term.relation_table>"}]}` → success=true，`data.tables` 非空，columns 与 `mcp.subject.table_columns.<同表>` 一致
+10. **EXECUTE_SQL 主题内表（正向）**：args `{"data_source_id": "<dsId>", "sql": "<mcp.subject.select_sql>"}` → success=true，results[0] SELECT、rows 非空（表级 scope 通过）
+11. **服务详情**：GET `/v1/mcp-services/{id}` → `tool_count`=3（3 个预置工具，无自定义）
+12. 删除服务（清理）

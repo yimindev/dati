@@ -235,6 +235,51 @@ chinook:
             - name: "genre_name"
               type: "STRING"
               required: true
+        # TC-MCP-019 回归锚点：UPDATE 模板（no-op，不污染种子数据；chinook 表列名为 genreid）
+        update_template: "UPDATE genre SET name = name WHERE genreid = {{id}}"
+        update_params:
+          - name: "id"
+            type: "Number"
+            required: true
+        # TC-MCP-016 EXECUTE_SQL 测试输入（表/列为 chinook 种子真实值）
+        exec_sql:
+          select: "SELECT * FROM genre LIMIT 5"
+          select_columns: ["genreid", "name"]
+          # 默认策略仅 SELECT，执行前拦截（不改数据）
+          update: "UPDATE genre SET name = name WHERE genreid = 1"
+          # 默认 allow_multi=false，多语句拦截
+          multi: "SELECT 1; SELECT 2"
+      # 基于主题的 MCP 服务主路径（2026-08-02 探索验证，供 TC-MCP-020 使用）
+      # 前置：种子主题已就绪（TC-SEM-000），ES 索引完整（TABLE 3/FIELD 7/FIELD_VALUE 25/TERM 1/SUBJECT 1）
+      subject:
+        subject_name: "e2e-chinook-subject"
+        # TERM 命中场景：搜术语主名或别名 → terms 返回该术语，且关联表出现在 data_sources（TermRelation 展开，关键词不含表名）
+        # 已验证：搜"音乐流派" → terms=[音乐流派] + data_sources=[e2e-chinook-seed: genre]
+        term:
+          name: "音乐流派"            # 与 semantic.seed_term_name 一致
+          aliases: ["genre", "音乐类型"]
+          description: "Chinook数据库中的音乐流派分类"
+          relation_table: "genre"    # 术语关联的表（entity_type=FIELD）
+          relation_field: "name"
+        # FIELD_VALUE 命中场景：搜维度值 → 该表出现在 data_sources，terms 为空
+        field_value_search: "Rock"
+        # 表名命中场景：搜表名 → 该表出现在 data_sources
+        table_search: "artist"
+        # 主题外关键词（应返回空结果，验证 scope 过滤）
+        outside_keyword: "invoice"
+        # 主题内表（正向 GET_TABLE_INFO / EXECUTE_SQL 用，表级 scope 通过）
+        subject_tables: ["genre", "artist", "album"]
+        # TC-MCP-018 专用主题用表（只加这一张表，制造表级违规）
+        dedicated_subject_table: "artist"
+        # TC-MCP-020 主题内表正向查询 SQL（步骤 10，表为 subject_tables 中的 artist）
+        select_sql: "SELECT * FROM artist LIMIT 3"
+        # 表列（断言用；注意 GET_TABLE_INFO 响应 schema 字段来自请求参数）
+        table_columns:
+          genre: ["genreid", "name"]
+          artist: ["artistid", "name"]
+          album: ["albumid", "title", "artistid"]
+        # genre.name 抽取的维度值数量
+        value_count: 25
 
     # ---- 语义层测试 ----
     semantic:

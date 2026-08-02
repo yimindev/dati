@@ -2,3 +2,24 @@
 # Agent 跑完 E2E 测试后自动维护此文件
 
 bugs:
+  - id: BUG-20260802-001
+    title: 创建自定义工具时 description 为空 → 500 DataIntegrityViolation（mcp_custom_tool.description 列 NOT NULL，而 CustomToolRequest.description 可选）
+    module: 
+    severity: medium
+    found_at: 2026-08-02
+    description: |
+      
+  - id: BUG-20260802-002
+    title: 不存在的路由（如 GET /v1/terms、/v1/datasources）返回 500 CM003 而非 404：GlobalExceptionHandler 将 NoResourceFoundException 当作 unexpected error；且 E2E 文档中数据源路径写错（正确为 /v1/data-sources、/tables、/v1/subjects/{id}/terms）
+    module: 
+    severity: medium
+    found_at: 2026-08-02
+    description: |
+      
+  - id: BUG-20260802-003
+    title: GET /v1/subjects/{subjectId}/terms 列表接口 relations 恒为空，仅 GET /v1/terms/{id} 详情接口返回完整 relations（可能为列表 VO 未填充，需确认是设计还是遗漏）
+    module: 语义层
+    severity: medium
+    found_at: 2026-08-02
+    description: |
+      探索种子数据时发现：同一术语「音乐流派」（b9d6763e）在主题术语列表接口返回 relations: []，而术语详情接口返回完整关联 [{entity_type: FIELD, table: genre, field: name}]。影响：依赖列表接口判断术语关联会误判数据缺失（本次差点因此误报种子数据不完整）；若前端列表展示关联也会显示为空。关联数据本身完整（TermRelation 表有记录，搜术语名实测可展开关联表）。
