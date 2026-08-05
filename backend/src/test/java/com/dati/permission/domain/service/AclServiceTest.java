@@ -1,7 +1,7 @@
 package com.dati.permission.domain.service;
 
 import com.dati.auth.authentication.User;
-import com.dati.auth.repository.dao.UserRepository;
+import com.dati.auth.domain.service.UserService;
 import com.dati.base.RequestContext;
 import com.dati.base.exception.DatiException;
 import com.dati.base.exception.ErrorCode;
@@ -24,6 +24,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -38,7 +39,7 @@ import static org.mockito.Mockito.when;
 class AclServiceTest {
 
     @Mock private ResourceAclDAO aclDAO;
-    @Mock private UserRepository userRepository;
+    @Mock private UserService userService;
     @Mock private DataSourceDAO dataSourceDAO;
     @Mock private SubjectDAO subjectDAO;
     @Mock private McpServiceDAO mcpServiceDAO;
@@ -48,7 +49,7 @@ class AclServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new AclService(aclDAO, userRepository, dataSourceDAO, subjectDAO,
+        service = new AclService(aclDAO, userService, dataSourceDAO, subjectDAO,
                 mcpServiceDAO, new PermissionService(checker, "admin"));
         User user = new User();
         user.setId("u-1");
@@ -84,7 +85,7 @@ class AclServiceTest {
     void grantRejectsUnknownPrincipal() {
         when(dataSourceDAO.findById("ds-1")).thenReturn(Optional.of(dsPo()));
         allowAcl();
-        when(userRepository.existsById("u3")).thenReturn(false);
+        when(userService.getUserMap(List.of("u3"))).thenReturn(Map.of());
         DatiException ex = assertThrows(DatiException.class,
                 () -> service.grant(ResourceType.DATA_SOURCE, "ds-1", PrincipalType.USER, "u3", Permission.VIEW));
         assertThat(ex.getCode()).isEqualTo(ErrorCode.INVALID_PARAMETER);
@@ -94,7 +95,7 @@ class AclServiceTest {
     void grantInsertsNewRow() {
         when(dataSourceDAO.findById("ds-1")).thenReturn(Optional.of(dsPo()));
         allowAcl();
-        when(userRepository.existsById("u3")).thenReturn(true);
+        when(userService.getUserMap(List.of("u3"))).thenReturn(Map.of("u3", principalUser()));
         when(aclDAO.findByResourceTypeAndResourceIdAndPrincipalTypeAndPrincipalId(
                 "DATA_SOURCE", "ds-1", "USER", "u3")).thenReturn(Optional.empty());
         ResourceAclPO saved = new ResourceAclPO();
@@ -109,7 +110,7 @@ class AclServiceTest {
     void grantUpgradesExistingRow() {
         when(dataSourceDAO.findById("ds-1")).thenReturn(Optional.of(dsPo()));
         allowAcl();
-        when(userRepository.existsById("u3")).thenReturn(true);
+        when(userService.getUserMap(List.of("u3"))).thenReturn(Map.of("u3", principalUser()));
         ResourceAclPO existing = new ResourceAclPO();
         existing.setId("acl-1");
         existing.setPermission(Permission.VIEW);
@@ -145,11 +146,7 @@ class AclServiceTest {
         allowAcl();
         when(aclDAO.findByResourceTypeAndResourceId("DATA_SOURCE", "ds-1"))
                 .thenReturn(List.of(aclPo()));
-        var u3 = new com.dati.auth.repository.po.UserPO();
-        u3.setId("u3");
-        u3.setName("bob");
-        u3.setDisplayName("Bob");
-        when(userRepository.findAllById(List.of("u3"))).thenReturn(List.of(u3));
+        when(userService.getUserMap(List.of("u3"))).thenReturn(Map.of("u3", principalUser()));
 
         List<ResourceAcl> acls = service.list(ResourceType.DATA_SOURCE, "ds-1");
         assertThat(acls).hasSize(1);
@@ -169,6 +166,14 @@ class AclServiceTest {
         po.setId("ds-1");
         po.setCreatedBy("u2");
         return po;
+    }
+
+    private User principalUser() {
+        User u = new User();
+        u.setId("u3");
+        u.setName("bob");
+        u.setDisplayName("Bob");
+        return u;
     }
 
     private ResourceAclPO aclPo() {

@@ -1,6 +1,7 @@
 package com.dati.permission.domain.service;
 
-import com.dati.auth.repository.dao.UserRepository;
+import com.dati.auth.authentication.User;
+import com.dati.auth.domain.service.UserService;
 import com.dati.base.RequestContext;
 import com.dati.base.exception.DatiException;
 import com.dati.base.exception.ErrorCode;
@@ -18,25 +19,26 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class AclService {
 
     private final ResourceAclDAO aclDAO;
-    private final UserRepository userRepository;
+    private final UserService userService;
     private final DataSourceDAO dataSourceDAO;
     private final SubjectDAO subjectDAO;
     private final McpServiceDAO mcpServiceDAO;
     private final PermissionService permissionService;
 
     public AclService(ResourceAclDAO aclDAO,
-                      UserRepository userRepository,
+                      UserService userService,
                       DataSourceDAO dataSourceDAO,
                       SubjectDAO subjectDAO,
                       McpServiceDAO mcpServiceDAO,
                       PermissionService permissionService) {
         this.aclDAO = aclDAO;
-        this.userRepository = userRepository;
+        this.userService = userService;
         this.dataSourceDAO = dataSourceDAO;
         this.subjectDAO = subjectDAO;
         this.mcpServiceDAO = mcpServiceDAO;
@@ -56,7 +58,7 @@ public class AclService {
             if (permission != Permission.VIEW) {
                 throw new DatiException(ErrorCode.INVALID_PARAMETER, "permission");
             }
-        } else if (!userRepository.existsById(principalId)) {
+        } else if (!userService.getUserMap(List.of(principalId)).containsKey(principalId)) {
             throw new DatiException(ErrorCode.INVALID_PARAMETER, "principal_id");
         }
         ResourceAclPO po = aclDAO.findByResourceTypeAndResourceIdAndPrincipalTypeAndPrincipalId(
@@ -94,13 +96,10 @@ public class AclService {
         if (acls.isEmpty()) {
             return;
         }
-        var userMap = userRepository.findAllById(
-                        acls.stream().map(ResourceAcl::getPrincipalId).distinct().toList())
-                .stream()
-                .collect(java.util.stream.Collectors.toMap(
-                        com.dati.auth.repository.po.UserPO::getId, u -> u));
+        Map<String, User> userMap = userService.getUserMap(
+                acls.stream().map(ResourceAcl::getPrincipalId).distinct().toList());
         acls.forEach(acl -> {
-            var user = userMap.get(acl.getPrincipalId());
+            User user = userMap.get(acl.getPrincipalId());
             if (user != null) {
                 acl.setPrincipalName(user.getDisplayName() != null
                         ? user.getDisplayName() : user.getName());
