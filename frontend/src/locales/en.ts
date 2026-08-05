@@ -28,6 +28,7 @@ export default {
   },
 
   common: {
+    noPermission: "No permission to perform this action",
     // General Actions
     save: "Save",
     cancel: "Cancel",
@@ -313,6 +314,27 @@ export default {
     extractFailed: "Extraction failed",
   },
 
+  permission: {
+    title: "Resource Authorization",
+    button: "Authorize",
+    grant: "Grant",
+    revoke: "Revoke",
+    grantSuccess: "Granted successfully",
+    revokeSuccess: "Authorization revoked",
+    principalPlaceholder: "Search username",
+    empty: "No authorized users",
+    roleViewer: "Viewer",
+    roleEditor: "Editor",
+    revokeConfirm: "Are you sure you want to revoke authorization for this user?",
+    subtitle: "Manage member access permissions for this resource",
+    authorizedUsers: "Authorized Members",
+    publicLabel: "Public Access",
+    publicHint: "When enabled, all logged-in members can read this resource",
+    confirmPublic: "All logged-in users will be able to read this resource. Enable public access?",
+    publicTag: "Public",
+    publicOn: "Resource is now public (read-only for everyone)",
+    publicConfirmButton: "Enable Public",
+  },
   mcpService: {
     title: "MCP Services",
     serviceName: "Service",

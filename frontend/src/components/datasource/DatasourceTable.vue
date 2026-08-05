@@ -14,6 +14,7 @@ interface Emits {
   (e: 'delete', datasource: DatasourceVO): void
   (e: 'test-connection', datasource: DatasourceVO): void
   (e: 'table-manage', datasource: DatasourceVO): void
+  (e: 'authorize', datasource: DatasourceVO): void
 }
 
 defineProps<Props>()
@@ -44,17 +45,18 @@ defineEmits<Emits>()
         </template>
       </el-table-column>
       <el-table-column prop="type" :label="t('common.type')" min-width="110" />
-      <el-table-column prop="created_user_name" :label="t('common.createdBy')" min-width="100" />
       <el-table-column prop="description" :label="t('common.description')" min-width="180" show-overflow-tooltip />
+      <el-table-column prop="created_user_name" :label="t('common.createdBy')" min-width="100" />
       <el-table-column prop="updated_at" :label="t('common.updatedAt')" min-width="160">
         <template #default="{ row }">
           {{ formatDateTime(row.updated_at) }}
         </template>
       </el-table-column>
-      <el-table-column :label="t('common.actions')" width="220" fixed="right" align="right">
+      <el-table-column :label="t('common.actions')" width="280" fixed="right" align="right">
         <template #default="{ row }">
           <div class="flex items-center justify-end gap-2">
             <el-button type="primary" link @click="$emit('table-manage', row)">{{ t('datasource.tableManage') }}</el-button>
+            <el-button type="primary" link @click="$emit('authorize', row)">{{ t('permission.button') }}</el-button>
             <el-button type="primary" link @click="$emit('edit', row)">{{ t('common.edit') }}</el-button>
             <el-button type="danger" link @click="$emit('delete', row)">{{ t('common.delete') }}</el-button>
           </div>

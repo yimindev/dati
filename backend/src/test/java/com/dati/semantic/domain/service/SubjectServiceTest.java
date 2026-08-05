@@ -1,7 +1,10 @@
 package com.dati.semantic.domain.service;
 
 import com.dati.TestFixtures;
+import com.dati.auth.authentication.User;
+import com.dati.base.RequestContext;
 import com.dati.base.exception.DatiException;
+import com.dati.base.exception.ErrorCode;
 import com.dati.datasource.repository.dao.TableInfoDAO;
 import com.dati.datasource.repository.po.TableInfoPO;
 import com.dati.semantic.domain.SemanticEntityType;
@@ -12,6 +15,8 @@ import com.dati.semantic.repository.dao.SubjectTableDAO;
 import com.dati.semantic.repository.po.SemanticSearchDocument;
 import com.dati.semantic.repository.po.SubjectPO;
 import com.dati.semantic.repository.po.SubjectTablePO;
+import com.dati.permission.domain.service.PermissionService;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -32,7 +37,10 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -53,6 +61,9 @@ class SubjectServiceTest {
     @Mock
     private SemanticIndexService semanticIndexService;
 
+    @Mock
+    private PermissionService permissionService;
+
     @InjectMocks
     private SubjectService subjectService;
 
@@ -61,10 +72,23 @@ class SubjectServiceTest {
 
     @BeforeEach
     void setUp() {
+        User user = new User();
+        user.setId(TestFixtures.TEST_USER_ID);
+        user.setName(TestFixtures.TEST_USER_ID);
+        RequestContext.setUser(user);
+        lenient().when(permissionService.isAdmin(anyString())).thenReturn(false);
+        lenient().doAnswer(inv -> {
+            String ownerId = inv.getArgument(3);
+            if (!TestFixtures.TEST_USER_ID.equals(ownerId)) {
+                throw new DatiException(ErrorCode.PERMISSION_DENIED);
+            }
+            return null;
+        }).when(permissionService).requireCurrentUser(any(), anyString(), any(), anyString());
         sampleSubjectPO = new SubjectPO();
         sampleSubjectPO.setId("subject-001");
         sampleSubjectPO.setName("Test Subject");
         sampleSubjectPO.setDescription("Test Description");
+        sampleSubjectPO.setCreatedBy(TestFixtures.TEST_USER_ID);
         sampleSubjectPO.setDatasourceId("datasource-001");
         sampleSubjectPO.setCreatedAt(Instant.now());
         sampleSubjectPO.setUpdatedAt(Instant.now());
@@ -73,6 +97,11 @@ class SubjectServiceTest {
         sampleTableInfoPO.setId("table-001");
         sampleTableInfoPO.setName("test_table");
         sampleTableInfoPO.setDataSourceId("datasource-001");
+    }
+
+    @AfterEach
+    void tearDown() {
+        RequestContext.getContext().clear();
     }
 
     @Test
@@ -164,7 +193,7 @@ class SubjectServiceTest {
     @DisplayName("deleteSubject - deletes SubjectPO and ES document")
     void deleteSubject_shouldDeleteSubjectAndEsDocs() {
         String id = "subject-001";
-        when(subjectDAO.existsById(id)).thenReturn(true);
+        when(subjectDAO.findById(id)).thenReturn(Optional.of(sampleSubjectPO));
 
         subjectService.deleteSubject(id);
 
@@ -173,10 +202,62 @@ class SubjectServiceTest {
     }
 
     @Test
+    @DisplayName("getSubjectById - denies without VIEW permission")
+    void getSubjectById_requiresViewPermission() {
+        SubjectPO other = new SubjectPO();
+        other.setId("subject-002");
+        other.setCreatedBy("other-user");
+        when(subjectDAO.findById("subject-002")).thenReturn(Optional.of(other));
+
+        DatiException ex = assertThrows(DatiException.class,
+                () -> subjectService.getSubjectById("subject-002"));
+        assertThat(ex.getCode()).isEqualTo(ErrorCode.PERMISSION_DENIED);
+    }
+
+    @Test
+    @DisplayName("updateSubject - denies without EDIT permission")
+    void updateSubject_requiresEditPermission() {
+        SubjectPO other = new SubjectPO();
+        other.setId("subject-002");
+        other.setCreatedBy("other-user");
+        when(subjectDAO.findById("subject-002")).thenReturn(Optional.of(other));
+
+        DatiException ex = assertThrows(DatiException.class,
+                () -> subjectService.updateSubject("subject-002", new Subject()));
+        assertThat(ex.getCode()).isEqualTo(ErrorCode.PERMISSION_DENIED);
+    }
+
+    @Test
+    @DisplayName("deleteSubject - denies without EDIT permission")
+    void deleteSubject_requiresEditPermission() {
+        SubjectPO other = new SubjectPO();
+        other.setId("subject-002");
+        other.setCreatedBy("other-user");
+        when(subjectDAO.findById("subject-002")).thenReturn(Optional.of(other));
+
+        DatiException ex = assertThrows(DatiException.class,
+                () -> subjectService.deleteSubject("subject-002"));
+        assertThat(ex.getCode()).isEqualTo(ErrorCode.PERMISSION_DENIED);
+    }
+
+    @Test
+    @DisplayName("addTableToSubject - denies without EDIT permission")
+    void addTableToSubject_requiresEditPermission() {
+        SubjectPO other = new SubjectPO();
+        other.setId("subject-002");
+        other.setCreatedBy("other-user");
+        when(subjectDAO.findById("subject-002")).thenReturn(Optional.of(other));
+
+        DatiException ex = assertThrows(DatiException.class,
+                () -> subjectService.addTableToSubject("subject-002", "table-001"));
+        assertThat(ex.getCode()).isEqualTo(ErrorCode.PERMISSION_DENIED);
+    }
+
+    @Test
     @DisplayName("deleteSubject - throws when Subject not found")
     void deleteSubject_shouldThrowWhenNotFound() {
         String id = "non-existent";
-        when(subjectDAO.existsById(id)).thenReturn(false);
+        when(subjectDAO.findById(id)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> subjectService.deleteSubject(id))
                 .isInstanceOf(DatiException.class)
@@ -248,6 +329,7 @@ class SubjectServiceTest {
         subjectTablePO.setSubjectId(subjectId);
         subjectTablePO.setTableId(tableId);
 
+        when(subjectDAO.findById(subjectId)).thenReturn(Optional.of(sampleSubjectPO));
         when(subjectTableDAO.findBySubjectIdAndTableId(subjectId, tableId))
                 .thenReturn(Optional.of(subjectTablePO));
 
@@ -262,6 +344,7 @@ class SubjectServiceTest {
         String subjectId = "subject-001";
         String tableId = "table-001";
 
+        when(subjectDAO.findById(subjectId)).thenReturn(Optional.of(sampleSubjectPO));
         when(subjectTableDAO.findBySubjectIdAndTableId(subjectId, tableId))
                 .thenReturn(Optional.empty());
 
@@ -277,13 +360,13 @@ class SubjectServiceTest {
         Pageable pageable = PageRequest.of(0, 10);
 
         Page<SubjectPO> subjectPOPage = new org.springframework.data.domain.PageImpl<>(List.of(sampleSubjectPO), pageable, 1);
-        when(subjectDAO.findAll(pageable)).thenReturn(subjectPOPage);
+        when(subjectDAO.findAllAccessible(TestFixtures.TEST_USER_ID, pageable)).thenReturn(subjectPOPage);
 
         Page<Subject> result = subjectService.getSubjects(keyword, pageable);
 
         assertThat(result.getTotalElements()).isEqualTo(1);
         assertThat(result.getContent().getFirst().getName()).isEqualTo("Test Subject");
-        verify(subjectDAO, never()).findByKeyword(any(), any());
+        verify(subjectDAO, never()).findByKeywordAndAccessible(any(), any(), any());
     }
 
     @Test
@@ -293,7 +376,7 @@ class SubjectServiceTest {
         Pageable pageable = PageRequest.of(0, 10);
 
         Page<SubjectPO> subjectPOPage = new org.springframework.data.domain.PageImpl<>(List.of(sampleSubjectPO), pageable, 1);
-        when(subjectDAO.findByKeyword(keyword, pageable)).thenReturn(subjectPOPage);
+        when(subjectDAO.findByKeywordAndAccessible(keyword, TestFixtures.TEST_USER_ID, pageable)).thenReturn(subjectPOPage);
 
         Page<Subject> result = subjectService.getSubjects(keyword, pageable);
 

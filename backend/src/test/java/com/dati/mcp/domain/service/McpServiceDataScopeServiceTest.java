@@ -1,13 +1,25 @@
 package com.dati.mcp.domain.service;
 
 import com.dati.TestFixtures;
+import com.dati.auth.authentication.User;
+import com.dati.base.RequestContext;
+import com.dati.base.exception.DatiException;
+import com.dati.base.exception.ErrorCode;
 import com.dati.mcp.domain.model.McpDataScopeType;
 import com.dati.mcp.domain.model.McpServiceDataScope;
 import com.dati.mcp.repository.dao.McpServiceDataScopeDAO;
 import com.dati.mcp.repository.mapper.McpServiceDataScopeMapper;
+import com.dati.datasource.repository.dao.DataSourceDAO;
+import com.dati.datasource.repository.po.DataSourcePO;
+import com.dati.mcp.repository.dao.McpServiceDAO;
 import com.dati.mcp.repository.po.McpServiceDataScopePO;
+import com.dati.mcp.repository.po.McpServicePO;
+import com.dati.permission.domain.service.PermissionService;
+import com.dati.semantic.repository.dao.SubjectDAO;
+import com.dati.semantic.repository.po.SubjectPO;
 import com.dati.semantic.domain.model.Subject;
 import com.dati.semantic.domain.service.SubjectService;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -19,13 +31,18 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -38,6 +55,18 @@ class McpServiceDataScopeServiceTest {
     @Mock
     private SubjectService subjectService;
 
+    @Mock
+    private McpServiceDAO mcpServiceDAO;
+
+    @Mock
+    private DataSourceDAO dataSourceDAO;
+
+    @Mock
+    private SubjectDAO subjectDAO;
+
+    @Mock
+    private PermissionService permissionService;
+
     @InjectMocks
     private McpServiceDataScopeService dataScopeService;
 
@@ -49,6 +78,24 @@ class McpServiceDataScopeServiceTest {
 
     @BeforeEach
     void setUp() {
+        User user = new User();
+        user.setId(TestFixtures.TEST_USER_ID);
+        user.setName("qa-user");
+        RequestContext.setUser(user);
+        lenient().doAnswer(inv -> {
+            String ownerId = inv.getArgument(3);
+            if (!TestFixtures.TEST_USER_ID.equals(ownerId)) {
+                throw new DatiException(ErrorCode.PERMISSION_DENIED);
+            }
+            return null;
+        }).when(permissionService).requireCurrentUser(any(), anyString(), any(), anyString());
+        lenient().doAnswer(inv -> {
+            String ownerId = inv.getArgument(5);
+            if (!TestFixtures.TEST_USER_ID.equals(ownerId)) {
+                throw new DatiException(ErrorCode.PERMISSION_DENIED);
+            }
+            return null;
+        }).when(permissionService).require(anyString(), anyString(), any(), anyString(), any(), anyString());
         testDataSourceScope = new McpServiceDataScope();
         testDataSourceScope.setServiceId(TestFixtures.TEST_MCP_SERVICE_ID);
         testDataSourceScope.setScopeType(McpDataScopeType.DATA_SOURCE);
@@ -60,10 +107,31 @@ class McpServiceDataScopeServiceTest {
         testSubjectScope.setReferenceId("subject-001");
     }
 
+    @AfterEach
+    void tearDown() {
+        RequestContext.getContext().clear();
+    }
+
+
+    /** stub 默认 scope（ds-001 数据源 + subject-001 主题）的 owner 查询，owner = 当前用户。 */
+    private void stubScopeOwners() {
+        DataSourcePO ds = new DataSourcePO();
+        ds.setId(TestFixtures.TEST_DATASOURCE_ID);
+        ds.setCreatedBy(TestFixtures.TEST_USER_ID);
+        when(dataSourceDAO.findById(TestFixtures.TEST_DATASOURCE_ID)).thenReturn(Optional.of(ds));
+        SubjectPO subject = new SubjectPO();
+        subject.setId("subject-001");
+        subject.setCreatedBy(TestFixtures.TEST_USER_ID);
+        when(subjectDAO.findById("subject-001")).thenReturn(Optional.of(subject));
+    }
+
     @Test
     @DisplayName("Save data scope - full replace, delete then insert")
     void saveDataScope_shouldDeleteThenSave() {
         List<McpServiceDataScope> scopes = List.of(testDataSourceScope, testSubjectScope);
+        when(mcpServiceDAO.findById(TestFixtures.TEST_MCP_SERVICE_ID))
+                .thenReturn(Optional.of(TestFixtures.createTestMcpServicePO()));
+        stubScopeOwners();
         when(dataScopeDAO.saveAll(any())).thenReturn(List.of());
 
         dataScopeService.saveDataScope(TestFixtures.TEST_MCP_SERVICE_ID, scopes);
@@ -80,6 +148,8 @@ class McpServiceDataScopeServiceTest {
     @Test
     @DisplayName("Save data scope - empty list clears existing")
     void saveDataScope_empty_shouldDeleteAll() {
+        when(mcpServiceDAO.findById(TestFixtures.TEST_MCP_SERVICE_ID))
+                .thenReturn(Optional.of(TestFixtures.createTestMcpServicePO()));
         dataScopeService.saveDataScope(TestFixtures.TEST_MCP_SERVICE_ID, List.of());
 
         verify(dataScopeDAO).deleteAllByServiceId(TestFixtures.TEST_MCP_SERVICE_ID);
@@ -173,4 +243,55 @@ class McpServiceDataScopeServiceTest {
 
         assertThat(result).isEmpty();
     }
+
+    @Test
+    @DisplayName("Save data scope - denies without service EDIT permission")
+    void saveDataScope_requiresServiceEdit() {
+        McpServicePO other = TestFixtures.createTestMcpServicePO();
+        other.setCreatedBy("other-user");
+        when(mcpServiceDAO.findById(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(Optional.of(other));
+
+        DatiException ex = assertThrows(DatiException.class,
+                () -> dataScopeService.saveDataScope(TestFixtures.TEST_MCP_SERVICE_ID, List.of(testDataSourceScope)));
+        assertThat(ex.getCode()).isEqualTo(ErrorCode.PERMISSION_DENIED);
+    }
+
+    @Test
+    @DisplayName("Validate scope - rejects data source without VIEW")
+    void validateScopePermission_rejectsDataSourceWithoutView() {
+        DataSourcePO ds = new DataSourcePO();
+        ds.setId(TestFixtures.TEST_DATASOURCE_ID);
+        ds.setCreatedBy("other-user");
+        when(dataSourceDAO.findById(TestFixtures.TEST_DATASOURCE_ID)).thenReturn(Optional.of(ds));
+
+        DatiException ex = assertThrows(DatiException.class,
+                () -> dataScopeService.validateScopePermission(List.of(testDataSourceScope)));
+        assertThat(ex.getCode()).isEqualTo(ErrorCode.PERMISSION_DENIED);
+    }
+
+    @Test
+    @DisplayName("Validate scope - accepts owned data source")
+    void validateScopePermission_acceptsOwnedDataSource() {
+        DataSourcePO ds = new DataSourcePO();
+        ds.setId(TestFixtures.TEST_DATASOURCE_ID);
+        ds.setCreatedBy(TestFixtures.TEST_USER_ID);
+        when(dataSourceDAO.findById(TestFixtures.TEST_DATASOURCE_ID)).thenReturn(Optional.of(ds));
+
+        assertThatCode(() -> dataScopeService.validateScopePermission(List.of(testDataSourceScope)))
+                .doesNotThrowAnyException();
+    }
+
+    @Test
+    @DisplayName("Validate scope - rejects subject without VIEW")
+    void validateScopePermission_rejectsSubjectWithoutView() {
+        SubjectPO subject = new SubjectPO();
+        subject.setId("subject-001");
+        subject.setCreatedBy("other-user");
+        when(subjectDAO.findById("subject-001")).thenReturn(Optional.of(subject));
+
+        DatiException ex = assertThrows(DatiException.class,
+                () -> dataScopeService.validateScopePermission(List.of(testSubjectScope)));
+        assertThat(ex.getCode()).isEqualTo(ErrorCode.PERMISSION_DENIED);
+    }
 }
+

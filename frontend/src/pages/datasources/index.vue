@@ -10,6 +10,7 @@ import {
   testConnection,
 } from "~/api/datasource";
 import { Plus, Search, Refresh } from "@element-plus/icons-vue";
+import AuthDialog from "~/components/common/AuthDialog.vue";
 
 const { t } = useI18n();
 const router = useRouter();
@@ -25,6 +26,15 @@ const searchKeyword = ref("");
 const page = ref(1);
 const pageSize = ref(10);
 const total = ref(0);
+
+// 授权弹窗状态
+const authDialogVisible = ref(false);
+const authResourceId = ref("");
+
+const handleAuthorize = (datasource: DatasourceVO) => {
+  authResourceId.value = datasource.id;
+  authDialogVisible.value = true;
+};
 
 // 加载数据源列表（携带分页参数）
 const loadDatasources = async () => {
@@ -209,6 +219,7 @@ onMounted(() => {
         @delete="handleDelete"
         @test-connection="handleTestConnection"
         @table-manage="handleTableManage"
+        @authorize="handleAuthorize"
       />
     </DataTableShell>
 
@@ -216,6 +227,12 @@ onMounted(() => {
       v-model="dialogVisible"
       :datasource="currentDatasource"
       @success="handleDialogSuccess"
+    />
+
+    <AuthDialog
+      v-model:visible="authDialogVisible"
+      resource-type="DATA_SOURCE"
+      :resource-id="authResourceId"
     />
   </div>
 </template>

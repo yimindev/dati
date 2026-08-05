@@ -14,6 +14,7 @@ interface Props {
 interface Emits {
   (e: "detail", service: McpServiceVO): void;
   (e: "delete", service: McpServiceVO): void;
+  (e: "authorize", service: McpServiceVO): void;
 }
 
 defineProps<Props>();
@@ -81,16 +82,6 @@ const handleCopy = async (endpointPath: string) => {
       </template>
     </el-table-column>
     <el-table-column
-      prop="description"
-      :label="t('common.description')"
-      min-width="200"
-      show-overflow-tooltip
-    >
-      <template #default="{ row }">
-        {{ row.description || '-' }}
-      </template>
-    </el-table-column>
-    <el-table-column
       prop="status"
       :label="t('mcpService.status.label')"
       min-width="100"
@@ -99,16 +90,6 @@ const handleCopy = async (endpointPath: string) => {
         <el-tag :type="statusType(row.status)" size="small">
           {{ statusLabel(row.status) }}
         </el-tag>
-      </template>
-    </el-table-column>
-    <el-table-column
-      prop="tool_count"
-      :label="t('mcpService.toolCount')"
-      min-width="90"
-      align="right"
-    >
-      <template #default="{ row }">
-        <span class="font-mono text-sm">{{ row.tool_count ?? 0 }}</span>
       </template>
     </el-table-column>
     <el-table-column
@@ -133,6 +114,31 @@ const handleCopy = async (endpointPath: string) => {
       </template>
     </el-table-column>
     <el-table-column
+      prop="tool_count"
+      :label="t('mcpService.toolCount')"
+      min-width="90"
+      align="right"
+    >
+      <template #default="{ row }">
+        <span class="font-mono text-sm">{{ row.tool_count ?? 0 }}</span>
+      </template>
+    </el-table-column>
+    <el-table-column
+      prop="description"
+      :label="t('common.description')"
+      min-width="200"
+      show-overflow-tooltip
+    >
+      <template #default="{ row }">
+        {{ row.description || '-' }}
+      </template>
+    </el-table-column>
+    <el-table-column
+      prop="created_user_name"
+      :label="t('common.createdBy')"
+      min-width="100"
+    />
+    <el-table-column
       prop="updated_at"
       :label="t('common.updatedAt')"
       min-width="160"
@@ -143,7 +149,7 @@ const handleCopy = async (endpointPath: string) => {
     </el-table-column>
     <el-table-column
       :label="t('common.actions')"
-      width="180"
+      width="240"
       fixed="right"
       align="right"
     >
@@ -151,6 +157,9 @@ const handleCopy = async (endpointPath: string) => {
         <div class="flex items-center justify-end gap-2">
           <el-button type="primary" link @click="$emit('detail', row)">
             {{ t("common.detail") }}
+          </el-button>
+          <el-button type="primary" link @click="$emit('authorize', row)">
+            {{ t("permission.button") }}
           </el-button>
           <el-button type="danger" link @click="$emit('delete', row)">
             {{ t("common.delete") }}

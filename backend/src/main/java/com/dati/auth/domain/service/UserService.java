@@ -6,12 +6,14 @@ import com.dati.auth.repository.dao.UserRepository;
 import com.dati.auth.repository.mapper.UserMapper;
 import com.dati.auth.repository.po.UserPO;
 import com.dati.auth.server.pojo.RegisterRequest;
+import com.dati.auth.server.pojo.UserBriefVO;
 import com.dati.base.exception.DatiException;
 import com.dati.base.exception.ErrorCode;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -50,6 +52,23 @@ public class UserService {
         return userRepository.findAllById(userIds).stream()
                 .map(UserMapper::toUser)
                 .collect(Collectors.toMap(User::getId, u -> u));
+    }
+
+    /** 按用户名/显示名模糊搜索（授权场景选择被授权人），返回最小字段。 */
+    public List<UserBriefVO> searchUsers(String keyword) {
+        if (keyword == null || keyword.isBlank()) {
+            return List.of();
+        }
+        return userRepository.findByNameContainingIgnoreCaseOrDisplayNameContainingIgnoreCase(keyword, keyword)
+                .stream()
+                .map(po -> {
+                    UserBriefVO vo = new UserBriefVO();
+                    vo.setId(po.getId());
+                    vo.setName(po.getName());
+                    vo.setDisplayName(po.getDisplayName());
+                    return vo;
+                })
+                .toList();
     }
 
 }

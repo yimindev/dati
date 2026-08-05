@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { SubjectVO } from '~/api/subject'
+import { formatDateTime } from '~/composables'
 import { useI18n } from 'vue-i18n'
 
 const { t } = useI18n()
@@ -58,6 +59,12 @@ defineEmits<Emits>()
       </template>
     </el-table-column>
     <el-table-column prop="description" :label="t('common.description')" min-width="200" show-overflow-tooltip />
+    <el-table-column prop="created_user_name" :label="t('common.createdBy')" min-width="100" />
+    <el-table-column prop="updated_at" :label="t('common.updatedAt')" min-width="160">
+      <template #default="{ row }">
+        {{ formatDateTime(row.updated_at) }}
+      </template>
+    </el-table-column>
     <el-table-column :label="t('common.actions')" width="150" fixed="right" align="right">
       <template #default="{ row }">
         <div class="flex items-center justify-end gap-2">

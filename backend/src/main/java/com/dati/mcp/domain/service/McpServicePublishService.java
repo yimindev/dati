@@ -11,6 +11,9 @@ import com.dati.mcp.repository.mapper.McpServiceSnapshotMapper;
 import com.dati.mcp.repository.po.McpServicePO;
 import com.dati.mcp.repository.po.McpServiceSnapshotPO;
 import com.dati.mcp.server.pojo.McpServiceDiffVO;
+import com.dati.permission.domain.model.Permission;
+import com.dati.permission.domain.model.ResourceType;
+import com.dati.permission.domain.service.PermissionService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,23 +32,29 @@ public class McpServicePublishService {
     private final McpServiceDataScopeService dataScopeService;
     private final McpToolService toolService;
     private final McpPromptService promptService;
+    private final PermissionService permissionService;
 
     public McpServicePublishService(McpServiceDAO mcpServiceDAO,
                                      McpServiceSnapshotDAO snapshotDAO,
                                      McpServiceDataScopeService dataScopeService,
                                      McpToolService toolService,
-                                     McpPromptService promptService) {
+                                     McpPromptService promptService,
+                                     PermissionService permissionService) {
         this.mcpServiceDAO = mcpServiceDAO;
         this.snapshotDAO = snapshotDAO;
         this.dataScopeService = dataScopeService;
         this.toolService = toolService;
         this.promptService = promptService;
+        this.permissionService = permissionService;
     }
 
     @Transactional
     public McpServiceSnapshot publish(String serviceId, String releaseNote) {
         McpServicePO servicePO = mcpServiceDAO.findById(serviceId)
                 .orElseThrow(() -> new DatiException(ErrorCode.MS_SERVICE_NOT_FOUND, serviceId));
+        permissionService.requireCurrentUser(ResourceType.MCP_SERVICE, serviceId, Permission.EDIT, servicePO.getCreatedBy());
+
+        dataScopeService.validateScopePermission(dataScopeService.getDataScope(serviceId));
 
         if (dataScopeService.getDataScope(serviceId).isEmpty()) {
             throw new DatiException(ErrorCode.MS_SERVICE_DATA_SCOPE_EMPTY, serviceId);
@@ -89,6 +98,7 @@ public class McpServicePublishService {
     public void disable(String serviceId) {
         McpServicePO servicePO = mcpServiceDAO.findById(serviceId)
                 .orElseThrow(() -> new DatiException(ErrorCode.MS_SERVICE_NOT_FOUND, serviceId));
+        permissionService.requireCurrentUser(ResourceType.MCP_SERVICE, serviceId, Permission.EDIT, servicePO.getCreatedBy());
         if (servicePO.getStatus() != McpServiceStatus.PUBLISHED) {
             throw new DatiException(ErrorCode.MS_SERVICE_STATUS_INVALID,
                     "Only PUBLISHED service can be disabled, current: " + servicePO.getStatus());
@@ -101,6 +111,7 @@ public class McpServicePublishService {
     public void enable(String serviceId) {
         McpServicePO servicePO = mcpServiceDAO.findById(serviceId)
                 .orElseThrow(() -> new DatiException(ErrorCode.MS_SERVICE_NOT_FOUND, serviceId));
+        permissionService.requireCurrentUser(ResourceType.MCP_SERVICE, serviceId, Permission.EDIT, servicePO.getCreatedBy());
         if (servicePO.getStatus() != McpServiceStatus.DISABLED) {
             throw new DatiException(ErrorCode.MS_SERVICE_STATUS_INVALID,
                     "Only DISABLED service can be enabled, current: " + servicePO.getStatus());

@@ -1,4 +1,6 @@
 import axios, { AxiosError, type AxiosInstance } from 'axios'
+import { ElMessage } from 'element-plus'
+import { i18n } from '~/plugins/i18n'
 
 // 可从 import.meta.env 加载
 const BASE_URL = import.meta.env.VITE_API_BASE_URL as string | undefined
@@ -63,6 +65,11 @@ http.interceptors.response.use(
         localStorage.removeItem("access_token");
         window.location.href = "/login";
       }
+      return Promise.reject(err);
+    }
+    if (err.status === 403) {
+      // 权限不足：提示但不登出、不清 token（后端是唯一权威，列表已静默过滤）
+      ElMessage.error(i18n.global.t("common.noPermission"));
       return Promise.reject(err);
     }
     return Promise.reject(err);

@@ -14,4 +14,29 @@ public interface SubjectDAO extends JpaRepository<SubjectPO, String> {
     @Query("SELECT s FROM SubjectPO s WHERE " +
            "s.id LIKE CONCAT(:keyword, '%') OR LOWER(s.name) LIKE LOWER(CONCAT('%', :keyword, '%'))")
     Page<SubjectPO> findByKeyword(@Param("keyword") String keyword, Pageable pageable);
+
+    @Query("""
+            SELECT s FROM SubjectPO s
+            WHERE (s.id LIKE CONCAT(:keyword, '%') OR LOWER(s.name) LIKE LOWER(CONCAT('%', :keyword, '%')))
+              AND (s.createdBy = :userId
+                   OR EXISTS (SELECT 1 FROM ResourceAclPO a
+                              WHERE a.resourceType = 'SUBJECT'
+                                AND a.resourceId = s.id
+                                AND ((a.principalType = 'USER' AND a.principalId = :userId)
+                                     OR (a.principalType = 'GROUP' AND a.principalId = 'ALL_USERS'))))
+            """)
+    Page<SubjectPO> findByKeywordAndAccessible(@Param("keyword") String keyword,
+                                               @Param("userId") String userId,
+                                               Pageable pageable);
+
+    @Query("""
+            SELECT s FROM SubjectPO s
+            WHERE s.createdBy = :userId
+               OR EXISTS (SELECT 1 FROM ResourceAclPO a
+                          WHERE a.resourceType = 'SUBJECT'
+                            AND a.resourceId = s.id
+                            AND ((a.principalType = 'USER' AND a.principalId = :userId)
+                                 OR (a.principalType = 'GROUP' AND a.principalId = 'ALL_USERS')))
+            """)
+    Page<SubjectPO> findAllAccessible(@Param("userId") String userId, Pageable pageable);
 }

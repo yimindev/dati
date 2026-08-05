@@ -6,6 +6,7 @@ import { useRouter } from "vue-router";
 import type { McpServiceVO } from "~/api/mcp-service";
 import { deleteMcpService, listMcpServices } from "~/api/mcp-service";
 import { Plus, Refresh, Search } from "@element-plus/icons-vue";
+import AuthDialog from "~/components/common/AuthDialog.vue";
 import DataTableShell from "~/components/common/DataTableShell.vue";
 
 const { t } = useI18n();
@@ -85,6 +86,14 @@ const handleDetail = (service: McpServiceVO) => {
   router.push({
     path: `/mcp-services/${service.id}`,
   });
+};
+
+const authDialogVisible = ref(false);
+const authResourceId = ref("");
+
+const handleAuthorize = (service: McpServiceVO) => {
+  authResourceId.value = service.id;
+  authDialogVisible.value = true;
 };
 
 const handleDelete = async (service: McpServiceVO) => {
@@ -190,8 +199,15 @@ onMounted(() => {
         :data="serviceList"
         @detail="handleDetail"
         @delete="handleDelete"
+        @authorize="handleAuthorize"
       />
     </DataTableShell>
+
+    <AuthDialog
+      v-model:visible="authDialogVisible"
+      resource-type="MCP_SERVICE"
+      :resource-id="authResourceId"
+    />
 
     <McpServiceDialog v-model="dialogVisible" @success="handleDialogSuccess" />
   </div>

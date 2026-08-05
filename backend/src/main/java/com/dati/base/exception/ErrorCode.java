@@ -60,7 +60,11 @@ public enum ErrorCode {
     AUTH_LOGIN_FAILED("AUTH001", 401, "Authentication failed: invalid credentials"),
     AUTH_TOKEN_INVALID("AUTH002", 401, "Token invalid or expired"),
     AUTH_USER_EXISTS("AUTH003", 409, "Username already exists: {0}"),
-    AUTH_TYPE_UNSUPPORTED("AUTH004", 400, "Unsupported authentication type: {0}");
+    AUTH_TYPE_UNSUPPORTED("AUTH004", 400, "Unsupported authentication type: {0}"),
+
+    // ── Permission module (PM) ───────────────────────────
+
+    PERMISSION_DENIED("PM001", 403, "No permission to access this resource");
 
     private final String code;
     private final int status;

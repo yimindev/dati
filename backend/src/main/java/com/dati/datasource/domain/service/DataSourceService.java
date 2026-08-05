@@ -1,6 +1,8 @@
 package com.dati.datasource.domain.service;
 
+import com.dati.auth.authentication.User;
 import com.dati.base.EncryptionUtils;
+import com.dati.base.RequestContext;
 import com.dati.base.exception.DatiException;
 import com.dati.base.exception.ErrorCode;
 import com.dati.common.StringUtils;
@@ -15,6 +17,9 @@ import com.dati.db.DbType;
 import com.dati.db.HikariPoolManager;
 import com.dati.db.JdbcConnector;
 import com.dati.db.JdbcUtils;
+import com.dati.permission.domain.service.PermissionService;
+import com.dati.permission.domain.model.Permission;
+import com.dati.permission.domain.model.ResourceType;
 import com.dati.semantic.domain.service.SemanticIndexService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -38,15 +43,17 @@ public class DataSourceService {
     private final ColumnInfoDAO columnInfoDAO;
     private final SemanticIndexService semanticIndexService;
     private final JdbcMetaService jdbcMetaService;
+    private final PermissionService permissionService;
 
     public DataSourceService(DataSourceDAO dataSourceDAO, TableInfoDAO tableInfoDAO,
                              ColumnInfoDAO columnInfoDAO, SemanticIndexService semanticIndexService,
-                             JdbcMetaService jdbcMetaService) {
+                             JdbcMetaService jdbcMetaService, PermissionService permissionService) {
         this.dataSourceDAO = dataSourceDAO;
         this.tableInfoDAO = tableInfoDAO;
         this.columnInfoDAO = columnInfoDAO;
         this.semanticIndexService = semanticIndexService;
         this.jdbcMetaService = jdbcMetaService;
+        this.permissionService = permissionService;
     }
 
     public boolean testConnection(JdbcConnector jdbcConnector) {
@@ -73,6 +80,7 @@ public class DataSourceService {
     public void updateDataSource(String id, DataSource dataSource) {
         DataSourcePO po = dataSourceDAO.findById(id)
                 .orElseThrow(() -> new DatiException(ErrorCode.DS_NOT_FOUND, id));
+        permissionService.requireCurrentUser(ResourceType.DATA_SOURCE, id, Permission.EDIT, po.getCreatedBy());
 
         DataSource current = DSMapper.toDataSource(po);
         JdbcConnector oldConnector = new JdbcConnector(current);
@@ -152,7 +160,9 @@ public class DataSourceService {
         if (dataSourcePOOptional.isEmpty()) {
             throw new DatiException(ErrorCode.DS_NOT_FOUND, id);
         }
-        JdbcConnector jdbcConnector = new JdbcConnector(DSMapper.toDataSource(dataSourcePOOptional.get()));
+        DataSourcePO po = dataSourcePOOptional.get();
+        permissionService.requireCurrentUser(ResourceType.DATA_SOURCE, id, Permission.EDIT, po.getCreatedBy());
+        JdbcConnector jdbcConnector = new JdbcConnector(DSMapper.toDataSource(po));
         HikariPoolManager.close(jdbcConnector);
 
         List<String> tableIds = tableInfoDAO.findByDataSourceId(id)
@@ -173,14 +183,27 @@ public class DataSourceService {
     }
 
     public Page<DataSource> listDataSources(String keyword, Pageable pageable) {
-        if (StringUtils.isEmpty(keyword)) {
-            return dataSourceDAO.findAll(pageable).map(DSMapper::toDataSource);
+        User user = RequestContext.getUser();
+        if (permissionService.isAdmin(user.getName())) {
+            if (StringUtils.isEmpty(keyword)) {
+                return dataSourceDAO.findAll(pageable).map(DSMapper::toDataSource);
+            }
+            return dataSourceDAO.findAllByNameContainingOrId(keyword, keyword, pageable)
+                    .map(DSMapper::toDataSource);
         }
-        return dataSourceDAO.findAllByNameContainingOrId(keyword, keyword, pageable).map(DSMapper::toDataSource);
+        if (StringUtils.isEmpty(keyword)) {
+            return dataSourceDAO.findAllAccessible(user.getId(), pageable).map(DSMapper::toDataSource);
+        }
+        return dataSourceDAO.findByNameContainingOrIdAndAccessible(keyword, user.getId(), pageable)
+                .map(DSMapper::toDataSource);
     }
 
     public Optional<DataSource> getDataSource(String id) {
-        return dataSourceDAO.findById(id).map(DSMapper::toDataSource);
+        return dataSourceDAO.findById(id)
+                .map(po -> {
+                    permissionService.requireCurrentUser(ResourceType.DATA_SOURCE, id, Permission.VIEW, po.getCreatedBy());
+                    return DSMapper.toDataSource(po);
+                });
     }
 
     public record DsBrief(String name, DbType dbType, String defaultSchema, String description) {}

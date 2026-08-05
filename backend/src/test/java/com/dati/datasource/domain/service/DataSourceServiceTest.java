@@ -1,7 +1,10 @@
 package com.dati.datasource.domain.service;
 
 import com.dati.TestFixtures;
+import com.dati.auth.authentication.User;
+import com.dati.base.RequestContext;
 import com.dati.base.exception.DatiException;
+import com.dati.base.exception.ErrorCode;
 import com.dati.datasource.domain.model.DataSource;
 import com.dati.datasource.repository.dao.ColumnInfoDAO;
 import com.dati.datasource.repository.dao.DataSourceDAO;
@@ -12,7 +15,9 @@ import com.dati.db.DbType;
 import com.dati.db.HikariPoolManager;
 import com.dati.db.JdbcConnector;
 import com.dati.db.JdbcUtils;
+import com.dati.permission.domain.service.PermissionService;
 import com.dati.semantic.domain.service.SemanticIndexService;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -37,7 +42,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.eq;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -62,6 +69,9 @@ class DataSourceServiceTest {
     @Mock
     private JdbcMetaService jdbcMetaService;
 
+    @Mock
+    private PermissionService permissionService;
+
     @InjectMocks
     private DataSourceService dataSourceService;
 
@@ -72,6 +82,24 @@ class DataSourceServiceTest {
     void setUp() {
         testDataSource = TestFixtures.createTestDataSource();
         testDataSourcePO = TestFixtures.createTestDataSourcePO();
+        User user = new User();
+        user.setId(TestFixtures.TEST_USER_ID);
+        user.setName(TestFixtures.TEST_USER_ID);
+        RequestContext.setUser(user);
+        lenient().when(permissionService.isAdmin(anyString())).thenReturn(false);
+        // requireCurrentUser owner 感知：ownerId == 当前用户（TEST_USER_ID）放行；否则抛 403
+        lenient().doAnswer(inv -> {
+            String ownerId = inv.getArgument(3);
+            if (!TestFixtures.TEST_USER_ID.equals(ownerId)) {
+                throw new DatiException(ErrorCode.PERMISSION_DENIED);
+            }
+            return null;
+        }).when(permissionService).requireCurrentUser(any(), anyString(), any(), anyString());
+    }
+
+    @AfterEach
+    void tearDown() {
+        RequestContext.getContext().clear();
     }
 
     @Test
@@ -256,7 +284,7 @@ class DataSourceServiceTest {
         // given
         Pageable pageable = PageRequest.of(0, 10);
         Page<DataSourcePO> page = new PageImpl<>(List.of(testDataSourcePO));
-        when(dataSourceDAO.findAll(pageable)).thenReturn(page);
+        when(dataSourceDAO.findAllAccessible(TestFixtures.TEST_USER_ID, pageable)).thenReturn(page);
 
         // when
         Page<DataSource> result = dataSourceService.listDataSources(null, pageable);
@@ -264,7 +292,7 @@ class DataSourceServiceTest {
         // then
         assertThat(result.getContent()).hasSize(1);
         assertThat(result.getContent().getFirst().getId()).isEqualTo(TestFixtures.TEST_DATASOURCE_ID);
-        verify(dataSourceDAO).findAll(pageable);
+        verify(dataSourceDAO).findAllAccessible(TestFixtures.TEST_USER_ID, pageable);
     }
 
     @Test
@@ -273,14 +301,15 @@ class DataSourceServiceTest {
         // given
         Pageable pageable = PageRequest.of(0, 10);
         Page<DataSourcePO> page = new PageImpl<>(List.of(testDataSourcePO));
-        when(dataSourceDAO.findAllByNameContainingOrId("test", "test", pageable)).thenReturn(page);
+        when(dataSourceDAO.findByNameContainingOrIdAndAccessible("test", TestFixtures.TEST_USER_ID, pageable))
+                .thenReturn(page);
 
         // when
         Page<DataSource> result = dataSourceService.listDataSources("test", pageable);
 
         // then
         assertThat(result.getContent()).hasSize(1);
-        verify(dataSourceDAO).findAllByNameContainingOrId("test", "test", pageable);
+        verify(dataSourceDAO).findByNameContainingOrIdAndAccessible("test", TestFixtures.TEST_USER_ID, pageable);
     }
 
     @Test
@@ -301,6 +330,42 @@ class DataSourceServiceTest {
 
         assertThat(dataSourceService.getDataSource(TestFixtures.TEST_DATASOURCE_ID)).isEmpty();
         verify(dataSourceDAO).findById(TestFixtures.TEST_DATASOURCE_ID);
+    }
+
+    @Test
+    @DisplayName("Get single data source - denies without VIEW permission")
+    void getDataSource_requiresViewPermission() {
+        DataSourcePO other = TestFixtures.createTestDataSourcePO();
+        other.setCreatedBy("other-user");
+        when(dataSourceDAO.findById(TestFixtures.TEST_DATASOURCE_ID)).thenReturn(Optional.of(other));
+
+        DatiException ex = assertThrows(DatiException.class,
+                () -> dataSourceService.getDataSource(TestFixtures.TEST_DATASOURCE_ID));
+        assertThat(ex.getCode()).isEqualTo(ErrorCode.PERMISSION_DENIED);
+    }
+
+    @Test
+    @DisplayName("Update data source - denies without EDIT permission")
+    void updateDataSource_requiresEditPermission() {
+        DataSourcePO other = TestFixtures.createTestDataSourcePO();
+        other.setCreatedBy("other-user");
+        when(dataSourceDAO.findById(TestFixtures.TEST_DATASOURCE_ID)).thenReturn(Optional.of(other));
+
+        DatiException ex = assertThrows(DatiException.class,
+                () -> dataSourceService.updateDataSource(TestFixtures.TEST_DATASOURCE_ID, testDataSource));
+        assertThat(ex.getCode()).isEqualTo(ErrorCode.PERMISSION_DENIED);
+    }
+
+    @Test
+    @DisplayName("Delete data source - denies without EDIT permission")
+    void deleteDataSource_requiresEditPermission() {
+        DataSourcePO other = TestFixtures.createTestDataSourcePO();
+        other.setCreatedBy("other-user");
+        when(dataSourceDAO.findById(TestFixtures.TEST_DATASOURCE_ID)).thenReturn(Optional.of(other));
+
+        DatiException ex = assertThrows(DatiException.class,
+                () -> dataSourceService.deleteDataSource(TestFixtures.TEST_DATASOURCE_ID));
+        assertThat(ex.getCode()).isEqualTo(ErrorCode.PERMISSION_DENIED);
     }
 
     @Test

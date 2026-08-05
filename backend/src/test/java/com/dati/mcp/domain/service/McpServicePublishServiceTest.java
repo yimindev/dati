@@ -1,6 +1,9 @@
 package com.dati.mcp.domain.service;
 
 import com.dati.TestFixtures;
+import com.dati.auth.authentication.User;
+import com.dati.base.RequestContext;
+import com.dati.permission.domain.service.PermissionService;
 import com.dati.base.exception.DatiException;
 import com.dati.base.exception.ErrorCode;
 import com.dati.mcp.domain.model.McpCustomTool;
@@ -18,6 +21,7 @@ import com.dati.mcp.repository.mapper.McpServiceSnapshotMapper;
 import com.dati.mcp.repository.po.McpServicePO;
 import com.dati.mcp.repository.po.McpServiceSnapshotPO;
 import com.dati.mcp.server.pojo.McpServiceDiffVO;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -33,6 +37,8 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
@@ -56,6 +62,9 @@ class McpServicePublishServiceTest {
     @Mock
     private McpPromptService promptService;
 
+    @Mock
+    private PermissionService permissionService;
+
     @InjectMocks
     private McpServicePublishService publishService;
 
@@ -64,6 +73,22 @@ class McpServicePublishServiceTest {
     @BeforeEach
     void setUp() {
         testServicePO = TestFixtures.createTestMcpServicePO();
+        User user = new User();
+        user.setId(TestFixtures.TEST_USER_ID);
+        user.setName(TestFixtures.TEST_USER_ID);
+        RequestContext.setUser(user);
+        lenient().doAnswer(inv -> {
+            String ownerId = inv.getArgument(3);
+            if (!TestFixtures.TEST_USER_ID.equals(ownerId)) {
+                throw new DatiException(ErrorCode.PERMISSION_DENIED);
+            }
+            return null;
+        }).when(permissionService).requireCurrentUser(any(), anyString(), any(), anyString());
+    }
+
+    @AfterEach
+    void tearDown() {
+        RequestContext.getContext().clear();
     }
 
     @Test
@@ -598,4 +623,31 @@ class McpServicePublishServiceTest {
         assertThat(testServicePO.getStatus()).isEqualTo(McpServiceStatus.DISABLED);
         assertThat(testServicePO.getActiveVersionNumber()).isEqualTo(2);
     }
+
+    @Test
+    @DisplayName("Publish service - denies without EDIT permission")
+    void publish_requiresServiceEdit() {
+        McpServicePO other = TestFixtures.createTestMcpServicePO();
+        other.setCreatedBy("other-user");
+        when(mcpServiceDAO.findById(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(Optional.of(other));
+
+        DatiException ex = org.junit.jupiter.api.Assertions.assertThrows(DatiException.class,
+                () -> publishService.publish(TestFixtures.TEST_MCP_SERVICE_ID, "note"));
+        assertThat(ex.getCode()).isEqualTo(ErrorCode.PERMISSION_DENIED);
+    }
+
+    @Test
+    @DisplayName("Publish service - rejects scope without permission (propagation)")
+    void publish_rejectsScopeWithoutPermission() {
+        when(mcpServiceDAO.findById(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(Optional.of(testServicePO));
+        when(dataScopeService.getDataScope(TestFixtures.TEST_MCP_SERVICE_ID))
+                .thenReturn(List.of(TestFixtures.createTestDataScope()));
+        org.mockito.Mockito.doThrow(new DatiException(ErrorCode.PERMISSION_DENIED))
+                .when(dataScopeService).validateScopePermission(anyList());
+
+        DatiException ex = org.junit.jupiter.api.Assertions.assertThrows(DatiException.class,
+                () -> publishService.publish(TestFixtures.TEST_MCP_SERVICE_ID, "note"));
+        assertThat(ex.getCode()).isEqualTo(ErrorCode.PERMISSION_DENIED);
+    }
 }
+

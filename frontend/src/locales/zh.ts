@@ -28,6 +28,7 @@ export default {
   },
 
   common: {
+    noPermission: "没有权限执行此操作",
     // 通用操作
     save: "保存",
     cancel: "取消",
@@ -313,6 +314,27 @@ export default {
     extractFailed: "抽取失败",
   },
 
+  permission: {
+    title: "资源授权",
+    button: "授权",
+    grant: "授权",
+    revoke: "取消授权",
+    grantSuccess: "授权成功",
+    revokeSuccess: "已取消授权",
+    principalPlaceholder: "搜索用户名",
+    empty: "暂无授权用户",
+    roleViewer: "只读",
+    roleEditor: "编辑",
+    revokeConfirm: "确定要撤销该用户的授权吗？",
+    subtitle: "配置与管理成员的资源访问权限",
+    authorizedUsers: "已授权成员",
+    publicLabel: "公开访问",
+    publicHint: "开启后，所有已登录用户均可只读访问",
+    confirmPublic: "开启后所有已登录用户均可只读访问该资源，确定要开启吗？",
+    publicTag: "公开",
+    publicOn: "已设为公开（所有人只读可见）",
+    publicConfirmButton: "开启公开",
+  },
   mcpService: {
     title: "MCP 服务",
     serviceName: "服务",

@@ -20,4 +20,59 @@ public interface McpServiceDAO extends JpaRepository<McpServicePO, String> {
     Page<McpServicePO> searchByKeywordAndStatus(@Param("keyword") String keyword, @Param("status") McpServiceStatus status, Pageable pageable);
 
     boolean existsByCode(String code);
+
+    @Query("""
+            SELECT m FROM McpServicePO m
+            WHERE (m.name LIKE %:keyword% OR m.id = :keyword)
+              AND (m.createdBy = :userId
+                   OR EXISTS (SELECT 1 FROM ResourceAclPO a
+                              WHERE a.resourceType = 'MCP_SERVICE'
+                                AND a.resourceId = m.id
+                                AND ((a.principalType = 'USER' AND a.principalId = :userId)
+                                     OR (a.principalType = 'GROUP' AND a.principalId = 'ALL_USERS'))))
+            """)
+    Page<McpServicePO> findAllByNameContainingOrIdAndAccessible(@Param("keyword") String keyword,
+                                                                @Param("userId") String userId,
+                                                                Pageable pageable);
+
+    @Query("""
+            SELECT m FROM McpServicePO m
+            WHERE m.status = :status
+              AND (m.createdBy = :userId
+                   OR EXISTS (SELECT 1 FROM ResourceAclPO a
+                              WHERE a.resourceType = 'MCP_SERVICE'
+                                AND a.resourceId = m.id
+                                AND ((a.principalType = 'USER' AND a.principalId = :userId)
+                                     OR (a.principalType = 'GROUP' AND a.principalId = 'ALL_USERS'))))
+            """)
+    Page<McpServicePO> findAllByStatusAndAccessible(@Param("status") McpServiceStatus status,
+                                                    @Param("userId") String userId,
+                                                    Pageable pageable);
+
+    @Query("""
+            SELECT m FROM McpServicePO m
+            WHERE ((m.name LIKE %:keyword% AND m.status = :status)
+                   OR (m.id = :keyword AND m.status = :status))
+              AND (m.createdBy = :userId
+                   OR EXISTS (SELECT 1 FROM ResourceAclPO a
+                              WHERE a.resourceType = 'MCP_SERVICE'
+                                AND a.resourceId = m.id
+                                AND ((a.principalType = 'USER' AND a.principalId = :userId)
+                                     OR (a.principalType = 'GROUP' AND a.principalId = 'ALL_USERS'))))
+            """)
+    Page<McpServicePO> searchByKeywordAndStatusAndAccessible(@Param("keyword") String keyword,
+                                                             @Param("status") McpServiceStatus status,
+                                                             @Param("userId") String userId,
+                                                             Pageable pageable);
+
+    @Query("""
+            SELECT m FROM McpServicePO m
+            WHERE m.createdBy = :userId
+               OR EXISTS (SELECT 1 FROM ResourceAclPO a
+                          WHERE a.resourceType = 'MCP_SERVICE'
+                            AND a.resourceId = m.id
+                            AND ((a.principalType = 'USER' AND a.principalId = :userId)
+                                 OR (a.principalType = 'GROUP' AND a.principalId = 'ALL_USERS')))
+            """)
+    Page<McpServicePO> findAllAccessible(@Param("userId") String userId, Pageable pageable);
 }

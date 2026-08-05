@@ -47,3 +47,24 @@ export interface User {
   display_name?: string;
 }
 
+
+export interface AclEntry {
+  id: string
+  principal_type: string
+  principal_id: string
+  principal_name?: string
+  permission: 'VIEW' | 'EDIT'
+  created_by: string
+}
+
+export interface GrantRequest {
+  principal_type: 'USER' | 'GROUP'
+  principal_id: string
+  permission: 'VIEW' | 'EDIT'
+}
+
+export interface UserBrief {
+  id: string
+  name: string
+  display_name?: string
+}

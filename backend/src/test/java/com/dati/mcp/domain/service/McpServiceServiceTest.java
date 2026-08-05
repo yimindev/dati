@@ -1,6 +1,8 @@
 package com.dati.mcp.domain.service;
 
 import com.dati.TestFixtures;
+import com.dati.auth.authentication.User;
+import com.dati.base.RequestContext;
 import com.dati.base.exception.DatiException;
 import com.dati.base.exception.ErrorCode;
 import com.dati.mcp.domain.model.McpDataScopeType;
@@ -15,6 +17,8 @@ import com.dati.mcp.repository.dao.McpServiceDataScopeDAO;
 import com.dati.mcp.repository.dao.McpServiceSnapshotDAO;
 import com.dati.mcp.repository.po.McpServiceDataScopePO;
 import com.dati.mcp.repository.po.McpServicePO;
+import com.dati.permission.domain.service.PermissionService;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -37,7 +41,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -64,6 +70,12 @@ class McpServiceServiceTest {
     @Mock
     private McpPromptDAO promptDAO;
 
+    @Mock
+    private PermissionService permissionService;
+
+    @Mock
+    private McpServiceDataScopeService dataScopeService;
+
     @Captor
     ArgumentCaptor<List<McpServiceDataScopePO>> captor;
 
@@ -77,6 +89,23 @@ class McpServiceServiceTest {
     void setUp() {
         testService = TestFixtures.createTestMcpService();
         testServicePO = TestFixtures.createTestMcpServicePO();
+        User user = new User();
+        user.setId(TestFixtures.TEST_USER_ID);
+        user.setName(TestFixtures.TEST_USER_ID);
+        RequestContext.setUser(user);
+        lenient().when(permissionService.isAdmin(anyString())).thenReturn(false);
+        lenient().doAnswer(inv -> {
+            String ownerId = inv.getArgument(3);
+            if (!TestFixtures.TEST_USER_ID.equals(ownerId)) {
+                throw new DatiException(ErrorCode.PERMISSION_DENIED);
+            }
+            return null;
+        }).when(permissionService).requireCurrentUser(any(), anyString(), any(), anyString());
+    }
+
+    @AfterEach
+    void tearDown() {
+        RequestContext.getContext().clear();
     }
 
     @Test
@@ -173,6 +202,30 @@ class McpServiceServiceTest {
     }
 
     @Test
+    @DisplayName("Query MCP service detail - denies without VIEW permission")
+    void getMcpService_requiresViewPermission() {
+        McpServicePO other = TestFixtures.createTestMcpServicePO();
+        other.setCreatedBy("other-user");
+        when(mcpServiceDAO.findById(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(Optional.of(other));
+
+        DatiException ex = assertThrows(DatiException.class,
+                () -> mcpServiceService.getMcpService(TestFixtures.TEST_MCP_SERVICE_ID));
+        assertThat(ex.getCode()).isEqualTo(ErrorCode.PERMISSION_DENIED);
+    }
+
+    @Test
+    @DisplayName("Update MCP service - denies without EDIT permission")
+    void updateMcpService_requiresEditPermission() {
+        McpServicePO other = TestFixtures.createTestMcpServicePO();
+        other.setCreatedBy("other-user");
+        when(mcpServiceDAO.findById(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(Optional.of(other));
+
+        DatiException ex = assertThrows(DatiException.class,
+                () -> mcpServiceService.updateMcpService(TestFixtures.TEST_MCP_SERVICE_ID, testService));
+        assertThat(ex.getCode()).isEqualTo(ErrorCode.PERMISSION_DENIED);
+    }
+
+    @Test
     @DisplayName("Query MCP service detail - throws when not found")
     void getMcpService_shouldThrowWhenNotFound() {
         // given
@@ -191,7 +244,7 @@ class McpServiceServiceTest {
         // given
         Pageable pageable = PageRequest.of(0, 10);
         Page<McpServicePO> page = new PageImpl<>(List.of(testServicePO));
-        when(mcpServiceDAO.findAll(pageable)).thenReturn(page);
+        when(mcpServiceDAO.findAllAccessible(TestFixtures.TEST_USER_ID, pageable)).thenReturn(page);
 
         // when
         Page<McpService> result = mcpServiceService.listMcpServices(null, null, pageable);
@@ -199,7 +252,7 @@ class McpServiceServiceTest {
         // then
         assertThat(result.getContent()).hasSize(1);
         assertThat(result.getContent().getFirst().getId()).isEqualTo(TestFixtures.TEST_MCP_SERVICE_ID);
-        verify(mcpServiceDAO).findAll(pageable);
+        verify(mcpServiceDAO).findAllAccessible(TestFixtures.TEST_USER_ID, pageable);
     }
 
     @Test
@@ -208,14 +261,14 @@ class McpServiceServiceTest {
         // given
         Pageable pageable = PageRequest.of(0, 10);
         Page<McpServicePO> page = new PageImpl<>(List.of(testServicePO));
-        when(mcpServiceDAO.findAllByNameContainingOrId("test", "test", pageable)).thenReturn(page);
+        when(mcpServiceDAO.findAllByNameContainingOrIdAndAccessible("test", TestFixtures.TEST_USER_ID, pageable)).thenReturn(page);
 
         // when
         Page<McpService> result = mcpServiceService.listMcpServices("test", null, pageable);
 
         // then
         assertThat(result.getContent()).hasSize(1);
-        verify(mcpServiceDAO).findAllByNameContainingOrId("test", "test", pageable);
+        verify(mcpServiceDAO).findAllByNameContainingOrIdAndAccessible("test", TestFixtures.TEST_USER_ID, pageable);
     }
 
     @Test
@@ -224,14 +277,14 @@ class McpServiceServiceTest {
         // given
         Pageable pageable = PageRequest.of(0, 10);
         Page<McpServicePO> page = new PageImpl<>(List.of(testServicePO));
-        when(mcpServiceDAO.findAllByStatus(McpServiceStatus.DRAFT, pageable)).thenReturn(page);
+        when(mcpServiceDAO.findAllByStatusAndAccessible(McpServiceStatus.DRAFT, TestFixtures.TEST_USER_ID, pageable)).thenReturn(page);
 
         // when
         Page<McpService> result = mcpServiceService.listMcpServices(null, McpServiceStatus.DRAFT, pageable);
 
         // then
         assertThat(result.getContent()).hasSize(1);
-        verify(mcpServiceDAO).findAllByStatus(McpServiceStatus.DRAFT, pageable);
+        verify(mcpServiceDAO).findAllByStatusAndAccessible(McpServiceStatus.DRAFT, TestFixtures.TEST_USER_ID, pageable);
     }
 
     @Test
@@ -240,14 +293,14 @@ class McpServiceServiceTest {
         // given
         Pageable pageable = PageRequest.of(0, 10);
         Page<McpServicePO> page = new PageImpl<>(List.of(testServicePO));
-        when(mcpServiceDAO.searchByKeywordAndStatus("test", McpServiceStatus.DRAFT, pageable)).thenReturn(page);
+        when(mcpServiceDAO.searchByKeywordAndStatusAndAccessible("test", McpServiceStatus.DRAFT, TestFixtures.TEST_USER_ID, pageable)).thenReturn(page);
 
         // when
         Page<McpService> result = mcpServiceService.listMcpServices("test", McpServiceStatus.DRAFT, pageable);
 
         // then
         assertThat(result.getContent()).hasSize(1);
-        verify(mcpServiceDAO).searchByKeywordAndStatus("test", McpServiceStatus.DRAFT, pageable);
+        verify(mcpServiceDAO).searchByKeywordAndStatusAndAccessible("test", McpServiceStatus.DRAFT, TestFixtures.TEST_USER_ID, pageable);
     }
 
     @Nested
@@ -379,7 +432,8 @@ class McpServiceServiceTest {
         @DisplayName("Deletes all child tables then the service itself")
         void delete_shouldCascadeAllChildren() {
             // given
-            when(mcpServiceDAO.existsById(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(true);
+            when(mcpServiceDAO.findById(TestFixtures.TEST_MCP_SERVICE_ID))
+                    .thenReturn(Optional.of(testServicePO));
 
             // when
             mcpServiceService.deleteMcpService(TestFixtures.TEST_MCP_SERVICE_ID);
@@ -397,7 +451,7 @@ class McpServiceServiceTest {
         @DisplayName("Service not found throws MS_SERVICE_NOT_FOUND")
         void delete_shouldThrowWhenServiceNotFound() {
             // given
-            when(mcpServiceDAO.existsById(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(false);
+            when(mcpServiceDAO.findById(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(Optional.empty());
 
             // when & then
             DatiException ex = assertThrows(DatiException.class, () ->
@@ -429,4 +483,18 @@ class McpServiceServiceTest {
             verify(mcpServiceDAO).save(argThat(po -> "original-code".equals(po.getCode())));
         }
     }
+
+    @Test
+    @DisplayName("Create MCP service - rejects scope without permission (propagation)")
+    void createMcpService_rejectsScopeWithoutPermission() {
+        McpService service = TestFixtures.createTestMcpService();
+        when(mcpServiceDAO.existsByCode(service.getCode())).thenReturn(false);
+        org.mockito.Mockito.doThrow(new DatiException(ErrorCode.PERMISSION_DENIED))
+                .when(dataScopeService).validateScopePermission(anyList());
+
+        DatiException ex = assertThrows(DatiException.class,
+                () -> mcpServiceService.createMcpService(service, List.of(TestFixtures.createTestDataScope())));
+        assertThat(ex.getCode()).isEqualTo(ErrorCode.PERMISSION_DENIED);
+    }
 }
+

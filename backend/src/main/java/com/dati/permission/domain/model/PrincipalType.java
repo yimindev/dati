@@ -1,0 +1,8 @@
+package com.dati.permission.domain.model;
+
+public enum PrincipalType {
+    USER, GROUP;  // GROUP 预留（团队），V1 仅支持 USER 与全公开主体
+
+    /** 全公开主体：GROUP 类型的特殊成员，拥有资源的只读访问权（VIEW）。 */
+    public static final String ALL_USERS = "ALL_USERS";
+}

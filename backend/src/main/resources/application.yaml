@@ -21,6 +21,7 @@ spring:
     property-naming-strategy: SNAKE_CASE
 
 auth:
+  admin-users: ${ADMIN_USERS:admin}
   jwt:
     secret: ${JWT_SECRET:this-is-a-32-char-long-default-secret-key}
     expiration-seconds: 604800

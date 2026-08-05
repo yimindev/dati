@@ -1,5 +1,7 @@
 package com.dati.mcp.domain.service;
 
+import com.dati.auth.authentication.User;
+import com.dati.base.RequestContext;
 import com.dati.base.exception.DatiException;
 import com.dati.base.exception.ErrorCode;
 import com.dati.common.StringUtils;
@@ -16,6 +18,9 @@ import com.dati.mcp.repository.mapper.McpServiceMapper;
 import com.dati.mcp.repository.mapper.McpServiceDataScopeMapper;
 import com.dati.mcp.repository.po.McpServicePO;
 import com.dati.mcp.repository.po.McpServiceDataScopePO;
+import com.dati.permission.domain.service.PermissionService;
+import com.dati.permission.domain.model.Permission;
+import com.dati.permission.domain.model.ResourceType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -35,19 +40,25 @@ public class McpServiceService {
     private final McpPrebuiltToolConfigDAO prebuiltToolConfigDAO;
     private final McpCustomToolDAO customToolDAO;
     private final McpPromptDAO promptDAO;
+    private final PermissionService permissionService;
+    private final McpServiceDataScopeService dataScopeService;
 
     public McpServiceService(McpServiceDAO mcpServiceDAO,
                              McpServiceDataScopeDAO dataScopeDAO,
                              McpServiceSnapshotDAO snapshotDAO,
                              McpPrebuiltToolConfigDAO prebuiltToolConfigDAO,
                              McpCustomToolDAO customToolDAO,
-                             McpPromptDAO promptDAO) {
+                             McpPromptDAO promptDAO,
+                             PermissionService permissionService,
+                             McpServiceDataScopeService dataScopeService) {
         this.mcpServiceDAO = mcpServiceDAO;
         this.dataScopeDAO = dataScopeDAO;
         this.snapshotDAO = snapshotDAO;
         this.prebuiltToolConfigDAO = prebuiltToolConfigDAO;
         this.customToolDAO = customToolDAO;
         this.promptDAO = promptDAO;
+        this.permissionService = permissionService;
+        this.dataScopeService = dataScopeService;
     }
 
     @Transactional
@@ -65,6 +76,7 @@ public class McpServiceService {
         if (scopes == null || scopes.isEmpty()) {
             throw new DatiException(ErrorCode.MS_SERVICE_DATA_SCOPE_REQUIRED);
         }
+        dataScopeService.validateScopePermission(scopes);
         service.setStatus(McpServiceStatus.DRAFT);
         McpServicePO po = McpServiceMapper.toPO(service);
         po = mcpServiceDAO.save(po);
@@ -80,6 +92,7 @@ public class McpServiceService {
     public void updateMcpService(String id, McpService service) {
         McpServicePO po = mcpServiceDAO.findById(id)
                 .orElseThrow(() -> new DatiException(ErrorCode.MS_SERVICE_NOT_FOUND, id));
+        permissionService.requireCurrentUser(ResourceType.MCP_SERVICE, id, Permission.EDIT, po.getCreatedBy());
         if (service.getName() != null) {
             po.setName(service.getName());
         }
@@ -93,12 +106,33 @@ public class McpServiceService {
     }
 
     public McpService getMcpService(String id) {
-        return mcpServiceDAO.findById(id)
-                .map(McpServiceMapper::toModel)
+        McpServicePO po = mcpServiceDAO.findById(id)
                 .orElseThrow(() -> new DatiException(ErrorCode.MS_SERVICE_NOT_FOUND, id));
+        permissionService.requireCurrentUser(ResourceType.MCP_SERVICE, id, Permission.VIEW, po.getCreatedBy());
+        return McpServiceMapper.toModel(po);
     }
 
     public Page<McpService> listMcpServices(String keyword, McpServiceStatus status, Pageable pageable) {
+        User user = RequestContext.getUser();
+        if (permissionService.isAdmin(user.getName())) {
+            return listMcpServicesUnfiltered(keyword, status, pageable);
+        }
+        if (StringUtils.isEmpty(keyword) && status == null) {
+            return mcpServiceDAO.findAllAccessible(user.getId(), pageable).map(McpServiceMapper::toModel);
+        }
+        if (StringUtils.isEmpty(keyword)) {
+            return mcpServiceDAO.findAllByStatusAndAccessible(status, user.getId(), pageable)
+                    .map(McpServiceMapper::toModel);
+        }
+        if (status == null) {
+            return mcpServiceDAO.findAllByNameContainingOrIdAndAccessible(keyword, user.getId(), pageable)
+                    .map(McpServiceMapper::toModel);
+        }
+        return mcpServiceDAO.searchByKeywordAndStatusAndAccessible(keyword, status, user.getId(), pageable)
+                .map(McpServiceMapper::toModel);
+    }
+
+    private Page<McpService> listMcpServicesUnfiltered(String keyword, McpServiceStatus status, Pageable pageable) {
         if (StringUtils.isEmpty(keyword) && status == null) {
             return mcpServiceDAO.findAll(pageable).map(McpServiceMapper::toModel);
         }
@@ -119,19 +153,15 @@ public class McpServiceService {
      */
     @Transactional
     public void deleteMcpService(String serviceId) {
-        requireServiceExists(serviceId);
+        McpServicePO po = mcpServiceDAO.findById(serviceId)
+                .orElseThrow(() -> new DatiException(ErrorCode.MS_SERVICE_NOT_FOUND, serviceId));
+        permissionService.requireCurrentUser(ResourceType.MCP_SERVICE, serviceId, Permission.EDIT, po.getCreatedBy());
         snapshotDAO.deleteAllByServiceId(serviceId);
         dataScopeDAO.deleteAllByServiceId(serviceId);
         prebuiltToolConfigDAO.deleteAllByServiceId(serviceId);
         customToolDAO.deleteAllByServiceId(serviceId);
         promptDAO.deleteAllByServiceId(serviceId);
         mcpServiceDAO.deleteById(serviceId);
-    }
-
-    private void requireServiceExists(String serviceId) {
-        if (!mcpServiceDAO.existsById(serviceId)) {
-            throw new DatiException(ErrorCode.MS_SERVICE_NOT_FOUND, serviceId);
-        }
     }
 
 }

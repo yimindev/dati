@@ -2,6 +2,8 @@ package com.dati.semantic.domain.service;
 
 import com.dati.base.exception.DatiException;
 import com.dati.base.exception.ErrorCode;
+import com.dati.auth.authentication.User;
+import com.dati.base.RequestContext;
 import com.dati.common.StringUtils;
 import com.dati.datasource.domain.model.TableInfo;
 import com.dati.datasource.repository.dao.TableInfoDAO;
@@ -17,6 +19,9 @@ import com.dati.semantic.repository.po.SemanticSearchDocument;
 import com.dati.semantic.repository.po.SubjectPO;
 import com.dati.semantic.repository.po.SubjectTablePO;
 import com.dati.semantic.server.pojo.vo.SubjectAvailableTableVO;
+import com.dati.permission.domain.service.PermissionService;
+import com.dati.permission.domain.model.Permission;
+import com.dati.permission.domain.model.ResourceType;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -37,13 +42,16 @@ public class SubjectService {
     private final SubjectTableDAO subjectTableDAO;
     private final TableInfoDAO tableInfoDAO;
     private final SemanticIndexService semanticIndexService;
+    private final PermissionService permissionService;
 
     public SubjectService(SubjectDAO subjectDAO, SubjectTableDAO subjectTableDAO,
-                          TableInfoDAO tableInfoDAO, SemanticIndexService semanticIndexService) {
+                          TableInfoDAO tableInfoDAO, SemanticIndexService semanticIndexService,
+                          PermissionService permissionService) {
         this.subjectDAO = subjectDAO;
         this.subjectTableDAO = subjectTableDAO;
         this.tableInfoDAO = tableInfoDAO;
         this.semanticIndexService = semanticIndexService;
+        this.permissionService = permissionService;
     }
 
     @Transactional
@@ -78,6 +86,7 @@ public class SubjectService {
     public Subject updateSubject(String id, Subject subject) {
         SubjectPO subjectPO = subjectDAO.findById(id)
                 .orElseThrow(() -> new DatiException(ErrorCode.SM_SUBJECT_NOT_FOUND, id));
+        permissionService.requireCurrentUser(ResourceType.SUBJECT, id, Permission.EDIT, subjectPO.getCreatedBy());
 
         if (subject.getName() != null) {
             subjectPO.setName(subject.getName());
@@ -114,9 +123,9 @@ public class SubjectService {
 
     @Transactional
     public void deleteSubject(String id) {
-        if (!subjectDAO.existsById(id)) {
-            throw new DatiException(ErrorCode.SM_SUBJECT_NOT_FOUND, id);
-        }
+        SubjectPO subjectPO = subjectDAO.findById(id)
+                .orElseThrow(() -> new DatiException(ErrorCode.SM_SUBJECT_NOT_FOUND, id));
+        permissionService.requireCurrentUser(ResourceType.SUBJECT, id, Permission.EDIT, subjectPO.getCreatedBy());
         subjectDAO.deleteById(id);
         semanticIndexService.deleteByEntity_SubjectId(id);
     }
@@ -125,6 +134,7 @@ public class SubjectService {
     public void addTableToSubject(String subjectId, String tableId) {
         SubjectPO subjectPO = subjectDAO.findById(subjectId)
                 .orElseThrow(() -> new DatiException(ErrorCode.SM_SUBJECT_NOT_FOUND, subjectId));
+        permissionService.requireCurrentUser(ResourceType.SUBJECT, subjectId, Permission.EDIT, subjectPO.getCreatedBy());
 
         TableInfoPO tableInfoPO = tableInfoDAO.findById(tableId)
                 .orElseThrow(() -> new DatiException(ErrorCode.DS_NOT_FOUND, tableId));
@@ -145,6 +155,9 @@ public class SubjectService {
 
     @Transactional
     public void removeTableFromSubject(String subjectId, String tableId) {
+        SubjectPO subjectPO = subjectDAO.findById(subjectId)
+                .orElseThrow(() -> new DatiException(ErrorCode.SM_SUBJECT_NOT_FOUND, subjectId));
+        permissionService.requireCurrentUser(ResourceType.SUBJECT, subjectId, Permission.EDIT, subjectPO.getCreatedBy());
         subjectTableDAO.findBySubjectIdAndTableId(subjectId, tableId)
                 .orElseThrow(() -> new DatiException(ErrorCode.SM_ASSOCIATION_NOT_FOUND, subjectId, tableId));
 
@@ -157,9 +170,17 @@ public class SubjectService {
      */
     @Transactional(readOnly = true)
     public Page<Subject> getSubjects(@Nullable String keyword, Pageable pageable) {
-        Page<SubjectPO> pos = StringUtils.isEmpty(keyword)
-                ? subjectDAO.findAll(pageable)
-                : subjectDAO.findByKeyword(keyword, pageable);
+        User user = RequestContext.getUser();
+        Page<SubjectPO> pos;
+        if (permissionService.isAdmin(user.getName())) {
+            pos = StringUtils.isEmpty(keyword)
+                    ? subjectDAO.findAll(pageable)
+                    : subjectDAO.findByKeyword(keyword, pageable);
+        } else {
+            pos = StringUtils.isEmpty(keyword)
+                    ? subjectDAO.findAllAccessible(user.getId(), pageable)
+                    : subjectDAO.findByKeywordAndAccessible(keyword, user.getId(), pageable);
+        }
         return pos.map(SubjectMapper::toSubject);
     }
 
@@ -213,11 +234,10 @@ public class SubjectService {
 
     @Transactional(readOnly = true)
     public Subject getSubjectById(String id) {
-        List<Subject> subjects = getSubjectsByIds(List.of(id));
-        if (subjects.isEmpty()) {
-            throw new DatiException(ErrorCode.SM_SUBJECT_NOT_FOUND, id);
-        }
-        return subjects.getFirst();
+        SubjectPO subjectPO = subjectDAO.findById(id)
+                .orElseThrow(() -> new DatiException(ErrorCode.SM_SUBJECT_NOT_FOUND, id));
+        permissionService.requireCurrentUser(ResourceType.SUBJECT, id, Permission.VIEW, subjectPO.getCreatedBy());
+        return SubjectMapper.toSubject(subjectPO);
     }
 
 }
