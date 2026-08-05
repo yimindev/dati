@@ -2,6 +2,7 @@ package com.dati.mcp.domain.service;
 
 import com.dati.TestFixtures;
 import com.dati.auth.authentication.User;
+import com.dati.auth.domain.service.UserGroupService;
 import com.dati.base.RequestContext;
 import com.dati.base.exception.DatiException;
 import com.dati.base.exception.ErrorCode;
@@ -17,6 +18,7 @@ import com.dati.mcp.repository.dao.McpServiceDataScopeDAO;
 import com.dati.mcp.repository.dao.McpServiceSnapshotDAO;
 import com.dati.mcp.repository.po.McpServiceDataScopePO;
 import com.dati.mcp.repository.po.McpServicePO;
+import com.dati.permission.domain.model.PrincipalType;
 import com.dati.permission.domain.service.PermissionService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -36,6 +38,7 @@ import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -76,6 +79,9 @@ class McpServiceServiceTest {
     @Mock
     private McpServiceDataScopeService dataScopeService;
 
+    @Mock
+    private UserGroupService userGroupService;
+
     @Captor
     ArgumentCaptor<List<McpServiceDataScopePO>> captor;
 
@@ -94,6 +100,8 @@ class McpServiceServiceTest {
         user.setName(TestFixtures.TEST_USER_ID);
         RequestContext.setUser(user);
         lenient().when(permissionService.isAdmin(anyString())).thenReturn(false);
+        lenient().when(userGroupService.groupIdsOf(TestFixtures.TEST_USER_ID))
+                .thenReturn(Set.of(PrincipalType.ALL_USERS));
         lenient().doAnswer(inv -> {
             String ownerId = inv.getArgument(3);
             if (!TestFixtures.TEST_USER_ID.equals(ownerId)) {
@@ -244,7 +252,8 @@ class McpServiceServiceTest {
         // given
         Pageable pageable = PageRequest.of(0, 10);
         Page<McpServicePO> page = new PageImpl<>(List.of(testServicePO));
-        when(mcpServiceDAO.findAllAccessible(TestFixtures.TEST_USER_ID, pageable)).thenReturn(page);
+        when(mcpServiceDAO.findAllAccessible(TestFixtures.TEST_USER_ID,
+                Set.of(PrincipalType.ALL_USERS), pageable)).thenReturn(page);
 
         // when
         Page<McpService> result = mcpServiceService.listMcpServices(null, null, pageable);
@@ -252,7 +261,8 @@ class McpServiceServiceTest {
         // then
         assertThat(result.getContent()).hasSize(1);
         assertThat(result.getContent().getFirst().getId()).isEqualTo(TestFixtures.TEST_MCP_SERVICE_ID);
-        verify(mcpServiceDAO).findAllAccessible(TestFixtures.TEST_USER_ID, pageable);
+        verify(mcpServiceDAO).findAllAccessible(TestFixtures.TEST_USER_ID,
+                Set.of(PrincipalType.ALL_USERS), pageable);
     }
 
     @Test
@@ -261,14 +271,16 @@ class McpServiceServiceTest {
         // given
         Pageable pageable = PageRequest.of(0, 10);
         Page<McpServicePO> page = new PageImpl<>(List.of(testServicePO));
-        when(mcpServiceDAO.findAllByNameContainingOrIdAndAccessible("test", TestFixtures.TEST_USER_ID, pageable)).thenReturn(page);
+        when(mcpServiceDAO.findAllByNameContainingOrIdAndAccessible("test", TestFixtures.TEST_USER_ID,
+                Set.of(PrincipalType.ALL_USERS), pageable)).thenReturn(page);
 
         // when
         Page<McpService> result = mcpServiceService.listMcpServices("test", null, pageable);
 
         // then
         assertThat(result.getContent()).hasSize(1);
-        verify(mcpServiceDAO).findAllByNameContainingOrIdAndAccessible("test", TestFixtures.TEST_USER_ID, pageable);
+        verify(mcpServiceDAO).findAllByNameContainingOrIdAndAccessible("test", TestFixtures.TEST_USER_ID,
+                Set.of(PrincipalType.ALL_USERS), pageable);
     }
 
     @Test
@@ -277,14 +289,16 @@ class McpServiceServiceTest {
         // given
         Pageable pageable = PageRequest.of(0, 10);
         Page<McpServicePO> page = new PageImpl<>(List.of(testServicePO));
-        when(mcpServiceDAO.findAllByStatusAndAccessible(McpServiceStatus.DRAFT, TestFixtures.TEST_USER_ID, pageable)).thenReturn(page);
+        when(mcpServiceDAO.findAllByStatusAndAccessible(McpServiceStatus.DRAFT, TestFixtures.TEST_USER_ID,
+                Set.of(PrincipalType.ALL_USERS), pageable)).thenReturn(page);
 
         // when
         Page<McpService> result = mcpServiceService.listMcpServices(null, McpServiceStatus.DRAFT, pageable);
 
         // then
         assertThat(result.getContent()).hasSize(1);
-        verify(mcpServiceDAO).findAllByStatusAndAccessible(McpServiceStatus.DRAFT, TestFixtures.TEST_USER_ID, pageable);
+        verify(mcpServiceDAO).findAllByStatusAndAccessible(McpServiceStatus.DRAFT, TestFixtures.TEST_USER_ID,
+                Set.of(PrincipalType.ALL_USERS), pageable);
     }
 
     @Test
@@ -293,14 +307,16 @@ class McpServiceServiceTest {
         // given
         Pageable pageable = PageRequest.of(0, 10);
         Page<McpServicePO> page = new PageImpl<>(List.of(testServicePO));
-        when(mcpServiceDAO.searchByKeywordAndStatusAndAccessible("test", McpServiceStatus.DRAFT, TestFixtures.TEST_USER_ID, pageable)).thenReturn(page);
+        when(mcpServiceDAO.searchByKeywordAndStatusAndAccessible("test", McpServiceStatus.DRAFT,
+                TestFixtures.TEST_USER_ID, Set.of(PrincipalType.ALL_USERS), pageable)).thenReturn(page);
 
         // when
         Page<McpService> result = mcpServiceService.listMcpServices("test", McpServiceStatus.DRAFT, pageable);
 
         // then
         assertThat(result.getContent()).hasSize(1);
-        verify(mcpServiceDAO).searchByKeywordAndStatusAndAccessible("test", McpServiceStatus.DRAFT, TestFixtures.TEST_USER_ID, pageable);
+        verify(mcpServiceDAO).searchByKeywordAndStatusAndAccessible("test", McpServiceStatus.DRAFT,
+                TestFixtures.TEST_USER_ID, Set.of(PrincipalType.ALL_USERS), pageable);
     }
 
     @Nested

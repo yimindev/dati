@@ -7,6 +7,7 @@ import org.springframework.validation.BindException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import java.text.MessageFormat;
 import java.util.stream.Collectors;
@@ -51,6 +52,13 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleMessageNotReadable(HttpMessageNotReadableException e) {
         ErrorResponse response = ErrorResponse.of(ErrorCode.INVALID_PARAMETER,
                 "Request body is not readable: " + e.getMostSpecificCause().getMessage());
+        return ResponseEntity.badRequest().body(response);
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ErrorResponse> handleTypeMismatch(MethodArgumentTypeMismatchException e) {
+        ErrorResponse response = ErrorResponse.of(ErrorCode.INVALID_PARAMETER,
+                "Parameter " + e.getName() + " has invalid value: " + e.getValue());
         return ResponseEntity.badRequest().body(response);
     }
 

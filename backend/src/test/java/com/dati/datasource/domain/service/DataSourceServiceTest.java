@@ -2,6 +2,7 @@ package com.dati.datasource.domain.service;
 
 import com.dati.TestFixtures;
 import com.dati.auth.authentication.User;
+import com.dati.auth.domain.service.UserGroupService;
 import com.dati.base.RequestContext;
 import com.dati.base.exception.DatiException;
 import com.dati.base.exception.ErrorCode;
@@ -15,6 +16,7 @@ import com.dati.db.DbType;
 import com.dati.db.HikariPoolManager;
 import com.dati.db.JdbcConnector;
 import com.dati.db.JdbcUtils;
+import com.dati.permission.domain.model.PrincipalType;
 import com.dati.permission.domain.service.PermissionService;
 import com.dati.semantic.domain.service.SemanticIndexService;
 import org.junit.jupiter.api.AfterEach;
@@ -37,6 +39,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -72,6 +75,9 @@ class DataSourceServiceTest {
     @Mock
     private PermissionService permissionService;
 
+    @Mock
+    private UserGroupService userGroupService;
+
     @InjectMocks
     private DataSourceService dataSourceService;
 
@@ -87,6 +93,8 @@ class DataSourceServiceTest {
         user.setName(TestFixtures.TEST_USER_ID);
         RequestContext.setUser(user);
         lenient().when(permissionService.isAdmin(anyString())).thenReturn(false);
+        lenient().when(userGroupService.groupIdsOf(TestFixtures.TEST_USER_ID))
+                .thenReturn(Set.of(PrincipalType.ALL_USERS));
         // requireCurrentUser owner 感知：ownerId == 当前用户（TEST_USER_ID）放行；否则抛 403
         lenient().doAnswer(inv -> {
             String ownerId = inv.getArgument(3);
@@ -284,7 +292,8 @@ class DataSourceServiceTest {
         // given
         Pageable pageable = PageRequest.of(0, 10);
         Page<DataSourcePO> page = new PageImpl<>(List.of(testDataSourcePO));
-        when(dataSourceDAO.findAllAccessible(TestFixtures.TEST_USER_ID, pageable)).thenReturn(page);
+        when(dataSourceDAO.findAllAccessible(TestFixtures.TEST_USER_ID,
+                Set.of(PrincipalType.ALL_USERS), pageable)).thenReturn(page);
 
         // when
         Page<DataSource> result = dataSourceService.listDataSources(null, pageable);
@@ -292,7 +301,8 @@ class DataSourceServiceTest {
         // then
         assertThat(result.getContent()).hasSize(1);
         assertThat(result.getContent().getFirst().getId()).isEqualTo(TestFixtures.TEST_DATASOURCE_ID);
-        verify(dataSourceDAO).findAllAccessible(TestFixtures.TEST_USER_ID, pageable);
+        verify(dataSourceDAO).findAllAccessible(TestFixtures.TEST_USER_ID,
+                Set.of(PrincipalType.ALL_USERS), pageable);
     }
 
     @Test
@@ -301,7 +311,8 @@ class DataSourceServiceTest {
         // given
         Pageable pageable = PageRequest.of(0, 10);
         Page<DataSourcePO> page = new PageImpl<>(List.of(testDataSourcePO));
-        when(dataSourceDAO.findByNameContainingOrIdAndAccessible("test", TestFixtures.TEST_USER_ID, pageable))
+        when(dataSourceDAO.findByNameContainingOrIdAndAccessible("test", TestFixtures.TEST_USER_ID,
+                Set.of(PrincipalType.ALL_USERS), pageable))
                 .thenReturn(page);
 
         // when
@@ -309,7 +320,8 @@ class DataSourceServiceTest {
 
         // then
         assertThat(result.getContent()).hasSize(1);
-        verify(dataSourceDAO).findByNameContainingOrIdAndAccessible("test", TestFixtures.TEST_USER_ID, pageable);
+        verify(dataSourceDAO).findByNameContainingOrIdAndAccessible("test", TestFixtures.TEST_USER_ID,
+                Set.of(PrincipalType.ALL_USERS), pageable);
     }
 
     @Test

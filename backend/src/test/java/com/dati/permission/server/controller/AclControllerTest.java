@@ -61,6 +61,22 @@ class AclControllerTest {
     }
 
     @Test
+    void revokeRejectsUnknownPrincipalType() throws Exception {
+        mockMvc.perform(delete("/v1/acls/DATA_SOURCE/ds-1/TEAM/t1"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void grantRejectsUnknownResourceType() throws Exception {
+        mockMvc.perform(post("/v1/acls/TEAM/ds-1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"principal_type":"USER","principal_id":"u2","permission":"VIEW"}
+                                """))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
     void listReturnsEntries() throws Exception {
         ResourceAcl acl = new ResourceAcl();
         acl.setId("acl-1");

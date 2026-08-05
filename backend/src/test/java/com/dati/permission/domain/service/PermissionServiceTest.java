@@ -38,19 +38,19 @@ class PermissionServiceTest {
     void adminCanDoAnything() {
         assertThat(service.can("u-1", "admin", ResourceType.DATA_SOURCE, "ds-1",
                 Permission.EDIT, "someone-else")).isTrue();
-        verify(checker, never()).can(anyString(), anyString(), any(), anyString(), any());
+        verify(checker, never()).can(anyString(), any(), anyString(), any());
     }
 
     @Test
     void ownerHasFullAccess() {
         assertThat(service.can("u-1", "u1", ResourceType.DATA_SOURCE, "ds-1",
                 Permission.EDIT, "u-1")).isTrue();
-        verify(checker, never()).can(anyString(), anyString(), any(), anyString(), any());
+        verify(checker, never()).can(anyString(), any(), anyString(), any());
     }
 
     @Test
     void ownerNullSkipsOwnerCheck() {
-        when(checker.can(eq("USER"), eq("u-1"), eq(ResourceType.DATA_SOURCE),
+        when(checker.can(eq("u-1"), eq(ResourceType.DATA_SOURCE),
                 eq("ds-1"), eq(Permission.VIEW))).thenReturn(true);
         assertThat(service.can("u-1", "u1", ResourceType.DATA_SOURCE, "ds-1",
                 Permission.VIEW, null)).isTrue();
@@ -58,7 +58,7 @@ class PermissionServiceTest {
 
     @Test
     void delegatesToCheckerWhenNotAdminNorOwner() {
-        when(checker.can(eq("USER"), eq("u-1"), eq(ResourceType.DATA_SOURCE),
+        when(checker.can(eq("u-1"), eq(ResourceType.DATA_SOURCE),
                 eq("ds-1"), eq(Permission.VIEW))).thenReturn(true);
         assertThat(service.can("u-1", "u1", ResourceType.DATA_SOURCE, "ds-1",
                 Permission.VIEW, "u-2")).isTrue();
@@ -66,7 +66,7 @@ class PermissionServiceTest {
 
     @Test
     void requireThrowsForbiddenWhenDenied() {
-        when(checker.can(anyString(), anyString(), any(), anyString(), any())).thenReturn(false);
+        when(checker.can(anyString(), any(), anyString(), any())).thenReturn(false);
         DatiException ex = assertThrows(DatiException.class, () ->
                 service.require("u-1", "u1", ResourceType.DATA_SOURCE, "ds-1", Permission.EDIT, "u-2"));
         assertThat(ex.getCode()).isEqualTo(ErrorCode.PERMISSION_DENIED);

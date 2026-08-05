@@ -2,6 +2,8 @@ package com.dati.permission.repository.po;
 
 import com.dati.base.pojo.BasePO;
 import com.dati.permission.domain.model.Permission;
+import com.dati.permission.domain.model.PrincipalType;
+import com.dati.permission.domain.model.ResourceType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -19,14 +21,16 @@ import lombok.Setter;
         columnNames = {"resource_type", "resource_id", "principal_type", "principal_id"}))
 public class ResourceAclPO extends BasePO {
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "resource_type", length = 32, nullable = false)
-    private String resourceType;
+    private ResourceType resourceType;
 
     @Column(name = "resource_id", length = 36, nullable = false)
     private String resourceId;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "principal_type", length = 16, nullable = false)
-    private String principalType;
+    private PrincipalType principalType;
 
     @Column(name = "principal_id", length = 64, nullable = false)
     private String principalId;

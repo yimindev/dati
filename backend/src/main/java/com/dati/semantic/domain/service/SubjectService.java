@@ -3,6 +3,7 @@ package com.dati.semantic.domain.service;
 import com.dati.base.exception.DatiException;
 import com.dati.base.exception.ErrorCode;
 import com.dati.auth.authentication.User;
+import com.dati.auth.domain.service.UserGroupService;
 import com.dati.base.RequestContext;
 import com.dati.common.StringUtils;
 import com.dati.datasource.domain.model.TableInfo;
@@ -43,15 +44,17 @@ public class SubjectService {
     private final TableInfoDAO tableInfoDAO;
     private final SemanticIndexService semanticIndexService;
     private final PermissionService permissionService;
+    private final UserGroupService userGroupService;
 
     public SubjectService(SubjectDAO subjectDAO, SubjectTableDAO subjectTableDAO,
                           TableInfoDAO tableInfoDAO, SemanticIndexService semanticIndexService,
-                          PermissionService permissionService) {
+                          PermissionService permissionService, UserGroupService userGroupService) {
         this.subjectDAO = subjectDAO;
         this.subjectTableDAO = subjectTableDAO;
         this.tableInfoDAO = tableInfoDAO;
         this.semanticIndexService = semanticIndexService;
         this.permissionService = permissionService;
+        this.userGroupService = userGroupService;
     }
 
     @Transactional
@@ -177,9 +180,10 @@ public class SubjectService {
                     ? subjectDAO.findAll(pageable)
                     : subjectDAO.findByKeyword(keyword, pageable);
         } else {
+            var groupIds = userGroupService.groupIdsOf(user.getId());
             pos = StringUtils.isEmpty(keyword)
-                    ? subjectDAO.findAllAccessible(user.getId(), pageable)
-                    : subjectDAO.findByKeywordAndAccessible(keyword, user.getId(), pageable);
+                    ? subjectDAO.findAllAccessible(user.getId(), groupIds, pageable)
+                    : subjectDAO.findByKeywordAndAccessible(keyword, user.getId(), groupIds, pageable);
         }
         return pos.map(SubjectMapper::toSubject);
     }

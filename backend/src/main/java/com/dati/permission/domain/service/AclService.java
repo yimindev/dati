@@ -62,11 +62,11 @@ public class AclService {
             throw new DatiException(ErrorCode.INVALID_PARAMETER, "principal_id");
         }
         ResourceAclPO po = aclDAO.findByResourceTypeAndResourceIdAndPrincipalTypeAndPrincipalId(
-                        type.name(), resourceId, principalType.name(), principalId)
+                        type, resourceId, principalType, principalId)
                 .orElseGet(ResourceAclPO::new);
-        po.setResourceType(type.name());
+        po.setResourceType(type);
         po.setResourceId(resourceId);
-        po.setPrincipalType(principalType.name());
+        po.setPrincipalType(principalType);
         po.setPrincipalId(principalId);
         po.setPermission(permission);
         po.setCreatedBy(RequestContext.getUser().getId());
@@ -78,13 +78,13 @@ public class AclService {
         String ownerId = resolveOwnerId(type, resourceId);
         permissionService.requireCurrentUser(type, resourceId, Permission.EDIT, ownerId);
         aclDAO.deleteByResourceTypeAndResourceIdAndPrincipalTypeAndPrincipalId(
-                type.name(), resourceId, principalType.name(), principalId);
+                type, resourceId, principalType, principalId);
     }
 
     public List<ResourceAcl> list(ResourceType type, String resourceId) {
         String ownerId = resolveOwnerId(type, resourceId);
         permissionService.requireCurrentUser(type, resourceId, Permission.EDIT, ownerId);
-        List<ResourceAcl> acls = aclDAO.findByResourceTypeAndResourceId(type.name(), resourceId).stream()
+        List<ResourceAcl> acls = aclDAO.findByResourceTypeAndResourceId(type, resourceId).stream()
                 .map(ResourceAclMapper::toModel)
                 .toList();
         fillPrincipalNames(acls);

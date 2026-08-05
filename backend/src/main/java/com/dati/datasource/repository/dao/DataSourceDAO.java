@@ -7,6 +7,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.Collection;
+
 public interface DataSourceDAO extends JpaRepository<DataSourcePO, String> {
 
     Page<DataSourcePO> findAllByNameContainingOrId(String name, String id, Pageable pageable);
@@ -19,10 +21,11 @@ public interface DataSourceDAO extends JpaRepository<DataSourcePO, String> {
                               WHERE a.resourceType = 'DATA_SOURCE'
                                 AND a.resourceId = d.id
                                 AND ((a.principalType = 'USER' AND a.principalId = :userId)
-                                     OR (a.principalType = 'GROUP' AND a.principalId = 'ALL_USERS'))))
+                                     OR (a.principalType = 'GROUP' AND a.principalId IN :groupIds))))
             """)
     Page<DataSourcePO> findByNameContainingOrIdAndAccessible(@Param("keyword") String keyword,
                                                              @Param("userId") String userId,
+                                                             @Param("groupIds") Collection<String> groupIds,
                                                              Pageable pageable);
 
     @Query("""
@@ -32,7 +35,9 @@ public interface DataSourceDAO extends JpaRepository<DataSourcePO, String> {
                           WHERE a.resourceType = 'DATA_SOURCE'
                             AND a.resourceId = d.id
                             AND ((a.principalType = 'USER' AND a.principalId = :userId)
-                                 OR (a.principalType = 'GROUP' AND a.principalId = 'ALL_USERS')))
+                                 OR (a.principalType = 'GROUP' AND a.principalId IN :groupIds)))
             """)
-    Page<DataSourcePO> findAllAccessible(@Param("userId") String userId, Pageable pageable);
+    Page<DataSourcePO> findAllAccessible(@Param("userId") String userId,
+                                         @Param("groupIds") Collection<String> groupIds,
+                                         Pageable pageable);
 }

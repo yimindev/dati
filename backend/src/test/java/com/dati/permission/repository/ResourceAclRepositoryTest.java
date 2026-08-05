@@ -1,6 +1,8 @@
 package com.dati.permission.repository;
 
 import com.dati.permission.domain.model.Permission;
+import com.dati.permission.domain.model.PrincipalType;
+import com.dati.permission.domain.model.ResourceType;
 import com.dati.permission.repository.dao.ResourceAclDAO;
 import com.dati.permission.repository.po.ResourceAclPO;
 import org.junit.jupiter.api.DisplayName;
@@ -25,9 +27,9 @@ class ResourceAclRepositoryTest {
 
     private ResourceAclPO acl(String principalId, Permission permission) {
         ResourceAclPO po = new ResourceAclPO();
-        po.setResourceType("DATA_SOURCE");
+        po.setResourceType(ResourceType.DATA_SOURCE);
         po.setResourceId("ds-1");
-        po.setPrincipalType("USER");
+        po.setPrincipalType(PrincipalType.USER);
         po.setPrincipalId(principalId);
         po.setPermission(permission);
         return po;
@@ -37,7 +39,7 @@ class ResourceAclRepositoryTest {
     void saveAndFindByResourceAndPrincipal() {
         aclDAO.save(acl("user-b", Permission.EDIT));
         var found = aclDAO.findByResourceTypeAndResourceIdAndPrincipalTypeAndPrincipalId(
-                "DATA_SOURCE", "ds-1", "USER", "user-b");
+                ResourceType.DATA_SOURCE, "ds-1", PrincipalType.USER, "user-b");
         assertThat(found).isPresent();
         assertThat(found.get().getPermission()).isEqualTo(Permission.EDIT);
     }
@@ -53,7 +55,7 @@ class ResourceAclRepositoryTest {
     void findListByResource() {
         aclDAO.save(acl("user-b", Permission.VIEW));
         aclDAO.save(acl("user-c", Permission.EDIT));
-        List<ResourceAclPO> list = aclDAO.findByResourceTypeAndResourceId("DATA_SOURCE", "ds-1");
+        List<ResourceAclPO> list = aclDAO.findByResourceTypeAndResourceId(ResourceType.DATA_SOURCE, "ds-1");
         assertThat(list).hasSize(2);
     }
 
@@ -61,16 +63,16 @@ class ResourceAclRepositoryTest {
     void deleteByResourceAndPrincipal() {
         aclDAO.save(acl("user-b", Permission.VIEW));
         aclDAO.deleteByResourceTypeAndResourceIdAndPrincipalTypeAndPrincipalId(
-                "DATA_SOURCE", "ds-1", "USER", "user-b");
+                ResourceType.DATA_SOURCE, "ds-1", PrincipalType.USER, "user-b");
         assertThat(aclDAO.findByResourceTypeAndResourceIdAndPrincipalTypeAndPrincipalId(
-                "DATA_SOURCE", "ds-1", "USER", "user-b")).isEmpty();
+                ResourceType.DATA_SOURCE, "ds-1", PrincipalType.USER, "user-b")).isEmpty();
     }
 
     @Test
     void deleteAllByResource() {
         aclDAO.save(acl("user-b", Permission.VIEW));
         aclDAO.save(acl("user-c", Permission.VIEW));
-        aclDAO.deleteByResourceTypeAndResourceId("DATA_SOURCE", "ds-1");
-        assertThat(aclDAO.findByResourceTypeAndResourceId("DATA_SOURCE", "ds-1")).isEmpty();
+        aclDAO.deleteByResourceTypeAndResourceId(ResourceType.DATA_SOURCE, "ds-1");
+        assertThat(aclDAO.findByResourceTypeAndResourceId(ResourceType.DATA_SOURCE, "ds-1")).isEmpty();
     }
 }

@@ -1,6 +1,7 @@
 package com.dati.datasource.domain.service;
 
 import com.dati.auth.authentication.User;
+import com.dati.auth.domain.service.UserGroupService;
 import com.dati.base.EncryptionUtils;
 import com.dati.base.RequestContext;
 import com.dati.base.exception.DatiException;
@@ -44,16 +45,19 @@ public class DataSourceService {
     private final SemanticIndexService semanticIndexService;
     private final JdbcMetaService jdbcMetaService;
     private final PermissionService permissionService;
+    private final UserGroupService userGroupService;
 
     public DataSourceService(DataSourceDAO dataSourceDAO, TableInfoDAO tableInfoDAO,
                              ColumnInfoDAO columnInfoDAO, SemanticIndexService semanticIndexService,
-                             JdbcMetaService jdbcMetaService, PermissionService permissionService) {
+                             JdbcMetaService jdbcMetaService, PermissionService permissionService,
+                             UserGroupService userGroupService) {
         this.dataSourceDAO = dataSourceDAO;
         this.tableInfoDAO = tableInfoDAO;
         this.columnInfoDAO = columnInfoDAO;
         this.semanticIndexService = semanticIndexService;
         this.jdbcMetaService = jdbcMetaService;
         this.permissionService = permissionService;
+        this.userGroupService = userGroupService;
     }
 
     public boolean testConnection(JdbcConnector jdbcConnector) {
@@ -192,9 +196,12 @@ public class DataSourceService {
                     .map(DSMapper::toDataSource);
         }
         if (StringUtils.isEmpty(keyword)) {
-            return dataSourceDAO.findAllAccessible(user.getId(), pageable).map(DSMapper::toDataSource);
+            return dataSourceDAO.findAllAccessible(user.getId(),
+                            userGroupService.groupIdsOf(user.getId()), pageable)
+                    .map(DSMapper::toDataSource);
         }
-        return dataSourceDAO.findByNameContainingOrIdAndAccessible(keyword, user.getId(), pageable)
+        return dataSourceDAO.findByNameContainingOrIdAndAccessible(keyword, user.getId(),
+                        userGroupService.groupIdsOf(user.getId()), pageable)
                 .map(DSMapper::toDataSource);
     }
 

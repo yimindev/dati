@@ -2,6 +2,7 @@ package com.dati.semantic.domain.service;
 
 import com.dati.TestFixtures;
 import com.dati.auth.authentication.User;
+import com.dati.auth.domain.service.UserGroupService;
 import com.dati.base.RequestContext;
 import com.dati.base.exception.DatiException;
 import com.dati.base.exception.ErrorCode;
@@ -15,6 +16,7 @@ import com.dati.semantic.repository.dao.SubjectTableDAO;
 import com.dati.semantic.repository.po.SemanticSearchDocument;
 import com.dati.semantic.repository.po.SubjectPO;
 import com.dati.semantic.repository.po.SubjectTablePO;
+import com.dati.permission.domain.model.PrincipalType;
 import com.dati.permission.domain.service.PermissionService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -34,6 +36,7 @@ import org.springframework.data.domain.Pageable;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -64,6 +67,9 @@ class SubjectServiceTest {
     @Mock
     private PermissionService permissionService;
 
+    @Mock
+    private UserGroupService userGroupService;
+
     @InjectMocks
     private SubjectService subjectService;
 
@@ -77,6 +83,8 @@ class SubjectServiceTest {
         user.setName(TestFixtures.TEST_USER_ID);
         RequestContext.setUser(user);
         lenient().when(permissionService.isAdmin(anyString())).thenReturn(false);
+        lenient().when(userGroupService.groupIdsOf(TestFixtures.TEST_USER_ID))
+                .thenReturn(Set.of(PrincipalType.ALL_USERS));
         lenient().doAnswer(inv -> {
             String ownerId = inv.getArgument(3);
             if (!TestFixtures.TEST_USER_ID.equals(ownerId)) {
@@ -360,13 +368,14 @@ class SubjectServiceTest {
         Pageable pageable = PageRequest.of(0, 10);
 
         Page<SubjectPO> subjectPOPage = new org.springframework.data.domain.PageImpl<>(List.of(sampleSubjectPO), pageable, 1);
-        when(subjectDAO.findAllAccessible(TestFixtures.TEST_USER_ID, pageable)).thenReturn(subjectPOPage);
+        when(subjectDAO.findAllAccessible(TestFixtures.TEST_USER_ID,
+                Set.of(PrincipalType.ALL_USERS), pageable)).thenReturn(subjectPOPage);
 
         Page<Subject> result = subjectService.getSubjects(keyword, pageable);
 
         assertThat(result.getTotalElements()).isEqualTo(1);
         assertThat(result.getContent().getFirst().getName()).isEqualTo("Test Subject");
-        verify(subjectDAO, never()).findByKeywordAndAccessible(any(), any(), any());
+        verify(subjectDAO, never()).findByKeywordAndAccessible(any(), any(), any(), any());
     }
 
     @Test
@@ -376,7 +385,8 @@ class SubjectServiceTest {
         Pageable pageable = PageRequest.of(0, 10);
 
         Page<SubjectPO> subjectPOPage = new org.springframework.data.domain.PageImpl<>(List.of(sampleSubjectPO), pageable, 1);
-        when(subjectDAO.findByKeywordAndAccessible(keyword, TestFixtures.TEST_USER_ID, pageable)).thenReturn(subjectPOPage);
+        when(subjectDAO.findByKeywordAndAccessible(keyword, TestFixtures.TEST_USER_ID,
+                Set.of(PrincipalType.ALL_USERS), pageable)).thenReturn(subjectPOPage);
 
         Page<Subject> result = subjectService.getSubjects(keyword, pageable);
 

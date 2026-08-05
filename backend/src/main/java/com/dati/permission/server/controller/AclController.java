@@ -1,7 +1,5 @@
 package com.dati.permission.server.controller;
 
-import com.dati.base.exception.DatiException;
-import com.dati.base.exception.ErrorCode;
 import com.dati.base.pojo.IdResponse;
 import com.dati.permission.domain.model.PrincipalType;
 import com.dati.permission.domain.model.ResourceAcl;
@@ -34,8 +32,7 @@ public class AclController {
     public IdResponse grant(@PathVariable ResourceType type,
                             @PathVariable String resourceId,
                             @Valid @RequestBody GrantRequest request) {
-        PrincipalType principalType = requireSupportedPrincipal(request.getPrincipalType());
-        String id = aclService.grant(type, resourceId, principalType,
+        String id = aclService.grant(type, resourceId, request.getPrincipalType(),
                 request.getPrincipalId(), request.getPermission());
         return new IdResponse(id);
     }
@@ -43,10 +40,9 @@ public class AclController {
     @DeleteMapping("/{type}/{resourceId}/{principalType}/{principalId}")
     public IdResponse revoke(@PathVariable ResourceType type,
                              @PathVariable String resourceId,
-                             @PathVariable String principalType,
+                             @PathVariable PrincipalType principalType,
                              @PathVariable String principalId) {
-        requireSupportedPrincipal(principalType);
-        aclService.revoke(type, resourceId, PrincipalType.valueOf(principalType.toUpperCase()), principalId);
+        aclService.revoke(type, resourceId, principalType, principalId);
         return new IdResponse(resourceId);
     }
 
@@ -65,16 +61,6 @@ public class AclController {
         vo.setPermission(acl.getPermission().name());
         vo.setCreatedBy(acl.getCreatedBy());
         return vo;
-    }
-
-    private PrincipalType requireSupportedPrincipal(String principalType) {
-        if (PrincipalType.USER.name().equalsIgnoreCase(principalType)) {
-            return PrincipalType.USER;
-        }
-        if (PrincipalType.GROUP.name().equalsIgnoreCase(principalType)) {
-            return PrincipalType.GROUP;  // V1 仅 ALL_USERS，AclService 内校验
-        }
-        throw new DatiException(ErrorCode.INVALID_PARAMETER, "principal_type");
     }
 
 }

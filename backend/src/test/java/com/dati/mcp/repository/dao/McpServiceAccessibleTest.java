@@ -3,6 +3,8 @@ package com.dati.mcp.repository.dao;
 import com.dati.mcp.domain.model.McpServiceStatus;
 import com.dati.mcp.repository.po.McpServicePO;
 import com.dati.permission.domain.model.Permission;
+import com.dati.permission.domain.model.PrincipalType;
+import com.dati.permission.domain.model.ResourceType;
 import com.dati.permission.repository.dao.ResourceAclDAO;
 import com.dati.permission.repository.po.ResourceAclPO;
 import org.junit.jupiter.api.DisplayName;
@@ -12,6 +14,8 @@ import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.test.context.ActiveProfiles;
+
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -38,9 +42,9 @@ class McpServiceAccessibleTest {
 
     private void acl(String resourceId, Permission permission) {
         ResourceAclPO po = new ResourceAclPO();
-        po.setResourceType("MCP_SERVICE");
+        po.setResourceType(ResourceType.MCP_SERVICE);
         po.setResourceId(resourceId);
-        po.setPrincipalType("USER");
+        po.setPrincipalType(PrincipalType.USER);
         po.setPrincipalId("u1");
         po.setPermission(permission);
         aclDAO.save(po);
@@ -53,7 +57,8 @@ class McpServiceAccessibleTest {
         String granted = mcpServiceDAO.save(svc("u3", "granted", McpServiceStatus.DRAFT)).getId();
         acl(granted, Permission.VIEW);
 
-        Page<McpServicePO> page = mcpServiceDAO.findAllAccessible("u1", PageRequest.of(0, 10));
+        Page<McpServicePO> page = mcpServiceDAO.findAllAccessible(
+                "u1", Set.of(PrincipalType.ALL_USERS), PageRequest.of(0, 10));
         assertThat(page.getContent()).extracting(McpServicePO::getId)
                 .containsExactlyInAnyOrder(mine, granted);
     }
@@ -66,7 +71,7 @@ class McpServiceAccessibleTest {
         acl(granted, Permission.EDIT);
 
         Page<McpServicePO> page = mcpServiceDAO.searchByKeywordAndStatusAndAccessible(
-                "sales", McpServiceStatus.PUBLISHED, "u1", PageRequest.of(0, 10));
+                "sales", McpServiceStatus.PUBLISHED, "u1", Set.of(PrincipalType.ALL_USERS), PageRequest.of(0, 10));
         assertThat(page.getContent()).extracting(McpServicePO::getId)
                 .containsExactlyInAnyOrder(mine, granted);
     }
@@ -76,15 +81,32 @@ class McpServiceAccessibleTest {
         mcpServiceDAO.save(svc("u2", "public-svc", McpServiceStatus.DRAFT));
         String granted = mcpServiceDAO.save(svc("u3", "another", McpServiceStatus.DRAFT)).getId();
         ResourceAclPO po = new ResourceAclPO();
-        po.setResourceType("MCP_SERVICE");
+        po.setResourceType(ResourceType.MCP_SERVICE);
         po.setResourceId(granted);
-        po.setPrincipalType("GROUP");
-        po.setPrincipalId("ALL_USERS");
+        po.setPrincipalType(PrincipalType.GROUP);
+        po.setPrincipalId(PrincipalType.ALL_USERS);
         po.setPermission(Permission.VIEW);
         aclDAO.save(po);
 
-        Page<McpServicePO> page = mcpServiceDAO.findAllAccessible("stranger", PageRequest.of(0, 10));
+        Page<McpServicePO> page = mcpServiceDAO.findAllAccessible(
+                "stranger", Set.of(PrincipalType.ALL_USERS), PageRequest.of(0, 10));
         assertThat(page.getContent()).extracting(McpServicePO::getId)
                 .containsExactlyInAnyOrder(granted);
+    }
+
+    @Test
+    void groupOutsideMembershipDoesNotGrantAccess() {
+        String granted = mcpServiceDAO.save(svc("u3", "team-svc", McpServiceStatus.DRAFT)).getId();
+        ResourceAclPO po = new ResourceAclPO();
+        po.setResourceType(ResourceType.MCP_SERVICE);
+        po.setResourceId(granted);
+        po.setPrincipalType(PrincipalType.GROUP);
+        po.setPrincipalId("team-x");
+        po.setPermission(Permission.VIEW);
+        aclDAO.save(po);
+
+        Page<McpServicePO> page = mcpServiceDAO.findAllAccessible(
+                "stranger", Set.of(PrincipalType.ALL_USERS), PageRequest.of(0, 10));
+        assertThat(page.getContent()).extracting(McpServicePO::getId).isEmpty();
     }
 }

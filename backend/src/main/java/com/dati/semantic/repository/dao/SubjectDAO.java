@@ -8,6 +8,8 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
+
 @Repository
 public interface SubjectDAO extends JpaRepository<SubjectPO, String> {
 
@@ -23,10 +25,11 @@ public interface SubjectDAO extends JpaRepository<SubjectPO, String> {
                               WHERE a.resourceType = 'SUBJECT'
                                 AND a.resourceId = s.id
                                 AND ((a.principalType = 'USER' AND a.principalId = :userId)
-                                     OR (a.principalType = 'GROUP' AND a.principalId = 'ALL_USERS'))))
+                                     OR (a.principalType = 'GROUP' AND a.principalId IN :groupIds))))
             """)
     Page<SubjectPO> findByKeywordAndAccessible(@Param("keyword") String keyword,
                                                @Param("userId") String userId,
+                                               @Param("groupIds") Collection<String> groupIds,
                                                Pageable pageable);
 
     @Query("""
@@ -36,7 +39,9 @@ public interface SubjectDAO extends JpaRepository<SubjectPO, String> {
                           WHERE a.resourceType = 'SUBJECT'
                             AND a.resourceId = s.id
                             AND ((a.principalType = 'USER' AND a.principalId = :userId)
-                                 OR (a.principalType = 'GROUP' AND a.principalId = 'ALL_USERS')))
+                                 OR (a.principalType = 'GROUP' AND a.principalId IN :groupIds)))
             """)
-    Page<SubjectPO> findAllAccessible(@Param("userId") String userId, Pageable pageable);
+    Page<SubjectPO> findAllAccessible(@Param("userId") String userId,
+                                      @Param("groupIds") Collection<String> groupIds,
+                                      Pageable pageable);
 }

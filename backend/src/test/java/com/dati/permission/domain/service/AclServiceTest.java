@@ -64,12 +64,12 @@ class AclServiceTest {
 
     /** 当前用户 u1 不是资源 owner（owner=u2），ACL 无记录 → 拒绝。 */
     private void denyAcl() {
-        when(checker.can(anyString(), anyString(), any(), anyString(), any())).thenReturn(false);
+        when(checker.can(anyString(), any(), anyString(), any())).thenReturn(false);
     }
 
     /** 当前用户 u1 被 ACL 授权（VIEW/EDIT 均可）。 */
     private void allowAcl() {
-        when(checker.can(anyString(), anyString(), any(), anyString(), any())).thenReturn(true);
+        when(checker.can(anyString(), any(), anyString(), any())).thenReturn(true);
     }
 
     @Test
@@ -97,7 +97,7 @@ class AclServiceTest {
         allowAcl();
         when(userService.getUserMap(List.of("u3"))).thenReturn(Map.of("u3", principalUser()));
         when(aclDAO.findByResourceTypeAndResourceIdAndPrincipalTypeAndPrincipalId(
-                "DATA_SOURCE", "ds-1", "USER", "u3")).thenReturn(Optional.empty());
+                ResourceType.DATA_SOURCE, "ds-1", PrincipalType.USER, "u3")).thenReturn(Optional.empty());
         ResourceAclPO saved = new ResourceAclPO();
         saved.setId("acl-1");
         when(aclDAO.save(any(ResourceAclPO.class))).thenReturn(saved);
@@ -115,7 +115,7 @@ class AclServiceTest {
         existing.setId("acl-1");
         existing.setPermission(Permission.VIEW);
         when(aclDAO.findByResourceTypeAndResourceIdAndPrincipalTypeAndPrincipalId(
-                "DATA_SOURCE", "ds-1", "USER", "u3")).thenReturn(Optional.of(existing));
+                ResourceType.DATA_SOURCE, "ds-1", PrincipalType.USER, "u3")).thenReturn(Optional.of(existing));
         when(aclDAO.save(any(ResourceAclPO.class))).thenAnswer(inv -> inv.getArgument(0));
 
         service.grant(ResourceType.DATA_SOURCE, "ds-1", PrincipalType.USER, "u3", Permission.EDIT);
@@ -128,7 +128,7 @@ class AclServiceTest {
         allowAcl();
         service.revoke(ResourceType.DATA_SOURCE, "ds-1", PrincipalType.USER, "u3");
         verify(aclDAO).deleteByResourceTypeAndResourceIdAndPrincipalTypeAndPrincipalId(
-                "DATA_SOURCE", "ds-1", "USER", "u3");
+                ResourceType.DATA_SOURCE, "ds-1", PrincipalType.USER, "u3");
     }
 
     @Test
@@ -144,7 +144,7 @@ class AclServiceTest {
     void listReturnsAclModelsWithPrincipalNames() {
         when(dataSourceDAO.findById("ds-1")).thenReturn(Optional.of(dsPo()));
         allowAcl();
-        when(aclDAO.findByResourceTypeAndResourceId("DATA_SOURCE", "ds-1"))
+        when(aclDAO.findByResourceTypeAndResourceId(ResourceType.DATA_SOURCE, "ds-1"))
                 .thenReturn(List.of(aclPo()));
         when(userService.getUserMap(List.of("u3"))).thenReturn(Map.of("u3", principalUser()));
 
@@ -178,8 +178,8 @@ class AclServiceTest {
 
     private ResourceAclPO aclPo() {
         ResourceAclPO po = new ResourceAclPO();
-        po.setResourceType("DATA_SOURCE");
-        po.setPrincipalType("USER");
+        po.setResourceType(ResourceType.DATA_SOURCE);
+        po.setPrincipalType(PrincipalType.USER);
         po.setPrincipalId("u3");
         po.setPermission(Permission.VIEW);
         return po;
@@ -190,7 +190,7 @@ class AclServiceTest {
         when(dataSourceDAO.findById("ds-1")).thenReturn(Optional.of(dsPo()));
         allowAcl();
         when(aclDAO.findByResourceTypeAndResourceIdAndPrincipalTypeAndPrincipalId(
-                "DATA_SOURCE", "ds-1", "GROUP", "ALL_USERS")).thenReturn(Optional.empty());
+                ResourceType.DATA_SOURCE, "ds-1", PrincipalType.GROUP, PrincipalType.ALL_USERS)).thenReturn(Optional.empty());
         ResourceAclPO saved = new ResourceAclPO();
         saved.setId("acl-pub");
         when(aclDAO.save(any(ResourceAclPO.class))).thenReturn(saved);

@@ -6,6 +6,12 @@ users:
     name: "qa-e2e-tester"
     password: "QaTest123456"
     type: "local"
+  # 全局管理员（对应后端 auth.admin-users 配置，默认 admin）
+  # 注意：密码与测试标准密码不同，为环境预置账户
+  qa_admin:
+    name: "admin"
+    password: "admin123"
+    type: "local"
 
 datasources:
   postgres_local:

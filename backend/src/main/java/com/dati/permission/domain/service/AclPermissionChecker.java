@@ -1,5 +1,6 @@
 package com.dati.permission.domain.service;
 
+import com.dati.auth.domain.service.UserGroupService;
 import com.dati.permission.domain.model.Permission;
 import com.dati.permission.domain.model.PrincipalType;
 import com.dati.permission.domain.model.ResourceType;
@@ -10,28 +11,27 @@ import org.springframework.stereotype.Component;
 public class AclPermissionChecker implements PermissionChecker {
 
     private final ResourceAclDAO aclDAO;
+    private final UserGroupService userGroupService;
 
-    public AclPermissionChecker(ResourceAclDAO aclDAO) {
+    public AclPermissionChecker(ResourceAclDAO aclDAO, UserGroupService userGroupService) {
         this.aclDAO = aclDAO;
+        this.userGroupService = userGroupService;
     }
 
     @Override
-    public boolean can(String principalType, String principalId,
-                       ResourceType resourceType, String resourceId, Permission permission) {
-        // 1. 具体主体授权
+    public boolean can(String userId, ResourceType resourceType, String resourceId, Permission permission) {
+        // 1. 用户个体授权
         if (aclDAO.findByResourceTypeAndResourceIdAndPrincipalTypeAndPrincipalId(
-                        resourceType.name(), resourceId, principalType, principalId)
+                        resourceType, resourceId, PrincipalType.USER, userId)
                 .map(po -> po.getPermission().covers(permission))
                 .orElse(false)) {
             return true;
         }
-        // 2. 全公开（GROUP/ALL_USERS）：仅覆盖只读级别
-        if (PrincipalType.USER.name().equals(principalType)) {
-            return aclDAO.findByResourceTypeAndResourceIdAndPrincipalTypeAndPrincipalId(
-                            resourceType.name(), resourceId, PrincipalType.GROUP.name(), PrincipalType.ALL_USERS)
-                    .map(po -> po.getPermission().covers(permission))
-                    .orElse(false);
-        }
-        return false;
+        // 2. 用户所在组授权（含隐式 ALL_USERS 全公开组）
+        return aclDAO.findByResourceTypeAndResourceIdAndPrincipalTypeAndPrincipalIdIn(
+                        resourceType, resourceId, PrincipalType.GROUP,
+                        userGroupService.groupIdsOf(userId))
+                .stream()
+                .anyMatch(po -> po.getPermission().covers(permission));
     }
 }

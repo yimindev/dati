@@ -1,6 +1,7 @@
 package com.dati.mcp.domain.service;
 
 import com.dati.auth.authentication.User;
+import com.dati.auth.domain.service.UserGroupService;
 import com.dati.base.RequestContext;
 import com.dati.base.exception.DatiException;
 import com.dati.base.exception.ErrorCode;
@@ -42,6 +43,7 @@ public class McpServiceService {
     private final McpPromptDAO promptDAO;
     private final PermissionService permissionService;
     private final McpServiceDataScopeService dataScopeService;
+    private final UserGroupService userGroupService;
 
     public McpServiceService(McpServiceDAO mcpServiceDAO,
                              McpServiceDataScopeDAO dataScopeDAO,
@@ -50,7 +52,8 @@ public class McpServiceService {
                              McpCustomToolDAO customToolDAO,
                              McpPromptDAO promptDAO,
                              PermissionService permissionService,
-                             McpServiceDataScopeService dataScopeService) {
+                             McpServiceDataScopeService dataScopeService,
+                             UserGroupService userGroupService) {
         this.mcpServiceDAO = mcpServiceDAO;
         this.dataScopeDAO = dataScopeDAO;
         this.snapshotDAO = snapshotDAO;
@@ -59,6 +62,7 @@ public class McpServiceService {
         this.promptDAO = promptDAO;
         this.permissionService = permissionService;
         this.dataScopeService = dataScopeService;
+        this.userGroupService = userGroupService;
     }
 
     @Transactional
@@ -117,18 +121,19 @@ public class McpServiceService {
         if (permissionService.isAdmin(user.getName())) {
             return listMcpServicesUnfiltered(keyword, status, pageable);
         }
+        var groupIds = userGroupService.groupIdsOf(user.getId());
         if (StringUtils.isEmpty(keyword) && status == null) {
-            return mcpServiceDAO.findAllAccessible(user.getId(), pageable).map(McpServiceMapper::toModel);
+            return mcpServiceDAO.findAllAccessible(user.getId(), groupIds, pageable).map(McpServiceMapper::toModel);
         }
         if (StringUtils.isEmpty(keyword)) {
-            return mcpServiceDAO.findAllByStatusAndAccessible(status, user.getId(), pageable)
+            return mcpServiceDAO.findAllByStatusAndAccessible(status, user.getId(), groupIds, pageable)
                     .map(McpServiceMapper::toModel);
         }
         if (status == null) {
-            return mcpServiceDAO.findAllByNameContainingOrIdAndAccessible(keyword, user.getId(), pageable)
+            return mcpServiceDAO.findAllByNameContainingOrIdAndAccessible(keyword, user.getId(), groupIds, pageable)
                     .map(McpServiceMapper::toModel);
         }
-        return mcpServiceDAO.searchByKeywordAndStatusAndAccessible(keyword, status, user.getId(), pageable)
+        return mcpServiceDAO.searchByKeywordAndStatusAndAccessible(keyword, status, user.getId(), groupIds, pageable)
                 .map(McpServiceMapper::toModel);
     }
 

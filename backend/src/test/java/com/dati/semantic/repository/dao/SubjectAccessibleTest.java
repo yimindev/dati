@@ -1,6 +1,8 @@
 package com.dati.semantic.repository.dao;
 
 import com.dati.permission.domain.model.Permission;
+import com.dati.permission.domain.model.PrincipalType;
+import com.dati.permission.domain.model.ResourceType;
 import com.dati.permission.repository.dao.ResourceAclDAO;
 import com.dati.permission.repository.po.ResourceAclPO;
 import com.dati.semantic.repository.po.SubjectPO;
@@ -11,6 +13,8 @@ import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.test.context.ActiveProfiles;
+
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -36,9 +40,9 @@ class SubjectAccessibleTest {
 
     private void acl(String resourceId, Permission permission) {
         ResourceAclPO po = new ResourceAclPO();
-        po.setResourceType("SUBJECT");
+        po.setResourceType(ResourceType.SUBJECT);
         po.setResourceId(resourceId);
-        po.setPrincipalType("USER");
+        po.setPrincipalType(PrincipalType.USER);
         po.setPrincipalId("u1");
         po.setPermission(permission);
         aclDAO.save(po);
@@ -51,7 +55,8 @@ class SubjectAccessibleTest {
         String granted = subjectDAO.save(subject("u3", "granted")).getId();
         acl(granted, Permission.VIEW);
 
-        Page<SubjectPO> page = subjectDAO.findAllAccessible("u1", PageRequest.of(0, 10));
+        Page<SubjectPO> page = subjectDAO.findAllAccessible(
+                "u1", Set.of(PrincipalType.ALL_USERS), PageRequest.of(0, 10));
         assertThat(page.getContent()).extracting(SubjectPO::getId)
                 .containsExactlyInAnyOrder(mine, granted);
     }
@@ -63,7 +68,7 @@ class SubjectAccessibleTest {
         acl(granted, Permission.EDIT);
 
         Page<SubjectPO> page = subjectDAO.findByKeywordAndAccessible(
-                "sales", "u1", PageRequest.of(0, 10));
+                "sales", "u1", Set.of(PrincipalType.ALL_USERS), PageRequest.of(0, 10));
         assertThat(page.getContent()).extracting(SubjectPO::getId)
                 .containsExactlyInAnyOrder(mine, granted);
     }
@@ -73,15 +78,32 @@ class SubjectAccessibleTest {
         subjectDAO.save(subject("u2", "public-subject"));
         String granted = subjectDAO.save(subject("u3", "another")).getId();
         ResourceAclPO po = new ResourceAclPO();
-        po.setResourceType("SUBJECT");
+        po.setResourceType(ResourceType.SUBJECT);
         po.setResourceId(granted);
-        po.setPrincipalType("GROUP");
-        po.setPrincipalId("ALL_USERS");
+        po.setPrincipalType(PrincipalType.GROUP);
+        po.setPrincipalId(PrincipalType.ALL_USERS);
         po.setPermission(Permission.VIEW);
         aclDAO.save(po);
 
-        Page<SubjectPO> page = subjectDAO.findAllAccessible("stranger", PageRequest.of(0, 10));
+        Page<SubjectPO> page = subjectDAO.findAllAccessible(
+                "stranger", Set.of(PrincipalType.ALL_USERS), PageRequest.of(0, 10));
         assertThat(page.getContent()).extracting(SubjectPO::getId)
                 .containsExactlyInAnyOrder(granted);
+    }
+
+    @Test
+    void groupOutsideMembershipDoesNotGrantAccess() {
+        String granted = subjectDAO.save(subject("u3", "team-subject")).getId();
+        ResourceAclPO po = new ResourceAclPO();
+        po.setResourceType(ResourceType.SUBJECT);
+        po.setResourceId(granted);
+        po.setPrincipalType(PrincipalType.GROUP);
+        po.setPrincipalId("team-x");
+        po.setPermission(Permission.VIEW);
+        aclDAO.save(po);
+
+        Page<SubjectPO> page = subjectDAO.findAllAccessible(
+                "stranger", Set.of(PrincipalType.ALL_USERS), PageRequest.of(0, 10));
+        assertThat(page.getContent()).extracting(SubjectPO::getId).isEmpty();
     }
 }

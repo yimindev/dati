@@ -7,6 +7,7 @@
 - **可插拔认证**：通过 `AuthenticationProvider` 接口，支持多种认证方式并存，默认提供本地账号密码认证。
 - **Provider 自治**：每个 Provider 完全封装自己的凭证提取、验证、Token 签发逻辑，通用层（Interceptor/Service）不感知具体实现细节。
 - **轻量无状态**：不引入 Spring Security，使用 JWT 实现无状态认证，适合分布式部署。
+- **身份与授权分离**：`auth` 模块只解决"你是谁"（用户、登录、组成员关系），"你能做什么"由 `permission` 模块负责（见 [permission.md](permission.md)）。
 
 ## 核心组件
 
@@ -18,6 +19,7 @@
 | `JwtTokenUtil` | JWT 生成与验证（封装在 Local Provider 内部） | `auth/domain/service/` |
 | `AuthenticationService` | 登录门面：按 type 路由到对应 Provider | `auth/domain/service/` |
 | `UserService` | 用户领域服务：注册、查询、密码哈希 | `auth/domain/service/` |
+| `UserGroupService` | 组成员解析：`groupIdsOf(userId)`，V1 返回隐式组 `ALL_USERS`，V2 合并真实组查询 | `auth/domain/service/` |
 | `UserPO` | 用户持久化对象（继承 `BasePO`） | `auth/repository/po/` |
 
 ## 认证流程
@@ -104,6 +106,7 @@ AuthInterceptor.preHandle()
 ```yaml
 auth:
   enabled: true                    # 是否启用认证拦截
+  admin-users: ${ADMIN_USERS:admin}  # 全局管理员（按登录名，逗号分隔；授权判定使用，见 permission.md）
   jwt:
     secret: ${JWT_SECRET}          # JWT 签名密钥（≥256位）
     expiration-seconds: 604800     # Token 有效期，默认 7 天
@@ -116,6 +119,7 @@ auth:
 | POST | `/v1/auth/register` | 用户注册 | 公开 |
 | POST | `/v1/auth/login` | 用户登录 | 公开 |
 | GET | `/v1/auth/me` | 获取当前用户信息 | 需 Token |
+| GET | `/v1/users/search` | 用户搜索（授权弹窗选人，返回最小字段） | 需 Token |
 
 ## 错误码
 
@@ -223,5 +227,6 @@ frontend/src/
 ## 参考
 
 - 详细设计文档：[../superpowers/specs/2026-04-28-auth-design.md](../superpowers/specs/2026-04-28-auth-design.md)
+- 授权架构：[permission.md](permission.md)
 - 后端代码位置：`backend/src/main/java/com/dati/auth/`
 - 前端代码位置：`frontend/src/`

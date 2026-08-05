@@ -42,7 +42,7 @@ public class PermissionService {
         if (ownerId != null && ownerId.equals(userId)) {
             return true;
         }
-        return checker.can("USER", userId, type, resourceId, permission);
+        return checker.can(userId, type, resourceId, permission);
     }
 
     public void require(String userId, String principalName, ResourceType type, String resourceId,

@@ -9,6 +9,8 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
+
 @Repository
 public interface McpServiceDAO extends JpaRepository<McpServicePO, String> {
 
@@ -29,10 +31,11 @@ public interface McpServiceDAO extends JpaRepository<McpServicePO, String> {
                               WHERE a.resourceType = 'MCP_SERVICE'
                                 AND a.resourceId = m.id
                                 AND ((a.principalType = 'USER' AND a.principalId = :userId)
-                                     OR (a.principalType = 'GROUP' AND a.principalId = 'ALL_USERS'))))
+                                     OR (a.principalType = 'GROUP' AND a.principalId IN :groupIds))))
             """)
     Page<McpServicePO> findAllByNameContainingOrIdAndAccessible(@Param("keyword") String keyword,
                                                                 @Param("userId") String userId,
+                                                                @Param("groupIds") Collection<String> groupIds,
                                                                 Pageable pageable);
 
     @Query("""
@@ -43,10 +46,11 @@ public interface McpServiceDAO extends JpaRepository<McpServicePO, String> {
                               WHERE a.resourceType = 'MCP_SERVICE'
                                 AND a.resourceId = m.id
                                 AND ((a.principalType = 'USER' AND a.principalId = :userId)
-                                     OR (a.principalType = 'GROUP' AND a.principalId = 'ALL_USERS'))))
+                                     OR (a.principalType = 'GROUP' AND a.principalId IN :groupIds))))
             """)
     Page<McpServicePO> findAllByStatusAndAccessible(@Param("status") McpServiceStatus status,
                                                     @Param("userId") String userId,
+                                                    @Param("groupIds") Collection<String> groupIds,
                                                     Pageable pageable);
 
     @Query("""
@@ -58,11 +62,12 @@ public interface McpServiceDAO extends JpaRepository<McpServicePO, String> {
                               WHERE a.resourceType = 'MCP_SERVICE'
                                 AND a.resourceId = m.id
                                 AND ((a.principalType = 'USER' AND a.principalId = :userId)
-                                     OR (a.principalType = 'GROUP' AND a.principalId = 'ALL_USERS'))))
+                                     OR (a.principalType = 'GROUP' AND a.principalId IN :groupIds))))
             """)
     Page<McpServicePO> searchByKeywordAndStatusAndAccessible(@Param("keyword") String keyword,
                                                              @Param("status") McpServiceStatus status,
                                                              @Param("userId") String userId,
+                                                             @Param("groupIds") Collection<String> groupIds,
                                                              Pageable pageable);
 
     @Query("""
@@ -72,7 +77,9 @@ public interface McpServiceDAO extends JpaRepository<McpServicePO, String> {
                           WHERE a.resourceType = 'MCP_SERVICE'
                             AND a.resourceId = m.id
                             AND ((a.principalType = 'USER' AND a.principalId = :userId)
-                                 OR (a.principalType = 'GROUP' AND a.principalId = 'ALL_USERS')))
+                                 OR (a.principalType = 'GROUP' AND a.principalId IN :groupIds)))
             """)
-    Page<McpServicePO> findAllAccessible(@Param("userId") String userId, Pageable pageable);
+    Page<McpServicePO> findAllAccessible(@Param("userId") String userId,
+                                         @Param("groupIds") Collection<String> groupIds,
+                                         Pageable pageable);
 }
