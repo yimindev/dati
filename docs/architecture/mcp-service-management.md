@@ -395,7 +395,7 @@ SemanticSearchService.search(keywords, dsIds, subjectIds)
 McpService
   ├─ id (UUID), code (唯一), name, description, status (DRAFT|PUBLISHED|DISABLED)
   ├─ activeVersionId, activeVersionNumber   ← 指向当前对外响应的快照
-  └─ endpointPath = "/{code}/mcp" (运行时推导，不存 DB)
+  └─ endpointPath = 配置项 dati.mcp.endpoint-base-url + "/{code}/mcp"（运行时推导，不存 DB；base-url 未配置时返回相对路径）
 
 McpServiceSnapshot (per service, 多个, 版本号单调递增)
   ├─ serviceId, versionNumber (v1, v2, v3...), releaseNote
@@ -575,6 +575,7 @@ StatementResult.writeFailure(errorMessage)           // WRITE 失败
 
 - Service Code 作为唯一标识，格式要求：小写字母、数字、连字符、下划线，1-64 字符。
 - Endpoint 路径运行时推导为 `/{code}/mcp`，不存 DB，始终反映最新 code。
+- 完整 URL 前缀由配置项 `dati.mcp.endpoint-base-url`（yml，支持 `MCP_ENDPOINT_BASE_URL` 环境变量覆盖）控制：配置后返回完整 URL（如 `https://mcp.example.com/{code}/mcp`），未配置则返回相对路径。**前端不拼接 origin，以后端返回值为准**（MCP 服务独立域名部署时配置该值）。
 
 #### 工具分为「预置」和「自定义」
 

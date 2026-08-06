@@ -24,6 +24,10 @@ spring:
     elasticsearch:
       repositories:
         enabled: true
+
+dati:
+  mcp:
+    endpoint-base-url: http://localhost:${server.port}
 #logging:
 #  level:
 #    # 核心：打印es 交互信息

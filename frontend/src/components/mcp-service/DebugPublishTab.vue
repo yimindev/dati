@@ -28,10 +28,7 @@ const loading = ref(false);
 const rollingBack = ref(false);
 const snapshots = ref<McpServiceSnapshotVO[]>([]);
 
-const endpointUrl = computed(() => {
-  if (!props.service?.endpoint_path) return "";
-  return window.location.origin + props.service.endpoint_path;
-});
+const endpointUrl = computed(() => props.service?.endpoint_path || "");
 
 const loadSnapshots = async () => {
   if (!props.serviceId) return;

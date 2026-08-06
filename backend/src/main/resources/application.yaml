@@ -25,3 +25,8 @@ auth:
   jwt:
     secret: ${JWT_SECRET:this-is-a-32-char-long-default-secret-key}
     expiration-seconds: 604800
+
+dati:
+  mcp:
+    # MCP endpoint 基础 URL（完整 URL 前缀，如 https://mcp.example.com），空则返回相对路径 /{code}/mcp
+    endpoint-base-url: ${MCP_ENDPOINT_BASE_URL:}

@@ -93,10 +93,7 @@ const statusLabel = (status: string) => {
   }
 };
 
-const endpointUrl = computed(() => {
-  if (!service.value?.endpoint_path) return "";
-  return window.location.origin + service.value.endpoint_path;
-});
+const endpointUrl = computed(() => service.value?.endpoint_path || "");
 
 const isDirty = computed(() =>
   !!service.value &&
