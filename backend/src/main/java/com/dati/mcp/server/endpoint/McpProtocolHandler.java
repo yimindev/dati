@@ -10,11 +10,12 @@ import com.dati.mcp.server.converter.ToolDefinitionConverter;
 import com.dati.mcp.server.converter.PromptDefinitionConverter;
 import com.dati.mcp.server.converter.ToolResultConverter;
 import com.dati.mcp.server.resolver.SnapshotToolResolver;
+import io.modelcontextprotocol.json.McpJsonDefaults;
+import io.modelcontextprotocol.json.McpJsonMapper;
 import io.modelcontextprotocol.spec.McpSchema;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -35,6 +36,7 @@ public class McpProtocolHandler {
     private final ToolResultConverter toolResultConverter;
     private final PromptDefinitionConverter promptDefinitionConverter;
     private final Map<McpToolType, ToolExecutor> executorMap;
+    private final McpJsonMapper jsonMapper = McpJsonDefaults.getMapper();
 
     public McpProtocolHandler(ToolDefinitionConverter toolDefinitionConverter,
                               SnapshotToolResolver snapshotToolResolver,
@@ -54,12 +56,12 @@ public class McpProtocolHandler {
                                             McpSchema.JSONRPCRequest request) {
         try {
             return switch (request.method()) {
-                case "initialize" -> handleInitialize(service, content, request);
-                case "ping" -> McpSchema.JSONRPCResponse.result(request.id(), Map.of());
-                case "tools/list" -> handleToolsList(content, request);
-                case "tools/call" -> handleToolsCall(service.getId(), content, request);
-                case "prompts/list" -> handlePromptsList(content, request);
-                case "prompts/get" -> handlePromptsGet(content, request);
+                case McpSchema.METHOD_INITIALIZE -> handleInitialize(service, content, request);
+                case McpSchema.METHOD_PING -> McpSchema.JSONRPCResponse.result(request.id(), Map.of());
+                case McpSchema.METHOD_TOOLS_LIST -> handleToolsList(content, request);
+                case McpSchema.METHOD_TOOLS_CALL -> handleToolsCall(service.getId(), content, request);
+                case McpSchema.METHOD_PROMPT_LIST -> handlePromptsList(content, request);
+                case McpSchema.METHOD_PROMPT_GET -> handlePromptsGet(content, request);
                 default -> McpSchema.JSONRPCResponse.error(request.id(), methodNotImplemented(request.method()));
             };
         } catch (ToolExecuteException e) {
@@ -67,7 +69,7 @@ public class McpProtocolHandler {
         } catch (Exception e) {
             log.error("MCP request failed: {}", e.getMessage(), e);
             return McpSchema.JSONRPCResponse.error(request.id(),
-                new McpSchema.JSONRPCResponse.JSONRPCError(-32603, "Internal error: " + e.getMessage(), null));
+                new McpSchema.JSONRPCResponse.JSONRPCError(McpSchema.ErrorCodes.INTERNAL_ERROR, "Internal error: " + e.getMessage(), null));
         }
     }
 
@@ -83,51 +85,46 @@ public class McpProtocolHandler {
     private McpSchema.JSONRPCResponse handleInitialize(McpServicePO service,
                                                        McpServiceSnapshot.SnapshotContent content,
                                                        McpSchema.JSONRPCRequest request) {
-        Map<String, Object> capabilities = new HashMap<>();
+        var capabilities = McpSchema.ServerCapabilities.builder();
         if (hasEnabledTools(content)) {
-            capabilities.put("tools", Map.of("listChanged", false));
+            capabilities.tools(false);
         }
         if (hasEnabledPrompts(content)) {
-            capabilities.put("prompts", Map.of("listChanged", false));
+            capabilities.prompts(false);
         }
-        Map<String, Object> result = new HashMap<>();
-        result.put("protocolVersion", PROTOCOL_VERSION);
-        result.put("capabilities", capabilities);
-        result.put("serverInfo", Map.of(
-            "name", service.getName(),
-            "version", "v" + (service.getActiveVersionNumber() == null ? 0 : service.getActiveVersionNumber())));
+        var serverInfo = McpSchema.Implementation.builder(service.getName(),
+            "v" + (service.getActiveVersionNumber() == null ? 0 : service.getActiveVersionNumber())).build();
+        McpSchema.InitializeResult result = McpSchema.InitializeResult.builder(
+            PROTOCOL_VERSION, capabilities.build(), serverInfo).build();
         return McpSchema.JSONRPCResponse.result(request.id(), result);
     }
 
     private McpSchema.JSONRPCResponse handleToolsList(McpServiceSnapshot.SnapshotContent content,
                                                       McpSchema.JSONRPCRequest request) {
-        Map<String, Object> result = new HashMap<>();
-        result.put("tools", toolDefinitionConverter.convert(content));
-        return McpSchema.JSONRPCResponse.result(request.id(), result);
+        return McpSchema.JSONRPCResponse.result(request.id(),
+            McpSchema.ListToolsResult.builder(toolDefinitionConverter.convert(content)).build());
     }
 
     private McpSchema.JSONRPCResponse handleToolsCall(String serviceId,
                                                       McpServiceSnapshot.SnapshotContent content,
                                                       McpSchema.JSONRPCRequest request) {
-        Map<?, ?> params = asParams(request);
-        String name = params == null ? null : (String) params.get("name");
+        McpSchema.CallToolRequest callReq = parseParams(request, McpSchema.CallToolRequest.class);
+        String name = callReq == null ? null : callReq.name();
         if (name == null || name.isBlank()) {
             return McpSchema.JSONRPCResponse.error(request.id(),
-                new McpSchema.JSONRPCResponse.JSONRPCError(-32602, "Missing required parameter: name", null));
+                new McpSchema.JSONRPCResponse.JSONRPCError(McpSchema.ErrorCodes.INVALID_PARAMS, "Missing required parameter: name", null));
         }
         SnapshotToolResolver.ResolvedTool tool = snapshotToolResolver.resolve(content, name).orElse(null);
         if (tool == null) {
             return McpSchema.JSONRPCResponse.error(request.id(),
-                new McpSchema.JSONRPCResponse.JSONRPCError(-32602, "Unknown tool: " + name, null));
+                new McpSchema.JSONRPCResponse.JSONRPCError(McpSchema.ErrorCodes.INVALID_PARAMS, "Unknown tool: " + name, null));
         }
         ToolExecutor executor = executorMap.get(tool.toolType());
         if (executor == null) {
             return McpSchema.JSONRPCResponse.error(request.id(),
-                new McpSchema.JSONRPCResponse.JSONRPCError(-32603, "No executor for tool type: " + tool.toolType(), null));
+                new McpSchema.JSONRPCResponse.JSONRPCError(McpSchema.ErrorCodes.INTERNAL_ERROR, "No executor for tool type: " + tool.toolType(), null));
         }
-        @SuppressWarnings("unchecked")
-        Map<String, Object> arguments = params.get("arguments") == null
-            ? Map.of() : (Map<String, Object>) params.get("arguments");
+        Map<String, Object> arguments = callReq.arguments() == null ? Map.of() : callReq.arguments();
         ToolExecutionContext ctx = new ToolExecutionContext(
             serviceId, tool.toolType(), tool.config(), arguments,
             snapshotToolResolver.buildScopeItems(serviceId, content));
@@ -137,36 +134,34 @@ public class McpProtocolHandler {
 
     private McpSchema.JSONRPCResponse handlePromptsList(McpServiceSnapshot.SnapshotContent content,
                                                         McpSchema.JSONRPCRequest request) {
-        Map<String, Object> result = new HashMap<>();
-        result.put("prompts", promptDefinitionConverter.list(content));
-        return McpSchema.JSONRPCResponse.result(request.id(), result);
+        return McpSchema.JSONRPCResponse.result(request.id(),
+            McpSchema.ListPromptsResult.builder(promptDefinitionConverter.list(content)).build());
     }
 
     private McpSchema.JSONRPCResponse handlePromptsGet(McpServiceSnapshot.SnapshotContent content,
                                                        McpSchema.JSONRPCRequest request) {
-        Map<?, ?> params = asParams(request);
-        String name = params == null ? null : (String) params.get("name");
+        McpSchema.GetPromptRequest promptReq = parseParams(request, McpSchema.GetPromptRequest.class);
+        String name = promptReq == null ? null : promptReq.name();
         if (name == null || name.isBlank()) {
             return McpSchema.JSONRPCResponse.error(request.id(),
-                new McpSchema.JSONRPCResponse.JSONRPCError(-32602, "Missing required parameter: name", null));
+                new McpSchema.JSONRPCResponse.JSONRPCError(McpSchema.ErrorCodes.INVALID_PARAMS, "Missing required parameter: name", null));
         }
         try {
-            @SuppressWarnings("unchecked")
-            Map<String, Object> arguments = params.get("arguments") == null
-                ? Map.of() : (Map<String, Object>) params.get("arguments");
-            Map<String, Object> result = promptDefinitionConverter.get(content, name, arguments);
+            Map<String, Object> arguments = promptReq.arguments() == null ? Map.of() : promptReq.arguments();
+            McpSchema.GetPromptResult result = promptDefinitionConverter.get(content, name, arguments);
             return McpSchema.JSONRPCResponse.result(request.id(), result);
         } catch (IllegalArgumentException e) {
             return McpSchema.JSONRPCResponse.error(request.id(),
-                new McpSchema.JSONRPCResponse.JSONRPCError(-32602, e.getMessage(), null));
+                new McpSchema.JSONRPCResponse.JSONRPCError(McpSchema.ErrorCodes.INVALID_PARAMS, e.getMessage(), null));
         }
     }
 
-    private Map<?, ?> asParams(McpSchema.JSONRPCRequest request) {
-        return request.params() instanceof Map<?, ?> m ? m : null;
+    /** Converts the generic JSON-RPC params into the typed MCP request record. */
+    private <T> T parseParams(McpSchema.JSONRPCRequest request, Class<T> type) {
+        return jsonMapper.convertValue(request.params(), type);
     }
 
     private McpSchema.JSONRPCResponse.JSONRPCError methodNotImplemented(String method) {
-        return new McpSchema.JSONRPCResponse.JSONRPCError(-32601, "Method not found: " + method, null);
+        return new McpSchema.JSONRPCResponse.JSONRPCError(McpSchema.ErrorCodes.METHOD_NOT_FOUND, "Method not found: " + method, null);
     }
 }

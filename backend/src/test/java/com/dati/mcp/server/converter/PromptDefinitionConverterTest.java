@@ -2,15 +2,14 @@ package com.dati.mcp.server.converter;
 
 import com.dati.TestFixtures;
 import com.dati.mcp.domain.model.McpServiceSnapshot;
+import io.modelcontextprotocol.spec.McpSchema;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
 import java.util.Map;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 @DisplayName("PromptDefinitionConverter tests")
 class PromptDefinitionConverterTest {
@@ -21,14 +20,12 @@ class PromptDefinitionConverterTest {
     @DisplayName("lists enabled prompts with arguments from parameters")
     void listsPrompts() {
         var content = TestFixtures.createTestSnapshotContent();
-        List<Map<String, Object>> prompts = converter.list(content);
+        List<McpSchema.Prompt> prompts = converter.list(content);
         assertEquals(1, prompts.size());
-        assertEquals("analyze_table", prompts.getFirst().get("name"));
-        @SuppressWarnings("unchecked")
-        List<Map<String, Object>> args = (List<Map<String, Object>>) prompts.getFirst().get("arguments");
-        assertEquals(1, args.size());
-        assertEquals("table", args.getFirst().get("name"));
-        assertEquals(true, args.getFirst().get("required"));
+        assertEquals("analyze_table", prompts.getFirst().name());
+        assertEquals(1, prompts.getFirst().arguments().size());
+        assertEquals("table", prompts.getFirst().arguments().getFirst().name());
+        assertEquals(true, prompts.getFirst().arguments().getFirst().required());
     }
 
     @Test
@@ -38,9 +35,9 @@ class PromptDefinitionConverterTest {
         content.setPrompts(List.of(
             TestFixtures.createTestPromptDraft("a", false, "x {{v}}", List.of()),
             TestFixtures.createTestPromptDraft("b", true, "y {{v}}", List.of())));
-        List<Map<String, Object>> prompts = converter.list(content);
+        List<McpSchema.Prompt> prompts = converter.list(content);
         assertEquals(1, prompts.size());
-        assertEquals("b", prompts.getFirst().get("name"));
+        assertEquals("b", prompts.getFirst().name());
         assertTrue(converter.list(new McpServiceSnapshot.SnapshotContent()).isEmpty());
     }
 
@@ -48,9 +45,11 @@ class PromptDefinitionConverterTest {
     @DisplayName("gets prompt with rendered template as user text message")
     void getsPromptRendered() {
         var content = TestFixtures.createTestSnapshotContent();
-        Map<String, Object> result = converter.get(content, "analyze_table", Map.of("table", "orders"));
-        Map<?, ?> message = (Map<?, ?>) ((List<?>) result.get("messages")).getFirst();
-        assertEquals("请分析 orders 表的数据。", ((Map<?, ?>) message.get("content")).get("text"));
+        McpSchema.GetPromptResult result = converter.get(content, "analyze_table", Map.of("table", "orders"));
+        assertEquals(1, result.messages().size());
+        assertEquals(McpSchema.Role.USER, result.messages().getFirst().role());
+        McpSchema.TextContent text = (McpSchema.TextContent) result.messages().getFirst().content();
+        assertEquals("请分析 orders 表的数据。", text.text());
     }
 
     @Test

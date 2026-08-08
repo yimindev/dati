@@ -5,6 +5,7 @@ import com.dati.mcp.domain.model.McpServiceSnapshot;
 import com.dati.mcp.domain.model.McpToolType;
 import com.dati.mcp.domain.model.ToolConfig;
 import com.dati.mcp.domain.model.ToolParameter;
+import io.modelcontextprotocol.spec.McpSchema;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -17,7 +18,7 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Converts snapshot tool drafts into MCP protocol Tool definitions.
+ * Converts snapshot tool drafts into MCP protocol {@link McpSchema.Tool} definitions.
  * Deterministic order: prebuilt fixed order, then custom tools by name.
  * Custom tools whose name collides with prebuilt or earlier custom tools are skipped (WARN logged).
  */
@@ -29,8 +30,8 @@ public class ToolDefinitionConverter {
         McpToolType.SEARCH_METADATA, McpToolType.GET_TABLE_INFO,
         McpToolType.EXECUTE_SQL, McpToolType.PARAMETERIZED_SQL);
 
-    public List<Map<String, Object>> convert(McpServiceSnapshot.SnapshotContent content) {
-        List<Map<String, Object>> tools = new ArrayList<>();
+    public List<McpSchema.Tool> convert(McpServiceSnapshot.SnapshotContent content) {
+        List<McpSchema.Tool> tools = new ArrayList<>();
         Set<String> usedNames = new HashSet<>();
         if (content.getPrebuiltTools() != null) {
             for (McpToolType type : PREBUILT_ORDER) {
@@ -53,23 +54,19 @@ public class ToolDefinitionConverter {
         return tools;
     }
 
-    private Map<String, Object> buildPrebuilt(McpToolType type) {
-        Map<String, Object> tool = new HashMap<>();
-        tool.put("name", type.getToolName());
-        tool.put("description", type.getDescription());
-        tool.put("inputSchema", parseSchema(type.getInputSchema()));
-        return tool;
+    private McpSchema.Tool buildPrebuilt(McpToolType type) {
+        return McpSchema.Tool.builder(type.getToolName(), parseSchema(type.getInputSchema()))
+            .description(type.getDescription())
+            .build();
     }
 
-    private Map<String, Object> buildCustom(McpServiceSnapshot.CustomToolDraft t) {
-        Map<String, Object> tool = new HashMap<>();
-        tool.put("name", t.name());
-        tool.put("description", t.description());
+    private McpSchema.Tool buildCustom(McpServiceSnapshot.CustomToolDraft t) {
+        var builder = McpSchema.Tool.builder(t.name(), buildInputSchema(t))
+            .description(t.description());
         if (t.title() != null && !t.title().isBlank()) {
-            tool.put("title", t.title());
+            builder.title(t.title());
         }
-        tool.put("inputSchema", buildInputSchema(t));
-        return tool;
+        return builder.build();
     }
 
     /** Prebuilt: parse enum JSON Schema. PARAMETERIZED_SQL custom: generate from ToolParameter list. */

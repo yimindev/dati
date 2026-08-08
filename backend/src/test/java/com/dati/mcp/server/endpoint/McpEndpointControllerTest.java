@@ -178,6 +178,20 @@ class McpEndpointControllerTest {
     }
 
     @Test
+    @DisplayName("unparseable body with protocol version returns 400 with JSON-RPC parse error")
+    void parseErrorBody() throws Exception {
+        mockMvc.perform(post("/test-mcp-service/mcp")
+                .header("Accept", "application/json, text/event-stream")
+                .header("MCP-Protocol-Version", "2025-11-25")
+                .header("Authorization", "Bearer abc")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("not-a-json-{"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.error.code").value(-32700))
+            .andExpect(jsonPath("$.error.message").isString());
+    }
+
+    @Test
     @DisplayName("GET returns 405")
     void getMethodNotAllowed() throws Exception {
         mockMvc.perform(get("/test-mcp-service/mcp"))

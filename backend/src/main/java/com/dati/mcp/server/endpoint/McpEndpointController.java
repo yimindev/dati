@@ -23,6 +23,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -78,7 +79,7 @@ public class McpEndpointController {
             return ResponseEntity.notFound().build();
         }
         if (service.getStatus() == McpServiceStatus.DISABLED) {
-            String err = jsonError(body, -32603, "Service is disabled");
+            String err = jsonError(body, McpSchema.ErrorCodes.INTERNAL_ERROR, "Service is disabled");
             return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
                 .contentType(MediaType.APPLICATION_JSON).body(err);
         }
@@ -94,7 +95,7 @@ public class McpEndpointController {
         // initialize is exempt from the protocol version header requirement (2025-11-25 spec)
         String method = parseMethod(body);
         String protocolVersion = request.getHeader("MCP-Protocol-Version");
-        if (!"initialize".equals(method) && !McpProtocolHandler.PROTOCOL_VERSION.equals(protocolVersion)) {
+        if (!McpSchema.METHOD_INITIALIZE.equals(method) && !McpProtocolHandler.PROTOCOL_VERSION.equals(protocolVersion)) {
             return ResponseEntity.badRequest().build();
         }
         // 4. Snapshot loading (active version only)
@@ -113,7 +114,7 @@ public class McpEndpointController {
             return ResponseEntity.status(HttpStatus.ACCEPTED).build();
         } catch (Exception e) {
             log.warn("Invalid MCP message from {}: {}", code, e.getMessage());
-            return ResponseEntity.badRequest().body(jsonError(body, -32700, "Parse error: " + e.getMessage()));
+            return ResponseEntity.badRequest().body(jsonError(body, McpSchema.ErrorCodes.PARSE_ERROR, "Parse error: " + e.getMessage()));
         }
     }
 
@@ -141,18 +142,23 @@ public class McpEndpointController {
         }
     }
 
-    /** Echoes the request id when present; serializes manually when absent (SDK rejects null ids). */
+    /**
+     * JSON-RPC error body, echoing the request id when parseable. The SDK's
+     * {@link McpSchema.JSONRPCResponse} rejects null ids, so unparseable bodies
+     * (e.g. malformed JSON) fall back to the minimal JSON-RPC 2.0 envelope.
+     */
     private String jsonError(String body, int code, String message) {
         Object id = parseId(body);
-        if (id == null) {
-            return "{\"jsonrpc\":\"2.0\",\"error\":{\"code\":" + code + ",\"message\":\"" + message + "\"}}";
-        }
-        McpSchema.JSONRPCResponse resp = McpSchema.JSONRPCResponse.error(id,
-            new McpSchema.JSONRPCResponse.JSONRPCError(code, message, null));
+        McpSchema.JSONRPCResponse.JSONRPCError error =
+            new McpSchema.JSONRPCResponse.JSONRPCError(code, message);
+        Object envelope = id != null
+            ? McpSchema.JSONRPCResponse.error(id, error)
+            : Map.of("jsonrpc", McpSchema.JSONRPC_VERSION, "error", error);
         try {
-            return jsonMapper.writeValueAsString(resp);
+            return jsonMapper.writeValueAsString(envelope);
         } catch (Exception e) {
-            return "{\"jsonrpc\":\"2.0\",\"error\":{\"code\":" + code + ",\"message\":\"" + message + "\"}}";
+            log.error("Failed to serialize MCP error response", e);
+            return "{}";
         }
     }
 

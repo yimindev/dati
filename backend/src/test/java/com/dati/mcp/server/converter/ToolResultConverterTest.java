@@ -7,11 +7,11 @@ import com.dati.mcp.domain.service.ToolExecuteException;
 import com.dati.mcp.server.pojo.SqlExecution;
 import com.dati.mcp.server.pojo.StatementResult;
 import com.dati.mcp.server.pojo.TableMetadata;
+import io.modelcontextprotocol.spec.McpSchema;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
-import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -25,12 +25,12 @@ class ToolResultConverterTest {
     void convertsSqlExecution() {
         SqlExecution execution = new SqlExecution("SELECT 1",
             List.of(StatementResult.select(List.of("a"), List.of(List.of(1)), 1)), null);
-        Map<String, Object> result = converter.toResult(execution);
-        assertFalse((boolean) result.get("isError"));
-        assertEquals(1, ((List<?>) result.get("content")).size());
-        Map<?, ?> text = (Map<?, ?>) ((List<?>) result.get("content")).getFirst();
-        assertEquals("text", text.get("type"));
-        assertNotNull(result.get("structuredContent"));
+        McpSchema.CallToolResult result = converter.toResult(execution);
+        assertFalse(result.isError());
+        assertEquals(1, result.content().size());
+        McpSchema.TextContent text = (McpSchema.TextContent) result.content().getFirst();
+        assertNotNull(text.text());
+        assertNotNull(result.structuredContent());
     }
 
     @Test
@@ -39,9 +39,9 @@ class ToolResultConverterTest {
         TableDef table = new TableDef("public", "users", "user table", List.of(),
             List.of(new ColumnDef("id", "bigint", "primary key", List.of(), List.of("1", "2"))));
         TableMetadata metadata = new TableMetadata(List.of(table));
-        Map<String, Object> result = converter.toResult(metadata);
-        assertFalse((boolean) result.get("isError"));
-        assertNotNull(result.get("structuredContent"));
+        McpSchema.CallToolResult result = converter.toResult(metadata);
+        assertFalse(result.isError());
+        assertNotNull(result.structuredContent());
     }
 
     @Test
@@ -49,19 +49,18 @@ class ToolResultConverterTest {
     void convertsSearchHit() {
         com.dati.mcp.server.pojo.SearchHit hit = new com.dati.mcp.server.pojo.SearchHit(
             List.of("orders"), List.of(), List.of());
-        Map<String, Object> result = converter.toResult(hit);
-        assertFalse((boolean) result.get("isError"));
-        assertNotNull(result.get("structuredContent"));
+        McpSchema.CallToolResult result = converter.toResult(hit);
+        assertFalse(result.isError());
+        assertNotNull(result.structuredContent());
     }
 
     @Test
     @DisplayName("tool execute exception becomes isError result with text message")
     void convertsException() {
         ToolExecuteException e = new ToolExecuteException(ToolError.SCOPE_VIOLATION, "table not in scope");
-        Map<String, Object> result = converter.toError(e);
-        assertTrue((boolean) result.get("isError"));
-        Map<?, ?> text = (Map<?, ?>) ((List<?>) result.get("content")).getFirst();
-        assertEquals("text", text.get("type"));
-        assertTrue(((String) text.get("text")).contains("table not in scope"));
+        McpSchema.CallToolResult result = converter.toError(e);
+        assertTrue(result.isError());
+        McpSchema.TextContent text = (McpSchema.TextContent) result.content().getFirst();
+        assertTrue(text.text().contains("table not in scope"));
     }
 }

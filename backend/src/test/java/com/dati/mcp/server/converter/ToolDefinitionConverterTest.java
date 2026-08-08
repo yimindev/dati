@@ -5,11 +5,11 @@ import com.dati.mcp.domain.model.McpToolType;
 import com.dati.mcp.domain.model.McpServiceSnapshot;
 import com.dati.mcp.domain.model.ToolConfig;
 import com.dati.mcp.domain.model.ToolParameter;
+import io.modelcontextprotocol.spec.McpSchema;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
-import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -22,15 +22,13 @@ class ToolDefinitionConverterTest {
     @DisplayName("converts prebuilt and custom tools with deterministic order")
     void convertsToolsWithOrder() {
         var content = TestFixtures.createTestSnapshotContent();
-        List<Map<String, Object>> tools = converter.convert(content);
+        List<McpSchema.Tool> tools = converter.convert(content);
         assertEquals(2, tools.size());
-        assertEquals("search_metadata", tools.get(0).get("name"));
-        assertEquals("list_tasks", tools.get(1).get("name"));
-        assertEquals("查询任务列表", tools.get(1).get("title"));
-        @SuppressWarnings("unchecked")
-        Map<String, Object> schema = (Map<String, Object>) tools.get(1).get("inputSchema");
-        assertEquals("object", schema.get("type"));
-        assertEquals(List.of("status"), schema.get("required"));
+        assertEquals("search_metadata", tools.get(0).name());
+        assertEquals("list_tasks", tools.get(1).name());
+        assertEquals("查询任务列表", tools.get(1).title());
+        assertEquals("object", tools.get(1).inputSchema().get("type"));
+        assertEquals(List.of("status"), tools.get(1).inputSchema().get("required"));
     }
 
     @Test
@@ -52,9 +50,9 @@ class ToolDefinitionConverterTest {
             TestFixtures.createTestPrebuiltToolDraft(McpToolType.EXECUTE_SQL, true, new ToolConfig.ExecuteSqlConfig()),
             TestFixtures.createTestPrebuiltToolDraft(McpToolType.GET_TABLE_INFO, true, new ToolConfig.GetTableInfoConfig()),
             TestFixtures.createTestPrebuiltToolDraft(McpToolType.SEARCH_METADATA, true, new ToolConfig.SearchMetadataConfig())));
-        List<Map<String, Object>> tools = converter.convert(content);
+        List<McpSchema.Tool> tools = converter.convert(content);
         assertEquals(List.of("search_metadata", "get_table_info", "execute_sql"),
-            tools.stream().map(t -> t.get("name")).toList());
+            tools.stream().map(McpSchema.Tool::name).toList());
     }
 
     @Test
@@ -67,8 +65,8 @@ class ToolDefinitionConverterTest {
             TestFixtures.createTestCustomToolDraft("search_metadata", McpToolType.PARAMETERIZED_SQL, true, new ToolConfig.ParamSqlConfig()),
             TestFixtures.createTestCustomToolDraft("dup", McpToolType.PARAMETERIZED_SQL, true, new ToolConfig.ParamSqlConfig()),
             TestFixtures.createTestCustomToolDraft("dup", McpToolType.PARAMETERIZED_SQL, true, new ToolConfig.ParamSqlConfig())));
-        List<Map<String, Object>> tools = converter.convert(content);
-        assertEquals(List.of("search_metadata", "dup"), tools.stream().map(t -> t.get("name")).toList());
+        List<McpSchema.Tool> tools = converter.convert(content);
+        assertEquals(List.of("search_metadata", "dup"), tools.stream().map(McpSchema.Tool::name).toList());
     }
 
     @Test
@@ -85,14 +83,12 @@ class ToolDefinitionConverterTest {
         var content = new McpServiceSnapshot.SnapshotContent();
         content.setCustomTools(List.of(
             TestFixtures.createTestCustomToolDraft("list_tasks", McpToolType.PARAMETERIZED_SQL, true, cfg)));
-        List<Map<String, Object>> tools = converter.convert(content);
+        List<McpSchema.Tool> tools = converter.convert(content);
         @SuppressWarnings("unchecked")
-        Map<String, Object> schema = (Map<String, Object>) tools.getFirst().get("inputSchema");
-        @SuppressWarnings("unchecked")
-        Map<String, Object> props = (Map<String, Object>) schema.get("properties");
+        var props = (java.util.Map<String, Object>) tools.getFirst().inputSchema().get("properties");
         assertTrue(props.containsKey("status"));
-        assertEquals("string", ((Map<?, ?>) props.get("status")).get("type"));
-        assertEquals(List.of("status"), schema.get("required"));
+        assertEquals("string", ((java.util.Map<?, ?>) props.get("status")).get("type"));
+        assertEquals(List.of("status"), tools.getFirst().inputSchema().get("required"));
     }
 
     @Test

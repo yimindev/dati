@@ -56,13 +56,12 @@ class McpProtocolHandlerTest {
             "protocolVersion", "2025-11-25", "capabilities", Map.of(), "clientInfo", Map.of()));
         McpSchema.JSONRPCResponse resp = handler.handle(service, content, req);
         assertNull(resp.error());
-        @SuppressWarnings("unchecked")
-        Map<String, Object> result = (Map<String, Object>) resp.result();
-        assertEquals("2025-11-25", result.get("protocolVersion"));
-        assertTrue(((Map<?, ?>) result.get("capabilities")).containsKey("tools"));
-        assertTrue(((Map<?, ?>) result.get("capabilities")).containsKey("prompts"));
-        assertEquals("Test MCP Service", ((Map<?, ?>) result.get("serverInfo")).get("name"));
-        assertEquals("v1", ((Map<?, ?>) result.get("serverInfo")).get("version"));
+        McpSchema.InitializeResult result = (McpSchema.InitializeResult) resp.result();
+        assertEquals("2025-11-25", result.protocolVersion());
+        assertNotNull(result.capabilities().tools());
+        assertNotNull(result.capabilities().prompts());
+        assertEquals("Test MCP Service", result.serverInfo().name());
+        assertEquals("v1", result.serverInfo().version());
     }
 
     @Test
@@ -71,10 +70,9 @@ class McpProtocolHandlerTest {
         var empty = new McpServiceSnapshot.SnapshotContent();
         McpSchema.JSONRPCRequest req = new McpSchema.JSONRPCRequest("initialize", 1, Map.of());
         McpSchema.JSONRPCResponse resp = handler.handle(service, empty, req);
-        @SuppressWarnings("unchecked")
-        Map<String, Object> result = (Map<String, Object>) resp.result();
-        assertFalse(((Map<?, ?>) result.get("capabilities")).containsKey("tools"));
-        assertFalse(((Map<?, ?>) result.get("capabilities")).containsKey("prompts"));
+        McpSchema.InitializeResult result = (McpSchema.InitializeResult) resp.result();
+        assertNull(result.capabilities().tools());
+        assertNull(result.capabilities().prompts());
     }
 
     @Test
@@ -92,9 +90,8 @@ class McpProtocolHandlerTest {
         McpSchema.JSONRPCRequest req = new McpSchema.JSONRPCRequest("tools/list", 3, Map.of());
         McpSchema.JSONRPCResponse resp = handler.handle(service, content, req);
         assertNull(resp.error());
-        @SuppressWarnings("unchecked")
-        Map<String, Object> result = (Map<String, Object>) resp.result();
-        assertEquals(2, ((List<?>) result.get("tools")).size());
+        McpSchema.ListToolsResult result = (McpSchema.ListToolsResult) resp.result();
+        assertEquals(2, result.tools().size());
     }
 
     @Test
@@ -107,9 +104,8 @@ class McpProtocolHandlerTest {
             Map.of("name", "search_metadata", "arguments", Map.of("keywords", List.of("orders"))));
         McpSchema.JSONRPCResponse resp = handler.handle(service, content, req);
         assertNull(resp.error());
-        @SuppressWarnings("unchecked")
-        Map<String, Object> result = (Map<String, Object>) resp.result();
-        assertFalse((boolean) result.get("isError"));
+        McpSchema.CallToolResult result = (McpSchema.CallToolResult) resp.result();
+        assertFalse(result.isError());
     }
 
     @Test
@@ -130,9 +126,8 @@ class McpProtocolHandlerTest {
             Map.of("name", "search_metadata", "arguments", Map.of("keywords", List.of("x"))));
         McpSchema.JSONRPCResponse resp = handler.handle(service, content, req);
         assertNull(resp.error());
-        @SuppressWarnings("unchecked")
-        Map<String, Object> result = (Map<String, Object>) resp.result();
-        assertTrue((boolean) result.get("isError"));
+        McpSchema.CallToolResult result = (McpSchema.CallToolResult) resp.result();
+        assertTrue(result.isError());
     }
 
     @Test
@@ -141,9 +136,8 @@ class McpProtocolHandlerTest {
         McpSchema.JSONRPCRequest req = new McpSchema.JSONRPCRequest("prompts/list", 8, Map.of());
         McpSchema.JSONRPCResponse resp = handler.handle(service, content, req);
         assertNull(resp.error());
-        @SuppressWarnings("unchecked")
-        Map<String, Object> result = (Map<String, Object>) resp.result();
-        assertEquals(1, ((List<?>) result.get("prompts")).size());
+        McpSchema.ListPromptsResult result = (McpSchema.ListPromptsResult) resp.result();
+        assertEquals(1, result.prompts().size());
     }
 
     @Test
@@ -153,9 +147,8 @@ class McpProtocolHandlerTest {
             Map.of("name", "analyze_table", "arguments", Map.of("table", "orders")));
         McpSchema.JSONRPCResponse resp = handler.handle(service, content, req);
         assertNull(resp.error());
-        @SuppressWarnings("unchecked")
-        Map<String, Object> result = (Map<String, Object>) resp.result();
-        assertEquals(1, ((List<?>) result.get("messages")).size());
+        McpSchema.GetPromptResult result = (McpSchema.GetPromptResult) resp.result();
+        assertEquals(1, result.messages().size());
     }
 
     @Test
