@@ -107,6 +107,7 @@ Warnings: 1
 | `scripts/run-tests.sh` | 一键测试调度器 |
 | `scripts/bug-tracker.sh` | Bug 生命周期管理 |
 | `scripts/helpers.sh` | 公共辅助函数（source 使用） |
+| `scripts/mcp-verify.sh` | MCP endpoint 验收（Inspector CLI + Conformance 2025-11-25），配套 `scripts/mcp-conformance-proxy.js`（JWT 注入代理，Conformance CLI 不支持自定义 header） |
 
 所有脚本支持 `--help` 查看详细用法。Agent 直接调用：
 
@@ -114,6 +115,10 @@ Warnings: 1
 scripts/run-tests.sh                        # 全模块
 scripts/run-tests.sh datasource             # 单模块
 scripts/bug-tracker.sh fix BUG-20260724-001
+
+# MCP endpoint 验收（需已发布服务，用例见 e2e-tests/test-cases/mcp-endpoint.md）
+MCP_CODE=mcp-verify-demo MCP_TOKEN=<jwt> MCP_DS_ID=<dsId> \
+  scripts/mcp-verify.sh
 ```
 
 ## 常见陷阱

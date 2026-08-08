@@ -1,0 +1,45 @@
+# DatI MCP Endpoint Conformance Test Baseline (2025-11-25)
+# Known failing scenarios, expected to fail until fixed. See:
+# https://github.com/modelcontextprotocol/conformance/blob/main/SDK_INTEGRATION.md
+#
+# Scope rationale (per docs/superpowers/specs/2026-08-06-mcp-endpoint-design.md §9):
+# - Stateless server: no session management, no SSE streams, no GET/DELETE endpoints
+# - Capabilities intentionally not declared: resources, logging, completion, elicitation (2026-07-28)
+# - Reference-server fixture tools/prompts (test_simple_text, test_image_content, ...) do not
+#   exist on a real domain-specific service; scenario expectations cannot be satisfied
+# - json-schema-2020-12: scenario requires a tool exposing a JSON-Schema-2020-12 inputSchema;
+#   our tools expose draft-07 style schemas (additionalProperties), schema compatibility is
+#   out of scope for this release
+
+server:
+  # ── Capabilities not declared (out of scope) ──────────────
+  - logging-set-level                      # logging capability not implemented
+  - tools-call-with-logging                # logging capability not implemented
+  - completion-complete                    # completion (2026-07-28) not implemented
+  - tools-call-with-progress               # progress notifications (SSE/streaming) not implemented
+  - tools-call-sampling                    # sampling capability not implemented
+  - tools-call-elicitation                 # elicitation (2026-07-28) not implemented
+  - elicitation-sep1034-defaults           # elicitation (2026-07-28) not implemented
+  - elicitation-sep1330-enums              # elicitation (2026-07-28) not implemented
+  - resources-list                         # resources capability not declared
+  - resources-read-text                    # resources capability not declared
+  - resources-read-binary                  # resources capability not declared
+  - resources-templates-read               # resources capability not declared
+  - resources-subscribe                    # resources capability not declared
+  - resources-unsubscribe                  # resources capability not declared
+
+  # ── Stateless design (no session ID by design) ──────────
+  - server-sse-multiple-streams           # WARNING: no Mcp-Session-Id issued (stateless, multi-instance)
+
+  # ── Reference-server fixture tools/prompts absent on a real service ──
+  # Note: tools-call-simple-text / prompts-get-simple / prompts-get-with-args are PASSING
+  # since 2026-08-07: the acceptance service defines same-named test tool/prompts
+  # (test_simple_text, test_simple_prompt, test_prompt_with_arguments).
+  - tools-call-image                       # requires reference tool test_image_content (image content type not supported)
+  - tools-call-audio                       # requires reference tool test_audio_content
+  - tools-call-embedded-resource           # requires reference tool test_embedded_resource
+  - tools-call-mixed-content               # requires reference tool test_multiple_content_types
+  - tools-call-error                       # scenario actually calls test_tool_with_progress (needs progress notifications)
+  - prompts-get-embedded-resource          # requires reference prompt test_prompt_with_embedded_resource
+  - prompts-get-with-image                 # requires reference prompt test_prompt_with_image
+  - json-schema-2020-12                    # requires a 2020-12 schema tool; out of scope

@@ -22,8 +22,15 @@ e2e-tests/
     auth.md           # 认证
     datasource.md     # 数据源管理
     mcp-service.md    # MCP 服务管理
+    mcp-endpoint.md   # MCP 对外 endpoint（/{code}/mcp JSON-RPC）
     ...
+  conformance/        # MCP Conformance 验收资产
+    baseline.yml      # 预期失败基线（入库）
+    results/          # 单次运行结果（可再生产物，gitignore）
 ```
+
+> MCP 验收脚本（`mcp-verify.sh`、`mcp-conformance-proxy.js`）属通用测试能力，
+> 位于 `.agents/skills/e2e-tester/scripts/`（与 `service.sh`/`run-tests.sh` 同级），用法见 skill 文档。
 
 ## 用例编写格式
 

@@ -36,3 +36,6 @@ target/
 /.settings/org.eclipse.core.resources.prefs
 /.settings/org.eclipse.m2e.core.prefs
 /e2e-tests/reports/
+
+# MCP Conformance run artifacts (regenerable; baseline yml is versioned)
+/e2e-tests/conformance/results/
