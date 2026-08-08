@@ -6,7 +6,7 @@
 > 数据准备流程：按 `mcp-service.md` 的 TC-MCP-008 创建服务并发布（携带 `data_scopes` 绑定种子数据源），
 > 按 TC-MCP-003/004 配置 Prompt 和自定义工具。本模块用例按 `code` 查找服务复用。
 >
-> **请求头约定**：`Accept: application/json, text/event-stream`；非 initialize 请求必须带 `MCP-Protocol-Version: 2025-11-25`；
+> **请求头约定**：`Accept` 不校验（服务始终返回 JSON，任意 Accept 均可）；非 initialize 请求必须带 `MCP-Protocol-Version: 2025-11-25`；
 > 认证 `Authorization: Bearer <jwt>`。JSON-RPC body 为 camelCase（`method`/`params`/`id`）。
 
 ---
@@ -88,8 +88,10 @@
 | 非 POST 方法 | GET `/<published-code>/mcp` | **405** |
 | Accept 不含 `text/event-stream` | `Accept: application/json` | **400** |
 | 非 initialize 缺 `MCP-Protocol-Version` | 不带该头 | **400** |
-| Origin 非 localhost | `Origin: http://evil.example.com` | **403** |
+| `Accept` 任意值（含缺省） | 任意 Accept / 无 Accept | **200**（不校验） |
+| Origin 非 localhost 且不在白名单 | `Origin: http://evil.example.com` | **403** |
 | Origin localhost | `Origin: http://localhost:8085` | **200** |
+| Origin 在白名单 | `Origin: https://trusted.example.com`（配置 `dati.mcp.allowed-origins`） | **200** |
 
 ---
 

@@ -15,8 +15,10 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -31,8 +33,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(McpEndpointController.class)
+@Import(McpEndpointService.class)
 @ActiveProfiles("test")
 @AutoConfigureMockMvc(addFilters = false)
+@TestPropertySource(properties = "dati.mcp.allowed-origins=https://trusted.example.com")
 @DisplayName("McpEndpointController integration tests")
 class McpEndpointControllerTest {
 
@@ -128,14 +132,30 @@ class McpEndpointControllerTest {
     }
 
     @Test
-    @DisplayName("invalid Accept header returns 400")
-    void invalidAccept() throws Exception {
+    @DisplayName("Accept header is not validated (any Accept works)")
+    void acceptNotValidated() throws Exception {
+        when(protocolHandler.handle(any(), any(), any())).thenReturn(
+            McpSchema.JSONRPCResponse.result(1, java.util.Map.of("tools", java.util.List.of())));
         mockMvc.perform(post("/test-mcp-service/mcp")
-                .header("Accept", "application/json")
+                .header("Accept", "text/event-stream")
+                .header("MCP-Protocol-Version", "2025-11-25")
                 .header("Authorization", "Bearer abc")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\"}"))
-            .andExpect(status().isBadRequest());
+            .andExpect(status().isOk());
+    }
+
+    @Test
+    @DisplayName("no Accept header is accepted")
+    void noAcceptHeader() throws Exception {
+        when(protocolHandler.handle(any(), any(), any())).thenReturn(
+            McpSchema.JSONRPCResponse.result(1, java.util.Map.of("tools", java.util.List.of())));
+        mockMvc.perform(post("/test-mcp-service/mcp")
+                .header("MCP-Protocol-Version", "2025-11-25")
+                .header("Authorization", "Bearer abc")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\"}"))
+            .andExpect(status().isOk());
     }
 
     @Test
@@ -150,7 +170,7 @@ class McpEndpointControllerTest {
     }
 
     @Test
-    @DisplayName("non-localhost Origin header returns 403")
+    @DisplayName("non-localhost Origin returns 403 (not whitelisted)")
     void evilOriginRejected() throws Exception {
         mockMvc.perform(post("/test-mcp-service/mcp")
                 .header("Accept", "application/json, text/event-stream")
@@ -160,6 +180,21 @@ class McpEndpointControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\"}"))
             .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("whitelisted non-loopback Origin is accepted")
+    void whitelistedOriginAccepted() throws Exception {
+        when(protocolHandler.handle(any(), any(), any())).thenReturn(
+            McpSchema.JSONRPCResponse.result(1, java.util.Map.of("tools", java.util.List.of())));
+        mockMvc.perform(post("/test-mcp-service/mcp")
+                .header("Accept", "application/json, text/event-stream")
+                .header("MCP-Protocol-Version", "2025-11-25")
+                .header("Authorization", "Bearer abc")
+                .header("Origin", "https://trusted.example.com")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\"}"))
+            .andExpect(status().isOk());
     }
 
     @Test
@@ -180,12 +215,13 @@ class McpEndpointControllerTest {
     @Test
     @DisplayName("unparseable body with protocol version returns 400 with JSON-RPC parse error")
     void parseErrorBody() throws Exception {
+        String invalidJsonContent = "not-a-json-{";
         mockMvc.perform(post("/test-mcp-service/mcp")
                 .header("Accept", "application/json, text/event-stream")
                 .header("MCP-Protocol-Version", "2025-11-25")
                 .header("Authorization", "Bearer abc")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("not-a-json-{"))
+                .content(invalidJsonContent))
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.error.code").value(-32700))
             .andExpect(jsonPath("$.error.message").isString());
