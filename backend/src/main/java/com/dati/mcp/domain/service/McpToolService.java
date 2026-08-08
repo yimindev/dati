@@ -166,6 +166,10 @@ public class McpToolService {
     @Transactional
     public void replaceCustomTools(String serviceId, List<McpCustomTool> tools) {
         customToolDAO.deleteAllByServiceId(serviceId);
+        // Flush the bulk delete before queuing inserts: Hibernate executes queued
+        // inserts before queued deletes within one flush, which would violate the
+        // (service_id, name) unique constraint when restored names collide with existing rows.
+        customToolDAO.flush();
         if (tools != null && !tools.isEmpty()) {
             List<McpCustomToolPO> pos = tools.stream()
                     .map(McpCustomToolMapper::toPO)

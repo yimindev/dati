@@ -24,4 +24,9 @@ public class RequestContext {
         return (User) getContext().get("user");
     }
 
+    /** Clears the thread-local context (must be called after request handling). */
+    public static void clear() {
+        context.remove();
+    }
+
 }

@@ -21,6 +21,7 @@
     <properties>
         <java.version>21</java.version>
         <spring-ai.version>1.0.0</spring-ai.version>
+        <mcp-sdk.version>2.0.0</mcp-sdk.version>
         <jjwt.version>0.12.6</jjwt.version>
         <jsqlparser.version>5.1</jsqlparser.version>
         <springdoc.version>2.8.17</springdoc.version>
@@ -33,6 +34,13 @@
                 <groupId>org.springframework.ai</groupId>
                 <artifactId>spring-ai-bom</artifactId>
                 <version>${spring-ai.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>io.modelcontextprotocol.sdk</groupId>
+                <artifactId>mcp-bom</artifactId>
+                <version>${mcp-sdk.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>

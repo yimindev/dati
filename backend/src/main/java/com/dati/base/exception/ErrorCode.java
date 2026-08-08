@@ -11,6 +11,7 @@ public enum ErrorCode {
     INVALID_PARAMETER("CM001", 400, "Request parameter error: {0}"),
     NOT_FOUND("CM002", 404, "Resource not found"),
     INTERNAL_ERROR("CM003", 500, "Internal server error"),
+    METHOD_NOT_ALLOWED("CM004", 405, "Method not allowed: {0}"),
 
     // ── DataSource module (DS) ───────────────────────────
 

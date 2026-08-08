@@ -10,9 +10,12 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.Collection;
+import java.util.Optional;
 
 @Repository
 public interface McpServiceDAO extends JpaRepository<McpServicePO, String> {
+
+    Optional<McpServicePO> findByCode(String code);
 
     Page<McpServicePO> findAllByNameContainingOrId(String name, String id, Pageable pageable);
 

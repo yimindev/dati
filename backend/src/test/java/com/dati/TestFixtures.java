@@ -1,5 +1,6 @@
 package com.dati;
 
+import com.dati.common.JsonUtils;
 import com.dati.datasource.domain.model.ColumnInfo;
 import com.dati.datasource.domain.model.DataSource;
 import com.dati.datasource.domain.model.TableInfo;
@@ -10,13 +11,16 @@ import com.dati.db.DbType;
 import com.dati.mcp.domain.model.McpCustomTool;
 import com.dati.mcp.domain.model.McpDataScopeType;
 import com.dati.mcp.domain.model.McpPrompt;
-import com.dati.mcp.domain.model.PromptParameter;
 import com.dati.mcp.domain.model.McpService;
 import com.dati.mcp.domain.model.McpServiceDataScope;
+import com.dati.mcp.domain.model.McpServiceSnapshot;
 import com.dati.mcp.domain.model.McpServiceStatus;
 import com.dati.mcp.domain.model.McpToolType;
+import com.dati.mcp.domain.model.PromptParameter;
 import com.dati.mcp.domain.model.ToolConfig;
+import com.dati.mcp.domain.model.ToolParameter;
 import com.dati.mcp.repository.po.McpServicePO;
+import com.dati.mcp.repository.po.McpServiceSnapshotPO;
 
 import java.time.Instant;
 import java.util.List;
@@ -180,6 +184,12 @@ public class TestFixtures {
         ToolConfig.ParamSqlConfig cfg = new ToolConfig.ParamSqlConfig();
         cfg.setDataSourceId(TEST_DATASOURCE_ID);
         cfg.setSqlTemplate("SELECT * FROM tasks WHERE status = {{status}}");
+        ToolParameter status = new ToolParameter();
+        status.setName("status");
+        status.setType("String");
+        status.setRequired(true);
+        status.setDescription("task status");
+        cfg.setParameters(List.of(status));
         return cfg;
     }
 
@@ -205,6 +215,59 @@ public class TestFixtures {
         p.setDescription(desc);
         p.setRequired(required);
         return p;
+    }
+
+    public static McpServiceSnapshot.SnapshotContent createTestSnapshotContent() {
+        McpServiceSnapshot.SnapshotContent content = new McpServiceSnapshot.SnapshotContent();
+        McpServiceSnapshot.ServiceInfo info = new McpServiceSnapshot.ServiceInfo();
+        info.setId(TEST_MCP_SERVICE_ID);
+        info.setName("Test MCP Service");
+        info.setDescription("Test MCP service for unit tests");
+        info.setCode(TEST_MCP_SERVICE_CODE);
+        content.setServiceInfo(info);
+        content.setDataScopes(List.of(
+            new McpServiceSnapshot.DataScopeDraft(TEST_MCP_SERVICE_ID, McpDataScopeType.DATA_SOURCE, TEST_DATASOURCE_ID)));
+        content.setPrebuiltTools(List.of(
+            new McpServiceSnapshot.PrebuiltToolDraft(TEST_MCP_SERVICE_ID, McpToolType.SEARCH_METADATA, true,
+                new ToolConfig.SearchMetadataConfig())));
+        content.setCustomTools(List.of(
+            new McpServiceSnapshot.CustomToolDraft(TEST_MCP_SERVICE_ID, "list_tasks", McpToolType.PARAMETERIZED_SQL,
+                "查询任务列表", "按状态查询所有任务", true, createTestParamSqlConfig())));
+        content.setPrompts(List.of(
+            new McpServiceSnapshot.PromptDraft(TEST_MCP_SERVICE_ID, "analyze_table", "分析指定表的数据", true,
+                "请分析 {{table}} 表的数据。", List.of(createTestPromptParameter("table", "表名", true)))));
+        return content;
+    }
+
+    public static McpServiceSnapshotPO createTestSnapshotPO() {
+        McpServiceSnapshotPO po = new McpServiceSnapshotPO();
+        po.setId("snapshot-001");
+        po.setServiceId(TEST_MCP_SERVICE_ID);
+        po.setVersionNumber(1);
+        po.setReleaseNote("v1");
+        po.setSnapshotContent(JsonUtils.toJson(createTestSnapshotContent()));
+        po.setCreatedBy(TEST_USER_ID);
+        po.setCreatedAt(Instant.now());
+        po.setUpdatedBy(TEST_USER_ID);
+        po.setUpdatedAt(Instant.now());
+        return po;
+    }
+
+    public static McpServiceSnapshot.PrebuiltToolDraft createTestPrebuiltToolDraft(
+            McpToolType type, boolean enabled, ToolConfig config) {
+        return new McpServiceSnapshot.PrebuiltToolDraft(TEST_MCP_SERVICE_ID, type, enabled, config);
+    }
+
+    public static McpServiceSnapshot.CustomToolDraft createTestCustomToolDraft(
+            String name, McpToolType type, boolean enabled, ToolConfig config) {
+        return new McpServiceSnapshot.CustomToolDraft(TEST_MCP_SERVICE_ID, name, type,
+            name, "custom tool " + name, enabled, config);
+    }
+
+    public static McpServiceSnapshot.PromptDraft createTestPromptDraft(
+            String name, boolean enabled, String content, List<PromptParameter> parameters) {
+        return new McpServiceSnapshot.PromptDraft(TEST_MCP_SERVICE_ID, name, "prompt " + name, enabled,
+            content, parameters);
     }
 
 }

@@ -88,6 +88,8 @@ public class McpPromptService {
     @Transactional
     public void replacePrompts(String serviceId, List<McpPrompt> prompts) {
         promptDAO.deleteAllByServiceId(serviceId);
+        // Flush the bulk delete before queuing inserts (see McpToolService.replaceCustomTools).
+        promptDAO.flush();
         if (prompts != null && !prompts.isEmpty()) {
             List<McpPromptPO> pos = prompts.stream()
                     .map(McpPromptMapper::toPO)
