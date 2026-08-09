@@ -2,20 +2,6 @@
 # Agent 跑完 E2E 测试后自动维护此文件
 
 bugs:
-  - id: BUG-20260802-001
-    title: 创建自定义工具时 description 为空 → 500 DataIntegrityViolation（mcp_custom_tool.description 列 NOT NULL，而 CustomToolRequest.description 可选）
-    module: 
-    severity: medium
-    found_at: 2026-08-02
-    description: |
-      
-  - id: BUG-20260802-002
-    title: 不存在的路由（如 GET /v1/terms、/v1/datasources）返回 500 CM003 而非 404：GlobalExceptionHandler 将 NoResourceFoundException 当作 unexpected error；且 E2E 文档中数据源路径写错（正确为 /v1/data-sources、/tables、/v1/subjects/{id}/terms）
-    module: 
-    severity: medium
-    found_at: 2026-08-02
-    description: |
-      
   - id: BUG-20260802-003
     title: GET /v1/subjects/{subjectId}/terms 列表接口 relations 恒为空，仅 GET /v1/terms/{id} 详情接口返回完整 relations（可能为列表 VO 未填充，需确认是设计还是遗漏）
     module: 语义层
@@ -23,3 +9,24 @@ bugs:
     found_at: 2026-08-02
     description: |
       探索种子数据时发现：同一术语「音乐流派」（b9d6763e）在主题术语列表接口返回 relations: []，而术语详情接口返回完整关联 [{entity_type: FIELD, table: genre, field: name}]。影响：依赖列表接口判断术语关联会误判数据缺失（本次差点因此误报种子数据不完整）；若前端列表展示关联也会显示为空。关联数据本身完整（TermRelation 表有记录，搜术语名实测可展开关联表）。
+  - id: BUG-20260809-001
+    title: term_relation 表存在遗留唯一约束 UK_TERM_RELATION(term_id,table_id,field_name)，FIELD 与 FIELD_VALUE 关系无法共存（第二个 500）
+    module: 语义层
+    severity: high
+    found_at: 2026-08-09
+    description: |
+      dev 环境 H2 库 term_relation 表存在旧版遗留的 UNIQUE(term_id,table_id,field_name) 约束（当前代码 TermRelationPO 未声明，git 历史亦无），导致同一术语/表/列上先后添加 FIELD 与 FIELD_VALUE 关系时，第二个请求 500 CM003。已验证与顺序无关（FIELD→FIELD_VALUE 或 FIELD_VALUE→FIELD 均复现）。TC-SEM-004 要求两者共存（FIELD+FIELD_VALUE 双关系），TC-MCP-020 种子术语关联展开亦受影响（FIELD_VALUE 文档命中后按 tableId 归并，受限于唯一约束无法建双关系）。根因：Hibernate ddl-auto:update 不会删除遗留约束，需手动迁移（如启动时 ALTER TABLE DROP CONSTRAINT 或引入 Flyway）。
+  - id: BUG-20260809-003
+    title: 删除服务后子资源端点返回 200 空数据而非 404（data-scope/tools/snapshots/prompts）
+    module: MCP 服务管理
+    severity: medium
+    found_at: 2026-08-09
+    description: |
+      TC-MCP-013 验证级联删除时发现：DELETE 服务后 GET /{id}/data-scope、/tools、/snapshots、/prompts 均返回 200（空列表/默认值），而 GET /{id} 与 /{id}/diff 正确返回 404。E2E 用例 TC-MCP-013 预期 prompts/snapshots 404。原因：这些端点的 Service 层未先校验服务存在性。用户视角：访问已删除服务的子资源应明确 404，而非静默返回空数据。
+  - id: BUG-20260809-004
+    title: mcp_prompt.description 存量库仍 NOT NULL：BUG-011 修复对旧 H2 库无效（ddl-auto:update 不 ALTER 已存在列），创建不带 description 的 Prompt 仍 500
+    module: MCP 服务管理
+    severity: medium
+    found_at: 2026-08-09
+    description: |
+      代码 McpPromptPO.description 已无 nullable=false（BUG-011 2026-07-26 修复），但 H2 文件库 INFORMATION_SCHEMA 显示 DESCRIPTION IS_NULLABLE=NO。根因同 BUG-20260809-001：项目无 Flyway 等迁移机制，PO 列定义变更无法同步到存量库。E2E 复现：POST /prompts 不带 description → 500 DataIntegrityViolation NULL not allowed。建议：引入启动时 schema 自检/迁移，或删除存量 H2 库重建（仅 dev 环境可行，需确认无手工数据）。

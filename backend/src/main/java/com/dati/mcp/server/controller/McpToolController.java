@@ -7,6 +7,7 @@ import com.dati.mcp.domain.service.McpToolService;
 import com.dati.mcp.domain.service.McpToolTestService;
 import com.dati.mcp.domain.service.ToolsResult;
 import com.dati.mcp.server.assembler.McpToolAssembler;
+import com.dati.mcp.server.pojo.CreateCustomToolRequest;
 import com.dati.mcp.server.pojo.CustomToolRequest;
 import com.dati.mcp.server.pojo.ToolTestRequest;
 import com.dati.mcp.server.pojo.ToolTestResponse;
@@ -53,7 +54,7 @@ public class McpToolController {
                                   @RequestBody @Valid CustomToolRequest request) {
         if (request.getToolType().isPrebuilt()) {
             McpPrebuiltToolConfig input = mcpToolAssembler.toModel(request.getToolType(), request.getConfig(),
-                request.getEnabled() != null ? request.getEnabled() : true);
+                    request.getEnabled() == null || request.getEnabled());
             mcpToolService.updatePrebuiltTool(serviceId, request.getToolType(), input);
         } else {
             McpCustomTool tool = mcpToolAssembler.toModel(request);
@@ -66,7 +67,7 @@ public class McpToolController {
 
     @PostMapping
     public IdResponse createTool(@PathVariable String serviceId,
-                                  @RequestBody @Valid CustomToolRequest request) {
+                                  @RequestBody @Valid CreateCustomToolRequest request) {
         McpCustomTool tool = mcpToolAssembler.toModel(request);
         return new IdResponse(mcpToolService.createCustomTool(serviceId, tool));
     }

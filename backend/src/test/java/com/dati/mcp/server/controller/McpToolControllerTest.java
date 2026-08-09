@@ -135,6 +135,16 @@ class McpToolControllerTest {
     }
 
     @Test
+    @DisplayName("POST /tools - create without description rejected with 400 (BUG-20260802-001)")
+    void createTool_missingDescription_shouldReturn400() throws Exception {
+        mockMvc.perform(post("/v1/mcp-services/{serviceId}/tools", TestFixtures.TEST_MCP_SERVICE_ID)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"tool_type\":\"PARAMETERIZED_SQL\",\"name\":\"list_tasks\"}"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.code").value("CM001"));
+    }
+
+    @Test
     @DisplayName("DELETE /tools/{toolId} - delete custom tool")
     void deleteTool_shouldReturnId() throws Exception {
         doNothing().when(mcpToolService).deleteCustomTool(TestFixtures.TEST_MCP_SERVICE_ID, TestFixtures.TEST_MCP_CUSTOM_TOOL_ID);

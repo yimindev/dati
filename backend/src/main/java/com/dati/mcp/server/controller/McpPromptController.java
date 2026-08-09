@@ -41,7 +41,7 @@ public class McpPromptController {
         McpPrompt prompt = promptAssembler.toModel(request);
         prompt.setId(promptId);
         prompt.setServiceId(serviceId);
-        promptService.updatePrompt(prompt);
+        promptService.updatePrompt(prompt, request.getEnabled());
         return new IdResponse(promptId);
     }
 

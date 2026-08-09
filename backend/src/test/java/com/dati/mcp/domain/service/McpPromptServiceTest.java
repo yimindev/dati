@@ -196,10 +196,72 @@ class McpPromptServiceTest {
         when(templateParser.parse(testPrompt.getContent())).thenReturn(compiled);
 
         testPrompt.setEnabled(false);
-        promptService.updatePrompt(testPrompt);
+        promptService.updatePrompt(testPrompt, false);
 
         verify(promptDAO).save(testPromptPO);
         assertThat(testPromptPO.getEnabled()).isFalse();
+    }
+
+    @Test
+    @DisplayName("Update Prompt - partial update: content only merges persisted parameters (BUG-20260809-002)")
+    void updatePrompt_contentOnly_mergesPersistedParameters() {
+        when(promptDAO.findByServiceIdAndId(TestFixtures.TEST_MCP_SERVICE_ID, TestFixtures.TEST_MCP_PROMPT_ID))
+            .thenReturn(Optional.of(testPromptPO));
+        CompiledTemplate compiled = mock(CompiledTemplate.class);
+        when(compiled.getVariables()).thenReturn(Set.of("table"));
+        when(templateParser.parse("请分析 {{table}} 表的数据。")).thenReturn(compiled);
+
+        McpPrompt partial = new McpPrompt();
+        partial.setServiceId(TestFixtures.TEST_MCP_SERVICE_ID);
+        partial.setId(TestFixtures.TEST_MCP_PROMPT_ID);
+        partial.setContent("请分析 {{table}} 表的数据。");
+        // parameters not provided (null) - must merge from persisted PO instead of treating as empty
+        // Note: McpPrompt.parameters defaults to an empty list; explicitly null here to simulate
+        // the controller→assembler pass-through (request without parameters field).
+        partial.setParameters(null);
+        promptService.updatePrompt(partial, null);
+
+        verify(promptDAO).save(testPromptPO);
+        assertThat(testPromptPO.getContent()).isEqualTo("请分析 {{table}} 表的数据。");
+        assertThat(testPromptPO.getEnabled()).isTrue(); // enabled not provided → unchanged
+    }
+
+    @Test
+    @DisplayName("Update Prompt - enabled not provided keeps persisted value (BUG-20260809-002)")
+    void updatePrompt_enabledNotProvided_keepsPersistedValue() {
+        testPromptPO.setEnabled(false);
+        when(promptDAO.findByServiceIdAndId(TestFixtures.TEST_MCP_SERVICE_ID, TestFixtures.TEST_MCP_PROMPT_ID))
+            .thenReturn(Optional.of(testPromptPO));
+        CompiledTemplate compiled = mock(CompiledTemplate.class);
+        when(compiled.getVariables()).thenReturn(Set.of("table"));
+        when(templateParser.parse(testPrompt.getContent())).thenReturn(compiled);
+
+        testPrompt.setEnabled(false);
+        promptService.updatePrompt(testPrompt, null);
+
+        verify(promptDAO).save(testPromptPO);
+        assertThat(testPromptPO.getEnabled()).isFalse();
+    }
+
+    @Test
+    @DisplayName("Update Prompt - explicit empty parameters clears persisted params (empty list != not provided)")
+    void updatePrompt_explicitEmptyParameters_clearsPersisted() {
+        when(promptDAO.findByServiceIdAndId(TestFixtures.TEST_MCP_SERVICE_ID, TestFixtures.TEST_MCP_PROMPT_ID))
+            .thenReturn(Optional.of(testPromptPO));
+        CompiledTemplate compiled = mock(CompiledTemplate.class);
+        when(compiled.getVariables()).thenReturn(Set.of());
+        when(templateParser.parse("plain text")).thenReturn(compiled);
+
+        McpPrompt partial = new McpPrompt();
+        partial.setServiceId(TestFixtures.TEST_MCP_SERVICE_ID);
+        partial.setId(TestFixtures.TEST_MCP_PROMPT_ID);
+        partial.setContent("plain text");
+        partial.setParameters(List.of()); // explicit empty → clear, not merge
+        promptService.updatePrompt(partial, null);
+
+        verify(promptDAO).save(testPromptPO);
+        assertThat(testPromptPO.getContent()).isEqualTo("plain text");
+        assertThat(testPromptPO.getParameters()).isEqualTo("[]");
     }
 
     @Test
@@ -209,7 +271,7 @@ class McpPromptServiceTest {
             .thenReturn(Optional.empty());
 
         DatiException ex = assertThrows(DatiException.class, () ->
-            promptService.updatePrompt(testPrompt)
+            promptService.updatePrompt(testPrompt, null)
         );
         assertThat(ex.getCode()).isEqualTo(ErrorCode.MS_PROMPT_NOT_FOUND);
     }

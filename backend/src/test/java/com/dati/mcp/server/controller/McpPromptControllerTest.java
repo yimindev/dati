@@ -71,7 +71,7 @@ class McpPromptControllerTest {
     @Test @DisplayName("PUT /prompts/{id} - update")
     void update() throws Exception {
         when(promptAssembler.toModel(any(McpPromptRequest.class))).thenReturn(new McpPrompt());
-        doNothing().when(promptService).updatePrompt(any());
+        doNothing().when(promptService).updatePrompt(any(), any());
         mockMvc.perform(put("/v1/mcp-services/{id}/prompts/{pid}", TestFixtures.TEST_MCP_SERVICE_ID, TestFixtures.TEST_MCP_PROMPT_ID)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"enabled\":false}"))

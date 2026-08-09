@@ -67,6 +67,14 @@ class GlobalExceptionHandlerTest {
             .andExpect(jsonPath("$.message").value("Internal server error"));
     }
 
+    @Test
+    @DisplayName("Should return 404 for unmapped routes (NoResourceFoundException)")
+    void unmappedRoute_shouldReturn404() throws Exception {
+        mockMvc.perform(get("/test/unknown-route-xyz"))
+            .andExpect(status().isNotFound())
+            .andExpect(jsonPath("$.code").value("CM002"));
+    }
+
     @RestController
     @RequestMapping("/test")
     static class TestController {

@@ -47,12 +47,16 @@ public class McpPromptService {
     }
 
     @Transactional
-    public void updatePrompt(McpPrompt prompt) {
+    public void updatePrompt(McpPrompt prompt, Boolean enabled) {
         McpPromptPO po = promptDAO.findByServiceIdAndId(prompt.getServiceId(), prompt.getId())
             .orElseThrow(() -> new DatiException(ErrorCode.MS_PROMPT_NOT_FOUND, prompt.getId()));
         if (prompt.getName() != null && !po.getName().equals(prompt.getName())
             && promptDAO.existsByServiceIdAndNameAndIdNot(prompt.getServiceId(), prompt.getName(), prompt.getId())) {
             throw new DatiException(ErrorCode.MS_PROMPT_NAME_EXISTS, prompt.getName());
+        }
+
+        if (prompt.getParameters() == null) {
+            prompt.setParameters(McpPromptMapper.toModel(po).getParameters());
         }
         validateContentParams(prompt);
         if (prompt.getName() != null) {
@@ -67,7 +71,9 @@ public class McpPromptService {
         if (prompt.getParameters() != null) {
             po.setParameters(JsonUtils.toJson(prompt.getParameters()));
         }
-        po.setEnabled(prompt.isEnabled());
+        if (enabled != null) {
+            po.setEnabled(enabled);
+        }
         promptDAO.save(po);
     }
 
