@@ -122,9 +122,9 @@ const handleDelete = async (service: McpServiceVO) => {
   }
 };
 
-const handleDialogSuccess = () => {
+const handleDialogSuccess = (id: string) => {
   dialogVisible.value = false;
-  loadServices();
+  router.push({ path: `/mcp-services/${id}` });
 };
 
 onMounted(() => {

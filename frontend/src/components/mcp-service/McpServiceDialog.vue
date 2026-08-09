@@ -14,7 +14,7 @@ interface Props {
 
 interface Emits {
   (e: "update:modelValue", value: boolean): void;
-  (e: "success"): void;
+  (e: "success", id: string): void;
 }
 
 const props = defineProps<Props>();
@@ -72,10 +72,10 @@ const handleSubmit = async () => {
     }
 
     submitting.value = true;
-    await createMcpService(formData.value);
+    const res = await createMcpService(formData.value);
     ElMessage.success(t("common.saveSuccess"));
 
-    emit("success");
+    emit("success", res.id);
   } catch (error) {
     console.error("Failed to submit:", error);
     ElMessage.error(t("common.operationFailed"));
