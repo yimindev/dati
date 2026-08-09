@@ -62,6 +62,8 @@ public enum ErrorCode {
     AUTH_TOKEN_INVALID("AUTH002", 401, "Token invalid or expired"),
     AUTH_USER_EXISTS("AUTH003", 409, "Username already exists: {0}"),
     AUTH_TYPE_UNSUPPORTED("AUTH004", 400, "Unsupported authentication type: {0}"),
+    AUTH_KEY_FORBIDDEN("AUTH005", 403, "Cannot operate on API key of another user"),
+    AUTH_KEY_INVALID_EXPIRY("AUTH006", 400, "expiresInDays must be one of 7/30/90/180/365"),
 
     // ── Permission module (PM) ───────────────────────────
 

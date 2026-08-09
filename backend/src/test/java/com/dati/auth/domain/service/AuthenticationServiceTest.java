@@ -1,11 +1,16 @@
 package com.dati.auth.domain.service;
 
+import com.dati.auth.authentication.ApiKeyAuthenticationProvider;
 import com.dati.auth.authentication.AuthenticationProvider;
 import com.dati.auth.authentication.User;
+import com.dati.auth.domain.model.ApiKey;
+import com.dati.auth.repository.dao.UserRepository;
+import com.dati.auth.repository.po.UserPO;
 import jakarta.servlet.http.HttpServletRequest;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
@@ -88,5 +93,53 @@ class AuthenticationServiceTest {
         verify(localProvider, never()).authenticate(request);
         verify(oauthProvider).canAuthenticate(request);
         verify(oauthProvider).authenticate(request);
+    }
+
+    @Test
+    @DisplayName("Should route sk_ bearer requests to ApiKeyAuthenticationProvider")
+    void skBearerRequest_shouldRouteToApiKeyProvider() {
+        HttpServletRequest request = mock(HttpServletRequest.class);
+        when(request.getHeader("Authorization")).thenReturn("Bearer sk_abc123");
+
+        ApiKeyService apiKeyService = mock(ApiKeyService.class);
+        UserRepository userRepository = mock(UserRepository.class);
+        ApiKey apiKey = new ApiKey("k-1", "user-1", "Claude Desktop",
+                "h".repeat(64), "sk_ab12***cd34", null, null, Instant.now());
+        when(apiKeyService.findByKeyHash(anyString())).thenReturn(Optional.of(apiKey));
+        UserPO userPO = new UserPO();
+        userPO.setId("user-1");
+        userPO.setName("alice");
+        userPO.setDisplayName("Alice");
+        when(userRepository.findById("user-1")).thenReturn(Optional.of(userPO));
+
+        AuthenticationProvider apiKeyProvider =
+            new ApiKeyAuthenticationProvider(apiKeyService, userRepository);
+        AuthenticationService service =
+            new AuthenticationService(List.of(apiKeyProvider, localProvider));
+
+        Optional<User> result = service.authenticate(request);
+
+        assertThat(result).isPresent();
+        assertThat(result.get().getId()).isEqualTo("user-1");
+        // JWT provider must not even be consulted for sk_ requests
+        verify(localProvider, never()).canAuthenticate(request);
+    }
+
+    @Test
+    @DisplayName("Should skip ApiKeyAuthenticationProvider for non-sk_ bearer requests")
+    void jwtBearerRequest_shouldSkipApiKeyProvider() {
+        HttpServletRequest request = mock(HttpServletRequest.class);
+        when(request.getHeader("Authorization")).thenReturn("Bearer eyJhbGciOiJIUzI1NiJ9.abc");
+
+        ApiKeyService apiKeyService = mock(ApiKeyService.class);
+        ApiKeyAuthenticationProvider apiKeyProvider =
+            new ApiKeyAuthenticationProvider(apiKeyService, mock(UserRepository.class));
+        AuthenticationService service =
+            new AuthenticationService(List.of(localProvider, apiKeyProvider));
+
+        Optional<User> result = service.authenticate(request);
+
+        assertThat(result).isEmpty();
+        verify(apiKeyService, never()).findByKeyHash(anyString());
     }
 }
