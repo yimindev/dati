@@ -4,7 +4,7 @@ import com.dati.semantic.repository.dao.TermDAO;
 import com.dati.semantic.repository.dao.TermRelationDAO;
 import com.dati.semantic.repository.po.TermPO;
 import com.dati.semantic.repository.po.TermRelationPO;
-import com.dati.semantic.domain.SemanticEntityType;
+import com.dati.semantic.domain.TermRelationType;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -48,14 +48,14 @@ class TermRepositoryTest {
     void save_shouldPersistTermRelationPO() {
         TermRelationPO termRelationPO = new TermRelationPO();
         termRelationPO.setTermId("test-term-id");
-        termRelationPO.setEntityType(SemanticEntityType.TABLE);
+        termRelationPO.setEntityType(TermRelationType.TABLE);
         termRelationPO.setTableId("test-table-id");
 
         TermRelationPO saved = termRelationDAO.save(termRelationPO);
 
         assertThat(saved.getId()).isNotNull();
         assertThat(saved.getTermId()).isEqualTo("test-term-id");
-        assertThat(saved.getEntityType()).isEqualTo(SemanticEntityType.TABLE);
+        assertThat(saved.getEntityType()).isEqualTo(TermRelationType.TABLE);
         assertThat(saved.getTableId()).isEqualTo("test-table-id");
     }
 
@@ -64,7 +64,7 @@ class TermRepositoryTest {
     void findByTermId_shouldReturnTermRelationPO() {
         TermRelationPO termRelationPO = new TermRelationPO();
         termRelationPO.setTermId("term-456");
-        termRelationPO.setEntityType(SemanticEntityType.FIELD);
+        termRelationPO.setEntityType(TermRelationType.FIELD);
         termRelationPO.setTableId("test-table-id");
         termRelationPO.setFieldName("test_field");
         termRelationDAO.save(termRelationPO);
@@ -72,7 +72,7 @@ class TermRepositoryTest {
         List<TermRelationPO> foundList = termRelationDAO.findByTermId("term-456");
 
         assertThat(foundList).hasSize(1);
-        assertThat(foundList.getFirst().getEntityType()).isEqualTo(SemanticEntityType.FIELD);
+        assertThat(foundList.getFirst().getEntityType()).isEqualTo(TermRelationType.FIELD);
         assertThat(foundList.getFirst().getFieldName()).isEqualTo("test_field");
     }
 
@@ -81,7 +81,7 @@ class TermRepositoryTest {
     void findByTermIdAndTableIdAndFieldName_shouldReturnTermRelationPO() {
         TermRelationPO termRelationPO = new TermRelationPO();
         termRelationPO.setTermId("term-789");
-        termRelationPO.setEntityType(SemanticEntityType.FIELD);
+        termRelationPO.setEntityType(TermRelationType.FIELD);
         termRelationPO.setTableId("table-abc");
         termRelationPO.setFieldName("field_xyz");
         termRelationDAO.save(termRelationPO);
@@ -98,14 +98,14 @@ class TermRepositoryTest {
     void findByTermIdAndTableId_shouldReturnTermRelationPO() {
         TermRelationPO termRelationPO = new TermRelationPO();
         termRelationPO.setTermId("term-999");
-        termRelationPO.setEntityType(SemanticEntityType.TABLE);
+        termRelationPO.setEntityType(TermRelationType.TABLE);
         termRelationPO.setTableId("table-def");
         termRelationDAO.save(termRelationPO);
 
         List<TermRelationPO> foundList = termRelationDAO.findByTermIdAndTableId("term-999", "table-def");
 
         assertThat(foundList).hasSize(1);
-        assertThat(foundList.getFirst().getEntityType()).isEqualTo(SemanticEntityType.TABLE);
+        assertThat(foundList.getFirst().getEntityType()).isEqualTo(TermRelationType.TABLE);
     }
 
     @Test
@@ -113,7 +113,7 @@ class TermRepositoryTest {
     void deleteByTermId_shouldRemoveTermRelationPO() {
         TermRelationPO termRelationPO = new TermRelationPO();
         termRelationPO.setTermId("term-to-delete");
-        termRelationPO.setEntityType(SemanticEntityType.TABLE);
+        termRelationPO.setEntityType(TermRelationType.TABLE);
         termRelationPO.setTableId("table-ghi");
         termRelationDAO.save(termRelationPO);
 
@@ -128,7 +128,7 @@ class TermRepositoryTest {
     void deleteByTermIdAndTableId_shouldRemoveTermRelationPO() {
         TermRelationPO termRelationPO = new TermRelationPO();
         termRelationPO.setTermId("term-to-delete-2");
-        termRelationPO.setEntityType(SemanticEntityType.TABLE);
+        termRelationPO.setEntityType(TermRelationType.TABLE);
         termRelationPO.setTableId("table-jkl");
         termRelationDAO.save(termRelationPO);
 

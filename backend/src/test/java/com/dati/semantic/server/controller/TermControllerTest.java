@@ -27,6 +27,8 @@ import java.util.List;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -99,7 +101,7 @@ class TermControllerTest {
         TermRelation relation = TermRelation.builder()
                 .id("rel-001")
                 .termId("term-001")
-                .entityType(com.dati.semantic.domain.SemanticEntityType.FIELD)
+                .entityType(com.dati.semantic.domain.TermRelationType.FIELD)
                 .tableId("table-001")
                 .tableName("orders")
                 .schema("sales")
@@ -183,7 +185,7 @@ class TermControllerTest {
     @DisplayName("Link Term relation - returns 200")
     void linkTermRelation_shouldReturn200() throws Exception {
         com.dati.semantic.server.pojo.request.LinkTermRelationRequest request = new com.dati.semantic.server.pojo.request.LinkTermRelationRequest();
-        request.setEntityType(com.dati.semantic.domain.SemanticEntityType.FIELD);
+        request.setEntityType(com.dati.semantic.domain.TermRelationType.FIELD);
         request.setTableId("table-001");
         request.setFieldName("field-001");
 
@@ -194,6 +196,21 @@ class TermControllerTest {
                 .content(objectMapper.writeValueAsString(request)))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.id").value("term-001"));
+    }
+
+    @Test
+    @DisplayName("Link Term relation with invalid entity_type - returns 400")
+    void linkTermRelation_invalidEntityType_shouldReturn400() throws Exception {
+        // TermRelationType only allows TABLE/FIELD; FIELD_VALUE/SUBJECT etc. must be
+        // rejected by Jackson during deserialization (type-level constraint).
+        mockMvc.perform(post("/v1/terms/term-001/relations")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"entityType":"FIELD_VALUE","tableId":"table-001","fieldName":"name"}
+                    """))
+            .andExpect(status().isBadRequest());
+
+        verify(termService, never()).linkEntity(anyString(), any(), anyString(), anyString());
     }
 
     @Test

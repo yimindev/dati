@@ -90,24 +90,26 @@
 
 ---
 
-## TC-SEM-004 术语关联关系管理（关联到列和维度值）
+## TC-SEM-004 术语关联关系管理（关联到列）
 **级别：** P1
 **前置：** 已登录，种子数据源已就绪（`column_values.table` 维度值已抽取）
 **数据：** `chinook.e2e.semantic.term_relation`
 
+> **关联类型约束**：术语关联仅支持 `TABLE`（表级）与 `FIELD`（字段级）两种类型（`TermRelationType` 枚举，Jackson 反序列化阶段拒绝其他值）。
+> `FIELD_VALUE` 是 ES 文档类型（维度值搜索用），**不是**术语关联的合法类型 —— 请求传 `FIELD_VALUE` 应返回 400。
+> 同一术语下：同表只能一条 TABLE 关系，同列只能一条 FIELD 关系（DB 唯一约束 `UK_TERM_RELATION(term_id, table_id, field_name)`）。
+
 1. 查找种子数据源，获取 datasourceId
 2. 在数据源中查找 `term_relation.table` 表，获取 tableId；查找 `term_relation.field` 列，获取 columnId
-3. 查该列的维度值列表，记下 `term_relation.sample_dim_value` 对应的 valueId
-4. 创建主题（绑定 datasourceId），将该表添加到主题
-5. **创建术语**，记下 termId
-6. **添加 FIELD 关系**：entityType=`FIELD`，tableId，fieldName=`term_relation.field`
-7. 验证返回 200
-8. **添加 FIELD_VALUE 关系**：entityType=`FIELD_VALUE`，tableId，fieldName=`term_relation.field`
-9. 验证返回 200
-10. 查术语详情，验证 relations 有 2 条，entity_type 分别为 FIELD 和 FIELD_VALUE，table_name/field_name 正确
-11. **删 FIELD 关系**（DELETE /terms/{termId}/relations/{tableId}/{fieldName}）
-12. 查术语详情，验证剩 1 条 FIELD_VALUE，非 null
-13. 删除术语，删除主题（不删数据源）
+3. 创建主题（绑定 datasourceId），将该表添加到主题
+4. **创建术语**，记下 termId
+5. **添加 FIELD 关系**：entityType=`FIELD`，tableId，fieldName=`term_relation.field`
+6. 验证返回 200
+7. **非法类型被拒**：entityType=`FIELD_VALUE`，tableId，fieldName=`term_relation.field` → 预期 **400**（非法枚举值，Jackson 拦截，不落库）
+8. 查术语详情，验证 relations 有 1 条，entity_type=FIELD，table_name/field_name 正确
+9. **删 FIELD 关系**（DELETE /terms/{termId}/relations/{tableId}/{fieldName}）
+10. 查术语详情，验证 relations 为空
+11. 删除术语，删除主题（不删数据源）
 
 ---
 

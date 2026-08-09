@@ -1,7 +1,7 @@
 package com.dati.semantic.repository.po;
 
 import com.dati.base.pojo.BasePO;
-import com.dati.semantic.domain.SemanticEntityType;
+import com.dati.semantic.domain.TermRelationType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -28,7 +28,7 @@ public class TermRelationPO extends BasePO {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "entity_type", nullable = false, length = 32)
-    private SemanticEntityType entityType;
+    private TermRelationType entityType;
 
     @Column(name = "table_id", nullable = false, length = 64)
     private String tableId;

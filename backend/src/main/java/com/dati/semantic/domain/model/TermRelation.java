@@ -1,6 +1,6 @@
 package com.dati.semantic.domain.model;
 
-import com.dati.semantic.domain.SemanticEntityType;
+import com.dati.semantic.domain.TermRelationType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -16,7 +16,7 @@ public class TermRelation {
 
     private String termId;
 
-    private SemanticEntityType entityType;
+    private TermRelationType entityType;
 
     private String tableId;
 

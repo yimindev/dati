@@ -5,6 +5,7 @@ import com.dati.base.exception.ErrorCode;
 import com.dati.common.StringUtils;
 import com.dati.datasource.repository.po.TableInfoPO;
 import com.dati.semantic.domain.SemanticEntityType;
+import com.dati.semantic.domain.TermRelationType;
 import com.dati.semantic.domain.model.Term;
 import com.dati.semantic.domain.model.TermRelation;
 import com.dati.datasource.repository.dao.TableInfoDAO;
@@ -131,11 +132,11 @@ public class TermService {
     }
 
     @Transactional
-    public void linkEntity(String termId, SemanticEntityType entityType, String tableId, String fieldName) {
+    public void linkEntity(String termId, TermRelationType entityType, String tableId, String fieldName) {
         TermPO termPO = termDAO.findById(termId)
                 .orElseThrow(() -> new DatiException(ErrorCode.SM_TERM_NOT_FOUND, termId));
 
-        if (entityType == SemanticEntityType.FIELD && fieldName == null) {
+        if (entityType == TermRelationType.FIELD && fieldName == null) {
             throw new DatiException(ErrorCode.INVALID_PARAMETER, "fieldName is required");
         }
 

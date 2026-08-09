@@ -7,7 +7,7 @@
 > `{"code": "...", "name": "...", "data_scopes": [{"scope_type": "DATA_SOURCE", "reference_id": "<datasourceId>"}]}`
 > 不带 `data_scopes` → 400；服务数据范围为空时调用 `/publish` → 400
 >
-> **种子数据源约定**：种子数据源必须已设置 `default_schema`（如 `public`），否则 schema-less 表引用（`SELECT * FROM genre`）无法通过 `ScopeValidator` 表级解析，工具测试会误报 SCOPE_ERROR（2026-08-02 实测发现种子数据源 default_schema 为 null，已通过更新连接参数触发服务端探测修复）。
+> **种子数据源约定**：种子数据源必须已设置 `default_schema`（如 `public`），否则 schema-less 表引用（`SELECT * FROM genre`）无法通过 `ScopeValidator` 表级解析，工具测试会误报 SCOPE_ERROR。
 >
 > **路径约定**：数据源接口路径为 `/v1/data-sources`（带连字符）、表列表为 `/v1/data-sources/{id}/tables`；术语列表为 `/v1/subjects/{subjectId}/terms`（无全局 `/v1/terms` 端点）。
 
@@ -318,7 +318,7 @@
 **前置：** 已登录，种子数据源已就绪
 **数据：** `chinook.e2e.{seeded_datasource_name, mcp.tool.update_template, mcp.tool.update_params}`
 
-> **背景**：PARAMETERIZED_SQL 的 SQL 模板由作者配置时编写，运行时仅注入参数值，已移除运行时 sqlPolicy（2026-08-02）。**旧行为**：UPDATE 模板会被默认策略（allow_update=false）拦截返回 PERMISSION_DENIED；**新行为**：直接执行。本用例锚定新行为，防止策略校验回归。
+> **背景**：PARAMETERIZED_SQL 的 SQL 模板由作者配置时编写，运行时仅注入参数值，无运行时 sqlPolicy。UPDATE 模板直接执行（不被策略拦截）。本用例锚定该行为，防止策略校验回归。
 
 1. 搜索种子数据源 → 创建 MCP 服务（携带 `data_scopes` 绑定该数据源）
 2. **创建 UPDATE 模板工具**：POST `/v1/mcp-services/{id}/tools`，name 自定，`tool_type`=PARAMETERIZED_SQL，config（JSON 字符串）：`data_source_id`=种子 dsId，`sql_template`=`mcp.tool.update_template`（`UPDATE genre SET name = name WHERE genreid = {{id}}`，no-op 不污染种子数据），`parameters`=`mcp.tool.update_params`（id/Number/required）
@@ -332,10 +332,10 @@
 
 ## TC-MCP-020 基于主题的 MCP 服务主路径：术语检索与关联展开
 **级别：** P0
-**前置：** 已登录，种子数据源/主题已就绪（TC-SEM-000），ES 索引完整（TABLE 3/FIELD 7/FIELD_VALUE 25/TERM 1/SUBJECT 1；索引缺失时按报告 mcp-service-2026-08-02 的环境修复流程重建：表 PUT + 列同步 + 值抽取）
+**前置：** 已登录，种子数据源/主题已就绪（TC-SEM-000），ES 索引完整（TABLE 3/FIELD 7/FIELD_VALUE 25/TERM 1/SUBJECT 1；索引缺失时按环境修复流程重建：表 PUT + 列同步 + 值抽取）
 **数据：** `chinook.e2e.{seeded_datasource_name, seeded_subject_name, semantic.seed_term_name, mcp.subject}`
 
-> **背景**：MCP 服务的主路径是**关联主题**——把领域术语暴露给 LLM。核心链路：搜关键词 → ES 命中 TERM → `terms` 返回术语（含主题归属）→ TermRelation 展开关联表 → 表出现在 `data_sources`（关键词不含表名）。本用例全部步骤已于 2026-08-02 实测验证。
+> **背景**：MCP 服务的主路径是**关联主题**——把领域术语暴露给 LLM。核心链路：搜关键词 → ES 命中 TERM → `terms` 返回术语（含主题归属）→ TermRelation 展开关联表 → 表出现在 `data_sources`（关键词不含表名）。
 
 1. 搜索种子主题（`seeded_subject_name`）获取 subjectId，搜索种子数据源获取 datasourceId
 2. **创建 MCP 服务绑定主题**：`data_scopes` 携带 `{"scope_type": "SUBJECT", "reference_id": "<subjectId>"}` → 200

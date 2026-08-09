@@ -1,11 +1,11 @@
 package com.dati.semantic.repository.mapper;
 
-import com.dati.semantic.domain.SemanticEntityType;
+import com.dati.semantic.domain.TermRelationType;
 import com.dati.semantic.repository.po.TermRelationPO;
 
 public class TermRelationMapper {
 
-    public static TermRelationPO toPO(String termId, SemanticEntityType entityType,
+    public static TermRelationPO toPO(String termId, TermRelationType entityType,
                                        String tableId, String fieldName) {
         TermRelationPO po = new TermRelationPO();
         po.setTermId(termId);

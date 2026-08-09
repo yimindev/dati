@@ -6,7 +6,7 @@
 
 - **Subject（主题）**：归属于某个数据源的业务主题，如"客户分析"、"销售报表"
 - **Term（术语）**：主题下的业务词汇，如"客户"、"营收"
-- **TermRelation（术语关联）**：将术语绑定到具体的表/字段/字段值
+- **TermRelation（术语关联）**：将术语绑定到具体的表（TABLE 级）/ 字段（FIELD 级）
 
 ```
 Subject (1) ─────< SubjectTable (M:N) >───── (1) TableInfo
@@ -27,7 +27,8 @@ Subject (1) ─────< SubjectTable (M:N) >───── (1) TableInfo
 ```
 backend/src/main/java/com/dati/semantic/
 ├── domain/
-│   ├── SemanticEntityType.java          # 枚举：SUBJECT/TABLE/FIELD/FIELD_VALUE/TERM
+│   ├── SemanticEntityType.java          # 枚举：SUBJECT/TABLE/FIELD/FIELD_VALUE/TERM（ES 文档类型）
+│   ├── TermRelationType.java            # 枚举：TABLE/FIELD（术语关联目标类型）
 │   ├── model/
 │   │   ├── Subject.java                 # 主题领域模型
 │   │   ├── Term.java                    # 术语领域模型

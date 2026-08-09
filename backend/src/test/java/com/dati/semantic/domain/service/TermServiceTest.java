@@ -2,6 +2,7 @@ package com.dati.semantic.domain.service;
 
 import com.dati.base.exception.DatiException;
 import com.dati.semantic.domain.SemanticEntityType;
+import com.dati.semantic.domain.TermRelationType;
 import com.dati.semantic.domain.model.Term;
 import com.dati.semantic.repository.dao.SubjectDAO;
 import com.dati.semantic.repository.dao.TermDAO;
@@ -95,7 +96,7 @@ class TermServiceTest {
 
         when(termDAO.findById(termId)).thenReturn(Optional.of(term));
 
-        assertThatThrownBy(() -> termService.linkEntity(termId, SemanticEntityType.FIELD, tableId, null))
+        assertThatThrownBy(() -> termService.linkEntity(termId, TermRelationType.FIELD, tableId, null))
                 .isInstanceOf(DatiException.class);
     }
 
@@ -120,7 +121,7 @@ class TermServiceTest {
         TermRelationPO relation = new TermRelationPO();
         relation.setId("relation-001");
         relation.setTermId(termId);
-        relation.setEntityType(SemanticEntityType.FIELD);
+        relation.setEntityType(TermRelationType.FIELD);
         relation.setTableId(tableId);
         relation.setFieldName(fieldName);
 
