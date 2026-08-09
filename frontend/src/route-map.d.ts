@@ -87,6 +87,13 @@ declare module 'vue-router/auto-routes' {
       Record<never, never>,
       | never
     >,
+    '/settings/api-keys': RouteRecordInfo<
+      '/settings/api-keys',
+      '/settings/api-keys',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
     '/subjects/': RouteRecordInfo<
       '/subjects/',
       '/subjects',
@@ -173,6 +180,14 @@ declare module 'vue-router/auto-routes' {
     'src/pages/register.vue': {
       routes:
         | '/register'
+      views:
+        | never
+      pathParamNames:
+        | never
+    }
+    'src/pages/settings/api-keys.vue': {
+      routes:
+        | '/settings/api-keys'
       views:
         | never
       pathParamNames:

@@ -20,6 +20,10 @@
 | `AuthenticationService` | 登录门面：按 type 路由到对应 Provider | `auth/domain/service/` |
 | `UserService` | 用户领域服务：注册、查询、密码哈希 | `auth/domain/service/` |
 | `UserGroupService` | 组成员解析：`groupIdsOf(userId)`，V1 返回隐式组 `ALL_USERS`，V2 合并真实组查询 | `auth/domain/service/` |
+| `ApiKeyAuthenticationProvider` | 认证用户 API Key（`Authorization: Bearer sk_...`）；`@Order(HIGHEST_PRECEDENCE)` 保证在 JWT Provider 之前被询问（JWT Provider 会认领任意 Bearer 头） | `auth/authentication/` |
+| `ApiKeyService` | API Key 领域服务：生成/掩码/列表/删除/过期校验 | `auth/domain/service/` |
+| `ApiKeyRepository` | API Key 持久化（key_hash 唯一索引） | `auth/repository/dao/` |
+| `ApiKeyPO` | API Key 持久化对象（继承 `BasePO`，表 `api_key`） | `auth/repository/po/` |
 | `UserPO` | 用户持久化对象（继承 `BasePO`） | `auth/repository/po/` |
 
 ## 认证流程
@@ -87,6 +91,43 @@ AuthInterceptor.preHandle()
 | `canAuthenticate(request)` | 快速形式匹配（看 Header、Cookie 等） | **认领该请求**，接下来调用 `authenticate` | 不匹配，跳过本 Provider |
 | `authenticate(request)` | 执行实际验证 | 认证成功，放行 | **认领了但认证失败**（如 Token 过期），`AuthInterceptor` 立即返回 401，不再尝试其他 Provider |
 
+### API Key 认证
+
+API Key 用于程序化调用（如 MCP 服务），`sk_` 前缀用于与 JWT 区分。由于 `LocalAuthenticationProvider.canAuthenticate` 会认领任意 `Bearer ` 头（`sk_...` 也不例外），`ApiKeyAuthenticationProvider` 通过 `@Order(Ordered.HIGHEST_PRECEDENCE)` 保证被优先询问，`sk_` 请求不会落到 JWT Provider。
+
+```
+请求携带 Authorization: Bearer sk_...
+    │
+    ▼
+ApiKeyAuthenticationProvider.canAuthenticate(request)
+    │
+    ├── Header 以 "Bearer sk_" 开头 → 返回 true（认领请求；因 @Order 优先，JWT Provider 不会被先询问）
+    │
+    └── 否则 → 返回 false（跳过，交给 JWT Provider）
+            │
+            ▼
+ApiKeyAuthenticationProvider.authenticate(request)
+    │
+    ├── SHA-256 哈希明文 Key → 查 api_key.key_hash
+    │    没查到 → Optional.empty()（401）
+    │
+    ├── 校验 expires_at 是否过期
+    │    已过期 → Optional.empty()（401）
+    │
+    ├── 加载 Key 绑定的用户 → 设置 RequestContext
+    │
+    └── 更新 last_used_at
+            │
+            ▼
+            进入 Controller
+```
+
+**安全要点**：
+
+- 明文 Key 仅在创建时返回一次，库中只存 SHA-256 哈希 + 掩码（如 `sk_ab12***cd34`），数据库泄露也无法还原
+- 删除 Key 即时生效（下次请求查不到哈希，直接 401）
+- API Key 无登录流程（`login()` 不支持），也不参与 `AuthenticationService` 的 type 路由
+
 ## 扩展机制
 
 新增一种认证方式（如 OAuth2）只需三步：
@@ -120,6 +161,9 @@ auth:
 | POST | `/v1/auth/login` | 用户登录 | 公开 |
 | GET | `/v1/auth/me` | 获取当前用户信息 | 需 Token |
 | GET | `/v1/users/search` | 用户搜索（授权弹窗选人，返回最小字段） | 需 Token |
+| POST | `/v1/auth/api-keys` | 创建 API Key（明文仅此一次返回） | 需 Token |
+| GET | `/v1/auth/api-keys` | 列表（仅掩码） | 需 Token |
+| DELETE | `/v1/auth/api-keys/{id}` | 删除 API Key | 需 Token |
 
 ## 错误码
 
@@ -129,6 +173,8 @@ auth:
 | `AUTH002` | 401 | Token 无效或过期 |
 | `AUTH003` | 409 | 用户名已存在 |
 | `AUTH004` | 400 | 不支持的认证类型 |
+| `AUTH005` | 403 | 不能操作其他用户的 API Key |
+| `AUTH006` | 400 | expiresInDays 必须是 30/90/180 |
 
 ## 前端架构
 

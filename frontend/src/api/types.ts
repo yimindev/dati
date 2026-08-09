@@ -68,3 +68,22 @@ export interface UserBrief {
   name: string
   display_name?: string
 }
+
+// API key (GET /v1/auth/api-keys list item)
+export interface ApiKey {
+  id: string;
+  name: string;
+  key_mask: string;
+  created_at: string;
+  expires_at: string | null;
+  last_used_at: string | null;
+}
+
+// POST /v1/auth/api-keys response (plaintext returned once)
+export interface ApiKeyCreated {
+  id: string;
+  name: string;
+  key: string;
+  key_mask: string;
+  expires_at: string | null;
+}

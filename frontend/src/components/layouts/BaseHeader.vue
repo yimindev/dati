@@ -1,13 +1,15 @@
 <script lang="ts" setup>
 import { isDark, toggleDark } from "~/composables";
-import { Moon, Sunny, CircleClose } from "@element-plus/icons-vue";
+import { Moon, Sunny, CircleClose, Key } from "@element-plus/icons-vue";
 import { computed } from "vue";
 import { useI18n } from "vue-i18n";
+import { useRouter } from "vue-router";
 import { setI18nLanguage, type AppLang } from "~/plugins/i18n";
 import { useAuthStore } from "~/stores/auth";
 
 const { t, locale } = useI18n();
 const authStore = useAuthStore();
+const router = useRouter();
 
 const localeLabel = computed(() => (locale.value === "zh" ? "中文" : "EN"));
 const userDisplayName = computed(() => authStore.user?.display_name || authStore.user?.name || "");
@@ -16,8 +18,12 @@ async function changeLocale(lang: AppLang) {
   await setI18nLanguage(lang);
 }
 
-function handleLogout() {
-  authStore.logout();
+function handleCommand(command: string) {
+  if (command === "logout") {
+    authStore.logout();
+  } else if (command === "api-keys") {
+    router.push("/settings/api-keys");
+  }
 }
 
 function goToDocs() {
@@ -26,8 +32,8 @@ function goToDocs() {
 </script>
 
 <template>
-  <el-menu class="el-menu-demo" mode="horizontal" :ellipsis="false" router>
-    <el-menu-item index="/">
+  <el-menu class="el-menu-demo" mode="horizontal" :ellipsis="false" :default-active="''">
+    <el-menu-item index="/" @click="router.push('/')">
       <div class="flex items-center justify-center gap-2">
         <img src="/dati.svg" alt="dati" class="size-7 object-contain" />
         <span class="text-base font-semibold leading-none">
@@ -81,13 +87,17 @@ function goToDocs() {
     </el-menu-item>
 
     <el-menu-item index="header-user" class="h-full" v-if="authStore.isLoggedIn">
-      <el-dropdown trigger="click" @command="handleLogout">
+      <el-dropdown trigger="click" @command="handleCommand">
         <div class="size-full flex items-center justify-center gap-2 cursor-pointer">
           <el-avatar :size="24">{{ userDisplayName.charAt(0).toUpperCase() }}</el-avatar>
           <span class="text-sm">{{ userDisplayName }}</span>
         </div>
         <template #dropdown>
           <el-dropdown-menu>
+            <el-dropdown-item command="api-keys">
+              <el-icon><Key /></el-icon>
+              <span>{{ t("apiKeys.title") }}</span>
+            </el-dropdown-item>
             <el-dropdown-item command="logout">
               <el-icon><CircleClose /></el-icon>
               <span>{{ t("auth.logout") }}</span>
@@ -106,8 +116,32 @@ function goToDocs() {
 
 <style lang="scss">
 .el-menu-demo {
-  &.ep-menu--horizontal > .ep-menu-item:nth-child(1) {
-    margin-right: auto;
+  &.ep-menu--horizontal,
+  &.el-menu--horizontal {
+    > .ep-menu-item:nth-child(1),
+    > .el-menu-item:nth-child(1) {
+      margin-right: auto;
+    }
+
+    /* Make Header menu completely stateless: remove active bottom underline and active text highlight */
+    > .ep-menu-item,
+    > .el-menu-item,
+    > .ep-sub-menu > .ep-sub-menu__title,
+    > .el-sub-menu > .el-sub-menu__title {
+      border-bottom: none !important;
+
+      &.is-active {
+        border-bottom: none !important;
+        color: var(--ep-menu-text-color, var(--el-menu-text-color)) !important;
+      }
+
+      &:hover,
+      &:focus,
+      &:focus-visible {
+        border-bottom: none !important;
+        outline: none !important;
+      }
+    }
   }
 }
 </style>
