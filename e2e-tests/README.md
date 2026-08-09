@@ -20,6 +20,7 @@ e2e-tests/
   test-data.yaml      # 公共测试数据（可复用的用户、连接信息等）
   test-cases/         # 测试用例，按模块分文件
     auth.md           # 认证
+    api-key.md        # API Key 管理（TC-AK-001~009，含 MCP 验收固定 key 构造）
     datasource.md     # 数据源管理
     mcp-service.md    # MCP 服务管理
     mcp-endpoint.md   # MCP 对外 endpoint（/{code}/mcp JSON-RPC）

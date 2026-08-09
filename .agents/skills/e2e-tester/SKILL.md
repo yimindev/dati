@@ -107,7 +107,8 @@ Warnings: 1
 | `scripts/run-tests.sh` | 一键测试调度器 |
 | `scripts/bug-tracker.sh` | Bug 生命周期管理 |
 | `scripts/helpers.sh` | 公共辅助函数（source 使用） |
-| `scripts/mcp-verify.sh` | MCP endpoint 验收（Inspector CLI + Conformance 2025-11-25），配套 `scripts/mcp-conformance-proxy.js`（JWT 注入代理，Conformance CLI 不支持自定义 header） |
+| `scripts/mcp-verify.sh` | MCP endpoint 验收（Inspector CLI + Conformance 2025-11-25），配套 `scripts/mcp-conformance-proxy.js`（JWT 注入代理，Conformance CLI 不支持自定义 header）；`MCP_TOKEN` 支持 JWT 或用户 API Key（`sk_` 开头，推荐，永不过期） |
+| `scripts/api-key-verify.sh` | API Key 全生命周期 e2e（TC-AK-001~009，含固定 key 构造供 mcp-verify.sh 复用） |
 
 所有脚本支持 `--help` 查看详细用法。Agent 直接调用：
 

@@ -13,6 +13,14 @@ users:
     password: "admin123"
     type: "local"
 
+# ---- API Key 测试（TC-AK-*）----
+api_keys:
+  # 固定验收 key（TC-AK-009）：永久不过期，明文保存在 /tmp/dati_apikey.txt
+  # 供 mcp-verify.sh 以 MCP_TOKEN=<sk_...> 复用；key 绑定 users.qa_user
+  mcp_verify:
+    name: "e2e-mcp-verify"
+    owner: "qa_user"
+
 datasources:
   postgres_local:
     name: "e2e-postgres-test"

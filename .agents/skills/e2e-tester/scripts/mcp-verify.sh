@@ -4,13 +4,17 @@
 # the Conformance CLI (2025-11-25), using a local proxy that injects the JWT.
 #
 # Usage:
-#   MCP_CODE=mcp-verify-demo MCP_TOKEN=<jwt> MCP_DS_ID=<dsId> \
+#   MCP_CODE=mcp-verify-demo MCP_TOKEN=<jwt-or-api-key> MCP_DS_ID=<dsId> \
 #     .agents/skills/e2e-tester/scripts/mcp-verify.sh
+#
+# MCP_TOKEN accepts either a JWT (via login) or a user API key (sk_..., see
+# e2e-tests/test-cases/api-key.md TC-AK-009); API keys never expire and are the
+# recommended credential for repeated acceptance runs.
 #
 # Environment:
 #   MCP_BASE_URL   backend base URL (default http://localhost:8085)
 #   MCP_CODE       published service code (default mcp-verify-demo)
-#   MCP_TOKEN      JWT (Authorization: Bearer <jwt>)
+#   MCP_TOKEN      JWT or user API key (sk_...) - Authorization: Bearer <token>
 #   MCP_DS_ID      data source id for execute_sql tool call (optional)
 #   MCP_TOOL_NAME  custom tool name for tools/call demo (optional, default list_genres)
 #   MCP_PROMPT     prompt name for prompts/get (optional, default analyze_genre)
