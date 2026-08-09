@@ -233,6 +233,17 @@ class McpServicePublishServiceTest {
     }
 
     @Test
+    @DisplayName("Query snapshots - throws MS_SERVICE_NOT_FOUND when service does not exist")
+    void getSnapshots_serviceNotFound_shouldThrow() {
+        when(mcpServiceDAO.existsById("non-exist")).thenReturn(false);
+
+        assertThatThrownBy(() -> publishService.getSnapshots("non-exist"))
+                .isInstanceOf(DatiException.class)
+                .satisfies(e -> assertThat(((DatiException) e).getCode())
+                        .isEqualTo(ErrorCode.MS_SERVICE_NOT_FOUND));
+    }
+
+    @Test
     @DisplayName("Publish service - empty data scope rejected (MS019)")
     void publish_EmptyDataScope_Throws() {
         when(mcpServiceDAO.findById(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(Optional.of(testServicePO));

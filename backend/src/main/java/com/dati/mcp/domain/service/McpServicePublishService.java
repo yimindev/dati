@@ -121,6 +121,9 @@ public class McpServicePublishService {
     }
 
     public List<McpServiceSnapshot> getSnapshots(String serviceId) {
+        if (!mcpServiceDAO.existsById(serviceId)) {
+            throw new DatiException(ErrorCode.MS_SERVICE_NOT_FOUND, serviceId);
+        }
         return snapshotDAO.findAllByServiceIdOrderByVersionNumberDesc(serviceId).stream()
                 .map(McpServiceSnapshotMapper::toModel)
                 .collect(Collectors.toList());

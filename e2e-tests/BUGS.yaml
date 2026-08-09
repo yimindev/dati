@@ -16,13 +16,6 @@ bugs:
     found_at: 2026-08-09
     description: |
       dev 环境 H2 库 term_relation 表存在旧版遗留的 UNIQUE(term_id,table_id,field_name) 约束（当前代码 TermRelationPO 未声明，git 历史亦无），导致同一术语/表/列上先后添加 FIELD 与 FIELD_VALUE 关系时，第二个请求 500 CM003。已验证与顺序无关（FIELD→FIELD_VALUE 或 FIELD_VALUE→FIELD 均复现）。TC-SEM-004 要求两者共存（FIELD+FIELD_VALUE 双关系），TC-MCP-020 种子术语关联展开亦受影响（FIELD_VALUE 文档命中后按 tableId 归并，受限于唯一约束无法建双关系）。根因：Hibernate ddl-auto:update 不会删除遗留约束，需手动迁移（如启动时 ALTER TABLE DROP CONSTRAINT 或引入 Flyway）。
-  - id: BUG-20260809-003
-    title: 删除服务后子资源端点返回 200 空数据而非 404（data-scope/tools/snapshots/prompts）
-    module: MCP 服务管理
-    severity: medium
-    found_at: 2026-08-09
-    description: |
-      TC-MCP-013 验证级联删除时发现：DELETE 服务后 GET /{id}/data-scope、/tools、/snapshots、/prompts 均返回 200（空列表/默认值），而 GET /{id} 与 /{id}/diff 正确返回 404。E2E 用例 TC-MCP-013 预期 prompts/snapshots 404。原因：这些端点的 Service 层未先校验服务存在性。用户视角：访问已删除服务的子资源应明确 404，而非静默返回空数据。
   - id: BUG-20260809-004
     title: mcp_prompt.description 存量库仍 NOT NULL：BUG-011 修复对旧 H2 库无效（ddl-auto:update 不 ALTER 已存在列），创建不带 description 的 Prompt 仍 500
     module: MCP 服务管理

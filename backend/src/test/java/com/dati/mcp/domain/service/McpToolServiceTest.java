@@ -78,8 +78,19 @@ class McpToolServiceTest {
     // ── 列表 ──
 
     @Test
+    @DisplayName("List - throws MS_SERVICE_NOT_FOUND when service does not exist")
+    void listTools_serviceNotFound_shouldThrow() {
+        when(mcpServiceDAO.existsById(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(false);
+
+        DatiException e = assertThrows(DatiException.class,
+            () -> mcpToolService.listTools(TestFixtures.TEST_MCP_SERVICE_ID));
+        assertThat(e.getCode()).isEqualTo(ErrorCode.MS_SERVICE_NOT_FOUND);
+    }
+
+    @Test
     @DisplayName("List - returns prebuilt defaults and empty custom list when no DB records")
     void listTools_noConfig_returnsDefaults() {
+        when(mcpServiceDAO.existsById(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(true);
         when(prebuiltDAO.findAllByServiceId(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(List.of());
         when(customToolDAO.findAllByServiceIdOrderByCreatedAtDesc(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(List.of());
 
@@ -91,6 +102,7 @@ class McpToolServiceTest {
     @Test
     @DisplayName("List - includes configured prebuilt and custom tools from DB")
     void listTools_withConfig_returnsAll() {
+        when(mcpServiceDAO.existsById(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(true);
         McpPrebuiltToolConfigPO esPO = new McpPrebuiltToolConfigPO();
         esPO.setId("pre-cfg-001");
         esPO.setServiceId(TestFixtures.TEST_MCP_SERVICE_ID);

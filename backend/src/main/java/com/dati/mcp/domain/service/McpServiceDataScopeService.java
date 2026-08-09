@@ -67,6 +67,9 @@ public class McpServiceDataScopeService {
     }
 
     public List<McpServiceDataScope> getDataScope(String serviceId) {
+        if (!mcpServiceDAO.existsById(serviceId)) {
+            throw new DatiException(ErrorCode.MS_SERVICE_NOT_FOUND, serviceId);
+        }
         return dataScopeDAO.findAllByServiceId(serviceId).stream()
                 .map(McpServiceDataScopeMapper::toModel)
                 .toList();

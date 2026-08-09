@@ -249,3 +249,11 @@ bugs:
     description: |
       McpPromptService.updatePrompt 对部分请求体直接调用 validateContentParams：请求只传 content 时 parameters=null，extractDefinedParams(null) 返回空集，content 中所有 {{var}} 均判为未定义 → MS007 'Unknown parameter(s) in content'。TC-MCP-003 step5（仅改 content 的部分更新）复现。另：po.setEnabled(prompt.isEnabled()) 无条件覆盖，请求缺 enabled 时（boolean 默认 false）会静默禁用 prompt —— 部分更新数据丢失隐患。修复方向：参数未传时从 DB 合并已持久化参数再校验，enabled 改为仅当请求显式携带时更新。
         - id: BUG-20260809-003
+  - id: BUG-20260809-003
+    title: 删除服务后子资源端点返回 200 空数据而非 404（data-scope/tools/snapshots/prompts）
+    module: MCP 服务管理
+    severity: medium
+    fixed_at: 2026-08-09
+    description: |
+      TC-MCP-013 验证级联删除时发现：DELETE 服务后 GET /{id}/data-scope、/tools、/snapshots、/prompts 均返回 200（空列表/默认值），而 GET /{id} 与 /{id}/diff 正确返回 404。E2E 用例 TC-MCP-013 预期 prompts/snapshots 404。原因：这些端点的 Service 层未先校验服务存在性。用户视角：访问已删除服务的子资源应明确 404，而非静默返回空数据。
+        - id: BUG-20260809-004

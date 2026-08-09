@@ -55,6 +55,9 @@ public class McpToolService {
     /** 返回分组数据 */
     @Transactional(readOnly = true)
     public ToolsResult listTools(String serviceId) {
+        if (!mcpServiceDAO.existsById(serviceId)) {
+            throw new DatiException(ErrorCode.MS_SERVICE_NOT_FOUND, serviceId);
+        }
         return new ToolsResult(buildPrebuiltList(serviceId), buildCustomList(serviceId));
     }
 

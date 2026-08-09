@@ -290,6 +290,7 @@ class McpPromptServiceTest {
     @Test
     @DisplayName("Query Prompt list - success")
     void listPrompts_returnsList() {
+        when(mcpServiceDAO.existsById(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(true);
         when(promptDAO.findAllByServiceIdOrderByCreatedAtDesc(TestFixtures.TEST_MCP_SERVICE_ID))
             .thenReturn(List.of(testPromptPO));
 
@@ -297,6 +298,16 @@ class McpPromptServiceTest {
 
         assertThat(result).hasSize(1);
         assertThat(result.getFirst().getName()).isEqualTo("analyze_table");
+    }
+
+    @Test
+    @DisplayName("Query Prompt list - throws MS_SERVICE_NOT_FOUND when service does not exist")
+    void listPrompts_serviceNotFound_shouldThrow() {
+        when(mcpServiceDAO.existsById(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(false);
+
+        DatiException e = assertThrows(DatiException.class,
+            () -> promptService.listPrompts(TestFixtures.TEST_MCP_SERVICE_ID));
+        assertThat(e.getCode()).isEqualTo(ErrorCode.MS_SERVICE_NOT_FOUND);
     }
 
     @Test

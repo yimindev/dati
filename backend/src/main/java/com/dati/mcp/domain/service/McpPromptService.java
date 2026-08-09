@@ -86,6 +86,7 @@ public class McpPromptService {
 
     @Transactional(readOnly = true)
     public List<McpPrompt> listPrompts(String serviceId) {
+        validateServiceExists(serviceId);
         return promptDAO.findAllByServiceIdOrderByCreatedAtDesc(serviceId)
             .stream().map(McpPromptMapper::toModel).toList();
     }
