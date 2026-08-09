@@ -38,7 +38,13 @@ public class TermAssembler extends BaseAssembler {
 
     public PageResponse<TermVO> toPageResponse(Page<Term> page) {
         List<TermVO> vos = page.getContent().stream()
-                .map(this::mapFields)
+                .map(term -> {
+                    TermVO vo = mapFields(term);
+                    vo.setRelations(term.getRelations() != null
+                            ? term.getRelations().stream().map(this::toRelationVO).toList()
+                            : new ArrayList<>());
+                    return vo;
+                })
                 .collect(Collectors.toList());
         super.fillUserInfo(vos);
         return PageResponse.of(new PageImpl<>(vos, page.getPageable(), page.getTotalElements()));

@@ -163,16 +163,34 @@ public class TermService {
         Page<TermPO> pos = StringUtils.isEmpty(keyword)
                 ? termDAO.findBySubjectId(subjectId, pageable)
                 : termDAO.findBySubjectIdAndKeyword(subjectId, keyword, pageable);
-        return pos.map(TermMapper::toTerm);
+        Page<Term> terms = pos.map(TermMapper::toTerm);
+        // Batch-fill relations so the list response carries them (avoids N+1 per row)
+        Map<String, List<TermRelation>> relationsByTerm = getTermRelationsByTermIds(
+                terms.getContent().stream().map(Term::getId).collect(Collectors.toSet()));
+        terms.getContent().forEach(term ->
+                term.setRelations(relationsByTerm.getOrDefault(term.getId(), List.of())));
+        return terms;
     }
 
     @Transactional(readOnly = true)
     public List<TermRelation> getTermRelations(String termId) {
-        List<TermRelationPO> relationPOList = termRelationDAO.findByTermId(termId);
-        Map<String, TableInfoPO> tableInfoMap = getTableInfoMap(termId, relationPOList);
+        return getTermRelationsByTermIds(Set.of(termId)).getOrDefault(termId, List.of());
+    }
+
+    /**
+     * Batch loads relations for many terms (3 fixed queries, no N+1):
+     * relations by termIds, then table metadata for all referenced tables.
+     */
+    @Transactional(readOnly = true)
+    public Map<String, List<TermRelation>> getTermRelationsByTermIds(Set<String> termIds) {
+        if (termIds == null || termIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        List<TermRelationPO> relationPOList = termRelationDAO.findByTermIdIn(termIds);
+        Map<String, TableInfoPO> tableInfoMap = getTableInfoMap(relationPOList);
         return relationPOList.stream()
                 .map(relation -> toTermRelation(relation, tableInfoMap))
-                .collect(Collectors.toList());
+                .collect(Collectors.groupingBy(TermRelation::getTermId));
     }
 
     @Transactional(readOnly = true)
@@ -190,7 +208,7 @@ public class TermService {
         return term;
     }
 
-    private Map<String, TableInfoPO> getTableInfoMap(String termId, List<TermRelationPO> relations) {
+    private Map<String, TableInfoPO> getTableInfoMap(List<TermRelationPO> relations) {
         Set<String> tableIds = relations.stream()
                 .map(TermRelationPO::getTableId)
                 .filter(tableId -> tableId != null && !tableId.isBlank())
@@ -203,7 +221,7 @@ public class TermService {
             return tableInfoDAO.findAllById(tableIds).stream()
                     .collect(Collectors.toMap(TableInfoPO::getId, table -> table));
         } catch (Exception e) {
-            log.warn("Failed to load table metadata for termId={}, tableIds={}", termId, tableIds, e);
+            log.warn("Failed to load table metadata for tableIds={}", tableIds, e);
             return Collections.emptyMap();
         }
     }

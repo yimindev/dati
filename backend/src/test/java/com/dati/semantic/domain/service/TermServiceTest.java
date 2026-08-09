@@ -1,9 +1,12 @@
 package com.dati.semantic.domain.service;
 
 import com.dati.base.exception.DatiException;
+import com.dati.datasource.repository.dao.TableInfoDAO;
+import com.dati.datasource.repository.po.TableInfoPO;
 import com.dati.semantic.domain.SemanticEntityType;
 import com.dati.semantic.domain.TermRelationType;
 import com.dati.semantic.domain.model.Term;
+import com.dati.semantic.domain.model.TermRelation;
 import com.dati.semantic.repository.dao.SubjectDAO;
 import com.dati.semantic.repository.dao.TermDAO;
 import com.dati.semantic.repository.dao.TermRelationDAO;
@@ -23,7 +26,9 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -47,6 +52,9 @@ class TermServiceTest {
 
     @Mock
     private SubjectDAO subjectDAO;
+
+    @Mock
+    private TableInfoDAO tableInfoDAO;
 
     @InjectMocks
     private TermService termService;
@@ -134,6 +142,44 @@ class TermServiceTest {
     }
 
     @Test
+    @DisplayName("getTermRelationsByTermIds - batch loads relations grouped by term with table info")
+    void getTermRelationsByTermIds_shouldGroupByTermWithTableInfo() {
+        TermRelationPO rel1 = new TermRelationPO();
+        rel1.setId("rel-001");
+        rel1.setTermId("term-001");
+        rel1.setEntityType(TermRelationType.FIELD);
+        rel1.setTableId("table-001");
+        rel1.setFieldName("amount");
+
+        TableInfoPO tableInfo = new TableInfoPO();
+        tableInfo.setId("table-001");
+        tableInfo.setName("orders");
+        tableInfo.setSchema("sales");
+
+        when(termRelationDAO.findByTermIdIn(Set.of("term-001", "term-002")))
+                .thenReturn(List.of(rel1));
+        when(tableInfoDAO.findAllById(Set.of("table-001"))).thenReturn(List.of(tableInfo));
+
+        Map<String, List<TermRelation>> result =
+                termService.getTermRelationsByTermIds(Set.of("term-001", "term-002"));
+
+        assertThat(result).containsOnlyKeys("term-001");
+        assertThat(result.get("term-001")).hasSize(1);
+        TermRelation rel = result.get("term-001").getFirst();
+        assertThat(rel.getTableName()).isEqualTo("orders");
+        assertThat(rel.getSchema()).isEqualTo("sales");
+        assertThat(rel.getFieldName()).isEqualTo("amount");
+    }
+
+    @Test
+    @DisplayName("getTermRelationsByTermIds - empty input returns empty map")
+    void getTermRelationsByTermIds_emptyInput_shouldReturnEmptyMap() {
+        Map<String, List<TermRelation>> result = termService.getTermRelationsByTermIds(Set.of());
+
+        assertThat(result).isEmpty();
+    }
+
+    @Test
     @DisplayName("getTermsBySubject - non-empty keyword matches by ID prefix or name")
     void getTermsBySubject_withKeyword_shouldReturnMatchingTerms() {
         String subjectId = "subject-001";
@@ -150,11 +196,13 @@ class TermServiceTest {
 
         Page<TermPO> poPage = new PageImpl<>(List.of(termPO), pageable, 1);
         when(termDAO.findBySubjectIdAndKeyword(subjectId, keyword, pageable)).thenReturn(poPage);
+        when(termRelationDAO.findByTermIdIn(any())).thenReturn(List.of());
 
         Page<Term> result = termService.getTermsBySubject(subjectId, keyword, pageable);
 
         assertThat(result.getTotalElements()).isEqualTo(1);
         assertThat(result.getContent().getFirst().getName()).isEqualTo("客户分析");
+        assertThat(result.getContent().getFirst().getRelations()).isNotNull();
     }
 
     @Test
@@ -179,6 +227,7 @@ class TermServiceTest {
 
         Page<TermPO> poPage = new PageImpl<>(List.of(termPO1, termPO2), pageable, 2);
         when(termDAO.findBySubjectId(eq(subjectId), eq(pageable))).thenReturn(poPage);
+        when(termRelationDAO.findByTermIdIn(any())).thenReturn(List.of());
 
         Page<Term> result = termService.getTermsBySubject(subjectId, null, pageable);
 

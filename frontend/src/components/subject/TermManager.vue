@@ -5,7 +5,7 @@ import { Plus, Search } from '@element-plus/icons-vue'
 import { useI18n } from 'vue-i18n'
 import type { FormInstance, FormRules } from 'element-plus'
 import type { TermVO, TermRelationVO, CreateTermRequest, UpdateTermRequest, LinkTermRelationRequest, TableInfoVO } from '~/api/subject'
-import { getTermsBySubject, createTerm, updateTerm, deleteTerm, getTermDetail, linkTermRelation, unlinkTermRelation, getSubjectTables } from '~/api/subject'
+import { getTermsBySubject, createTerm, updateTerm, deleteTerm, linkTermRelation, unlinkTermRelation, getSubjectTables } from '~/api/subject'
 import { listTableColumns } from '~/api/column'
 
 const { t } = useI18n()
@@ -22,7 +22,6 @@ const searchKeyword = ref('')
 const page = ref(1)
 const pageSize = ref(10)
 const total = ref(0)
-const termDetails = ref<Map<string, TermVO & { relations: TermRelationVO[] }>>(new Map())
 
 const termDialogVisible = ref(false)
 const termDialogLoading = ref(false)
@@ -127,21 +126,12 @@ const handlePageSizeChange = (ps: number) => {
   loadTerms()
 }
 
-const loadTermDetail = async (termId: string) => {
-  try {
-    const detail = await getTermDetail(termId)
-    termDetails.value.set(termId, detail)
-  } catch (error) {
-    console.error('Failed to load term detail:', error)
-  }
+const getTermRelations = (term?: TermVO) => {
+  return term?.relations || []
 }
 
-const getTermRelations = (termId: string) => {
-  return termDetails.value.get(termId)?.relations || []
-}
-
-const getTermDisplayRelations = (termId: string) => {
-  return getTermRelations(termId).slice(0, 2)
+const getTermDisplayRelations = (term: TermVO) => {
+  return getTermRelations(term).slice(0, 2)
 }
 
 const getRelationDisplayText = (relation: TermRelationVO) => {
@@ -158,9 +148,9 @@ const buildRelationKey = (entityType: 'TABLE' | 'FIELD', tableId: string, fieldN
     : `FIELD:${tableId}:${fieldName || ''}`
 }
 
-const getExistingRelationKeys = (termId: string) => {
+const getExistingRelationKeys = (relations: TermRelationVO[]) => {
   const keys = new Set<string>()
-  for (const relation of getTermRelations(termId)) {
+  for (const relation of relations) {
     keys.add(buildRelationKey(relation.entity_type, relation.table_id, relation.field_name))
   }
   return keys
@@ -313,19 +303,6 @@ const handleFieldConfigTabChange = async (paneName: string | number) => {
   await loadColumnsForTable(tableId)
 }
 
-const loadTermsDetails = async () => {
-  for (const term of termList.value) {
-    if (!termDetails.value.has(term.id)) {
-      await loadTermDetail(term.id)
-    }
-  }
-}
-
-const loadTermsAndDetails = async () => {
-  await loadTerms()
-  await loadTermsDetails()
-}
-
 const handleOpenTermDialog = (term?: TermVO) => {
   if (term) {
     editingTerm.value = term
@@ -367,7 +344,7 @@ const handleSubmitTerm = async () => {
     }
 
     handleCloseTermDialog()
-    await loadTermsAndDetails()
+    await loadTerms()
   } catch (error) {
     console.error('Submit term failed:', error)
     ElMessage.error(t('common.operationFailed'))
@@ -448,8 +425,8 @@ const handleTableListScroll = (event: Event) => {
   }
 }
 
-const handleOpenAddRelationDialog = async (termId: string) => {
-  relationTermId.value = termId
+const handleOpenAddRelationDialog = async (term: TermVO) => {
+  relationTermId.value = term.id
   resetRelationEditorState()
 
   try {
@@ -458,9 +435,6 @@ const handleOpenAddRelationDialog = async (termId: string) => {
     tableTotal.value = 0
     availableTables.value = []
     await loadTablesForRelation(false)
-    if (!termDetails.value.has(termId)) {
-      await loadTermDetail(termId)
-    }
     relationDialogVisible.value = true
   } catch (error) {
     console.error('Failed to load subject tables:', error)
@@ -496,7 +470,7 @@ const handleSubmitRelation = async () => {
   try {
     relationDialogLoading.value = true
 
-    const existingKeys = getExistingRelationKeys(relationTermId.value)
+    const existingKeys = getExistingRelationKeys(termList.value.find(t => t.id === relationTermId.value)?.relations || [])
     const payloads: LinkTermRelationRequest[] = []
     let totalIntentCount = 0
 
@@ -538,7 +512,7 @@ const handleSubmitRelation = async () => {
 
     ElMessage.success(t('subject.addRelationResult', { added: payloads.length, skipped: skippedCount }))
 
-    await loadTermDetail(relationTermId.value)
+    await loadTerms()
     resetRelationEditorState()
     relationDialogVisible.value = false
   } catch (error) {
@@ -562,7 +536,7 @@ const handleRemoveRelation = async (termId: string, relation: TermRelationVO) =>
     )
     await unlinkTermRelation(termId, relation.table_id, relation.field_name || null)
     ElMessage.success(t('subject.removeRelationSuccess'))
-    await loadTermDetail(termId)
+    await loadTerms()
   } catch (error) {
     if (error !== 'cancel') {
       console.error('Failed to remove relation:', error)
@@ -572,7 +546,7 @@ const handleRemoveRelation = async (termId: string, relation: TermRelationVO) =>
 }
 
 onMounted(() => {
-  loadTermsAndDetails()
+  loadTerms()
 })
 </script>
 
@@ -624,10 +598,10 @@ onMounted(() => {
         <el-table-column prop="description" :label="t('common.description')" min-width="220" show-overflow-tooltip />
         <el-table-column :label="t('subject.linkedEntities')" min-width="260">
           <template #default="{ row }">
-            <template v-if="getTermRelations(row.id).length > 0">
+            <template v-if="getTermRelations(row).length > 0">
               <div class="flex flex-wrap gap-1 items-center">
                 <el-tag
-                  v-for="rel in getTermDisplayRelations(row.id)"
+                  v-for="rel in getTermDisplayRelations(row)"
                   :key="rel.id"
                   :type="rel.entity_type === 'TABLE' ? 'info' : 'warning'"
                   size="small"
@@ -637,15 +611,15 @@ onMounted(() => {
                   {{ getRelationDisplayText(rel) }}
                 </el-tag>
 
-                <template v-if="getTermRelations(row.id).length > 2">
+                <template v-if="getTermRelations(row).length > 2">
                   <el-popover trigger="click" placement="bottom" :width="340">
                     <template #reference>
                       <el-button link type="primary" size="small">
-                        +{{ getTermRelations(row.id).length - 2 }}
+                        +{{ getTermRelations(row).length - 2 }}
                       </el-button>
                     </template>
                     <div class="space-y-1 max-h-60 overflow-y-auto">
-                      <div v-for="rel in getTermRelations(row.id)" :key="rel.id" class="flex items-center justify-between gap-2 py-1">
+                      <div v-for="rel in getTermRelations(row)" :key="rel.id" class="flex items-center justify-between gap-2 py-1">
                         <div class="flex items-center gap-1.5 min-w-0">
                           <el-tag :type="rel.entity_type === 'TABLE' ? 'info' : 'warning'" size="small">
                             {{ rel.entity_type === 'TABLE' ? t('subject.tableLevel') : t('subject.fieldLevel') }}
@@ -666,7 +640,7 @@ onMounted(() => {
         </el-table-column>
         <el-table-column :label="t('common.actions')" width="210" fixed="right" align="right">
           <template #default="{ row }">
-            <el-button link type="primary" @click="handleOpenAddRelationDialog(row.id)">
+            <el-button link type="primary" @click="handleOpenAddRelationDialog(row)">
               {{ t('subject.addRelation') }}
             </el-button>
             <el-button link type="primary" @click="handleOpenTermDialog(row)">

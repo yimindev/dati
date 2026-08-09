@@ -21,6 +21,7 @@ export interface SubjectAvailableTableVO {
 export interface TermVO extends BaseResourceVO {
   subject_id: string;
   aliases?: string[];
+  relations?: TermRelationVO[];
 }
 
 export interface TermRelationVO {
@@ -153,8 +154,8 @@ export function deleteTerm(id: string, signal?: AbortSignal): Promise<IdResponse
   return del<IdResponse>(`/v1/terms/${encodeURIComponent(id)}`, undefined, signal);
 }
 
-export function getTermDetail(id: string, signal?: AbortSignal): Promise<TermVO & { relations: TermRelationVO[] }> {
-  return get<TermVO & { relations: TermRelationVO[] }>(`/v1/terms/${encodeURIComponent(id)}`, undefined, signal);
+export function getTermDetail(id: string, signal?: AbortSignal): Promise<TermVO> {
+  return get<TermVO>(`/v1/terms/${encodeURIComponent(id)}`, undefined, signal);
 }
 
 export function linkTermRelation(termId: string, body: LinkTermRelationRequest, signal?: AbortSignal): Promise<IdResponse> {
