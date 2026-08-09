@@ -1,7 +1,7 @@
 # MCP Service 管理 — 架构文档
 
-> 版本：v2.2（US-01–05, US-5.5, US-07, US-08, US-10 完整实现）
-> 最后更新：2026-08-01
+> 版本：v2.3（US-01–05, US-5.5, US-07, US-08, US-10 完整实现；MCP Endpoint 已上线）
+> 最后更新：2026-08-08
 
 ---
 
@@ -21,8 +21,9 @@ MCP Service 管理模块提供 **MCP（Model Context Protocol）服务的生命�
 - **工具测试（Tool Test）**：参数输入 → 安全校验 → 执行 → 结果展示（支持 4 种工具类型、多语句 SQL、部分失败、scope 校验）
 - **发布与版本管理（US-08）**：草稿-快照隔离、发布/发布变更、停用/启用、版本历史与回滚、草稿 vs 线上 diff
 - **删除服务（US-10）**：事务级联删除（快照/数据范围/工具/Prompt），前端与全站删除操作一致（简单确认弹窗）
+- **MCP Endpoint（JSON-RPC over HTTP）**：`POST /{code}/mcp` 协议入口，支持 `initialize` / `ping` / `tools/list` / `tools/call` / `prompts/list` / `prompts/get`；仅读取激活快照（草稿永不暴露）；服务状态语义（未知 code / DRAFT → 404，DISABLED → 503）；Origin DNS-rebinding 防护 + `MCP-Protocol-Version` 校验
 
-> **遗留**：MCP JSON-RPC/SSE Endpoint（`/{code}/mcp` 对外暴露）未实现，详见 US-08「遗留任务」。
+> **遗留**：调用审计日志（US-09）未实现。
 
 ---
 
@@ -95,6 +96,16 @@ com.dati.mcp/
     │   ├── McpToolController.java         # 工具 CRUD + 测试端点
     │   ├── McpPromptController.java       # Prompt CRUD 端点
     │   └── TemplatePreviewController.java # 模板预览/提取端点
+    ├── endpoint/                # MCP 协议入口（/{code}/mcp）
+    │   ├── McpEndpointController.java     # HTTP 适配层：路由 / 响应状态码
+    │   ├── McpEndpointService.java        # 编排：状态语义 / Origin 校验 / 激活快照加载
+    │   └── McpProtocolHandler.java        # JSON-RPC 方法分发
+    ├── converter/               # 快照 draft → MCP 协议类型
+    │   ├── ToolDefinitionConverter.java   # Tool 定义 + inputSchema 生成
+    │   ├── PromptDefinitionConverter.java # Prompt 定义 + prompts/get 渲染
+    │   └── ToolResultConverter.java       # 执行结果 → CallToolResult
+    ├── resolver/
+    │   └── SnapshotToolResolver.java      # 快照内工具解析（enabled-only）
     ├── pojo/                 # VO / Request / Response
     │   ├── McpServiceVO.java, DataScopeItemVO.java, DataScopeRequest.java, DataScopeResponse.java
     │   ├── McpServiceDiffVO.java, McpServiceSnapshotVO.java, PublishRequest.java, RollbackRequest.java
@@ -257,6 +268,29 @@ Controller → HTTP 200 + ToolTestResponse JSON
    - `content` 中 `{{var}}` 提取的变量集 vs `parameters` 中定义的参数名集
    - 定义但未引用的参数 → 抛出 `MS_PROMPT_ARG_MISMATCH`（Unused parameter）
    - 引用但未定义的变量 → 抛出 `MS_PROMPT_ARG_MISMATCH`（Unknown parameter）
+
+#### MCP Endpoint（协议层）
+
+| 类 | 职责 |
+|---|---|
+| `McpEndpointController` | `POST /{code}/mcp` HTTP 适配层：路由、请求体透传、响应状态码映射。不含协议逻辑。认证由全局 `AuthInterceptor` 覆盖（WebMvcConfig 注册 `/*/mcp` 路径） |
+| `McpEndpointService` | 端点编排：① 服务状态语义（未知 code / DRAFT → 404；DISABLED → 503 + JSON-RPC error）② 传输层校验（Origin DNS-rebinding 防护 + `MCP-Protocol-Version`，initialize 豁免）③ 加载激活快照 ④ JSON-RPC 反序列化与分发委托。无状态：不签发 `Mcp-Session-Id` |
+| `McpProtocolHandler` | JSON-RPC 方法分发：`initialize`（按快照内容声明 capabilities.tools/prompts）、`ping`、`tools/list`、`tools/call`、`prompts/list`、`prompts/get`；未知方法 → `METHOD_NOT_FOUND`。`ToolExecuteException` → `isError=true` 的 `CallToolResult`（LLM 可自纠正）；其余异常 → `INTERNAL_ERROR` |
+| `ToolDefinitionConverter` | 快照 tool drafts → `McpSchema.Tool`。确定性顺序：预置固定顺序 → 自定义按名称排序。与预置/先前自定义重名的自定义工具跳过（WARN 日志）。inputSchema：预置用枚举内置 JSON Schema；PARAMETERIZED_SQL 从 `ToolParameter` 列表生成（类型映射 String/DateTime→string、Number→number、Boolean→boolean、Array→array；required 列表；default 值） |
+| `PromptDefinitionConverter` | 快照 prompt drafts → `McpSchema.Prompt`（name/description/arguments）；`prompts/get` 复用 `TextRenderer` 渲染（模板引擎），必填参数缺失 → `INVALID_PARAMS` |
+| `ToolResultConverter` | `ToolTestData` → `CallToolResult`（`textContent` + `structuredContent` JSON，`isError=false`）；`ToolExecuteException` → `isError=true` |
+| `SnapshotToolResolver` | 从**激活快照**解析工具（仅 enabled；disabled 工具与未知工具不可区分），构建 scope items 供 `ScopeValidator` 消费 |
+
+**关键设计：**
+
+- **版本隔离在协议层落地**：endpoint 只读 `active_version_id` 指向的快照 content，草稿数据永不对外暴露（US-08 遗留任务 #2）
+- **状态语义**：未知 code 与 DRAFT 不可区分 → 404（不泄露服务存在性）；DISABLED → 503 + JSON-RPC error「Service is disabled」（US-08 遗留任务 #3）
+- **空服务语义**：`initialize` 按快照内容声明 capabilities —— 无启用工具则不声明 `tools`，无启用 Prompt 则不声明 `prompts`（US-08 遗留任务 #4）
+- **Origin DNS-rebinding 防护**（MCP 2025-11-25 安全最佳实践）：loopback origin（localhost / 127.0.0.1 / ::1）始终信任（浏览器端 MCP Client 本地运行）；远程部署需通过 `dati.mcp.allowed-origins`（逗号分隔完整 origin，支持 `MCP_ALLOWED_ORIGINS` 环境变量覆盖）白名单；无 Origin 头不检查
+- **协议版本校验**：除 `initialize` 外，所有请求必须携带 `MCP-Protocol-Version: 2025-11-25`，否则 400
+- **通知处理**：notification 接受但不响应（2025-11-25 规范允许），返回 202
+- **JSON 序列化**：MCP 消息使用 SDK camelCase mapper（`McpProtocolMessageConverter` 注册于 message converters 首位），与 Dev profile 的 SNAKE_CASE API 响应互不影响
+- **认证集成**：`/*/mcp` 路径纳入全局 `AuthInterceptor`，与应用层认证体系（APIKey 等）统一鉴权
 
 ### 2.3 ToolError 枚举
 
@@ -519,6 +553,12 @@ StatementResult.writeFailure(errorMessage)           // WRITE 失败
 | `POST` | `/v1/template/preview` | 渲染模板（TEXT 或 SQL 模式），需指定 `mode` + `template` + `values` |
 | `POST` | `/v1/template/extract` | 提取模板中的所有变量名，返回 `{ variables: [...] }` |
 
+#### MCP Endpoint（协议入口）
+
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| `POST` | `/{code}/mcp` | MCP JSON-RPC over HTTP 入口。支持 `initialize` / `ping` / `tools/list` / `tools/call` / `prompts/list` / `prompts/get`。仅读取激活快照。未知 code / DRAFT → 404；DISABLED → 503 + JSON-RPC error。请求需携带 `MCP-Protocol-Version: 2025-11-25`（initialize 豁免）；浏览器 Origin 需为 loopback 或 `dati.mcp.allowed-origins` 白名单。认证走全局 `AuthInterceptor`（APIKey 等） |
+
 ### 2.6 错误码（McpService 模块）
 
 | Code | 含义 |
@@ -638,7 +678,7 @@ StatementResult.writeFailure(errorMessage)           // WRITE 失败
 - 信任模型：EXECUTE_SQL 的 `sqlPolicy` 是沙箱（LLM 运行时传任意 SQL）；PARAMETERIZED_SQL 的模板由作者配置时编写，运行时仅注入参数值，作者给自己写权限属于自我设限，逻辑冗余。
 - 已从 `ParamSqlConfig` 移除 `sqlPolicy` 字段与 `ParameterizedSqlExecutor` 中的 `policy.validate()` 调用（旧数据中残留的 `sql_policy` JSON 键被 `@JsonIgnoreProperties(ignoreUnknown=true)` 静默丢弃，无需迁移）。
 - 保留的护栏：`ScopeValidator` 表级 scope 校验（基于渲染后 SQL 的表引用）与 `timeout` / `maxRows` 执行限制。
-- 遗留：PARAMETERIZED_SQL 的 MCP annotations（readOnlyHint 等）待协议层实现时从模板静态分析推导。
+- 遗留：PARAMETERIZED_SQL 的 MCP annotations（readOnlyHint 等）未随协议层实现落地（`ToolDefinitionConverter` 仅生成 name/description/title/inputSchema），待后续从模板静态分析推导。
 
 #### SQL 安全分析引擎独立于 MCP 模块
 
@@ -650,6 +690,13 @@ StatementResult.writeFailure(errorMessage)           // WRITE 失败
 
 - `com.dati.common.template` 包是通用模板引擎，不依赖 MCP 模块。
 - 支持 TEXT 和 SQL 两种渲染模式，SQL 模式下对参数值按类型做安全格式化。
+
+#### MCP Endpoint 设计决策
+
+- **Endpoint 是薄适配层**：HTTP 关注点（路由/状态码/头）在 `McpEndpointController`，协议逻辑在 `McpEndpointService` + `McpProtocolHandler`，工具执行复用草稿区同一套 `ToolExecutor` 体系（调试与线上调用同链路）
+- **无状态、无 session**：每个请求独立处理，不签发 `Mcp-Session-Id`（2025-11-25 规范允许）；Streamable HTTP 的 GET/SSE 流式传输留待后续
+- **协议错误与工具错误分离**：JSON-RPC 层错误（未知方法/未知工具/参数缺失）走 `JSONRPCError`；工具执行失败（`ToolExecuteException`）转为 `CallToolResult(isError=true)`，LLM 可读取错误信息自纠正
+- **tools/list 确定性输出**：预置固定顺序 + 自定义按名称排序，便于 Client 端 diff；与预置/先前自定义重名的自定义工具静默跳过（防输入误导）
 
 ---
 
@@ -891,8 +938,14 @@ mcpService.status:
 | `TableMetadataServiceTest` | 单表/批量元数据查询、样本值合并（8 用例） |
 | `SemanticSearchServiceTest` | ES 搜索编排、术语关联展开、数据源分组（4 用例） |
 | `McpServicePublishServiceTest` | 发布/二次发布版本递增、停用/启用、diff（未发布草稿/已修改草稿/审计字段不误报/prebuilt 变更明细）、回滚（内容写回草稿+新快照/目标不存在）、状态机前置条件、停用中发布（16 用例） |
+| `McpEndpointControllerTest` | 端点集成：404/503 状态语义、Origin 校验、协议版本校验、方法分发、错误 envelope（14 用例） |
+| `McpProtocolHandlerTest` | JSON-RPC 分发：initialize capabilities、tools/list、tools/call（未知工具 / 执行异常）、prompts/list、prompts/get、未知方法（11 用例） |
+| `ToolDefinitionConverterTest` | 预置/自定义工具定义、inputSchema 生成、重名跳过、确定性顺序（6 用例） |
+| `PromptDefinitionConverterTest` | prompts/list 定义、prompts/get 渲染、必填参数校验（5 用例） |
+| `ToolResultConverterTest` | 成功 / 错误结果转换（4 用例） |
+| `SnapshotToolResolverTest` | 快照内工具解析、enabled 过滤、scope items 构建（5 用例） |
 
-**后端总计：608 测试，0 失败。**
+**后端总计：751 测试，0 失败。**
 
 ---
 
@@ -908,7 +961,7 @@ mcpService.status:
 | US-5.5 | 模板引擎基础设施 | ✅ 已实现 | Handlebars 风格 Parser + Text/SQL Renderer |
 | US-06 | 管理服务 Token | ❌ V1 暂缓 | 统一在应用层认证，MCP 模块不单独设计 |
 | US-07 | 调试 Tool 调用 | ✅ 已实现 | 工具测试弹窗、4 种 Executor、scope 校验、异常处理、前端结果渲染 |
-| US-08 | 发布与版本管理 | ✅ 已实现 | 草稿-快照隔离、发布/发布变更、停用/启用、版本历史与回滚、草稿 vs 线上 diff。**遗留**：MCP Endpoint（JSON-RPC/SSE）未实现，见 US-08「遗留任务」 |
+| US-08 | 发布与版本管理 | ✅ 已实现 | 草稿-快照隔离、发布/发布变更、停用/启用、版本历史与回滚、草稿 vs 线上 diff。**MCP Endpoint 已实现**（JSON-RPC over HTTP，见 2.2 协议层），US-08 遗留任务 #2/#3/#4 已落地；遗留：Streamable HTTP 的 GET/SSE 流式传输与 session 管理 |
 | US-09 | 查看服务调用日志 | ❌ 未实现 | 无 `mcp_audit_log` 表和对应接口 |
 | US-10 | 删除 MCP 服务 | ✅ 已实现 | 事务级联删除（快照/数据范围/预置工具/自定义工具/Prompt），已发布服务可直接删除；前端与全站删除操作一致（`ElMessageBox.confirm` 简单确认）。**遗留**：「仅管理员可删除」待角色体系统一实现 |
 
