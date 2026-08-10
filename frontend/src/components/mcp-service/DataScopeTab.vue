@@ -10,7 +10,6 @@ const { t } = useI18n();
 
 const props = defineProps<{
   serviceId: string;
-  serviceStatus?: string;
 }>();
 
 const emit = defineEmits<{ (e: "refresh"): void }>();
@@ -88,25 +87,12 @@ onMounted(() => {
 
 <template>
   <div v-loading="loading" class="flex flex-col gap-4">
-    <!-- Header -->
-    <div class="flex items-start justify-between gap-4">
-      <div>
-        <h2 class="text-base font-semibold text-[var(--ep-text-color-primary)]">{{ t("mcpService.tab.dataScope") }}</h2>
-        <span class="text-xs text-[var(--ep-text-color-secondary)]">{{ t("mcpService.dataScope.subtitle") }}</span>
-      </div>
+    <!-- Action Header Line -->
+    <div class="flex items-center justify-end pb-2 border-b border-[var(--ep-border-color-lighter)]">
       <el-button type="primary" :icon="Plus" @click="addDialogVisible = true">
         {{ t("mcpService.dataScope.addScope") }}
       </el-button>
     </div>
-
-    <!-- Published hint -->
-    <el-alert
-      v-if="serviceStatus === 'PUBLISHED'"
-      :title="t('mcpService.dataScope.publishedHint')"
-      type="warning"
-      :closable="false"
-      show-icon
-    />
 
     <!-- Empty -->
     <el-empty v-if="items.length === 0" :description="t('mcpService.dataScope.empty')" />

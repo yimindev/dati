@@ -8,7 +8,6 @@ import { onMounted, ref, computed, nextTick } from "vue";
 import { useRoute } from "vue-router";
 import { ElMessage } from "element-plus";
 import { useI18n } from "vue-i18n";
-import { DocumentCopy, Connection } from "@element-plus/icons-vue";
 import type { SubjectVO, UpdateSubjectRequest } from "~/api/subject";
 import { getSubject, updateSubject } from "~/api/subject";
 import { formatDateTime } from "~/composables";
@@ -100,16 +99,6 @@ const handleSave = async () => {
   }
 };
 
-const handleCopy = async (text?: string) => {
-  if (!text) return;
-  try {
-    await navigator.clipboard.writeText(text);
-    ElMessage.success(t("mcpService.copySuccess"));
-  } catch {
-    ElMessage.error(t("mcpService.copyFailed"));
-  }
-};
-
 onMounted(() => {
   loadSubject();
 });
@@ -156,36 +145,12 @@ onMounted(() => {
     <main class="main-content flex-1 min-w-0">
       <!-- Tab 1: Basic Info (Single Panel Container) -->
       <div v-if="activeTab === 'basic'" class="panel p-6 shadow-sm flex flex-col gap-6 rounded-xl border border-[var(--ep-border-color-lighter)] bg-[var(--ep-bg-color)]">
-        <!-- Panel Header -->
-        <div class="flex items-center justify-between border-b border-[var(--ep-border-color-lighter)] pb-4">
-          <div>
-            <h2 class="text-base font-semibold text-[var(--ep-text-color-primary)] m-0">
-              {{ t("subject.basicInfo") }}
-            </h2>
-            <span class="text-xs text-[var(--ep-text-color-secondary)]">查看与修改数据主题的基础属性及关联配置</span>
-          </div>
-          <el-button
-            type="primary"
-            :loading="saving"
-            :disabled="!isDirty"
-            @click="handleSave"
-          >
-            {{ t("common.save") }}
-          </el-button>
-        </div>
-
         <!-- Form Fields -->
         <el-form label-position="top" class="subject-form flex flex-col gap-5">
-          <!-- Readonly ID Row -->
-          <div class="flex items-center justify-between p-3 rounded-lg bg-[var(--ep-fill-color-lighter)] text-xs border border-[var(--ep-border-color-lighter)]">
-            <div class="flex items-center gap-2">
-              <span class="text-[var(--ep-text-color-secondary)] font-medium">主题 ID</span>
-              <span class="font-mono text-xs text-[var(--ep-text-color-primary)]">{{ subject?.id || '-' }}</span>
-            </div>
-            <el-button v-if="subject?.id" link :icon="DocumentCopy" class="!p-0 !h-auto text-[var(--ep-text-color-secondary)] hover:text-[var(--ep-color-primary)]" @click="handleCopy(subject.id)">
-              {{ t('common.copy') }}
-            </el-button>
-          </div>
+          <!-- Static Readonly ID Field -->
+          <el-form-item label="ID" class="!mb-0">
+            <span class="font-mono text-sm text-[var(--ep-text-color-primary)] font-medium select-all">{{ subject?.id || '-' }}</span>
+          </el-form-item>
 
           <el-form-item :label="t('common.name')" required class="!mb-0">
             <el-input v-model="formData.name" :placeholder="t('common.placeholder.name')" />
@@ -226,19 +191,29 @@ onMounted(() => {
             />
           </el-form-item>
 
+          <!-- Static Readonly Datasource Field -->
           <el-form-item :label="t('subject.datasource')" class="!mb-0">
-            <div class="flex items-center gap-2 p-3 rounded-lg bg-[var(--ep-fill-color-lighter)] text-xs border border-[var(--ep-border-color-lighter)] w-full">
-              <el-icon class="text-[var(--ep-color-primary)]"><Connection /></el-icon>
-              <span class="font-semibold text-[var(--ep-text-color-primary)]">{{ subject?.datasource_name || subject?.datasource_id || '-' }}</span>
-              <span v-if="subject?.datasource_id" class="font-mono text-[var(--ep-text-color-secondary)] text-[11px] ml-auto">ID: {{ subject.datasource_id }}</span>
-            </div>
+            <span class="text-sm text-[var(--ep-text-color-primary)] font-medium">
+              {{ subject?.datasource_name || subject?.datasource_id || '-' }}
+            </span>
           </el-form-item>
         </el-form>
 
-        <!-- Panel Footer -->
-        <div class="flex items-center justify-between border-t border-[var(--ep-border-color-lighter)] pt-4 text-xs text-[var(--ep-text-color-secondary)]">
-          <span>最后修改于：{{ subject?.updated_at ? formatDateTime(subject.updated_at) : '-' }}</span>
-          <span v-if="isDirty" class="text-amber-500 font-medium">存在未保存的修改</span>
+        <!-- Panel Footer Action Bar -->
+        <div class="flex items-center justify-between border-t border-[var(--ep-border-color-lighter)] pt-4">
+          <el-button
+            type="primary"
+            :loading="saving"
+            :disabled="!isDirty"
+            @click="handleSave"
+          >
+            {{ t("common.save") }}
+          </el-button>
+
+          <div class="flex items-center gap-3 text-xs text-[var(--ep-text-color-secondary)]">
+            <span v-if="isDirty" class="text-amber-500 font-medium">{{ t("common.unsavedChanges") }}</span>
+            <span>{{ t("common.lastModifiedAt", { time: subject?.updated_at ? formatDateTime(subject.updated_at) : '-' }) }}</span>
+          </div>
         </div>
       </div>
 

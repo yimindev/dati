@@ -65,6 +65,8 @@ export default {
     added: "新增",
     deleted: "删除",
     rollback: "回滚",
+    unsavedChanges: "存在未保存的修改",
+    lastModifiedAt: "最后修改于：{time}",
 
     // 通用字段
     id: "ID",
@@ -361,7 +363,6 @@ export default {
     toolCount: "工具数",
     serviceList: "服务列表",
     overview: "服务概览",
-    basicSubtitle: "名称、描述与访问地址",
     dialogNote: "创建时可配置数据范围；创建后可在详情中管理工具与发布策略。",
     create: {
       dataScopeSection: "数据范围",
@@ -396,14 +397,13 @@ export default {
     moreChanges: "等 {count} 项变更",
     publishDisabledConfirmDesc: "服务当前处于停用状态，发布后将更新线上快照，但服务仍保持停用，需手动启用才对外服务。",
     publishChangesConfirmDesc: "发布变更后，系统将打包最新的草稿配置覆盖线上快照并生成新的版本号，外部 MCP Client 会立刻访问到最新能力。",
-    releaseNote: "发布备注 / Release Notes (可选)",
+    releaseNote: "发布说明 / Release Notes",
     releaseNotePlaceholder: "请输入本次发布的变更说明（如：更新 SQL 工具限制及 Prompt）",
     confirmPublish: "确认发布",
     hasUnpublishedChanges: "检测到有未发布的草稿变更",
     hasUnpublishedChangesDesc: "线上接口正稳定运行在 v{version} 版本。您在草稿中对 Tool / Prompt / Scope 做的修改尚未在线上生效。点击右上角【发布变更】即可更新覆盖线上版本。",
     disableConfirmTitle: "停用服务确认",
     disableConfirmMsg: "停用后，外部 MCP Client 将无法继续请求此 Endpoint，确定停用？",
-    versionHistory: "版本快照历史",
     versionNumber: "版本",
     activeTag: "当前线上",
     rollbackConfirmTitle: "回滚版本确认",
@@ -425,8 +425,6 @@ export default {
       addDialogTitle: "添加数据范围",
       subtitle: "为当前 MCP 服务选择可访问的数据源和主题",
       empty: "暂无数据范围配置",
-
-      publishedHint: "已发布服务的数据范围修改会保存到草稿副本，重新发布后生效",
       deleteConfirm: "确定要移除该项吗？",
       searchDataSource: "搜索数据源...",
       searchSubject: "搜索主题...",
@@ -440,8 +438,6 @@ export default {
       noSelection: "未选择任何项",
     },
     tool: {
-      title: "工具管理 (Tools)",
-      subtitle: "管理该 MCP 服务向外暴露的工具，Agent 将调用这些工具执行数据操作。",
       prebuiltTitle: "预置工具",
       customTitle: "自定义工具",
       addCustom: "新建自定义工具",
@@ -503,8 +499,6 @@ export default {
       },
     },
     prompt: {
-      title: "Prompt 管理",
-      subtitle: "管理 MCP 服务的 Prompt 模板，Agent 可通过 prompts/get 获取渲染后的上下文。",
       addPrompt: "新建 Prompt",
       editPrompt: "编辑 Prompt",
       searchPlaceholder: "搜索名称或描述...",

@@ -38,30 +38,25 @@ onMounted(loadTools);
 
 <template>
   <div v-loading="loading" class="flex flex-col gap-4">
-    <div class="tab-header">
-      <h2 class="tab-title">{{ t("mcpService.tool.title") }}</h2>
-      <p class="tab-subtitle">{{ t("mcpService.tool.subtitle") }}</p>
-    </div>
-
     <!-- Sub Tabs -->
-    <div class="sub-tabs">
-      <button
-        class="sub-tab"
-        :class="{ active: activeSubTab === 'prebuilt' }"
-        @click="activeSubTab = 'prebuilt'"
-      >
-        {{ t("mcpService.tool.prebuiltTitle") }}
-        <span class="count">{{ prebuiltTools.length }}</span>
-      </button>
-      <button
-        class="sub-tab"
-        :class="{ active: activeSubTab === 'custom' }"
-        @click="activeSubTab = 'custom'"
-      >
-        {{ t("mcpService.tool.customTitle") }}
-        <span class="count">{{ customTools.length }}</span>
-      </button>
-    </div>
+    <div class="sub-tabs flex items-center gap-6 w-full">
+        <button
+          class="sub-tab"
+          :class="{ active: activeSubTab === 'prebuilt' }"
+          @click="activeSubTab = 'prebuilt'"
+        >
+          {{ t("mcpService.tool.prebuiltTitle") }}
+          <span class="count">{{ prebuiltTools.length }}</span>
+        </button>
+        <button
+          class="sub-tab"
+          :class="{ active: activeSubTab === 'custom' }"
+          @click="activeSubTab = 'custom'"
+        >
+          {{ t("mcpService.tool.customTitle") }}
+          <span class="count">{{ customTools.length }}</span>
+        </button>
+      </div>
 
     <PrebuiltToolList
       v-if="activeSubTab === 'prebuilt'"
@@ -80,27 +75,16 @@ onMounted(loadTools);
 </template>
 
 <style scoped>
-.tab-header h2 {
-  margin: 0;
-  font-size: 16px;
-  font-weight: 650;
-  color: var(--ep-text-color-primary);
-}
-
-.tab-subtitle {
-  margin: 4px 0 0;
-  font-size: 13px;
-  color: var(--ep-text-color-secondary);
-}
-
 .sub-tabs {
   display: flex;
   gap: 24px;
+  width: 100%;
   border-bottom: 1px solid var(--ep-border-color-lighter);
 }
 
 .sub-tab {
-  padding: 0 4px 12px;
+  padding: 0 4px 10px;
+  margin-bottom: -1px;
   font-size: 14px;
   font-weight: 500;
   color: var(--ep-text-color-secondary);

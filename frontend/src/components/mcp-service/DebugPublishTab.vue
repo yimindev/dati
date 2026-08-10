@@ -87,23 +87,7 @@ watch(
 </script>
 
 <template>
-  <div v-loading="loading" class="debug-publish-tab flex flex-col gap-5">
-    <!-- Header -->
-    <div class="flex items-center justify-between border-b border-[var(--ep-border-color-lighter)] pb-4">
-      <div>
-        <h2 class="text-base font-semibold text-[var(--ep-text-color-primary)] m-0">
-          {{ t("mcpService.versionHistory") }}
-        </h2>
-        <span class="text-xs text-[var(--ep-text-color-secondary)]">记录每次发布的版本快照，支持一键回退至指定历史版本</span>
-      </div>
-      <div v-if="service?.active_version_number" class="flex items-center gap-2">
-        <span class="text-xs text-[var(--ep-text-color-secondary)]">当前运行版本：</span>
-        <span class="text-xs font-mono font-semibold px-2 py-0.5 rounded bg-[var(--ep-color-primary-light-9)] text-[var(--ep-color-primary)]">
-          v{{ service.active_version_number }}
-        </span>
-      </div>
-    </div>
-
+  <div v-loading="loading" class="debug-publish-tab flex flex-col gap-4">
     <!-- Snapshot History Table -->
     <el-table
       :data="snapshots"

@@ -390,53 +390,43 @@ const handleCopy = async (text: string | number) => {
       <div v-if="activeTab === 'basic'" class="grid grid-cols-1 lg:grid-cols-12 gap-6 w-full">
         <!-- Left Card: Basic Settings Form (7 cols out of 12) -->
         <section class="panel p-6 lg:col-span-7 flex flex-col justify-between shadow-sm border border-[var(--ep-border-color-lighter)] rounded-xl bg-[var(--ep-bg-color)]">
-          <div class="flex flex-col gap-6">
-            <div class="panel-heading flex items-center justify-between gap-3 border-b border-[var(--ep-border-color-lighter)] pb-4">
-              <div>
-                <h2 class="text-base font-semibold text-[var(--ep-text-color-primary)] m-0">服务基础属性</h2>
-                <span class="text-xs text-[var(--ep-text-color-secondary)]">设置 MCP 服务的显示名称与详细说明</span>
-              </div>
-              <el-button type="primary" :loading="saving" :disabled="!isDirty" @click="handleSave">
-                {{ t("common.save") }}
-              </el-button>
+          <el-form label-position="top" class="detail-form flex flex-col gap-4">
+            <el-form-item :label="t('common.name')" required class="!mb-0">
+              <el-input
+                v-model="formData.name"
+                :placeholder="t('common.placeholder.name')"
+                maxlength="100"
+                show-word-limit
+              />
+            </el-form-item>
+            <el-form-item :label="t('common.description')" class="!mb-0">
+              <el-input
+                v-model="formData.description"
+                type="textarea"
+                :rows="6"
+                maxlength="500"
+                show-word-limit
+                :placeholder="t('common.placeholder.description')"
+              />
+            </el-form-item>
+          </el-form>
+
+          <div class="mt-6 pt-4 border-t border-[var(--ep-border-color-lighter)] flex items-center justify-between">
+            <el-button type="primary" :loading="saving" :disabled="!isDirty" @click="handleSave">
+              {{ t("common.save") }}
+            </el-button>
+
+            <div class="flex items-center gap-3 text-xs text-[var(--ep-text-color-secondary)]">
+              <span v-if="isDirty" class="text-amber-500 font-medium flex items-center gap-1">
+                <el-icon><InfoFilled /></el-icon> {{ t("common.unsavedChanges") }}
+              </span>
+              <span>{{ t("common.lastModifiedAt", { time: service?.updated_at ? formatDateTime(service.updated_at) : '-' }) }}</span>
             </div>
-
-            <el-form label-position="top" class="detail-form flex flex-col gap-4">
-              <el-form-item :label="t('common.name')" required class="!mb-0">
-                <el-input
-                  v-model="formData.name"
-                  :placeholder="t('common.placeholder.name')"
-                  maxlength="100"
-                  show-word-limit
-                />
-              </el-form-item>
-              <el-form-item :label="t('common.description')" class="!mb-0">
-                <el-input
-                  v-model="formData.description"
-                  type="textarea"
-                  :rows="6"
-                  maxlength="500"
-                  show-word-limit
-                  :placeholder="t('common.placeholder.description')"
-                />
-              </el-form-item>
-            </el-form>
-          </div>
-
-          <div class="mt-6 pt-4 border-t border-[var(--ep-border-color-lighter)] flex items-center justify-between text-xs text-[var(--ep-text-color-secondary)]">
-            <span>最后修改于：{{ service?.updated_at ? formatDateTime(service.updated_at) : '-' }}</span>
-            <span v-if="isDirty" class="text-amber-500 font-medium flex items-center gap-1">
-              <el-icon><InfoFilled /></el-icon> 存在未保存的修改
-            </span>
           </div>
         </section>
 
         <!-- Right Card: Technical Access & Metadata Card (5 cols out of 12) -->
         <aside class="panel p-6 lg:col-span-5 flex flex-col gap-5 shadow-sm border border-[var(--ep-border-color-lighter)] rounded-xl bg-[var(--ep-bg-color)]">
-          <div class="panel-heading border-b border-[var(--ep-border-color-lighter)] pb-4">
-            <h2 class="text-base font-semibold text-[var(--ep-text-color-primary)] m-0">MCP 接入与元数据</h2>
-            <span class="text-xs text-[var(--ep-text-color-secondary)]">MCP 协议客户端调用的唯一接入终点与标识</span>
-          </div>
 
           <!-- MCP Endpoint Box -->
           <div class="endpoint-card p-4 rounded-lg bg-[var(--ep-fill-color-lighter)] border border-[var(--ep-border-color-lighter)] flex flex-col gap-2.5">
@@ -492,7 +482,7 @@ const handleCopy = async (text: string | number) => {
       </div>
 
       <div v-else-if="activeTab === 'scope'" class="scope-panel p-[20px] shadow-sm">
-        <DataScopeTab :service-id="serviceId" :service-status="service?.status" @refresh="refreshAll" />
+        <DataScopeTab :service-id="serviceId" @refresh="refreshAll" />
       </div>
       <div v-else-if="activeTab === 'tools'" class="scope-panel p-[20px] shadow-sm">
         <ToolsTab :service-id="serviceId" @refresh="refreshAll" />
