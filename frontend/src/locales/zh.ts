@@ -421,7 +421,7 @@ export default {
       logs: "调用日志",
     },
     createButton: "新建服务",
-    searchPlaceholder: "输入名称或 ID",
+    searchPlaceholder: "输入名称或 Code",
     deleteConfirmMessage: "确定要删除 MCP 服务「{name}」吗？",
     deleteSubtitle: "删除后 MCP Client 将无法再调用该服务，且关联数据将一并清除",
     deleteSuccess: "服务已删除",

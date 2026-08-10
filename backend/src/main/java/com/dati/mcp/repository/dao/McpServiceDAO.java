@@ -17,18 +17,27 @@ public interface McpServiceDAO extends JpaRepository<McpServicePO, String> {
 
     Optional<McpServicePO> findByCode(String code);
 
-    Page<McpServicePO> findAllByNameContainingOrId(String name, String id, Pageable pageable);
+    @Query("SELECT m FROM McpServicePO m WHERE LOWER(m.name) LIKE LOWER(CONCAT('%', :name, '%')) OR LOWER(m.code) LIKE LOWER(CONCAT('%', :name, '%')) OR m.id = :id")
+    Page<McpServicePO> findAllByNameContainingOrId(@Param("name") String name, @Param("id") String id, Pageable pageable);
 
     Page<McpServicePO> findAllByStatus(McpServiceStatus status, Pageable pageable);
 
-    @Query("SELECT m FROM McpServicePO m WHERE (m.name LIKE %:keyword% AND m.status = :status) OR (m.id = :keyword AND m.status = :status)")
+    @Query("""
+            SELECT m FROM McpServicePO m
+            WHERE ((LOWER(m.name) LIKE LOWER(CONCAT('%', :keyword, '%'))
+                   OR LOWER(m.code) LIKE LOWER(CONCAT('%', :keyword, '%'))
+                   OR m.id = :keyword)
+                  AND m.status = :status)
+            """)
     Page<McpServicePO> searchByKeywordAndStatus(@Param("keyword") String keyword, @Param("status") McpServiceStatus status, Pageable pageable);
 
     boolean existsByCode(String code);
 
     @Query("""
             SELECT m FROM McpServicePO m
-            WHERE (m.name LIKE %:keyword% OR m.id = :keyword)
+            WHERE (LOWER(m.name) LIKE LOWER(CONCAT('%', :keyword, '%'))
+                   OR LOWER(m.code) LIKE LOWER(CONCAT('%', :keyword, '%'))
+                   OR m.id = :keyword)
               AND (m.createdBy = :userId
                    OR EXISTS (SELECT 1 FROM ResourceAclPO a
                               WHERE a.resourceType = 'MCP_SERVICE'
@@ -58,8 +67,10 @@ public interface McpServiceDAO extends JpaRepository<McpServicePO, String> {
 
     @Query("""
             SELECT m FROM McpServicePO m
-            WHERE ((m.name LIKE %:keyword% AND m.status = :status)
-                   OR (m.id = :keyword AND m.status = :status))
+            WHERE ((LOWER(m.name) LIKE LOWER(CONCAT('%', :keyword, '%'))
+                   OR LOWER(m.code) LIKE LOWER(CONCAT('%', :keyword, '%'))
+                   OR m.id = :keyword)
+                  AND m.status = :status)
               AND (m.createdBy = :userId
                    OR EXISTS (SELECT 1 FROM ResourceAclPO a
                               WHERE a.resourceType = 'MCP_SERVICE'

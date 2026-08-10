@@ -421,7 +421,7 @@ export default {
       logs: "Call Logs",
     },
     createButton: "New Service",
-    searchPlaceholder: "Enter name or ID",
+    searchPlaceholder: "Enter name or Code",
     deleteConfirmMessage: 'Are you sure you want to delete MCP service "{name}"?',
     deleteSubtitle: "MCP clients will no longer be able to call this service, and associated data will be removed",
     deleteSuccess: "Service deleted",
