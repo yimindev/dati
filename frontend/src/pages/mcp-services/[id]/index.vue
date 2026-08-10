@@ -9,10 +9,9 @@ import { useRoute } from "vue-router";
 import { ElMessage, ElMessageBox } from "element-plus";
 import { useI18n } from "vue-i18n";
 import {
-  Clock,
-  DataAnalysis,
-  Document,
   DocumentCopy,
+  InfoFilled,
+  Link,
   SwitchButton,
   VideoPlay,
 } from "@element-plus/icons-vue";
@@ -25,6 +24,7 @@ import {
   publishMcpService,
   updateMcpService,
 } from "~/api/mcp-service";
+import { listPrompts } from "~/api/mcp-prompt";
 import DataScopeTab from "~/components/mcp-service/DataScopeTab.vue";
 import DebugPublishTab from "~/components/mcp-service/DebugPublishTab.vue";
 import DiffSummaryList from "~/components/mcp-service/DiffSummaryList.vue";
@@ -52,28 +52,17 @@ const formData = ref({
 
 const activeTab = ref("basic");
 
-const tabs = [
-  { key: "basic", label: t("mcpService.tab.basic"), icon: Document },
-  { key: "scope", label: t("mcpService.tab.dataScope"), icon: DataAnalysis },
-  { key: "tools", label: t("mcpService.tab.tools"), iconClass: "icon-[codicon--developer-tools]" },
-  { key: "prompts", label: t("mcpService.tab.prompts"), iconClass: "icon-[fluent--prompt-16-regular]" },
-  { key: "version", label: t("mcpService.tab.version"), icon: Clock },
-];
+const promptCount = ref(0);
 
-const statusType = (status: string) => {
-  switch (status) {
-    case "DRAFT":
-      return "info";
-    case "PUBLISHED":
-      return "success";
-    case "DISABLED":
-      return "danger";
-    default:
-      return "info";
-  }
-};
+const tabs = computed(() => [
+  { key: "basic", label: t("mcpService.tab.basic") },
+  { key: "scope", label: t("mcpService.tab.dataScope") },
+  { key: "tools", label: t("mcpService.tab.tools"), badge: service.value?.tool_count ?? 0 },
+  { key: "prompts", label: t("mcpService.tab.prompts"), badge: promptCount.value },
+  { key: "version", label: t("mcpService.tab.version") },
+]);
 
-const statusLabel = (status: string) => {
+const statusLabel = (status?: string) => {
   switch (status) {
     case "DRAFT":
       return t("mcpService.status.draft");
@@ -82,7 +71,7 @@ const statusLabel = (status: string) => {
     case "DISABLED":
       return t("mcpService.status.disabled");
     default:
-      return status;
+      return status || "";
   }
 };
 
@@ -131,34 +120,6 @@ const diffSummary = computed(() => {
   return items;
 });
 
-const serviceMeta = computed(() => [
-  {
-    label: t("common.id"),
-    value: service.value?.id || "",
-    copyable: true,
-  },
-  {
-    label: t("mcpService.serviceCode"),
-    value: service.value?.code || t("mcpService.emptyValue"),
-    copyable: true,
-  },
-  {
-    label: t("mcpService.toolCount"),
-    value: service.value?.tool_count ?? 0,
-  },
-  {
-    label: t("mcpService.endpointPath"),
-    value: service.value?.endpoint_path || t("mcpService.notPublished"),
-    copyable: true,
-  },
-  {
-    label: t("common.updatedAt"),
-    value: service.value?.updated_at
-      ? formatDateTime(service.value.updated_at)
-      : t("mcpService.emptyValue"),
-  },
-]);
-
 const loadService = async () => {
   try {
     loading.value = true;
@@ -182,8 +143,17 @@ const loadDiff = async () => {
   }
 };
 
+const loadPrompts = async () => {
+  try {
+    const list = await listPrompts(serviceId);
+    promptCount.value = list.length;
+  } catch (error) {
+    console.error("Failed to load prompts count:", error);
+  }
+};
+
 const refreshAll = async () => {
-  await Promise.all([loadService(), loadDiff()]);
+  await Promise.all([loadService(), loadDiff(), loadPrompts()]);
 };
 
 // ── 发布 / 停用 / 启用（页面级状态操作）──
@@ -286,28 +256,43 @@ const handleCopy = async (text: string | number) => {
     ElMessage.error(t("mcpService.copyFailed"));
   }
 };
-
-const handleCopyEndpoint = async () => {
-  await handleCopy(endpointUrl.value);
-};
 </script>
 
 <template>
-  <div v-loading="loading" class="mcp-detail-page">
-    <div class="detail-header flex items-center justify-between gap-4">
-      <div class="flex items-center gap-3">
+  <div v-loading="loading" class="mcp-detail-page flex flex-col gap-5 p-6">
+    <!-- Top Navigation Breadcrumbs & Action Bar -->
+    <div class="detail-header flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div class="flex items-center gap-3 flex-wrap">
         <el-breadcrumb separator="/">
           <el-breadcrumb-item :to="{ path: '/mcp-services' }">
             {{ t("mcpService.title") }}
           </el-breadcrumb-item>
           <el-breadcrumb-item>{{ service?.name || serviceId }}</el-breadcrumb-item>
         </el-breadcrumb>
-        <el-tag v-if="service" :type="statusType(service.status)" size="small" effect="plain">
+
+        <span
+          v-if="service"
+          class="status-dot-badge inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium transition-all"
+          :class="{
+            'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/50': service.status === 'PUBLISHED',
+            'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400 border border-amber-200 dark:border-amber-800/50': service.status === 'DISABLED',
+            'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700': service.status === 'DRAFT',
+          }"
+        >
+          <span
+            class="w-1.5 h-1.5 rounded-full"
+            :class="{
+              'bg-emerald-500 animate-pulse': service.status === 'PUBLISHED',
+              'bg-amber-500': service.status === 'DISABLED',
+              'bg-slate-400': service.status === 'DRAFT',
+            }"
+          />
           {{ statusLabel(service.status) }}
-        </el-tag>
-        <el-tag v-if="service?.active_version_number" type="primary" size="small" effect="light" class="font-mono">
+        </span>
+
+        <span v-if="service?.active_version_number" class="text-xs font-mono text-[var(--ep-text-color-secondary)] bg-[var(--ep-fill-color-light)] px-2 py-0.5 rounded-md border border-[var(--ep-border-color-lighter)]">
           v{{ service.active_version_number }}
-        </el-tag>
+        </span>
       </div>
 
       <div class="detail-actions flex items-center gap-3">
@@ -372,38 +357,52 @@ const handleCopyEndpoint = async () => {
       </div>
     </div>
 
-    <div class="detail-layout">
-      <aside class="detail-nav">
-        <el-menu
-          :default-active="activeTab"
-          class="detail-menu border-r-0"
-          @select="(key: string) => (activeTab = key)"
+    <!-- Top Horizontal Underline Tabs -->
+    <div class="border-b border-[var(--ep-border-color-lighter)]">
+      <nav class="flex items-center gap-6 -mb-px overflow-x-auto">
+        <button
+          v-for="tab in tabs"
+          :key="tab.key"
+          type="button"
+          class="py-2.5 px-1 relative text-sm font-medium transition-colors flex items-center gap-2 cursor-pointer whitespace-nowrap border-b-2 bg-transparent"
+          :class="activeTab === tab.key
+            ? 'text-[var(--ep-color-primary)] border-[var(--ep-color-primary)] font-semibold'
+            : 'text-[var(--ep-text-color-secondary)] border-transparent hover:text-[var(--ep-text-color-primary)] hover:border-[var(--ep-border-color)]'"
+          @click="activeTab = tab.key"
         >
-          <el-menu-item v-for="tab in tabs" :key="tab.key" :index="tab.key">
-            <el-icon>
-              <span v-if="tab.iconClass" :class="tab.iconClass"></span>
-              <component v-else :is="tab.icon" />
-            </el-icon>
-            <span> {{ tab.label }} </span>
-          </el-menu-item>
-        </el-menu>
-      </aside>
+          <span>{{ tab.label }}</span>
+          <span
+            v-if="tab.badge !== undefined"
+            class="text-[11px] px-2 py-0.5 rounded-full font-mono transition-colors font-semibold"
+            :class="activeTab === tab.key
+              ? 'bg-[var(--ep-color-primary-light-9)] text-[var(--ep-color-primary)]'
+              : 'bg-[var(--ep-fill-color-light)] text-[var(--ep-text-color-secondary)]'"
+          >
+            {{ tab.badge }}
+          </span>
+        </button>
+      </nav>
+    </div>
 
-      <main class="detail-main min-w-0">
-        <div v-if="activeTab === 'basic'" class="basic-grid">
-          <section class="panel min-w-0 p-[18px]">
-            <div class="panel-heading flex items-start justify-between gap-3 mb-[18px]">
+    <!-- Tab Content Body -->
+    <main class="detail-main min-w-0 flex-1">
+      <!-- Full-Width Responsive Dual-Card Grid Layout (7:5 Split) -->
+      <div v-if="activeTab === 'basic'" class="grid grid-cols-1 lg:grid-cols-12 gap-6 w-full">
+        <!-- Left Card: Basic Settings Form (7 cols out of 12) -->
+        <section class="panel p-6 lg:col-span-7 flex flex-col justify-between shadow-sm border border-[var(--ep-border-color-lighter)] rounded-xl bg-[var(--ep-bg-color)]">
+          <div class="flex flex-col gap-6">
+            <div class="panel-heading flex items-center justify-between gap-3 border-b border-[var(--ep-border-color-lighter)] pb-4">
               <div>
-                <h2>{{ t("mcpService.tab.basic") }}</h2>
-                <span>{{ t("mcpService.basicSubtitle") }}</span>
+                <h2 class="text-base font-semibold text-[var(--ep-text-color-primary)] m-0">服务基础属性</h2>
+                <span class="text-xs text-[var(--ep-text-color-secondary)]">设置 MCP 服务的显示名称与详细说明</span>
               </div>
               <el-button type="primary" :loading="saving" :disabled="!isDirty" @click="handleSave">
                 {{ t("common.save") }}
               </el-button>
             </div>
 
-            <el-form label-position="top" class="detail-form">
-              <el-form-item :label="t('common.name')" required>
+            <el-form label-position="top" class="detail-form flex flex-col gap-4">
+              <el-form-item :label="t('common.name')" required class="!mb-0">
                 <el-input
                   v-model="formData.name"
                   :placeholder="t('common.placeholder.name')"
@@ -411,79 +410,104 @@ const handleCopyEndpoint = async () => {
                   show-word-limit
                 />
               </el-form-item>
-              <el-form-item :label="t('common.description')">
+              <el-form-item :label="t('common.description')" class="!mb-0">
                 <el-input
                   v-model="formData.description"
                   type="textarea"
-                  :rows="5"
+                  :rows="6"
                   maxlength="500"
                   show-word-limit
                   :placeholder="t('common.placeholder.description')"
                 />
               </el-form-item>
-              <el-form-item
-                v-if="service?.status === 'PUBLISHED'"
-                :label="t('mcpService.endpointUrl')"
-              >
-                <el-input :model-value="endpointUrl" readonly class="font-mono">
-                  <template #append>
-                    <el-tooltip :content="t('common.copy')" placement="top">
-                      <el-button :icon="DocumentCopy" @click="handleCopyEndpoint" />
-                    </el-tooltip>
-                  </template>
-                </el-input>
-              </el-form-item>
             </el-form>
-          </section>
+          </div>
 
-          <aside class="panel min-w-0 p-[18px]">
-            <div class="panel-heading compact flex items-center justify-between gap-3 mb-[18px]">
-              <div>
-                <h2>{{ t("mcpService.overview") }}</h2>
-                <span>{{ t("mcpService.status.label") }}</span>
-              </div>
-              <el-tag v-if="service" :type="statusType(service.status)" effect="plain">
-                {{ statusLabel(service.status) }}
-              </el-tag>
+          <div class="mt-6 pt-4 border-t border-[var(--ep-border-color-lighter)] flex items-center justify-between text-xs text-[var(--ep-text-color-secondary)]">
+            <span>最后修改于：{{ service?.updated_at ? formatDateTime(service.updated_at) : '-' }}</span>
+            <span v-if="isDirty" class="text-amber-500 font-medium flex items-center gap-1">
+              <el-icon><InfoFilled /></el-icon> 存在未保存的修改
+            </span>
+          </div>
+        </section>
+
+        <!-- Right Card: Technical Access & Metadata Card (5 cols out of 12) -->
+        <aside class="panel p-6 lg:col-span-5 flex flex-col gap-5 shadow-sm border border-[var(--ep-border-color-lighter)] rounded-xl bg-[var(--ep-bg-color)]">
+          <div class="panel-heading border-b border-[var(--ep-border-color-lighter)] pb-4">
+            <h2 class="text-base font-semibold text-[var(--ep-text-color-primary)] m-0">MCP 接入与元数据</h2>
+            <span class="text-xs text-[var(--ep-text-color-secondary)]">MCP 协议客户端调用的唯一接入终点与标识</span>
+          </div>
+
+          <!-- MCP Endpoint Box -->
+          <div class="endpoint-card p-4 rounded-lg bg-[var(--ep-fill-color-lighter)] border border-[var(--ep-border-color-lighter)] flex flex-col gap-2.5">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-semibold text-[var(--ep-text-color-primary)] flex items-center gap-1.5">
+                <el-icon class="text-[var(--ep-color-primary)]"><Link /></el-icon> {{ t("mcpService.endpointPath") }}
+              </span>
+              <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-[var(--ep-color-primary-light-9)] text-[var(--ep-color-primary)] font-medium">
+                Streamable HTTP
+              </span>
             </div>
 
-            <div class="meta-list flex flex-col gap-3">
-              <div v-for="item in serviceMeta" :key="item.label" class="meta-item flex gap-3 px-3 py-2.5">
-                <div class="meta-content flex flex-col gap-0.5 flex-1 min-w-0">
-                  <span>{{ item.label }}</span>
-                  <div class="meta-value flex items-center gap-2">
-                    <strong class="truncate" :title="String(item.value)">{{ item.value }}</strong>
-                    <el-button
-                      v-if="item.copyable"
-                      link
-                      :icon="DocumentCopy"
-                      @click="handleCopy(item.value)"
-                    />
-                  </div>
-                </div>
+            <div class="flex items-center justify-between gap-2 p-2.5 rounded-md bg-[var(--ep-bg-color)] border border-[var(--ep-border-color-lighter)] min-w-0">
+              <span class="font-mono text-xs text-[var(--ep-text-color-primary)] truncate" :title="endpointUrl || t('mcpService.notPublished')">
+                {{ endpointUrl || t('mcpService.notPublished') }}
+              </span>
+              <el-tooltip :content="t('common.copy')" placement="top">
+                <el-button
+                  v-if="endpointUrl"
+                  link
+                  :icon="DocumentCopy"
+                  class="!p-1 text-[var(--ep-color-primary)] hover:opacity-80"
+                  @click="handleCopy(endpointUrl)"
+                />
+              </el-tooltip>
+            </div>
+          </div>
+
+          <!-- Technical Attributes List -->
+          <div class="tech-attributes flex flex-col gap-3">
+            <div class="attr-row flex items-center justify-between p-3 rounded-lg bg-[var(--ep-fill-color-lighter)] text-xs">
+              <span class="text-[var(--ep-text-color-secondary)]">MCP 协议版本</span>
+              <span class="font-mono font-medium text-[var(--ep-text-color-primary)]">2025-11-25</span>
+            </div>
+
+            <div class="attr-row flex items-center justify-between p-3 rounded-lg bg-[var(--ep-fill-color-lighter)] text-xs">
+              <span class="text-[var(--ep-text-color-secondary)]">服务标识 (Code)</span>
+              <div class="flex items-center gap-1.5">
+                <span class="font-mono font-medium text-[var(--ep-text-color-primary)]">{{ service?.code || '-' }}</span>
+                <el-button v-if="service?.code" link :icon="DocumentCopy" class="!p-0 !h-auto text-[var(--ep-text-color-secondary)] hover:text-[var(--ep-color-primary)]" @click="handleCopy(service.code)" />
               </div>
             </div>
-          </aside>
-        </div>
 
-        <div v-else-if="activeTab === 'scope'" class="scope-panel p-[18px]">
-          <DataScopeTab :service-id="serviceId" :service-status="service?.status" @refresh="refreshAll" />
-        </div>
-        <div v-else-if="activeTab === 'tools'" class="scope-panel p-[18px]">
-          <ToolsTab :service-id="serviceId" @refresh="refreshAll" />
-        </div>
-        <div v-else-if="activeTab === 'prompts'" class="scope-panel p-[18px]">
-          <PromptsTab :service-id="serviceId" @refresh="refreshAll" />
-        </div>
-        <div v-else-if="activeTab === 'version'" class="scope-panel p-[18px]">
-          <DebugPublishTab
-            :service-id="serviceId"
-            :service="service"
-            @refresh="refreshAll"
-          />
-        </div>
-      </main>
-    </div>
+            <div class="attr-row flex items-center justify-between p-3 rounded-lg bg-[var(--ep-fill-color-lighter)] text-xs gap-2">
+              <span class="text-[var(--ep-text-color-secondary)] shrink-0">ID</span>
+              <div class="flex items-center gap-1.5 min-w-0">
+                <span class="font-mono text-xs text-[var(--ep-text-color-primary)]" :title="service?.id">{{ service?.id || '-' }}</span>
+                <el-button v-if="service?.id" link :icon="DocumentCopy" class="!p-0 !h-auto text-[var(--ep-text-color-secondary)] hover:text-[var(--ep-color-primary)] shrink-0" @click="handleCopy(service.id)" />
+              </div>
+            </div>
+          </div>
+        </aside>
+      </div>
+
+      <div v-else-if="activeTab === 'scope'" class="scope-panel p-[20px] shadow-sm">
+        <DataScopeTab :service-id="serviceId" :service-status="service?.status" @refresh="refreshAll" />
+      </div>
+      <div v-else-if="activeTab === 'tools'" class="scope-panel p-[20px] shadow-sm">
+        <ToolsTab :service-id="serviceId" @refresh="refreshAll" />
+      </div>
+      <div v-else-if="activeTab === 'prompts'" class="scope-panel p-[20px] shadow-sm">
+        <PromptsTab :service-id="serviceId" @refresh="refreshAll" />
+      </div>
+      <div v-else-if="activeTab === 'version'" class="scope-panel p-[20px] shadow-sm">
+        <DebugPublishTab
+          :service-id="serviceId"
+          :service="service"
+          @refresh="refreshAll"
+        />
+      </div>
+    </main>
 
     <!-- Publish Confirmation Dialog -->
     <el-dialog
@@ -538,45 +562,12 @@ const handleCopyEndpoint = async () => {
   </div>
 </template>
 
-
 <style scoped>
-.mcp-detail-page {
-  display: flex;
-  min-height: 100%;
-  flex-direction: column;
-  gap: 16px;
-  padding: 24px; /* p-6 */
-}
-
-.detail-layout {
-  display: grid;
-  min-height: 0;
-  flex: 1;
-  grid-template-columns: minmax(220px, 260px) minmax(0, 1fr);
-  gap: 16px;
-}
-
-.detail-nav,
 .panel,
 .scope-panel {
   border: 1px solid var(--ep-border-color-lighter);
   border-radius: 8px;
   background: var(--ep-bg-color);
-}
-
-.detail-nav {
-  align-self: start;
-  overflow: hidden;
-}
-
-.detail-menu :deep(.el-menu-item) {
-  height: 44px;
-}
-
-.basic-grid {
-  display: grid;
-  grid-template-columns: minmax(360px, 1fr) minmax(260px, 400px);
-  gap: 16px;
 }
 
 .panel-heading h2 {
@@ -594,50 +585,5 @@ const handleCopyEndpoint = async () => {
 .detail-form :deep(.el-form-item__label) {
   color: var(--ep-text-color-primary);
   font-weight: 600;
-}
-
-.meta-content > span {
-  color: var(--ep-text-color-secondary);
-  font-size: 12px;
-}
-
-.meta-value strong {
-  color: var(--ep-text-color-primary);
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.meta-item {
-  border-radius: 6px;
-  background: var(--ep-fill-color-lighter);
-}
-
-@media (max-width: 1200px) {
-  .basic-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-@media (max-width: 960px) {
-  .detail-header,
-  .detail-actions {
-    align-items: stretch;
-    flex-direction: column;
-  }
-
-  .detail-layout,
-  .basic-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .detail-nav {
-    overflow-x: auto;
-  }
-}
-
-@media (max-width: 640px) {
-  .mcp-detail-page {
-    padding: 16px; /* p-4 */
-  }
 }
 </style>

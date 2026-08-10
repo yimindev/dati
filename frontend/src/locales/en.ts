@@ -407,7 +407,8 @@ export default {
     versionNumber: "Version",
     activeTag: "Live",
     rollbackConfirmTitle: "Rollback Version Confirmation",
-    rollbackConfirmMsg: "Are you sure you want to rollback to v{version}? Your unpublished draft changes will be overwritten by v{version} content, and a new version snapshot will replace the live one.",
+    rollbackConfirmMsg: "Are you sure you want to rollback service configuration to v{version}? Current unpublished draft changes will be overwritten by v{version} content, and a new version snapshot will be generated.",
+    emptyVersionHistory: "No version history snapshots",
     tab: {
       basic: "Basic Info",
       dataScope: "Data Scope",

@@ -27,7 +27,7 @@ defineEmits<{ (e: "update:modelValue", v: any): void }>();
     class="w-full"
   >
     <template #suffix>
-      <span class="icon-[lsicon--number-filled] text-[var(--ep-text-color-placeholder)]"></span>
+      <span class="text-xs font-mono font-semibold text-[var(--ep-text-color-placeholder)]">#</span>
     </template>
   </el-input>
   <el-switch

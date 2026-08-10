@@ -408,6 +408,7 @@ export default {
     activeTag: "当前线上",
     rollbackConfirmTitle: "回滚版本确认",
     rollbackConfirmMsg: "确定要将服务配置回滚至 v{version} 吗？当前未发布的草稿修改将被 v{version} 内容覆盖，且将生成新版本快照切换线上。",
+    emptyVersionHistory: "暂无发布历史快照",
     tab: {
       basic: "基础信息",
       dataScope: "数据范围",
