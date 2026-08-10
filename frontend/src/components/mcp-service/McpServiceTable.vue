@@ -9,6 +9,7 @@ const { t } = useI18n();
 
 interface Props {
   data: McpServiceVO[];
+  hasFilter?: boolean;
 }
 
 interface Emits {
@@ -17,7 +18,7 @@ interface Emits {
   (e: "authorize", service: McpServiceVO): void;
 }
 
-defineProps<Props>();
+const props = defineProps<Props>();
 defineEmits<Emits>();
 
 const statusType = (status: string) => {
@@ -169,7 +170,7 @@ const handleCopy = async (endpointPath: string) => {
     </el-table-column>
 
     <template #empty>
-      <el-empty :description="t('mcpService.emptyList')" />
+      <el-empty :description="props.hasFilter ? t('mcpService.emptySearchResult') : t('mcpService.emptyList')" />
     </template>
   </el-table>
 </template>

@@ -369,6 +369,7 @@ export default {
     },
     activeFilters: "已筛选 {count} 项",
     emptyList: "暂无 MCP 服务",
+    emptySearchResult: "无匹配的 MCP 服务",
     emptyDescription: "暂无描述",
     emptyValue: "-",
     notPublished: "未发布",

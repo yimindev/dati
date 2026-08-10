@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, computed } from "vue";
+import { computed, watch } from "vue";
 import { useRoute } from "vue-router";
 import { useI18n } from "vue-i18n";
 import BaseHeader from "~/components/layouts/BaseHeader.vue";
@@ -14,12 +14,16 @@ const { t } = useI18n();
 
 const isAuthPage = computed(() => ["/login", "/register"].includes(route.path));
 
-onMounted(() => {
-  if (!isAuthPage.value) {
-    systemStore.loadConfig();
-    authStore.fetchUser();
-  }
-});
+watch(
+  () => authStore.isLoggedIn,
+  (loggedIn) => {
+    if (loggedIn) {
+      systemStore.loadConfig();
+      authStore.fetchUser();
+    }
+  },
+  { immediate: true },
+);
 </script>
 
 <template>

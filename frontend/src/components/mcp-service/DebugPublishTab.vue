@@ -67,7 +67,6 @@ const handleRollback = async (snapshot: McpServiceSnapshotVO) => {
     rollingBack.value = true;
     await rollbackMcpService(props.serviceId, {
       target_version_number: snapshot.version_number,
-      release_note: `Rollback to v${snapshot.version_number}`,
     });
     ElMessage.success(t("mcpService.rollbackSuccess"));
     emit("refresh");

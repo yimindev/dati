@@ -26,18 +26,18 @@ const router = createRouter({
 
 const publicPaths = ["/login", "/register"];
 
-router.beforeEach((to, _from, next) => {
+router.beforeEach((to) => {
   const authStore = useAuthStore();
 
   if (authStore.isLoggedIn && publicPaths.includes(to.path)) {
-    return next("/");
+    return "/";
   }
 
   if (!authStore.isLoggedIn && !publicPaths.includes(to.path)) {
-    return next("/login");
+    return "/login";
   }
 
-  next();
+  return true;
 });
 
 app.use(pinia)

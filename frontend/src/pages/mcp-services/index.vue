@@ -197,6 +197,7 @@ onMounted(() => {
     >
       <McpServiceTable
         :data="serviceList"
+        :has-filter="activeFilters > 0"
         @detail="handleDetail"
         @delete="handleDelete"
         @authorize="handleAuthorize"

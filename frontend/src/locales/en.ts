@@ -369,6 +369,7 @@ export default {
     },
     activeFilters: "{count} filters",
     emptyList: "No MCP services",
+    emptySearchResult: "No matching MCP services",
     emptyDescription: "No description",
     emptyValue: "-",
     notPublished: "Not published",
