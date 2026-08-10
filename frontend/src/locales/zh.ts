@@ -39,6 +39,8 @@ export default {
     delete: "删除",
     detail: "详情",
     copy: "复制",
+    config: "配置",
+    test: "测试",
     create: "创建",
     update: "更新",
     remove: "移除",

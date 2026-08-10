@@ -39,6 +39,8 @@ export default {
     delete: "Delete",
     detail: "Detail",
     copy: "Copy",
+    config: "Configure",
+    test: "Test",
     create: "Create",
     update: "Update",
     remove: "Remove",

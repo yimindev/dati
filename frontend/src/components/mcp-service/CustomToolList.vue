@@ -138,14 +138,14 @@ const handleDialogSaved = () => {
         </div>
 
         <div class="flex items-center gap-3.5 shrink-0">
-          <el-tooltip content="编辑" placement="top">
-            <el-icon class="action-icon" @click="handleEdit(tool)"><Edit /></el-icon>
+          <el-tooltip :content="t('common.edit')" placement="top">
+            <el-icon class="action-icon" :aria-label="t('common.edit')" @click="handleEdit(tool)"><Edit /></el-icon>
           </el-tooltip>
-          <el-tooltip content="删除" placement="top">
-            <el-icon class="action-icon action-delete" @click="handleDelete(tool)"><Delete /></el-icon>
+          <el-tooltip :content="t('common.delete')" placement="top">
+            <el-icon class="action-icon action-delete" :aria-label="t('common.delete')" @click="handleDelete(tool)"><Delete /></el-icon>
           </el-tooltip>
-          <el-tooltip content="测试" placement="top">
-            <el-icon class="action-icon" @click="openTest(tool)"><CaretRight /></el-icon>
+          <el-tooltip :content="t('common.test')" placement="top">
+            <el-icon class="action-icon" :aria-label="t('common.test')" @click="openTest(tool)"><CaretRight /></el-icon>
           </el-tooltip>
           <el-switch
             :model-value="tool.enabled"

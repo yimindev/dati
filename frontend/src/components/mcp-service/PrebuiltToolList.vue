@@ -82,15 +82,15 @@ const toolTypeLabel = (status: string) => {
       </div>
 
       <div class="flex items-center gap-3.5 shrink-0">
-        <el-tooltip content="配置" placement="top">
+        <el-tooltip v-if="tool.tool_type === 'EXECUTE_SQL'" :content="t('common.config')" placement="top">
           <el-icon
-            v-if="tool.tool_type === 'EXECUTE_SQL'"
             class="config-icon"
+            :aria-label="t('common.config')"
             @click="sqlConfigVisible = true"
           ><Setting /></el-icon>
         </el-tooltip>
-        <el-tooltip content="测试" placement="top">
-          <el-icon class="config-icon" @click="openTest(tool)"><CaretRight /></el-icon>
+        <el-tooltip :content="t('common.test')" placement="top">
+          <el-icon class="config-icon" :aria-label="t('common.test')" @click="openTest(tool)"><CaretRight /></el-icon>
         </el-tooltip>
         <el-switch
           :model-value="tool.enabled"
