@@ -779,7 +779,7 @@ src/
 - **自定义工具区**：Edit/Delete 图标 + 「测试」按钮。hover 变色（Edit 蓝色，Delete 红色）。
 - **配置弹窗**：权限 pills 切换（选中态紫色 → 蓝色高亮）。安全警告黄色提示。
 - **工具测试弹窗**：左右分栏布局（参数左 / 结果右）。`SqlEditor`（CodeMirror）用于 SQL 输入。PARAMETERIZED_SQL 使用 `ParameterInput` 动态表单，带 `el-form` 校验（required 字段显示红色星号）。GET_TABLE_INFO 的 schema/table 下拉框通过 `listTableInfos` API 拉取已有元数据。SEARCH_METADATA 的关键词用 `el-input-tag` 输入。执行结果按 `data.type` 分发渲染：SELECT → `el-table` + 行数提示；WRITE → 操作摘要卡片；TABLE_METADATA → 每表一个卡片（表名/列/别名/样本值）；SEARCH_HIT → 术语卡片 + 按数据源分组表卡片。关闭弹窗时自动清空表单和结果。
-- **删除确认（US-10）**：与全站其他删除操作一致 —— `ElMessageBox.confirm`（黄色警告图标 + 单句文案「确定要删除 MCP 服务「{name}」吗？」）。列表页删除成功 → 刷新列表（删除最后一条时回退一页）；详情页基础信息 Tab 底部 danger 区入口 → 删除成功跳转列表页。删除失败 toast 提示可重试。
+- **删除确认（US-10）**：与全站其他删除操作一致 —— `ElMessageBox.confirm`（黄色警告图标 + 单句文案「确定要删除 MCP 服务「{name}」吗？」）。**删除入口仅在列表页行尾**（详情页不提供，与 US-08 定稿一致）。列表页删除成功 → 刷新列表（删除最后一条时回退一页）；删除失败 toast 提示可重试。
 - **抽屉表单**：使用 Element Plus `el-form` 的 `FormRules` 校验，保存前 `validate()`，异常时 `clearValidate()`。
 - **错误处理**：统一 `catch (e: any)` + `e?.message` 展示后端错误信息。
 - **数据范围弹窗**：Tab 切换（数据源/主题）。分页加载 + 搜索防抖 300ms。已添加项显示灰色 + `el-tag type="info"` 禁用勾选。确认提交后全量替换。已发布服务显示警告提示。
@@ -911,7 +911,7 @@ mcpService.delete（删除服务弹窗）:
   deleteSuccess, deleteFailed, cancel
 
 mcpService.tab:
-  basic, dataScope, tools, resources, prompts, security, version（版本管理）, logs
+  basic, dataScope, tools, prompts, version（版本管理）
 
 mcpService.status:
   draft, published, disabled
@@ -965,7 +965,7 @@ mcpService.status:
 | US-09 | 查看服务调用日志 | ❌ 未实现 | 无 `mcp_audit_log` 表和对应接口 |
 | US-10 | 删除 MCP 服务 | ✅ 已实现 | 事务级联删除（快照/数据范围/预置工具/自定义工具/Prompt），已发布服务可直接删除；前端与全站删除操作一致（`ElMessageBox.confirm` 简单确认）。**遗留**：「仅管理员可删除」待角色体系统一实现 |
 
-> **说明**：详情页侧边导航的 `security`、`logs` Tab 均为占位；`version`（版本管理）Tab 已实现。发布/停用/启用操作位于详情页右上角，删除位于列表页行尾 + 详情页基础信息 Tab 底部 danger 区。
+> **说明**：详情页侧边导航已实现 Tab：基础信息 / 数据范围 / Tools / Prompts / 版本管理。`security`（US-06 暂缓）、`logs`（US-09 未实现）Tab 已从侧边导航移除（占位入口不下发，等实现后再加回）。发布/停用/启用操作位于详情页右上角，删除仅在列表页行尾。
 
 ---
 
