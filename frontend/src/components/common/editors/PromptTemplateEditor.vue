@@ -3,7 +3,7 @@
 import { useVModel } from "@vueuse/core";
 import { EditorView } from "@codemirror/view";
 import { FullScreen } from "@element-plus/icons-vue";
-import { autocompletion } from "@codemirror/autocomplete";import { EditorState } from "@codemirror/state";
+import { autocompletion } from "@codemirror/autocomplete";
 import { useI18n } from "vue-i18n";
 import { useCodeMirror } from "~/composables/useCodeMirror";
 import { useEditorFullscreen } from "~/composables/useEditorFullscreen";
@@ -29,8 +29,8 @@ const { isFullscreen, toggle } = useEditorFullscreen();
 const cm = useCodeMirror({
   modelValue: useVModel(props, "modelValue", emit),
   extensions: [
-    autocompletion(),
-    EditorState.languageData.of(() => [{ autocomplete: templateCompletions() }]),
+    // override 方式不依赖 Language 实例（languageData 方式需 @codemirror/language 的 Language 才会被 autocompletion 读取）
+    autocompletion({ override: [templateCompletions()] }),
     templateAutoClose(),
     templateDecorations(),
     bracketMatching(),
