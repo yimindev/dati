@@ -15,6 +15,7 @@ interface Props {
 }
 
 const props = defineProps<Props>();
+const emit = defineEmits<{ (e: "refresh"): void }>();
 
 const loading = ref(false);
 const tableList = ref<TableInfoVO[]>([]);
@@ -141,6 +142,7 @@ const handleBatchAdd = async () => {
     ElMessage.success(t("subject.addTableSuccess"));
     addTableDialogVisible.value = false;
     await loadTables();
+    emit("refresh");
   } catch (error) {
     console.error("Failed to add tables:", error);
     ElMessage.error(t("common.operationFailed"));
@@ -163,6 +165,7 @@ const handleRemoveTable = async (table: TableInfoVO) => {
     await removeTableFromSubject(props.subjectId, table.id);
     ElMessage.success(t("subject.removeTableSuccess"));
     await loadTables();
+    emit("refresh");
   } catch (error) {
     if (error !== "cancel") {
       console.error("Failed to remove table:", error);
