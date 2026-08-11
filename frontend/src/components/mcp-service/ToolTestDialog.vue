@@ -97,7 +97,7 @@ watch(
     if (!dsId) return;
     tableLoading.value = true;
     try {
-      const resp = await listTableInfos(dsId, 1, 9999);
+      const resp = await listTableInfos(dsId, 1, 100);
       allTables.value = (resp.data || []).map((t: any) => ({
         schema: t.schema,
         name: t.name,

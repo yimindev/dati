@@ -63,22 +63,48 @@ watch(() => props.subject, (newVal) => {
 }, { immediate: true })
 
 watch(() => props.modelValue, async (newVal) => {
-  if (newVal && !isEdit.value) {
+  if (newVal) {
     await loadDatasources()
   }
 })
 
-async function loadDatasources() {
+let searchTimer: ReturnType<typeof setTimeout> | null = null
+
+async function loadDatasources(keyword?: string) {
   try {
     datasourceLoading.value = true
-    const response = await listDataSources(1, 1000)
-    datasources.value = response.data || []
+    const response = await listDataSources(1, 20, keyword || undefined)
+    const list = response.data || []
+
+    if (formData.value.datasource_id) {
+      const exists = list.some(ds => ds.id === formData.value.datasource_id)
+      if (!exists) {
+        const selectedName = props.subject?.datasource_name || formData.value.datasource_id
+        list.unshift({
+          id: formData.value.datasource_id,
+          name: selectedName,
+          type: '',
+          jdbc_url: '',
+          username: '',
+          created_at: '',
+          updated_at: ''
+        })
+      }
+    }
+    datasources.value = list
   } catch (error) {
     console.error('Failed to load datasources:', error)
     ElMessage.error(t('common.loadFailed'))
   } finally {
     datasourceLoading.value = false
   }
+}
+
+function onSearchDatasources(query: string) {
+  if (searchTimer) clearTimeout(searchTimer)
+  searchTimer = setTimeout(() => {
+    loadDatasources(query.trim())
+  }, 300)
 }
 
 function resetForm() {
@@ -218,6 +244,9 @@ const handleCancel = () => {
           :placeholder="t('subject.selectDatasource')"
           :disabled="isEdit"
           :loading="datasourceLoading"
+          filterable
+          remote
+          :remote-method="onSearchDatasources"
           style="width: 100%"
         >
           <el-option

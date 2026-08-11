@@ -452,7 +452,7 @@ const loadColumnsForTable = async (tableId: string) => {
 
   try {
     loadingTableColumns.value.add(tableId)
-    const response = await listTableColumns(table.datasource_id, tableId, 1, 1000)
+    const response = await listTableColumns(table.datasource_id, tableId, 1, 100)
     tableColumnsData.value.set(tableId, response.data || [])
   } catch (error) {
     console.error('Failed to load columns:', error)
