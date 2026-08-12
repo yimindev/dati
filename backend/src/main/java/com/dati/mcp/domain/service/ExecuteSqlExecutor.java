@@ -10,6 +10,7 @@ import com.dati.mcp.domain.model.McpToolType;
 import com.dati.mcp.domain.model.SqlPolicy;
 import com.dati.mcp.domain.model.ToolConfig.ExecuteSqlConfig;
 import com.dati.mcp.domain.model.ToolError;
+import com.dati.mcp.domain.model.param.ExecuteSqlArgs;
 import com.dati.mcp.server.pojo.SqlExecution;
 import com.dati.mcp.server.pojo.StatementResult;
 import com.dati.mcp.server.pojo.ToolTestData;
@@ -38,14 +39,9 @@ public class ExecuteSqlExecutor implements ToolExecutor {
 
     @Override
     public ToolTestData execute(ToolExecutionContext ctx) {
-        String dsId = (String) ctx.arguments().get("data_source_id");
-        String sql = (String) ctx.arguments().get("sql");
-        if (dsId == null || dsId.isBlank()) {
-            throw new ToolExecuteException(ToolError.PARAM_MISSING, "data_source_id");
-        }
-        if (sql == null || sql.isBlank()) {
-            throw new ToolExecuteException(ToolError.PARAM_MISSING, "sql");
-        }
+        ExecuteSqlArgs args = ctx.args(ExecuteSqlArgs.class);
+        String dsId = args.dataSourceId();
+        String sql = args.sql();
 
         ExecuteSqlConfig config = (ExecuteSqlConfig) ctx.config();
 

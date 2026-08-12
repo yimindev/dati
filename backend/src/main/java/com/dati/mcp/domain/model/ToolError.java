@@ -8,6 +8,7 @@ public enum ToolError {
     TOOL_NOT_FOUND        ("PARAM_ERROR",       "工具不存在"),
     TOOL_DISABLED         ("PARAM_ERROR",       "工具已禁用"),
     PARAM_MISSING         ("PARAM_ERROR",       "缺少必填参数：{0}"),
+    PARAM_INVALID         ("PARAM_ERROR",       "参数不合法：{0}"),
     DATA_SOURCE_NOT_FOUND ("PARAM_ERROR",       "数据源不存在"),
     SCOPE_VIOLATION       ("SCOPE_ERROR",       "数据源或表不在服务范围内：{0}"),
     SQL_POLICY_VIOLATION  ("PERMISSION_DENIED", "SQL 操作被策略禁止：{0}"),

@@ -2,7 +2,7 @@ package com.dati.mcp.domain.service;
 
 import com.dati.datasource.domain.service.TableMetadataService;
 import com.dati.mcp.domain.model.McpToolType;
-import com.dati.mcp.domain.model.ToolError;
+import com.dati.mcp.domain.model.param.GetTableInfoArgs;
 import com.dati.datasource.domain.model.TableDef;
 import com.dati.mcp.server.pojo.TableMetadata;
 import com.dati.mcp.server.pojo.ToolTestData;
@@ -10,7 +10,6 @@ import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 @Component
@@ -31,34 +30,16 @@ public class GetTableInfoExecutor implements ToolExecutor {
     }
 
     @Override
-    @SuppressWarnings("unchecked")
     public ToolTestData execute(ToolExecutionContext ctx) {
-        String dsId = requireNonBlank(ctx.arguments(), "data_source_id");
-        List<Map<String, Object>> rawTables = (List<Map<String, Object>>) ctx.arguments().get("tables");
-        if (rawTables == null || rawTables.isEmpty()) {
-            throw new ToolExecuteException(ToolError.PARAM_MISSING, "tables");
-        }
-
-        scopeValidator.validate(ctx.scopeItems(), dsId, Set.of(), null);
-
+        GetTableInfoArgs args = ctx.args(GetTableInfoArgs.class);
         List<TableDef> entries = new ArrayList<>();
-        for (Map<String, Object> entry : rawTables) {
-            String schema = (String) entry.get("schema");
-            String tableName = requireNonBlank(entry, "table");
-            tableMetadataService.getTableMeta(dsId, schema, tableName)
-                .map(tm -> new TableDef(tableName, schema, tm.description(),
+        for (GetTableInfoArgs.TableRef ref : args.tables()) {
+            scopeValidator.validate(ctx.scopeItems(), ref.dataSourceId(), Set.of(), null);
+            tableMetadataService.getTableMeta(ref.dataSourceId(), ref.schema(), ref.table())
+                .map(tm -> new TableDef(ref.table(), ref.schema(), tm.description(),
                         tm.aliases(), tm.columns()))
                 .ifPresent(entries::add);
         }
-
         return new TableMetadata(entries);
-    }
-
-    private static String requireNonBlank(Map<String, Object> args, String key) {
-        Object val = args.get(key);
-        if (val == null || (val instanceof String s && s.isBlank())) {
-            throw new ToolExecuteException(ToolError.PARAM_MISSING, key);
-        }
-        return val.toString();
     }
 }

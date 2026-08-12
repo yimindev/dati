@@ -43,7 +43,8 @@ class McpToolTestServiceTest {
     @BeforeEach
     void setUp() {
         when(toolExecutor.getToolType()).thenReturn(McpToolType.EXECUTE_SQL);
-        service = new McpToolTestService(toolResolver, scopeDAO, List.of(toolExecutor));
+        service = new McpToolTestService(toolResolver, scopeDAO, List.of(toolExecutor),
+            new ToolParameterBinder());
     }
 
     @Test
@@ -79,6 +80,22 @@ class McpToolTestServiceTest {
                 new ToolTestRequest(Map.of("data_source_id", "ds-1", "sql", "SELECT 1"))))
             .isInstanceOf(NullPointerException.class)
             .hasMessageContaining("boom");
+    }
+
+    @Test
+    @DisplayName("invalid arguments → ToolTestError with PARAM_ERROR category")
+    void invalidArgumentsMapToParamError() {
+        ToolResolver.ResolvedTool resolved = new ToolResolver.ResolvedTool(
+            McpToolType.EXECUTE_SQL, true, new ExecuteSqlConfig(), true);
+        when(toolResolver.resolve("svc", "EXECUTE_SQL")).thenReturn(resolved);
+        when(scopeDAO.findAllByServiceId("svc")).thenReturn(List.of());
+
+        ToolTestResponse resp = service.test("svc", "EXECUTE_SQL",
+            new ToolTestRequest(Map.of("data_source_id", "ds-1")));
+
+        assertThat(resp.success()).isFalse();
+        assertThat(resp.error()).isNotNull();
+        assertThat(resp.error().errorCategory()).isEqualTo("PARAM_ERROR");
     }
 
     @ParameterizedTest

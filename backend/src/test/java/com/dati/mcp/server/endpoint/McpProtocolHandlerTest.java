@@ -2,8 +2,10 @@ package com.dati.mcp.server.endpoint;
 
 import com.dati.TestFixtures;
 import com.dati.mcp.domain.model.McpServiceSnapshot;
+import com.dati.mcp.domain.service.McpParameterSchemaGenerator;
 import com.dati.mcp.domain.service.ToolExecutor;
 import com.dati.mcp.domain.service.ToolExecuteException;
+import com.dati.mcp.domain.service.ToolParameterBinder;
 import com.dati.mcp.domain.model.ToolError;
 import com.dati.mcp.server.converter.ToolDefinitionConverter;
 import com.dati.mcp.server.converter.PromptDefinitionConverter;
@@ -40,8 +42,10 @@ class McpProtocolHandlerTest {
     void setUp() {
         when(executor.getToolType()).thenReturn(com.dati.mcp.domain.model.McpToolType.SEARCH_METADATA);
         handler = new McpProtocolHandler(
-            new ToolDefinitionConverter(), new SnapshotToolResolver(),
-            new ToolResultConverter(), new PromptDefinitionConverter(), List.of(executor));
+            new ToolDefinitionConverter(new McpParameterSchemaGenerator()),
+            new SnapshotToolResolver(),
+            new ToolResultConverter(), new PromptDefinitionConverter(), List.of(executor),
+            new ToolParameterBinder());
         service = TestFixtures.createTestMcpServicePO();
         service.setStatus(com.dati.mcp.domain.model.McpServiceStatus.PUBLISHED);
         service.setActiveVersionId("snapshot-001");
@@ -128,6 +132,32 @@ class McpProtocolHandlerTest {
         assertNull(resp.error());
         McpSchema.CallToolResult result = (McpSchema.CallToolResult) resp.result();
         assertTrue(result.isError());
+    }
+
+    @Test
+    @DisplayName("tools/call with type-error argument returns isError, not INTERNAL_ERROR")
+    void toolsCallTypeErrorIsNotInternalError() {
+        McpSchema.JSONRPCRequest req = new McpSchema.JSONRPCRequest("tools/call", 11,
+            Map.of("name", "search_metadata", "arguments", Map.of("keywords", 123)));
+        McpSchema.JSONRPCResponse resp = handler.handle(service, content, req);
+        assertNull(resp.error());
+        McpSchema.CallToolResult result = (McpSchema.CallToolResult) resp.result();
+        assertTrue(result.isError());
+        String text = ((McpSchema.TextContent) result.content().getFirst()).text();
+        assertTrue(text.contains("Parse JSON failed"));
+    }
+
+    @Test
+    @DisplayName("tools/call with missing required argument returns isError with violation message")
+    void toolsCallMissingRequiredIsError() {
+        McpSchema.JSONRPCRequest req = new McpSchema.JSONRPCRequest("tools/call", 12,
+            Map.of("name", "search_metadata", "arguments", Map.of()));
+        McpSchema.JSONRPCResponse resp = handler.handle(service, content, req);
+        assertNull(resp.error());
+        McpSchema.CallToolResult result = (McpSchema.CallToolResult) resp.result();
+        assertTrue(result.isError());
+        String text = ((McpSchema.TextContent) result.content().getFirst()).text();
+        assertTrue(text.contains("must not be null"));
     }
 
     @Test

@@ -5,6 +5,7 @@ import com.dati.mcp.domain.model.McpToolType;
 import com.dati.mcp.domain.service.ToolExecuteException;
 import com.dati.mcp.domain.service.ToolExecutionContext;
 import com.dati.mcp.domain.service.ToolExecutor;
+import com.dati.mcp.domain.service.ToolParameterBinder;
 import com.dati.mcp.repository.po.McpServicePO;
 import com.dati.mcp.server.converter.ToolDefinitionConverter;
 import com.dati.mcp.server.converter.PromptDefinitionConverter;
@@ -35,6 +36,7 @@ public class McpProtocolHandler {
     private final SnapshotToolResolver snapshotToolResolver;
     private final ToolResultConverter toolResultConverter;
     private final PromptDefinitionConverter promptDefinitionConverter;
+    private final ToolParameterBinder parameterBinder;
     private final Map<McpToolType, ToolExecutor> executorMap;
     private final McpJsonMapper jsonMapper = McpJsonDefaults.getMapper();
 
@@ -42,11 +44,13 @@ public class McpProtocolHandler {
                               SnapshotToolResolver snapshotToolResolver,
                               ToolResultConverter toolResultConverter,
                               PromptDefinitionConverter promptDefinitionConverter,
-                              List<ToolExecutor> toolExecutorList) {
+                              List<ToolExecutor> toolExecutorList,
+                              ToolParameterBinder parameterBinder) {
         this.toolDefinitionConverter = toolDefinitionConverter;
         this.snapshotToolResolver = snapshotToolResolver;
         this.toolResultConverter = toolResultConverter;
         this.promptDefinitionConverter = promptDefinitionConverter;
+        this.parameterBinder = parameterBinder;
         this.executorMap = toolExecutorList.stream()
             .collect(Collectors.toMap(ToolExecutor::getToolType, Function.identity()));
     }
@@ -126,7 +130,8 @@ public class McpProtocolHandler {
         }
         Map<String, Object> arguments = callReq.arguments() == null ? Map.of() : callReq.arguments();
         ToolExecutionContext ctx = new ToolExecutionContext(
-            serviceId, tool.toolType(), tool.config(), arguments,
+            serviceId, tool.toolType(), tool.config(),
+            parameterBinder.bind(tool.toolType().getParameterType(), arguments),
             snapshotToolResolver.buildScopeItems(serviceId, content));
         var data = executor.execute(ctx);
         return McpSchema.JSONRPCResponse.result(request.id(), toolResultConverter.toResult(data));

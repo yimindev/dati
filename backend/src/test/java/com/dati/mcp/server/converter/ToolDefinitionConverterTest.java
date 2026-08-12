@@ -5,6 +5,7 @@ import com.dati.mcp.domain.model.McpToolType;
 import com.dati.mcp.domain.model.McpServiceSnapshot;
 import com.dati.mcp.domain.model.ToolConfig;
 import com.dati.mcp.domain.model.ToolParameter;
+import com.dati.mcp.domain.service.McpParameterSchemaGenerator;
 import io.modelcontextprotocol.spec.McpSchema;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -16,7 +17,8 @@ import static org.junit.jupiter.api.Assertions.*;
 @DisplayName("ToolDefinitionConverter tests")
 class ToolDefinitionConverterTest {
 
-    private final ToolDefinitionConverter converter = new ToolDefinitionConverter();
+    private final ToolDefinitionConverter converter =
+        new ToolDefinitionConverter(new McpParameterSchemaGenerator());
 
     @Test
     @DisplayName("converts prebuilt and custom tools with deterministic order")
@@ -67,6 +69,20 @@ class ToolDefinitionConverterTest {
             TestFixtures.createTestCustomToolDraft("dup", McpToolType.PARAMETERIZED_SQL, true, new ToolConfig.ParamSqlConfig())));
         List<McpSchema.Tool> tools = converter.convert(content);
         assertEquals(List.of("search_metadata", "dup"), tools.stream().map(McpSchema.Tool::name).toList());
+    }
+
+    @Test
+    @DisplayName("prebuilt schema is generated from the parameter record")
+    void prebuiltSchemaComesFromRecord() {
+        var content = new McpServiceSnapshot.SnapshotContent();
+        content.setPrebuiltTools(List.of(
+            TestFixtures.createTestPrebuiltToolDraft(McpToolType.SEARCH_METADATA, true,
+                new ToolConfig.SearchMetadataConfig())));
+        List<McpSchema.Tool> tools = converter.convert(content);
+        @SuppressWarnings("unchecked")
+        var props = (java.util.Map<String, Object>) tools.getFirst().inputSchema().get("properties");
+        assertTrue(props.containsKey("keywords"));
+        assertEquals(List.of("keywords"), tools.getFirst().inputSchema().get("required"));
     }
 
     @Test

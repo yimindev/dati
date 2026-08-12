@@ -1,10 +1,10 @@
 package com.dati.mcp.server.converter;
 
-import com.dati.common.JsonUtils;
 import com.dati.mcp.domain.model.McpServiceSnapshot;
 import com.dati.mcp.domain.model.McpToolType;
 import com.dati.mcp.domain.model.ToolConfig;
 import com.dati.mcp.domain.model.ToolParameter;
+import com.dati.mcp.domain.service.McpParameterSchemaGenerator;
 import io.modelcontextprotocol.spec.McpSchema;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -21,14 +21,21 @@ import java.util.Set;
  * Converts snapshot tool drafts into MCP protocol {@link McpSchema.Tool} definitions.
  * Deterministic order: prebuilt fixed order, then custom tools by name.
  * Custom tools whose name collides with prebuilt or earlier custom tools are skipped (WARN logged).
+ * Prebuilt schemas are generated from parameter records (single source of truth).
  */
 @Slf4j
 @Component
 public class ToolDefinitionConverter {
 
+    private final McpParameterSchemaGenerator schemaGenerator;
+
     private static final List<McpToolType> PREBUILT_ORDER = List.of(
         McpToolType.SEARCH_METADATA, McpToolType.GET_TABLE_INFO,
         McpToolType.EXECUTE_SQL, McpToolType.PARAMETERIZED_SQL);
+
+    public ToolDefinitionConverter(McpParameterSchemaGenerator schemaGenerator) {
+        this.schemaGenerator = schemaGenerator;
+    }
 
     public List<McpSchema.Tool> convert(McpServiceSnapshot.SnapshotContent content) {
         List<McpSchema.Tool> tools = new ArrayList<>();
@@ -55,7 +62,8 @@ public class ToolDefinitionConverter {
     }
 
     private McpSchema.Tool buildPrebuilt(McpToolType type) {
-        return McpSchema.Tool.builder(type.getToolName(), parseSchema(type.getInputSchema()))
+        return McpSchema.Tool.builder(type.getToolName(),
+                schemaGenerator.generate(type.getParameterType()))
             .description(type.getDescription())
             .build();
     }
@@ -69,13 +77,13 @@ public class ToolDefinitionConverter {
         return builder.build();
     }
 
-    /** Prebuilt: parse enum JSON Schema. PARAMETERIZED_SQL custom: generate from ToolParameter list. */
+    /** Prebuilt: schema generated from parameter record. PARAMETERIZED_SQL custom: generated from ToolParameter list. */
     private Map<String, Object> buildInputSchema(McpServiceSnapshot.CustomToolDraft t) {
         if (t.toolType() == McpToolType.PARAMETERIZED_SQL && t.config() instanceof ToolConfig.ParamSqlConfig cfg) {
             return buildParamSqlSchema(cfg.getParameters());
         }
-        if (t.toolType() != null && t.toolType().getInputSchema() != null) {
-            return parseSchema(t.toolType().getInputSchema());
+        if (t.toolType() != null && t.toolType().isPrebuilt()) {
+            return schemaGenerator.generate(t.toolType().getParameterType());
         }
         Map<String, Object> empty = new HashMap<>();
         empty.put("type", "object");
@@ -118,15 +126,5 @@ public class ToolDefinitionConverter {
             case "Array" -> "array";
             default -> "string";   // String / DateTime / unknown
         };
-    }
-
-    @SuppressWarnings("unchecked")
-    private Map<String, Object> parseSchema(String json) {
-        if (json == null || json.isBlank()) {
-            Map<String, Object> empty = new HashMap<>();
-            empty.put("type", "object");
-            return empty;
-        }
-        return JsonUtils.fromJson(json, Map.class);
     }
 }

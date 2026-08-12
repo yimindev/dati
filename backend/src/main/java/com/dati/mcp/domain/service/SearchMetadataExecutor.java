@@ -3,7 +3,7 @@ package com.dati.mcp.domain.service;
 import com.dati.mcp.domain.model.McpDataScopeType;
 import com.dati.mcp.domain.model.McpServiceDataScope;
 import com.dati.mcp.domain.model.McpToolType;
-import com.dati.mcp.domain.model.ToolError;
+import com.dati.mcp.domain.model.param.SearchMetadataArgs;
 import com.dati.datasource.domain.model.DataSourceDef;
 import com.dati.datasource.domain.model.TableDef;
 import com.dati.mcp.server.pojo.SearchHit;
@@ -15,8 +15,6 @@ import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 
 @Component
@@ -38,9 +36,8 @@ public class SearchMetadataExecutor implements ToolExecutor {
 
     @Override
     public ToolTestData execute(ToolExecutionContext ctx) {
-        List<String> keywords = extractKeywords(ctx.arguments());
-        if (keywords.isEmpty())
-            throw new ToolExecuteException(ToolError.PARAM_MISSING, "keywords");
+        SearchMetadataArgs args = ctx.args(SearchMetadataArgs.class);
+        List<String> keywords = args.keywords();
 
         if (ctx.scopeItems().isEmpty())
             return new SearchHit(keywords, List.of(), List.of());
@@ -69,17 +66,5 @@ public class SearchMetadataExecutor implements ToolExecutor {
                 .toList();
 
         return new SearchHit(keywords, dataSources, terms);
-    }
-
-    private List<String> extractKeywords(Map<String, Object> args) {
-        Object val = args.get("keywords");
-        if (val instanceof List<?> list) {
-            return list.stream()
-                    .filter(Objects::nonNull)
-                    .map(Object::toString)
-                    .filter(s -> !s.isBlank())
-                    .toList();
-        }
-        return List.of();
     }
 }

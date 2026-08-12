@@ -22,12 +22,15 @@ public class McpToolTestService {
 
     private final ToolResolver toolResolver;
     private final McpServiceDataScopeDAO scopeDAO;
+    private final ToolParameterBinder parameterBinder;
     private final Map<McpToolType, ToolExecutor> executorMap;
 
     public McpToolTestService(ToolResolver toolResolver, McpServiceDataScopeDAO scopeDAO,
-                              List<ToolExecutor> toolExecutorList) {
+                              List<ToolExecutor> toolExecutorList,
+                              ToolParameterBinder parameterBinder) {
         this.toolResolver = toolResolver;
         this.scopeDAO = scopeDAO;
+        this.parameterBinder = parameterBinder;
         this.executorMap = toolExecutorList.stream().collect(Collectors.toMap(ToolExecutor::getToolType, Function.identity()));
     }
 
@@ -38,7 +41,9 @@ public class McpToolTestService {
             List<McpServiceDataScope> scopeItems = scopeDAO.findAllByServiceId(serviceId)
                 .stream().map(McpServiceDataScopeMapper::toModel).toList();
             ToolExecutionContext ctx = new ToolExecutionContext(
-                serviceId, tool.toolType(), tool.config(), request.arguments(), scopeItems);
+                serviceId, tool.toolType(), tool.config(),
+                parameterBinder.bind(tool.toolType().getParameterType(), request.arguments()),
+                scopeItems);
             ToolExecutor executor = executorMap.get(tool.toolType());
             if (executor == null) {
                 throw new IllegalStateException(

@@ -56,7 +56,7 @@ public class ParameterizedSqlExecutor implements ToolExecutor {
         String dsId = config.getDataSourceId();
 
         CompiledTemplate compiled = templateParser.parse(config.getSqlTemplate());
-        PreparedSql prepared = sqlRenderer.render(compiled, ctx.arguments());
+        PreparedSql prepared = sqlRenderer.render(compiled, ctx.argumentsMap());
         String sql = prepared.sql();
 
         // No runtime SQL policy for PARAMETERIZED_SQL: the template is authored at
