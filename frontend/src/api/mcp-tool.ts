@@ -32,7 +32,14 @@ export interface ParamSqlConfig {
 
 export interface McpToolVO {
   id: string;
-  tool_type: "SEARCH_METADATA" | "GET_TABLE_INFO" | "EXECUTE_SQL" | "PARAMETERIZED_SQL";
+  tool_type:
+    | "SEARCH_METADATA"
+    | "GET_TABLE_INFO"
+    | "EXECUTE_SQL"
+    | "UPDATE_TABLE_INFO"
+    | "UPDATE_COLUMN_INFO"
+    | "UPSERT_TERM"
+    | "PARAMETERIZED_SQL";
   name: string;
   title?: string;
   description: string;

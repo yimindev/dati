@@ -263,6 +263,21 @@ chinook:
           update: "UPDATE genre SET name = name WHERE genreid = 1"
           # 默认 allow_multi=false，多语句拦截
           multi: "SELECT 1; SELECT 2"
+        # TC-MCP-021/022/023 元数据写入工具测试（写后恢复基线：genre 表基线 description=""、aliases=[]）
+        write_tool:
+          table: "genre"
+          column: "name"
+          table_desc: "E2E 元数据更新-表描述"
+          table_aliases: ["e2e-alias-genre"]
+          column_desc: "E2E 元数据更新-列描述"
+          column_aliases: ["e2e-alias-column"]
+          term_name: "E2E元数据写入术语"
+          term_desc: "E2E 元数据写入术语描述"
+          term_aliases: ["e2e-alias-term"]
+          term_desc_v2: "E2E 元数据写入术语描述-已更新"
+          outside_subject: "e2e-nonexistent-subject"
+          ghost_table: "e2e_ghost_table_xyz"
+          ghost_column: "e2e_ghost_column_xyz"
       # 基于主题的 MCP 服务主路径（2026-08-02 探索验证，供 TC-MCP-020 使用）
       # 前置：种子主题已就绪（TC-SEM-000），ES 索引完整（TABLE 3/FIELD 7/FIELD_VALUE 25/TERM 1/SUBJECT 1）
       subject:

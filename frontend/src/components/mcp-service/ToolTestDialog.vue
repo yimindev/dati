@@ -1,28 +1,12 @@
 <script setup lang="ts">
-import { computed, reactive, ref, watch } from "vue";
+import { ref, watch } from "vue";
 import { ElMessage } from "element-plus";
-import type { FormInstance } from "element-plus";
 import { useI18n } from "vue-i18n";
-import {
-  Plus,
-  Delete,
-  CircleCheckFilled,
-  Menu as IconMenu,
-  Coin,
-  CircleCloseFilled,
-} from "@element-plus/icons-vue";
 import type { McpToolVO } from "~/api/mcp-tool";
-import type {
-  ToolTestResponse,
-  SqlExecution,
-  TableMetadata,
-  SelectResult,
-  WriteResult,
-  SearchHit,
-} from "~/api/mcp-tool-test";
+import type { ToolTestResponse } from "~/api/mcp-tool-test";
 import { testTool } from "~/api/mcp-tool-test";
 import { getDataScope } from "~/api/mcp-service";
-import { listTableInfos } from "~/api/tableinfo";
+import { resetTablePickerCache } from "~/composables/useTablePicker";
 
 const { t } = useI18n();
 
@@ -36,111 +20,24 @@ const emit = defineEmits<{ (e: "update:visible", v: boolean): void }>();
 const loading = ref(false);
 const response = ref<ToolTestResponse | null>(null);
 
-// --- Default form values per tool type ---
-const defaultForm = (): Record<string, any> => {
-  switch (props.tool?.tool_type) {
-    case "EXECUTE_SQL":
-      return { data_source_id: "", sql: "" };
-    case "GET_TABLE_INFO":
-      return { data_source_id: "", tables: [{ schema: "", table: "" }] };
-    case "PARAMETERIZED_SQL": {
-      const params: Record<string, any> = {};
-      ((props.tool.config as any)?.parameters || []).forEach((p: any) => {
-        params[p.name] = p.default_value ?? undefined;
-      });
-      return params;
-    }
-    case "SEARCH_METADATA":
-      return { keywords: [] };
-    default:
-      return {};
-  }
-};
+/** Contract between the dialog shell and tool-specific param forms. */
+interface ToolTestParamsExpose {
+  getArgs: () => Record<string, any>;
+  validate?: () => Promise<boolean>;
+}
+const paramRef = ref<ToolTestParamsExpose | null>(null);
 
-const form = reactive<Record<string, any>>(defaultForm());
-
-// Reset on open
-watch(
-  () => props.visible,
-  (v) => {
-    if (v) {
-      const defaults = defaultForm();
-      Object.keys(form).forEach((k) => delete form[k]);
-      Object.assign(form, defaults);
-      response.value = null;
-      schemaOptions.value = [];
-      tableOptions.value = {};
-      allTables.value = [];
-    }
-  },
-);
-
-// Parameter definitions
-const paramDefs = computed(() => (props.tool?.config as any)?.parameters || []);
-
-// GET_TABLE_INFO table list
-const addTableEntry = () =>
-  (form.tables as any[])?.push({ schema: "", table: "" });
-const removeTableEntry = (i: number) => (form.tables as any[])?.splice(i, 1);
-
-// Schema & table dropdowns for GET_TABLE_INFO (from platform-managed tables)
-const allTables = ref<{ schema: string; name: string }[]>([]);
-const schemaOptions = ref<string[]>([]);
-const tableOptions = ref<Record<number, { name: string }[]>>({});
-const tableLoading = ref(false);
-
-watch(
-  () => form.data_source_id,
-  async (dsId) => {
-    schemaOptions.value = [];
-    tableOptions.value = {};
-    if (!dsId) return;
-    tableLoading.value = true;
-    try {
-      const resp = await listTableInfos(dsId, 1, 100);
-      allTables.value = (resp.data || []).map((t: any) => ({
-        schema: t.schema,
-        name: t.name,
-      }));
-      schemaOptions.value = [
-        ...new Set(allTables.value.map((t) => t.schema).filter(Boolean)),
-      ].sort() as string[];
-    } catch {
-      allTables.value = [];
-    } finally {
-      tableLoading.value = false;
-    }
-  },
-);
-
-watch(
-  () => (form.tables as any[])?.map((e: any) => e.schema),
-  (schemas) => {
-    if (!schemas) return;
-    schemas.forEach((schema: string, i: number) => {
-      tableOptions.value[i] = schema
-        ? allTables.value
-            .filter((t) => t.schema === schema)
-            .map((t) => ({ name: t.name }))
-        : [];
-    });
-  },
-  { deep: true },
-);
-
-// Data source selector
+// Data source options for param forms that pick one
 const dataSources = ref<{ id: string; name: string }[]>([]);
-const dsNameMap = computed(() => {
-  const map: Record<string, string> = {};
-  dataSources.value.forEach((ds) => {
-    map[ds.id] = ds.name;
-  });
-  return map;
-});
+// SUBJECT-scope items of this service (UPSERT_TERM subject picker)
+const scopeSubjects = ref<{ id: string; name: string }[]>([]);
 watch(
   () => props.visible,
   async (v) => {
     if (v) {
+      // Fresh state per open: result + table/column option caches
+      response.value = null;
+      resetTablePickerCache();
       try {
         const resp = await getDataScope(props.serviceId);
         dataSources.value = (resp.resolved_data_sources || []).map(
@@ -149,6 +46,9 @@ watch(
             name: ds.name,
           }),
         );
+        scopeSubjects.value = (resp.items || [])
+          .filter((s) => s.scope_type === "SUBJECT")
+          .map((s) => ({ id: s.reference_id, name: s.reference_name || s.reference_id }));
       } catch {
         /* ignore */
       }
@@ -157,33 +57,11 @@ watch(
   { immediate: true },
 );
 
-// --- Execute ---
 const doExecute = async () => {
   loading.value = true;
   response.value = null;
   try {
-    const args: Record<string, any> = {};
-    if (props.tool?.tool_type === "GET_TABLE_INFO") {
-      args.data_source_id = form.data_source_id;
-      args.tables =
-        (form.tables as any[])?.map((e: any) => ({
-          schema: e.schema || null,
-          table: e.table,
-        })) || [];
-    } else {
-      Object.assign(args, form);
-      Object.keys(args).forEach((k) => {
-        const v = args[k];
-        if (
-          v === null ||
-          v === undefined ||
-          v === "" ||
-          (Array.isArray(v) && v.length === 0)
-        ) {
-          delete args[k];
-        }
-      });
-    }
+    const args = paramRef.value?.getArgs() ?? {};
     response.value = await testTool(props.serviceId, props.tool!.id, {
       arguments: args,
     });
@@ -194,76 +72,16 @@ const doExecute = async () => {
   }
 };
 
-const formRef = ref<FormInstance>();
-
-const formRules = computed(() => {
-  const rules: Record<string, any> = {};
-  for (const p of paramDefs.value) {
-    if (p.required) {
-      rules[p.name] = [
-        {
-          required: true,
-          message: t("mcpService.toolTest.requiredHint", { name: p.name }),
-          trigger: ["blur", "change"],
-        },
-      ];
-    }
-  }
-  return rules;
-});
-
 const handleTestClick = async () => {
   if (props.tool?.tool_type === "PARAMETERIZED_SQL") {
     try {
-      await formRef.value?.validate();
+      await paramRef.value?.validate?.();
     } catch {
       return;
     }
   }
   await doExecute();
 };
-
-// --- Error advice ---
-const errorAdvice = computed(() => {
-  const cat = response.value?.error?.error_category;
-  switch (cat) {
-    case "PARAM_ERROR":
-      return t("mcpService.toolTest.adviceParamError");
-    case "SCOPE_ERROR":
-      return t("mcpService.toolTest.adviceScopeError");
-    case "PERMISSION_DENIED":
-      return t("mcpService.toolTest.advicePermissionDenied");
-    case "SQL_ERROR":
-      return t("mcpService.toolTest.adviceSqlError");
-    case "TIMEOUT":
-      return t("mcpService.toolTest.adviceTimeout");
-    default:
-      return "";
-  }
-});
-
-// --- Result helpers ---
-const dbTypeLabel = (t: string) =>
-  ({
-    POSTGRESQL: "PostgreSQL",
-    MYSQL: "MySQL",
-    CLICKHOUSE: "ClickHouse",
-    ORACLE: "Oracle",
-    SQLSERVER: "SQL Server",
-    H2: "H2",
-    MARIADB: "MariaDB",
-    DUCKDB: "DuckDB",
-    SQLITE: "SQLite",
-    TRINO: "Trino",
-  })[t] || t;
-
-const dbTypeColor = (t: string) =>
-  ({
-    POSTGRESQL: "var(--ep-color-primary)",
-    MYSQL: "var(--ep-color-warning)",
-    CLICKHOUSE: "var(--ep-color-success)",
-    ORACLE: "var(--ep-color-danger)",
-  })[t] || "var(--ep-color-info)";
 </script>
 
 <template>
@@ -276,6 +94,7 @@ const dbTypeColor = (t: string) =>
     width="960px"
     :close-on-click-modal="false"
     append-to-body
+    destroy-on-close
     class="test-dialog"
   >
     <div class="test-layout flex flex-row h-[520px] relative">
@@ -289,158 +108,41 @@ const dbTypeColor = (t: string) =>
           {{ t("mcpService.toolTest.parameters") }}
         </h4>
 
-        <!-- EXECUTE_SQL -->
-        <template v-if="tool?.tool_type === 'EXECUTE_SQL'">
-          <el-form label-position="top">
-            <el-form-item :label="t('common.dataSource')" required>
-              <el-select
-                v-model="form.data_source_id"
-                class="w-full"
-                placeholder="Select data source"
-              >
-                <el-option
-                  v-for="ds in dataSources"
-                  :key="ds.id"
-                  :label="ds.name"
-                  :value="ds.id"
-                />
-              </el-select>
-            </el-form-item>
-            <el-form-item>
-              <SqlEditor v-model="form.sql" label="SQL" required />
-            </el-form-item>
-          </el-form>
-        </template>
-
-        <!-- PARAMETERIZED_SQL -->
-        <template v-else-if="tool?.tool_type === 'PARAMETERIZED_SQL'">
-          <div
-            v-if="(tool.config as any)?.data_source_id"
-            class="ds-readonly flex items-center gap-2 py-2.5 px-3.5 bg-[var(--ep-fill-color-lighter)] border border-[var(--ep-border-color-lighter)] rounded-lg mb-5"
-          >
-            <span class="text-xs text-[var(--ep-text-color-secondary)]">{{
-              t("common.dataSource")
-            }}</span>
-            <span
-              class="text-[13px] font-semibold text-[var(--ep-text-color-primary)]"
-              >{{
-                dsNameMap[(tool.config as any).data_source_id] ||
-                (tool.config as any).data_source_id
-              }}</span
-            >
-          </div>
-          <div
-            v-if="paramDefs.length === 0"
-            class="text-sm text-[var(--ep-text-color-placeholder)]"
-          >
-            {{ t("mcpService.toolTest.noParams") }}
-          </div>
-          <el-form
-            v-else
-            ref="formRef"
-            :model="form"
-            :rules="formRules"
-            label-position="top"
-          >
-            <el-form-item
-              v-for="p in paramDefs"
-              :key="p.name"
-              :label="p.name"
-              :required="p.required"
-              :prop="p.name"
-            >
-              <ParameterInput :parameter="p" v-model="form[p.name]" />
-            </el-form-item>
-          </el-form>
-        </template>
-
-        <!-- GET_TABLE_INFO -->
-        <template v-else-if="tool?.tool_type === 'GET_TABLE_INFO'">
-          <el-form label-position="top">
-            <el-form-item :label="t('common.dataSource')" required>
-              <el-select
-                v-model="form.data_source_id"
-                class="w-full"
-                placeholder="Select data source"
-              >
-                <el-option
-                  v-for="ds in dataSources"
-                  :key="ds.id"
-                  :label="ds.name"
-                  :value="ds.id"
-                />
-              </el-select>
-            </el-form-item>
-          </el-form>
-          <div class="flex flex-col gap-2">
-            <div
-              v-for="(entry, i) in form.tables as any[]"
-              :key="i"
-              class="flex items-center gap-1"
-            >
-              <el-select
-                v-model="entry.schema"
-                placeholder="schema"
-                filterable
-                clearable
-                class="!w-[112px] shrink-0"
-                :loading="tableLoading"
-                :disabled="!form.data_source_id"
-                @change="entry.table = ''"
-              >
-                <el-option
-                  v-for="s in schemaOptions"
-                  :key="s"
-                  :label="s"
-                  :value="s"
-                />
-              </el-select>
-              <span
-                class="text-[var(--ep-text-color-placeholder)] font-semibold shrink-0"
-                >.</span
-              >
-              <div class="flex-1 min-w-0">
-                <el-select
-                  v-model="entry.table"
-                  placeholder="table"
-                  filterable
-                  clearable
-                  :disabled="!form.data_source_id || !entry.schema"
-                >
-                  <el-option
-                    v-for="t in tableOptions[i] || []"
-                    :key="t.name"
-                    :label="t.name"
-                    :value="t.name"
-                  />
-                </el-select>
-              </div>
-              <el-button
-                size="small"
-                text
-                type="danger"
-                :icon="Delete"
-                @click="removeTableEntry(i)"
-                :disabled="(form.tables as any[]).length <= 1"
-              />
-            </div>
-            <el-button size="small" :icon="Plus" @click="addTableEntry"
-              >Add table</el-button
-            >
-          </div>
-        </template>
-
-        <!-- SEARCH_METADATA -->
-        <template v-else-if="tool?.tool_type === 'SEARCH_METADATA'">
-          <el-form label-position="top">
-            <el-form-item :label="t('mcpService.toolTest.keywords')">
-              <el-input-tag
-                v-model="form.keywords"
-                :placeholder="t('mcpService.toolTest.keywordsPlaceholder')"
-              />
-            </el-form-item>
-          </el-form>
-        </template>
+        <ExecuteSqlParams
+          v-if="tool?.tool_type === 'EXECUTE_SQL'"
+          ref="paramRef"
+          :data-sources="dataSources"
+        />
+        <ParameterizedSqlParams
+          v-else-if="tool?.tool_type === 'PARAMETERIZED_SQL'"
+          ref="paramRef"
+          :tool="tool"
+          :data-sources="dataSources"
+        />
+        <GetTableInfoParams
+          v-else-if="tool?.tool_type === 'GET_TABLE_INFO'"
+          ref="paramRef"
+          :data-sources="dataSources"
+        />
+        <UpdateTableInfoParams
+          v-else-if="tool?.tool_type === 'UPDATE_TABLE_INFO'"
+          ref="paramRef"
+          :data-sources="dataSources"
+        />
+        <UpdateColumnInfoParams
+          v-else-if="tool?.tool_type === 'UPDATE_COLUMN_INFO'"
+          ref="paramRef"
+          :data-sources="dataSources"
+        />
+        <UpsertTermParams
+          v-else-if="tool?.tool_type === 'UPSERT_TERM'"
+          ref="paramRef"
+          :subjects="scopeSubjects"
+        />
+        <SearchMetadataParams
+          v-else-if="tool?.tool_type === 'SEARCH_METADATA'"
+          ref="paramRef"
+        />
 
         <!-- Execute button (bottom of left panel) -->
         <div
@@ -458,404 +160,7 @@ const dbTypeColor = (t: string) =>
       </div>
 
       <!-- ====== Right: Result Area ====== -->
-      <div
-        class="right-panel flex-1 pl-5 overflow-y-auto overflow-x-hidden relative min-w-0"
-      >
-        <!-- Initial empty state -->
-        <div v-if="!loading && !response" class="result-empty">
-          <el-empty :description="t('mcpService.toolTest.hint')" />
-        </div>
-
-        <!-- Loading skeleton -->
-        <div v-if="loading" class="result-loading">
-          <el-skeleton :rows="10" animated />
-        </div>
-
-        <!-- Result -->
-        <template v-if="response">
-          <div
-            class="result-header flex justify-between items-center text-[13px] font-semibold text-[var(--ep-text-color-primary)] mb-3"
-          >
-            <span>{{ t("mcpService.toolTest.result") }}</span>
-            <span
-              class="text-xs font-normal text-[var(--ep-text-color-placeholder)]"
-              >{{
-                t("mcpService.toolTest.elapsed", {
-                  ms: response.execution_time_ms,
-                })
-              }}</span
-            >
-          </div>
-
-          <!-- Top-level error -->
-          <div v-if="!response.success && response.error" class="error-card">
-            <div class="error-header">
-              <el-icon><CircleCloseFilled /></el-icon>
-              <span class="error-category">{{
-                response.error.error_category
-              }}</span>
-            </div>
-            <pre class="error-message">{{ response.error.message }}</pre>
-            <div v-if="errorAdvice" class="error-advice">{{ errorAdvice }}</div>
-          </div>
-
-          <!-- SQL_EXECUTION -->
-          <template v-else-if="response.data?.type === 'SQL_EXECUTION'">
-            <div class="output-block">
-              <div class="output-block-title">
-                {{ t("mcpService.toolTest.executedSql") }}
-              </div>
-              <pre class="output-block-body">{{
-                (response.data as SqlExecution).executed_sql
-              }}</pre>
-            </div>
-
-            <div
-              v-if="(response.data as SqlExecution).bindings?.length"
-              class="output-block"
-            >
-              <div class="output-block-title">
-                {{ t("mcpService.toolTest.bindings") }}
-              </div>
-              <div class="output-block-body flex flex-wrap gap-x-6 gap-y-1">
-                <span
-                  v-for="(val, i) in (response.data as SqlExecution).bindings"
-                  :key="i"
-                  class="binding-item"
-                >
-                  ?{{ i + 1 }} = <code>{{ val }}</code>
-                </span>
-              </div>
-            </div>
-
-            <template
-              v-for="(r, i) in (response.data as SqlExecution).results"
-              :key="i"
-            >
-              <div
-                class="result-card border border-[var(--ep-border-color-lighter)] rounded-lg overflow-hidden mb-3"
-                :class="{ 'result-failed': !r.success }"
-              >
-                <!-- Card header -->
-                <div
-                  class="result-card-header flex items-center gap-1.5 text-xs font-semibold text-[var(--ep-text-color-secondary)] bg-[var(--ep-fill-color)] py-2 px-3"
-                  :class="{ 'header-failed': !r.success }"
-                >
-                  <template v-if="r.success">
-                    <el-icon class="text-[var(--ep-color-success)]"
-                      ><CircleCheckFilled
-                    /></el-icon>
-                  </template>
-                  <template v-else>
-                    <el-icon class="text-[var(--ep-color-danger)]"
-                      ><CircleCloseFilled
-                    /></el-icon>
-                  </template>
-                  <span>{{
-                    t(
-                      r.type === "SELECT"
-                        ? "mcpService.toolTest.queryResult"
-                        : "mcpService.toolTest.writeResult",
-                      { n: i + 1 },
-                    )
-                  }}</span>
-                  <span
-                    v-if="r.success && r.type === 'SELECT'"
-                    class="ml-auto font-normal"
-                  >
-                    {{
-                      t("mcpService.toolTest.totalRows", {
-                        total: (r as SelectResult).total_rows,
-                      })
-                    }}
-                  </span>
-                  <span
-                    v-if="r.success && r.type === 'WRITE'"
-                    class="ml-auto font-normal"
-                  >
-                    {{
-                      t("mcpService.toolTest.affectedRows", {
-                        count: (r as WriteResult).affected_rows,
-                      })
-                    }}
-                  </span>
-                </div>
-
-                <!-- Card body -->
-                <div class="result-card-body p-0">
-                  <!-- SELECT success -->
-                  <template v-if="r.success && r.type === 'SELECT'">
-                    <el-table
-                      :data="(r as SelectResult).rows"
-                      border
-                      size="small"
-                      max-height="360"
-                      stripe
-                    >
-                      <el-table-column
-                        v-for="(col, ci) in (r as SelectResult).columns"
-                        :key="ci"
-                        :prop="String(ci)"
-                        :label="col"
-                      />
-                    </el-table>
-                  </template>
-                  <!-- WRITE success -->
-                  <template v-else-if="r.success && r.type === 'WRITE'">
-                    <div
-                      class="write-result flex items-center gap-2.5 py-3.5 px-4 text-[13px]"
-                    >
-                      {{
-                        t("mcpService.toolTest.affectedRows", {
-                          count: (r as WriteResult).affected_rows,
-                        })
-                      }}
-                    </div>
-                  </template>
-                  <!-- Failed -->
-                  <template v-else>
-                    <div
-                      class="result-error py-3 px-4 text-[13px] text-[var(--ep-color-danger)] font-mono bg-[var(--ep-color-danger-light-9)]"
-                    >
-                      {{ (r as any).error_message }}
-                    </div>
-                  </template>
-                </div>
-              </div>
-            </template>
-
-            <div
-              v-if="(response.data as SqlExecution).results.length === 0"
-              class="text-sm text-[var(--ep-text-color-placeholder)] text-center py-4"
-            >
-              {{ t("mcpService.toolTest.emptyResult") }}
-            </div>
-          </template>
-
-          <!-- TABLE_METADATA -->
-          <template v-else-if="response.data?.type === 'TABLE_METADATA'">
-            <template
-              v-for="entry in (response.data as TableMetadata).tables"
-              :key="entry.table"
-            >
-              <div
-                class="result-card border border-[var(--ep-border-color-lighter)] rounded-lg overflow-hidden mb-3"
-              >
-                <div
-                  class="result-card-header flex items-center gap-1.5 text-xs font-semibold text-[var(--ep-text-color-secondary)] bg-[var(--ep-fill-color)] py-2 px-3"
-                >
-                  <el-icon class="text-[var(--ep-color-success)]"
-                    ><CircleCheckFilled
-                  /></el-icon>
-                  <span
-                    >{{ entry.schema ? entry.schema + "." : ""
-                    }}{{ entry.table }}</span
-                  >
-                </div>
-                <div class="result-card-body p-0">
-                  <el-table
-                    v-if="entry.columns"
-                    :data="entry.columns"
-                    border
-                    size="small"
-                  >
-                    <el-table-column prop="name" label="Column" width="140" />
-                    <el-table-column prop="type" label="Type" width="120" />
-                    <el-table-column
-                      prop="comment"
-                      label="Comment"
-                      min-width="120"
-                    />
-                    <el-table-column label="Aliases" width="140">
-                      <template #default="{ row }">
-                        <el-tag
-                          v-for="a in row.aliases"
-                          :key="a"
-                          size="small"
-                          class="mr-1"
-                          >{{ a }}</el-tag
-                        >
-                      </template>
-                    </el-table-column>
-                    <el-table-column label="Sample Values" min-width="160">
-                      <template #default="{ row }">
-                        <el-tag
-                          v-for="v in row.sample_values"
-                          :key="v"
-                          size="small"
-                          type="info"
-                          class="mr-1"
-                          >{{ v }}</el-tag
-                        >
-                      </template>
-                    </el-table-column>
-                  </el-table>
-                </div>
-              </div>
-            </template>
-          </template>
-
-          <!-- SEARCH_HIT -->
-          <template v-else-if="response.data?.type === 'SEARCH_HIT'">
-            <div v-if="(response.data as SearchHit).terms?.length" class="mb-6">
-              <div class="result-section-header">
-                <el-icon class="text-[var(--ep-color-primary)]"
-                  ><IconMenu
-                /></el-icon>
-                <span
-                  >{{ t("mcpService.toolTest.matchTerms") }} ({{
-                    (response.data as SearchHit).terms.length
-                  }})</span
-                >
-              </div>
-              <div
-                v-for="t in (response.data as SearchHit).terms"
-                :key="`${t.name}-${t.subject_name}`"
-                class="p-3 rounded mb-2 bg-[var(--ep-fill-color-lighter)]"
-              >
-                <div class="flex items-center gap-2">
-                  <span class="font-semibold text-sm">{{ t.name }}</span>
-                  <span class="text-xs text-[var(--ep-text-color-placeholder)]">
-                    {{ t.subject_name }}</span
-                  >
-                </div>
-                <p
-                  v-if="t.description"
-                  class="text-sm mt-1 text-[var(--ep-text-color-secondary)]"
-                >
-                  {{ t.description }}
-                </p>
-              </div>
-            </div>
-            <div class="mb-1">
-              <div class="result-section-header">
-                <el-icon class="text-[var(--ep-color-primary)]"
-                  ><Coin
-                /></el-icon>
-                <span>{{ t("mcpService.toolTest.matchSources") }}</span>
-              </div>
-            </div>
-            <div v-if="(response.data as SearchHit).data_sources">
-              <template
-                v-for="ds in (response.data as SearchHit).data_sources"
-                :key="ds.id"
-              >
-                <div
-                  class="ds-card border border-[var(--ep-border-color-lighter)] rounded-lg mb-3 overflow-hidden"
-                >
-                  <div
-                    class="ds-header flex items-center justify-between bg-[var(--ep-fill-color-lighter)] px-4 py-3"
-                  >
-                    <div class="flex items-center gap-2 flex-wrap">
-                      <span class="font-semibold text-sm">{{ ds.name }}</span>
-                      <el-tag
-                        v-if="ds.db_type"
-                        size="small"
-                        :color="dbTypeColor(ds.db_type)"
-                        effect="dark"
-                      >
-                        {{ dbTypeLabel(ds.db_type) }}
-                      </el-tag>
-                    </div>
-                    <el-tag size="small" round
-                      >{{ ds.tables.length }}
-                      {{ t("mcpService.toolTest.tables") }}</el-tag
-                    >
-                  </div>
-                  <div
-                    v-if="ds.description"
-                    class="text-xs text-[var(--ep-text-color-secondary)] px-4 py-1.5 bg-[var(--ep-bg-color)]"
-                  >
-                    {{ ds.description }}
-                  </div>
-                  <div class="ds-body px-3 pb-3 pt-2 flex flex-col gap-2">
-                    <template v-for="tbl in ds.tables" :key="tbl.table">
-                      <div
-                        class="border border-[var(--ep-border-color-lighter)] rounded-md overflow-hidden"
-                      >
-                        <div
-                          class="flex items-center gap-1.5 text-xs font-semibold text-[var(--ep-text-color-secondary)] bg-[var(--ep-fill-color)] py-1.5 px-3"
-                        >
-                          <el-icon class="text-[var(--ep-color-success)]"
-                            ><CircleCheckFilled
-                          /></el-icon>
-                          <span
-                            ><span
-                              class="text-[var(--ep-text-color-placeholder)] font-normal"
-                              >{{ tbl.schema ? tbl.schema + "." : "" }}</span
-                            >{{ tbl.table }}</span
-                          >
-                          <span
-                            v-if="tbl.description"
-                            class="font-normal text-[var(--ep-text-color-placeholder)] ml-1"
-                          >
-                            — {{ tbl.description }}</span
-                          >
-                        </div>
-                        <el-table
-                          v-if="tbl.columns?.length"
-                          :data="tbl.columns"
-                          border
-                          size="small"
-                        >
-                          <el-table-column
-                            prop="name"
-                            label="Column"
-                            width="140"
-                          />
-                          <el-table-column
-                            prop="type"
-                            label="Type"
-                            width="120"
-                          />
-                          <el-table-column
-                            prop="comment"
-                            label="Comment"
-                            min-width="120"
-                          />
-                          <el-table-column label="Aliases" width="140">
-                            <template #default="{ row }">
-                              <el-tag
-                                v-for="a in row.aliases"
-                                :key="a"
-                                size="small"
-                                class="mr-1"
-                                >{{ a }}</el-tag
-                              >
-                            </template>
-                          </el-table-column>
-                          <el-table-column
-                            label="Sample Values"
-                            min-width="160"
-                          >
-                            <template #default="{ row }">
-                              <el-tag
-                                v-for="v in row.sample_values"
-                                :key="v"
-                                size="small"
-                                type="info"
-                                class="mr-1"
-                                >{{ v }}</el-tag
-                              >
-                            </template>
-                          </el-table-column>
-                        </el-table>
-                      </div>
-                    </template>
-                  </div>
-                </div>
-              </template>
-            </div>
-            <el-empty
-              v-if="
-                !(response.data as SearchHit).data_sources?.length &&
-                !(response.data as SearchHit).terms?.length
-              "
-              :description="t('mcpService.toolTest.emptyResult')"
-            />
-          </template>
-        </template>
-      </div>
+      <ToolTestResult :loading="loading" :response="response" />
     </div>
   </el-dialog>
 </template>
@@ -871,103 +176,5 @@ const dbTypeColor = (t: string) =>
   margin-right: 8px;
   vertical-align: middle;
   margin-top: -1px;
-}
-
-.output-block {
-  margin-bottom: 12px;
-  border: 1px solid var(--ep-border-color-lighter);
-  border-radius: 8px;
-  overflow: hidden;
-}
-.output-block-title {
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--ep-text-color-secondary);
-  background: var(--ep-fill-color);
-  padding: 6px 14px;
-  border-bottom: 1px solid var(--ep-border-color-lighter);
-}
-.output-block-body {
-  background: var(--ep-fill-color-lighter);
-  padding: 10px 14px;
-  font-family: monospace;
-  font-size: 12px;
-  white-space: pre-wrap;
-  word-break: break-all;
-  color: var(--ep-text-color-primary);
-  line-height: 1.6;
-  margin: 0;
-}
-.binding-item code {
-  font-family: monospace;
-  color: var(--ep-color-primary);
-  background-color: transparent;
-  padding: 0;
-  border-radius: 0;
-}
-
-.error-card {
-  border: 1px solid var(--ep-color-danger-light-7);
-  border-left: 4px solid var(--ep-color-danger);
-  border-radius: 0 8px 8px 0;
-  padding: 16px;
-  background: var(--ep-color-danger-light-9);
-}
-.error-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  font-weight: 650;
-  color: var(--ep-color-danger);
-  margin-bottom: 10px;
-}
-.error-category {
-  font-family: monospace;
-  font-size: 12px;
-}
-.error-message {
-  font-family: monospace;
-  font-size: 12px;
-  color: var(--ep-color-danger);
-  background: var(--ep-bg-color);
-  padding: 8px 12px;
-  border-radius: 4px;
-  margin: 0 0 10px;
-  white-space: pre-wrap;
-  word-break: break-word;
-}
-.error-advice {
-  font-size: 13px;
-  color: var(--ep-text-color-secondary);
-}
-
-/* ── Result card state variants (requires dynamic :class) ── */
-.result-failed {
-  border-color: var(--ep-color-danger-light-7);
-}
-.header-failed {
-  background: var(--ep-color-danger-light-9);
-  color: var(--ep-color-danger);
-}
-
-/* ── Search hit layout ── */
-.result-section-header {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 14px;
-  font-weight: 650;
-  color: var(--ep-text-color-primary);
-  margin-bottom: 12px;
-}
-.ds-card {
-  background: var(--ep-bg-color);
-}
-.ds-header {
-  border-bottom: 1px solid var(--ep-border-color-lighter);
-}
-.ds-body {
-  background: var(--ep-bg-color);
 }
 </style>

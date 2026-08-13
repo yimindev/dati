@@ -252,7 +252,7 @@
 **前置：** 已登录，种子数据源已就绪
 
 1. 搜索种子数据源 → 创建 MCP 服务（携带 `data_scopes` 绑定该数据源）
-2. **懒初始化默认配置**：GET `/v1/mcp-services/{id}/tools` → prebuilt 3 个，均 `enabled`=true；SEARCH_METADATA / GET_TABLE_INFO 的 config 为 `{"timeout": 30}`；EXECUTE_SQL config 含 `sql_policy.allow_select`=true（其余 false）、`timeout`=30、`max_rows`=1000（无 DB 记录时使用代码默认值）
+2. **懒初始化默认配置**：GET `/v1/mcp-services/{id}/tools` → prebuilt **6 个**，均 `enabled`=true；SEARCH_METADATA / GET_TABLE_INFO 的 config 为 `{"timeout": 30}`；EXECUTE_SQL config 含 `sql_policy.allow_select`=true（其余 false）、`timeout`=30、`max_rows`=1000；UPDATE_TABLE_INFO / UPDATE_COLUMN_INFO / UPSERT_TERM 的 config 为 `{}`（无 per-service 配置，无 DB 记录时使用代码默认值）
 3. **更新 EXECUTE_SQL 配置**：PUT `/v1/mcp-services/{id}/tools/EXECUTE_SQL`，body：`{"tool_type": "EXECUTE_SQL", "enabled": true, "config": "{\"sql_policy\":{\"allow_select\":true,\"allow_update\":true,\"allow_multi\":true},\"timeout\":60,\"max_rows\":500}"}`（config 为 JSON 字符串）→ 200
    - GET `/tools` 回读：EXECUTE_SQL config 与提交一致（`allow_update`=true、`allow_multi`=true、`timeout`=60、`max_rows`=500）
 4. **预置工具开关**：PUT `/tools/SEARCH_METADATA`，body：`{"tool_type": "SEARCH_METADATA", "enabled": false}` → 200；GET `/tools` 回读 SEARCH_METADATA `enabled`=false
@@ -284,10 +284,10 @@
 **数据：** `chinook.e2e.{seeded_datasource_name, mcp.subject, datasource.nonexistent_table}`
 
 1. 搜索种子数据源 → 创建 MCP 服务（携带 `data_scopes` 绑定该数据源）
-2. **GET_TABLE_INFO（平台元数据路径）**：POST `/tools/GET_TABLE_INFO/test`，args `{"data_source_id": "<seedDsId>", "tables": [{"table": "<mcp.subject.term.relation_table>"}]}`（注意：参数为 `tables` 数组，非 inputSchema 中的 `table` 字符串）→ HTTP 200
+2. **GET_TABLE_INFO（平台元数据路径，decision 12：`data_source_id` 在每个 `tables[]` 项内）**：POST `/tools/GET_TABLE_INFO/test`，args `{"tables": [{"data_source_id": "<seedDsId>", "table": "<mcp.subject.term.relation_table>"}]}`（注意：参数为 `tables` 数组，`data_source_id` 在每行内，非顶层；顶层 `data_source_id` 会导致 PARAM_INVALID）→ HTTP 200
    - `success`=true，`data.type`=TABLE_METADATA，`data.tables` 非空
    - tables[0]：`table`=`mcp.subject.term.relation_table`，`columns` 与 `mcp.subject.table_columns.<同表>` 一致（来自平台同步元数据，非 JDBC 直查）
-   - **不存在的表**：args tables 改为 `[{"table": "<datasource.nonexistent_table>"}]` → HTTP 200，`success`=true，`data.tables` 为空数组（静默跳过，不报错）
+   - **不存在的表**：args tables 改为 `[{"data_source_id": "<seedDsId>", "table": "<datasource.nonexistent_table>"}]` → HTTP 200，`success`=true，`data.tables` 为空数组（静默跳过，不报错）
 3. **SEARCH_METADATA（ES 搜索路径）**：POST `/tools/SEARCH_METADATA/test`，args `{"keywords": ["<mcp.subject.field_value_search>"]}` → HTTP 200
    - `success`=true，`data.type`=SEARCH_HIT，`data.keywords`=["<mcp.subject.field_value_search>"]
    - `data.data_sources` 或 `data.terms` 至少一个非空（`mcp.subject.table_columns` 中对应表的维度值命中，按数据源分组返回）
@@ -348,7 +348,68 @@
 6. **搜维度值（FIELD_VALUE 路径）**：args `{"keywords": ["<mcp.subject.field_value_search>"]}` → success=true，data_sources 含 `mcp.subject.term.relation_table`，**terms 为空**（值命中 ≠ 术语命中）
 7. **搜表名**：args `{"keywords": ["<mcp.subject.table_search>"]}` → data_sources 含该表
 8. **主题外关键词（scope 过滤）**：args `{"keywords": ["<mcp.subject.outside_keyword>"]}` → success=true，`data.data_sources` 与 `data.terms` 均为空数组（不报错）
-9. **GET_TABLE_INFO 主题内表（正向）**：args `{"data_source_id": "<dsId>", "tables": [{"table": "<mcp.subject.term.relation_table>"}]}` → success=true，`data.tables` 非空，columns 与 `mcp.subject.table_columns.<同表>` 一致
+9. **GET_TABLE_INFO 主题内表（正向）**：args `{"tables": [{"data_source_id": "<dsId>", "table": "<mcp.subject.term.relation_table>"}]}` → success=true，`data.tables` 非空，columns 与 `mcp.subject.table_columns.<同表>` 一致
 10. **EXECUTE_SQL 主题内表（正向）**：args `{"data_source_id": "<dsId>", "sql": "<mcp.subject.select_sql>"}` → success=true，results[0] SELECT、rows 非空（表级 scope 通过）
-11. **服务详情**：GET `/v1/mcp-services/{id}` → `tool_count`=3（3 个预置工具，无自定义）
+11. **服务详情**：GET `/v1/mcp-services/{id}` → `tool_count`=6（6 个预置工具，无自定义）
 12. 删除服务（清理）
+
+---
+
+## TC-MCP-021 UPDATE_TABLE_INFO 元数据写入（含部分失败与恢复）
+**级别：** P0
+**前置：** 已登录，种子数据源已就绪（TC-SEM-000）
+**数据：** `chinook.e2e.{seeded_datasource_name, mcp.write_tool, datasource.nonexistent_table}`
+
+> **背景**：LLM 把学到的表描述/别名写回共享元数据存储。写入立即可见（GET_TABLE_INFO 回读），单条失败不阻塞其他条目（部分失败语义）。测试后恢复基线（genre 表基线：`description`=""、`aliases`=[]），不污染种子数据。
+
+1. 搜索种子数据源 → 创建 MCP 服务（携带 `data_scopes` 绑定该数据源）
+2. **基线读取**：POST `/tools/GET_TABLE_INFO/test`，args `{"tables": [{"data_source_id": "<seedDsId>", "table": "<write_tool.table>"}]}` → 记录 `data.tables[0].description` 与 `aliases` 为基线（预期 `""` 与 `[]`）
+3. **写入表描述与别名**：POST `/tools/UPDATE_TABLE_INFO/test`，args `{"tables": [{"data_source_id": "<seedDsId>", "table": "<write_tool.table>", "description": "<write_tool.table_desc>", "aliases": ["<write_tool.table_aliases[0]>"]}]}` → HTTP 200
+   - `success`=true，`data.type`=**METADATA_UPDATE**
+   - `data.results[0]`：`entity_type`=TABLE、`entity`=`write_tool.table`、`success`=true、`change_type`=UPDATE
+   - `results[0].old.description`/`aliases` 与基线一致；`results[0].new.description`=写入值
+4. **回读验证（写入立即生效）**：GET_TABLE_INFO 同参数 → `data.tables[0].description`=写入值，`aliases` 含写入别名
+5. **部分失败**：UPDATE_TABLE_INFO 一次传两行——genre（合法）+ `write_tool.ghost_table`（不存在）→ HTTP 200
+   - `data.results` 长度 2；`results[0].success`=true（合法行写入生效，GET_TABLE_INFO 回读确认）
+   - `results[1].success`=false，`results[1].error.error_category`=**PARAM_ERROR**（ENTITY_NOT_FOUND），`error.message` 含表名
+6. **scope 违规（ds 级）**：args `tables[0].data_source_id`=随机 UUID → HTTP 200，`results[0].success`=false，`error.error_category`=**SCOPE_ERROR**（写工具仅做 ds 级校验，不做表级）
+7. **参数超长（binder 层整体失败）**：args `description`=501 字符 → HTTP 200，`success`=false，`error.error_category`=PARAM_ERROR，`data` 不存在（非逐条失败）
+8. **恢复基线**：UPDATE_TABLE_INFO 写回基线（`description`=""、`aliases`=[]）→ success=true；GET_TABLE_INFO 回读确认已恢复
+9. 删除服务（清理）
+
+---
+
+## TC-MCP-022 UPDATE_COLUMN_INFO 元数据写入（含失败分支与恢复）
+**级别：** P1
+**前置：** 已登录，种子数据源已就绪（TC-SEM-000）
+**数据：** `chinook.e2e.{seeded_datasource_name, mcp.write_tool}`
+
+> **背景**：列描述/别名写入（列值语义是最高价值知识）。写后 GET_TABLE_INFO 回读验证（ColumnDef.comment=列描述）。测试后恢复基线。
+
+1. 搜索种子数据源 → 创建 MCP 服务（携带 `data_scopes` 绑定该数据源）
+2. **基线读取**：GET_TABLE_INFO，args `{"tables": [{"data_source_id": "<seedDsId>", "table": "<write_tool.table>"}]}` → 记录列 `<write_tool.column>` 的 `comment` 与 `aliases` 为基线
+3. **写入列描述与别名**：POST `/tools/UPDATE_COLUMN_INFO/test`，args `{"columns": [{"data_source_id": "<seedDsId>", "table": "<write_tool.table>", "column": "<write_tool.column>", "description": "<write_tool.column_desc>", "aliases": ["<write_tool.column_aliases[0]>"]}]}` → HTTP 200
+   - `data.results[0]`：`entity_type`=COLUMN、`entity`=`write_tool.column`、`success`=true、`change_type`=UPDATE
+   - `results[0].old.comment` 语义（description）与基线一致；`results[0].new.description`=写入值
+4. **回读验证**：GET_TABLE_INFO → 列 `write_tool.column` 的 `comment`=写入值，`aliases` 含写入别名
+5. **不存在的列**：args `column`=`write_tool.ghost_column` → HTTP 200，`results[0].success`=false，`error.error_category`=PARAM_ERROR（ENTITY_NOT_FOUND），`error.message` 含列名
+6. **恢复基线**：UPDATE_COLUMN_INFO 写回基线 → success=true；GET_TABLE_INFO 回读确认已恢复
+7. 删除服务（清理）
+
+---
+
+## TC-MCP-023 UPSERT_TERM 术语写入（CREATE→UPDATE 幂等 + 平台可见性）
+**级别：** P0
+**前置：** 已登录，种子主题已就绪（TC-SEM-000）
+**数据：** `chinook.e2e.{seeded_subject_name, mcp.write_tool}`
+
+> **背景**：LLM 写入的业务术语须在平台侧可见（跨工具一致性：MCP 写入 → 平台术语 API 可查），重复调用同 subject+name 走 UPDATE（幂等 upsert）。术语通过平台 API 清理（无 v1 管理 UI）。
+
+1. 搜索种子主题（`seeded_subject_name`）获取 subjectId，创建 MCP 服务（`data_scopes` 绑定该主题，`scope_type`=SUBJECT）
+2. **创建术语**：POST `/tools/UPSERT_TERM/test`，args `{"terms": [{"subject_name": "<seeded_subject_name>", "name": "<write_tool.term_name>", "description": "<write_tool.term_desc>", "aliases": ["<write_tool.term_aliases[0]>"]}]}` → HTTP 200
+   - `data.results[0]`：`entity_type`=TERM、`entity`=`write_tool.term_name`、`success`=true、`change_type`=**CREATE**、`old`=null、`new.description`=写入值
+3. **平台 API 验证（跨工具一致性）**：GET `/v1/subjects/{subjectId}/terms`（keyword=术语名）→ 术语存在，`name`/`description`/`aliases` 与写入一致
+4. **更新术语（幂等 upsert）**：再次调用 UPSERT_TERM（同 subject+name，`description`=`write_tool.term_desc_v2`）→ `results[0].change_type`=**UPDATE**，`old.description`=步骤 2 写入值，`new.description`=新值
+5. 平台 API 回读 → `description` 已更新为 `term_desc_v2`
+6. **主题不在范围**：args `terms[0].subject_name`=`write_tool.outside_subject` → HTTP 200，`results[0].success`=false，`error.error_category`=**SCOPE_ERROR**
+7. **清理**：平台 API DELETE `/v1/terms/{id}` 删除测试术语（按步骤 3 查到的 id），删除服务

@@ -16,7 +16,24 @@ export interface ToolTestError {
   message: string;
 }
 
-export type ToolTestData = SqlExecution | TableMetadata | SearchHit;
+export type ToolTestData = SqlExecution | TableMetadata | SearchHit | MetadataUpdateData;
+
+// ── METADATA_UPDATE (UPDATE_TABLE_INFO / UPDATE_COLUMN_INFO / UPSERT_TERM) ──
+
+export interface MetadataUpdateData {
+  type: "METADATA_UPDATE";
+  results: MetadataUpdateResult[];
+}
+
+export interface MetadataUpdateResult {
+  entity_type: "TABLE" | "COLUMN" | "TERM";
+  entity: string;
+  success: boolean;
+  change_type?: "CREATE" | "UPDATE";
+  old?: { description?: string; aliases?: string[] };
+  new?: { description?: string; aliases?: string[] };
+  error?: { error_category: string; message: string };
+}
 
 export interface SqlExecution {
   type: "SQL_EXECUTION";

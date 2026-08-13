@@ -42,6 +42,9 @@ const toolTypeLabel = (status: string) => {
     case "SEARCH_METADATA": return t("mcpService.tool.type.SEARCH_METADATA");
     case "GET_TABLE_INFO": return t("mcpService.tool.type.GET_TABLE_INFO");
     case "EXECUTE_SQL": return t("mcpService.tool.type.EXECUTE_SQL");
+    case "UPDATE_TABLE_INFO": return t("mcpService.tool.type.UPDATE_TABLE_INFO");
+    case "UPDATE_COLUMN_INFO": return t("mcpService.tool.type.UPDATE_COLUMN_INFO");
+    case "UPSERT_TERM": return t("mcpService.tool.type.UPSERT_TERM");
     default: return status;
   }
 };
