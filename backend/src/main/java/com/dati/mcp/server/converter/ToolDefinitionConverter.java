@@ -1,10 +1,12 @@
 package com.dati.mcp.server.converter;
 
+import com.dati.common.JsonUtils;
 import com.dati.mcp.domain.model.McpServiceSnapshot;
 import com.dati.mcp.domain.model.McpToolType;
 import com.dati.mcp.domain.model.ToolConfig;
 import com.dati.mcp.domain.model.ToolParameter;
 import com.dati.mcp.domain.service.McpParameterSchemaGenerator;
+import com.fasterxml.jackson.core.type.TypeReference;
 import io.modelcontextprotocol.spec.McpSchema;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -31,7 +33,9 @@ public class ToolDefinitionConverter {
 
     private static final List<McpToolType> PREBUILT_ORDER = List.of(
         McpToolType.SEARCH_METADATA, McpToolType.GET_TABLE_INFO,
-        McpToolType.EXECUTE_SQL, McpToolType.PARAMETERIZED_SQL);
+        McpToolType.EXECUTE_SQL, McpToolType.UPDATE_TABLE_INFO,
+        McpToolType.UPDATE_COLUMN_INFO, McpToolType.UPSERT_TERM,
+        McpToolType.PARAMETERIZED_SQL);
 
     public ToolDefinitionConverter(McpParameterSchemaGenerator schemaGenerator) {
         this.schemaGenerator = schemaGenerator;
@@ -62,9 +66,30 @@ public class ToolDefinitionConverter {
     }
 
     private McpSchema.Tool buildPrebuilt(McpToolType type) {
-        return McpSchema.Tool.builder(type.getToolName(),
+        var builder = McpSchema.Tool.builder(type.getToolName(),
                 schemaGenerator.generate(type.getParameterType()))
-            .description(type.getDescription())
+            .description(type.getDescription());
+        if (type.getTitle() != null) {
+            builder.title(type.getTitle());
+        }
+        McpSchema.ToolAnnotations annotations = buildAnnotations(type.getAnnotationsJson());
+        if (annotations != null) {
+            builder.annotations(annotations);
+        }
+        return builder.build();
+    }
+
+    /** Parses the enum-declared annotations JSON; null/blank means no annotations. */
+    private McpSchema.ToolAnnotations buildAnnotations(String json) {
+        if (json == null || json.isBlank()) {
+            return null;
+        }
+        Map<String, Object> map = JsonUtils.fromJson(json, new TypeReference<>() {});
+        return McpSchema.ToolAnnotations.builder()
+            .readOnlyHint((Boolean) map.get("readOnlyHint"))
+            .destructiveHint((Boolean) map.get("destructiveHint"))
+            .idempotentHint((Boolean) map.get("idempotentHint"))
+            .openWorldHint((Boolean) map.get("openWorldHint"))
             .build();
     }
 

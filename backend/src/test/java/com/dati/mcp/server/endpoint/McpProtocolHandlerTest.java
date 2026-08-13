@@ -2,6 +2,8 @@ package com.dati.mcp.server.endpoint;
 
 import com.dati.TestFixtures;
 import com.dati.mcp.domain.model.McpServiceSnapshot;
+import com.dati.mcp.domain.model.McpToolType;
+import com.dati.mcp.domain.model.ToolConfig;
 import com.dati.mcp.domain.service.McpParameterSchemaGenerator;
 import com.dati.mcp.domain.service.ToolExecutor;
 import com.dati.mcp.domain.service.ToolExecuteException;
@@ -198,5 +200,56 @@ class McpProtocolHandlerTest {
         McpSchema.JSONRPCResponse resp = handler.handle(service, content, req);
         assertNotNull(resp.error());
         assertEquals(-32601, resp.error().code());
+    }
+
+    @Test
+    @DisplayName("tools/list exposes metadata update tools with title/annotations and fixed schema shape")
+    void toolsListExposesMetadataUpdateTools() {
+        var content = new com.dati.mcp.domain.model.McpServiceSnapshot.SnapshotContent();
+        content.setPrebuiltTools(List.of(
+            TestFixtures.createTestPrebuiltToolDraft(McpToolType.GET_TABLE_INFO, true,
+                new ToolConfig.GetTableInfoConfig()),
+            TestFixtures.createTestPrebuiltToolDraft(McpToolType.UPDATE_TABLE_INFO, true,
+                new ToolConfig.UpdateMetadataConfig()),
+            TestFixtures.createTestPrebuiltToolDraft(McpToolType.UPDATE_COLUMN_INFO, true,
+                new ToolConfig.UpdateMetadataConfig()),
+            TestFixtures.createTestPrebuiltToolDraft(McpToolType.UPSERT_TERM, true,
+                new ToolConfig.UpdateMetadataConfig())));
+
+        McpSchema.JSONRPCRequest req = new McpSchema.JSONRPCRequest("tools/list", 3, Map.of());
+        McpSchema.JSONRPCResponse resp = handler.handle(service, content, req);
+
+        assertNull(resp.error());
+        McpSchema.ListToolsResult result = (McpSchema.ListToolsResult) resp.result();
+        assertEquals(List.of("get_table_info", "update_table_info", "update_column_info", "upsert_term"),
+            result.tools().stream().map(McpSchema.Tool::name).toList());
+
+        McpSchema.Tool read = result.tools().getFirst();
+        assertEquals("Get Table Info", read.title());
+        assertTrue(read.annotations().readOnlyHint());
+        // GET_TABLE_INFO schema: data_source_id inside each tables[] item (decision 12)
+        @SuppressWarnings("unchecked")
+        var tablesProp = (Map<String, Object>) ((Map<String, Object>) read.inputSchema().get("properties")).get("tables");
+        @SuppressWarnings("unchecked")
+        var itemProps = (Map<String, Object>) ((Map<String, Object>) tablesProp.get("items")).get("properties");
+        assertTrue(itemProps.containsKey("data_source_id"));
+        assertEquals(List.of("data_source_id", "table"),
+            ((Map<String, Object>) tablesProp.get("items")).get("required"));
+
+        McpSchema.Tool update = result.tools().get(1);
+        assertEquals("Update Table Metadata", update.title());
+        assertNotNull(update.annotations());
+        assertFalse(update.annotations().readOnlyHint());
+        assertFalse(update.annotations().destructiveHint());
+        assertTrue(update.annotations().idempotentHint());
+        assertTrue(update.annotations().openWorldHint());
+        @SuppressWarnings("unchecked")
+        var updateProps = (Map<String, Object>) ((Map<String, Object>)
+            ((Map<String, Object>) update.inputSchema().get("properties")).get("tables")).get("items");
+        assertEquals(List.of("data_source_id", "table"), updateProps.get("required"));
+
+        McpSchema.Tool term = result.tools().get(3);
+        assertEquals("upsert_term", term.name());
+        assertEquals("Upsert Business Term", term.title());
     }
 }

@@ -36,7 +36,7 @@ public class McpCustomToolPO extends BasePO {
     private String description;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "tool_type", nullable = false)
+    @Column(name = "tool_type", nullable = false, columnDefinition = "varchar(30)")
     private McpToolType toolType = McpToolType.PARAMETERIZED_SQL;
 
     @Column

@@ -30,7 +30,7 @@ public class McpPrebuiltToolConfigPO extends BaseResourcePO {
     private String serviceId;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "tool_type", nullable = false, length = 30)
+    @Column(name = "tool_type", nullable = false, length = 30, columnDefinition = "varchar(30)")
     private McpToolType toolType;
 
     @Column(nullable = false)

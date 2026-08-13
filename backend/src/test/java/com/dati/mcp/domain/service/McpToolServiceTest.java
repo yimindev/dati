@@ -96,7 +96,7 @@ class McpToolServiceTest {
 
         ToolsResult result = mcpToolService.listTools(TestFixtures.TEST_MCP_SERVICE_ID);
 
-        assertThat(result.prebuilt()).hasSize(3);
+        assertThat(result.prebuilt()).hasSize(6);
     }
 
     @Test
@@ -115,7 +115,7 @@ class McpToolServiceTest {
 
         ToolsResult result = mcpToolService.listTools(TestFixtures.TEST_MCP_SERVICE_ID);
 
-        assertThat(result.prebuilt()).hasSize(3);
+        assertThat(result.prebuilt()).hasSize(6);
         assertThat(result.custom()).hasSize(1);
     }
 
@@ -366,7 +366,7 @@ class McpToolServiceTest {
 
         long result = mcpToolService.countToolsByServiceId(TestFixtures.TEST_MCP_SERVICE_ID);
 
-        assertThat(result).isEqualTo(5L);
+        assertThat(result).isEqualTo(8L);
     }
 
     // ── 全量替换（回滚恢复草稿用）──

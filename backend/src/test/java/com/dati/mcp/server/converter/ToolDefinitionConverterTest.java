@@ -113,4 +113,35 @@ class ToolDefinitionConverterTest {
         var content = new McpServiceSnapshot.SnapshotContent();
         assertTrue(converter.convert(content).isEmpty());
     }
+
+    @Test
+    @DisplayName("prebuilt tools expose protocol title and annotations")
+    void prebuiltTitleAndAnnotations() {
+        var content = new McpServiceSnapshot.SnapshotContent();
+        content.setPrebuiltTools(List.of(
+            TestFixtures.createTestPrebuiltToolDraft(McpToolType.UPDATE_TABLE_INFO, true,
+                new ToolConfig.UpdateMetadataConfig()),
+            TestFixtures.createTestPrebuiltToolDraft(McpToolType.SEARCH_METADATA, true,
+                new ToolConfig.SearchMetadataConfig()),
+            TestFixtures.createTestPrebuiltToolDraft(McpToolType.EXECUTE_SQL, true,
+                new ToolConfig.ExecuteSqlConfig())));
+        List<McpSchema.Tool> tools = converter.convert(content);
+        McpSchema.Tool read = tools.stream().filter(t -> t.name().equals("search_metadata")).findFirst().orElseThrow();
+        McpSchema.Tool write = tools.stream().filter(t -> t.name().equals("update_table_info")).findFirst().orElseThrow();
+        McpSchema.Tool sql = tools.stream().filter(t -> t.name().equals("execute_sql")).findFirst().orElseThrow();
+
+        assertEquals("search_metadata", read.name());
+        assertEquals("Search Metadata", read.title());
+        assertTrue(read.annotations().readOnlyHint());
+
+        assertEquals("Update Table Metadata", write.title());
+        assertNotNull(write.annotations());
+        assertFalse(write.annotations().readOnlyHint());
+        assertFalse(write.annotations().destructiveHint());
+        assertTrue(write.annotations().idempotentHint());
+        assertTrue(write.annotations().openWorldHint());
+
+        // EXECUTE_SQL declares neither read-only nor write annotations (can run write SQL)
+        assertNull(sql.annotations());
+    }
 }

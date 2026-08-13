@@ -20,6 +20,7 @@ public class McpToolAssembler {
         vo.setId(type.name());
         vo.setToolType(type);
         vo.setName(type.getToolName());
+        vo.setTitle(type.getTitle());
         vo.setDescription(type.getDescription());
         vo.setEnabled(cfg.isEnabled());
         vo.setConfig(cfg.getConfig());
@@ -69,7 +70,7 @@ public class McpToolAssembler {
         tool.setName(request.getName());
         tool.setTitle(request.getTitle());
         tool.setDescription(request.getDescription());
-        tool.setEnabled(request.getEnabled() != null ? request.getEnabled() : true);
+        tool.setEnabled(request.getEnabled() == null || request.getEnabled());
         if (request.getConfig() != null && !request.getConfig().isBlank()) {
             tool.setConfig(JsonUtils.fromJson(request.getConfig(), ToolConfig.ParamSqlConfig.class));
         }

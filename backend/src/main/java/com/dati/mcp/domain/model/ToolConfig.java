@@ -44,4 +44,9 @@ public interface ToolConfig {
         private int timeout = 30;
         private int maxRows = 1000;
     }
+
+    /** Metadata update tools (UPDATE_TABLE_INFO / UPDATE_COLUMN_INFO / UPSERT_TERM) have no per-service config. */
+    @Data
+    class UpdateMetadataConfig implements ToolConfig {
+    }
 }

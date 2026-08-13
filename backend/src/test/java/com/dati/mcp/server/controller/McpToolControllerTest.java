@@ -8,6 +8,8 @@ import com.dati.mcp.domain.service.McpToolTestService;
 import com.dati.mcp.domain.service.ToolsResult;
 import com.dati.mcp.server.assembler.McpToolAssembler;
 import com.dati.mcp.server.pojo.McpToolVO;
+import com.dati.mcp.server.pojo.MetadataUpdateData;
+import com.dati.mcp.server.pojo.MetadataUpdateResult;
 import com.dati.mcp.server.pojo.SqlExecution;
 import com.dati.mcp.server.pojo.ToolTestError;
 import com.dati.mcp.server.pojo.ToolTestResponse;
@@ -23,6 +25,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.List;
+import java.util.Map;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -192,5 +195,32 @@ class McpToolControllerTest {
             .andExpect(jsonPath("$.error.error_category").value("SCOPE_ERROR"))
             .andExpect(jsonPath("$.error.message").value("Data source not in scope"))
             .andExpect(jsonPath("$.data").doesNotExist());
+    }
+
+    @Test
+    @DisplayName("POST /tools/{toolId}/test - metadata update returns METADATA_UPDATE")
+    void testMetadataUpdateTool() throws Exception {
+        MetadataUpdateData data = new MetadataUpdateData(List.of(
+            new MetadataUpdateResult("TABLE", "sales", true, "UPDATE",
+                Map.of("description", "old", "aliases", List.of("a")),
+                Map.of("description", "new", "aliases", List.of("a", "b")), null),
+            new MetadataUpdateResult("TERM", "退货单", false, null, null, null,
+                new MetadataUpdateResult.MetadataUpdateError("SCOPE_ERROR", "Subject 财务 not in service scope"))));
+        ToolTestResponse mockResp = new ToolTestResponse(true, 33, data, null);
+        when(mcpToolTestService.test(eq(TestFixtures.TEST_MCP_SERVICE_ID), eq("UPDATE_TABLE_INFO"), any()))
+            .thenReturn(mockResp);
+
+        mockMvc.perform(post("/v1/mcp-services/{serviceId}/tools/{toolId}/test",
+                TestFixtures.TEST_MCP_SERVICE_ID, "UPDATE_TABLE_INFO")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"arguments\":{\"tables\":[{\"data_source_id\":\"ds-1\",\"table\":\"sales\",\"description\":\"new\"}]}}"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.type").value("METADATA_UPDATE"))
+            .andExpect(jsonPath("$.data.results[0].entity_type").value("TABLE"))
+            .andExpect(jsonPath("$.data.results[0].success").value(true))
+            .andExpect(jsonPath("$.data.results[0].change_type").value("UPDATE"))
+            .andExpect(jsonPath("$.data.results[0].new.description").value("new"))
+            .andExpect(jsonPath("$.data.results[1].success").value(false))
+            .andExpect(jsonPath("$.data.results[1].error.error_category").value("SCOPE_ERROR"));
     }
 }

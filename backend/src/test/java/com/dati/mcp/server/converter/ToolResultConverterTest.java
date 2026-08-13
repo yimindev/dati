@@ -12,6 +12,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -62,5 +63,32 @@ class ToolResultConverterTest {
         assertTrue(result.isError());
         McpSchema.TextContent text = (McpSchema.TextContent) result.content().getFirst();
         assertTrue(text.text().contains("table not in scope"));
+    }
+
+    @Test
+    @DisplayName("metadata update results serialize with snake_case and old/new keys")
+    void convertsMetadataUpdate() {
+        com.dati.mcp.server.pojo.MetadataUpdateData data =
+            new com.dati.mcp.server.pojo.MetadataUpdateData(List.of(
+                new com.dati.mcp.server.pojo.MetadataUpdateResult(
+                    "TABLE", "sales", true, "UPDATE",
+                    Map.of("description", "old desc", "aliases", List.of("a")),
+                    Map.of("description", "new desc", "aliases", List.of("a", "b")),
+                    null),
+                new com.dati.mcp.server.pojo.MetadataUpdateResult(
+                    "TERM", "退货单", false, null, null, null,
+                    new com.dati.mcp.server.pojo.MetadataUpdateResult.MetadataUpdateError(
+                        "SCOPE_ERROR", "Subject 财务 not in service scope"))));
+
+        McpSchema.CallToolResult result = converter.toResult(data);
+        assertFalse(result.isError());
+        String text = ((McpSchema.TextContent) result.content().getFirst()).text();
+        assertTrue(text.contains("\"type\":\"METADATA_UPDATE\""));
+        assertTrue(text.contains("\"entity_type\":\"TABLE\""));
+        assertTrue(text.contains("\"change_type\":\"UPDATE\""));
+        assertTrue(text.contains("\"new\":{"));
+        assertTrue(text.contains("\"description\":\"new desc\""));
+        assertTrue(text.contains("\"error_category\":\"SCOPE_ERROR\""));
+        assertNotNull(result.structuredContent());
     }
 }
