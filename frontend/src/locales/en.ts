@@ -116,21 +116,13 @@ export default {
   layout: {
     header: {
       brand: "DatI",
-      workspace: "Workspace",
-      itemOne: "Item One",
-      itemTwo: "Item Two",
-      info: "Info",
-      orders: "Orders",
       theme: "Theme",
-      language: "Language",
       help: "Help",
     },
     side: {
       expand: "Expand",
       collapse: "Collapse",
-      semanticModels: "Semantic Models",
       dataSources: "Data Sources",
-      help: "Help",
     },
   },
 

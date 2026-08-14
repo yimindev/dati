@@ -42,11 +42,6 @@ function goToDocs() {
       </div>
     </el-menu-item>
 
-    <el-sub-menu index="2">
-      <template #title> {{ t("layout.header.workspace") }} </template>
-      <el-menu-item index="2-1"> {{ t("layout.header.itemOne") }} </el-menu-item>
-      <el-menu-item index="2-2"> {{ t("layout.header.itemTwo") }} </el-menu-item>
-    </el-sub-menu>
 
     <el-menu-item index="header-theme" class="h-full" @click="toggleDark()">
       <button

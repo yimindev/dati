@@ -84,9 +84,9 @@ async function handleRegister() {
         <el-form-item>
           <el-button
             type="primary"
+            native-type="submit"
             class="w-full"
             :loading="authStore.loading"
-            @click="handleRegister"
           >
             {{ t("auth.register") }}
           </el-button>
