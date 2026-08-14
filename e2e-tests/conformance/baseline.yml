@@ -2,7 +2,7 @@
 # Known failing scenarios, expected to fail until fixed. See:
 # https://github.com/modelcontextprotocol/conformance/blob/main/SDK_INTEGRATION.md
 #
-# Scope rationale (per docs/superpowers/specs/2026-08-06-mcp-endpoint-design.md §9):
+# Scope rationale (per docs/architecture/mcp-service-management.md, ScopeValidator section):
 # - Stateless server: no session management, no SSE streams, no GET/DELETE endpoints
 # - Capabilities intentionally not declared: resources, logging, completion, elicitation (2026-07-28)
 # - Reference-server fixture tools/prompts (test_simple_text, test_image_content, ...) do not

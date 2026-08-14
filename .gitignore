@@ -39,3 +39,6 @@ target/
 
 # MCP Conformance run artifacts (regenerable; baseline yml is versioned)
 /e2e-tests/conformance/results/
+
+# VitePress build cache
+docs/user-guide/.vitepress/cache/

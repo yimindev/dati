@@ -366,19 +366,7 @@ DataSourceService.deleteDataSource()
 - **列值抽取**: 通过 `ColumnValueService` 执行 `SELECT DISTINCT` 抽取列的去重值到 ES，支持覆盖/追加两种模式，受 `ColumnValueConfig` 限制采样数量和值长度
 - **值匹配开关**: 仅字符串类型列（varchar/char/text）支持，开启后可管理列值；关闭时自动清理 ES 中的 FIELD_VALUE 数据
 
-## 7. 更新记录
+## 7. 参考
 
-| 日期 | 更新内容 |
-|------|----------|
-| 2026-06-28 | 修正目录结构中 `repository/mapper/` 重复描述的错误，移除不存在的 MyBatis 引用 |
-| 2026-06-28 | 补充 `ColumnInfo.extractValueEnabled` 字段说明 |
-| 2026-06-28 | 新增 `ColumnValueService` 服务文档 |
-| 2026-06-28 | 补充 TableController 和 ColumnController 的完整 API 列表 |
-| 2026-06-28 | 补充 `DataSourceService.updateDataSource()` 方法说明 |
-| 2026-06-28 | 修正前端组件目录，移除不存在的 `DatasourceAction.vue` |
-| 2026-06-28 | 补充前端 `tableinfo.ts` 和 `column.ts` API 文件及接口定义 |
-| 2026-06-28 | 新增列值管理相关功能描述（抽取、手动管理、值匹配开关） |
-| 2026-06-28 | 补充 `ColumnValueConfig` 配置说明 |
-| 2026-06-28 | 完善数据流图，体现 ColumnValueService 和 Table/Column Controller |
-| 2026-06-28 | 增加 ES 集成中 FIELD_VALUE 类型的交互流程 |
-| 2026-07-27 | 新增/更新数据源时改为持久化前探测真实 `defaultSchema`（忽略客户端传入值），失败转明确的 `DatiException`；`DbClient.getCurrentSchema` 改为接收 `Connection`，连接生命周期统一收敛到 `JdbcMetaService`；`HikariPoolManager` 将预期的连接池初始化失败转换为 `SQLException`；新增 `DS_UNSUPPORTED_TYPE`/`DS_SCHEMA_DETECTION_FAILED` 错误码 |
+- 语义模型集成（ES）：[semantic.md](semantic.md)
+- 模板引擎：[template-engine.md](template-engine.md)

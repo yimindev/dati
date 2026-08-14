@@ -27,6 +27,12 @@ MCP Service 管理模块提供 **MCP（Model Context Protocol）服务的生命�
 
 > **遗留**：调用审计日志（US-09）未实现；元数据写入审计（`mcp_metadata_audit_log`）已落地（见 2.2 元数据更新工具）。
 
+**设计原则**：
+- **简单优先 / 灵活优先**：提供通用原子能力（元数据检索、SQL 执行、参数化 SQL、Prompt），不做业务假设，由用户按场景组合
+- **协议适配而非协议绑定**：核心业务逻辑（Tool 执行、权限校验、审计）作为协议无关的能力层实现，MCP JSON-RPC 层只是其中一个调用方（未来可扩展 Skill / OpenAI Function Calling / REST API）
+- **默认可控，显式放开**：自由 SQL 默认只允许 SELECT，写操作与 DDL 需用户显式开启
+- **SQL 是核心能力**：支持自由 SQL 与参数化 SQL，操作权限在 Tool 层配置
+
 ---
 
 ## 2. 后端架构
@@ -947,118 +953,20 @@ ToolTestDialog
 
 ---
 
-## 4. 国际化（i18n）
+## 4. 测试
 
-```
-mcpService.tool:
-  title, subtitle
-  prebuiltTitle, customTitle
-  addCustom, editCustom
-  searchPlaceholder, totalCount, matchCount, emptySearch, emptyCustom
-  basicInfo, execConfig, security
-  toolName, toolTitle, titlePlaceholder, descPlaceholder, nameFormatHint
-  nameRequired, descRequired, sqlRequired, dataSourceRequired
-  sqlTemplate, dataSourceBinding, selectDataSource
-  parameters, addParam, scanParams, scanParamsSuccess, scanParamsNoNew, noParams, paramCount, paramDesc, paramRequired
-  configExecuteSql, allowedOps, sqlRiskWarning, maxRows, timeout
-  annotationsPreview, annotationsHint
-  previewRender, previewTitle, previewRun, previewParamPlaceholder, previewEmptyValues, previewTextResult, previewSqlResult
-  deleteConfirm
-  type: { SEARCH_METADATA, GET_TABLE_INFO, EXECUTE_SQL, UPDATE_TABLE_INFO, UPDATE_COLUMN_INFO, UPSERT_TERM, PARAMETERIZED_SQL }
+后端总计 **830 测试**（2026-08-14 全量回归），核心覆盖：
 
-mcpService.toolTest:
-  title, parameters, runTest, noParams, result
-  executionTime, affectedRows, rowTotal, emptyResult, comingSoon, keywords, keywordPlaceholder
-  requiredHint
-  entityType: { TABLE, COLUMN, TERM }, oldValue, newValue
-  changeCreate, changeUpdate
-  descriptionPlaceholder, aliasesPlaceholder
+- `McpServiceServiceTest` / `McpServiceControllerTest`：服务 CRUD、code 校验、级联删除
+- `McpServicePublishServiceTest`：发布 / 停用 / 启用 / diff / 回滚 / 状态机（21 用例）
+- `McpEndpointControllerTest` / `McpProtocolHandlerTest`：JSON-RPC 端点与协议分发
+- `SqlAnalyzerTest`：75 条参数化用例（类型识别 / 表提取 / 多语句 / 事务预扫描）
+- `ToolParameterBinderTest` / `McpParameterSchemaGeneratorTest`：结构化参数校验与 inputSchema 生成
+- 各 Executor 测试：`ExecuteSqlExecutorTest` / `GetTableInfoExecutorTest` / `SearchMetadataExecutorTest` / `UpdateTableInfoExecutorTest` / `UpdateColumnInfoExecutorTest` / `UpsertTermExecutorTest`
+- `McpPromptServiceTest` / `TemplatePreviewControllerTest`：Prompt 校验与模板渲染
 
-mcpService.dataScope:
-  addScope, addDialogTitle, subtitle, empty
-  typeDataSource, typeSubject
-  publishedHint, deleteConfirm
-  searchDataSource, searchSubject
-  alreadyAdded, selected, noSelection, selectedCount
-  pageText, prevPage, nextPage
-  confirmAdd, selectFirst, noResults, showingRange
-
-mcpService.prompt:
-  title, subtitle
-  addPrompt, editPrompt
-  searchPlaceholder, totalCount, empty, emptySearch
-  basicInfo, promptName, descPlaceholder
-  content, contentPlaceholder, contentRequired, nameRequired
-  parameters, noParams, paramCount
-  deleteConfirm, previewRender
-
-mcpService（发布与版本管理）:
-  publish, publishChanges, disable, enable, rollback
-  publishSuccess, publishSuccessDisabled, disableSuccess, enableSuccess, rollbackSuccess
-  publishConfirmTitle, publishChangesConfirmTitle
-  publishConfirmDesc, publishChangesConfirmDesc, publishDisabledConfirmDesc
-  publishSummaryTitle, releaseNote, releaseNotePlaceholder, confirmPublish
-  hasUnpublishedChanges, hasUnpublishedChangesDesc
-  disableConfirmTitle, disableConfirmMsg
-  rollbackConfirmTitle, rollbackConfirmMsg
-  versionHistory, versionNumber, releaseNote, activeTag
-  changeAdded, changeModified, changeDeleted, moreChanges
-
-mcpService.delete（删除服务弹窗）:
-  title, subtitle, previewLoading, previewFailed
-  tools, prompts, countSuffix, emptyCascade
-  warning, confirmPlaceholder, confirmButton
-  deleteSuccess, deleteFailed, cancel
-
-mcpService.tab:
-  basic, dataScope, tools, prompts, version（版本管理）
-
-mcpService.status:
-  draft, published, disabled
-```
-
----
-
-## 5. 测试
-
-| 测试类 | 覆盖 |
-|---|---|
-| `McpServiceServiceTest` | 服务 CRUD、code 校验、分页过滤、**删除影响清单组装（预置+自定义工具/prompts/服务不存在）、级联删除（5 子表 + 服务本身）**（27 用例） |
-| `McpServiceControllerTest` | 端点集成测试（**含 DELETE**，15 用例） |
-| `McpServiceDataScopeServiceTest` | 数据范围全量替换、空列表清空、查询、`getResolvedDataSourceIds`（13 用例） |
-| `McpToolServiceTest` | 预置列表（默认值回退）、自定义 CRUD、name 校验、计数（19 用例）；`McpToolServiceReplaceTest` 另 2 用例 |
-| `McpToolControllerTest` | 分组列表、预置/自定义更新、创建、删除、测试端点（9 用例） |
-| `McpToolTestServiceTest` | 工具测试编排：正常执行、异常 catch、参数绑定（10 用例） |
-| `ToolResolverTest` | 预置工具 DB/默认配置、disabled、自定义工具找到/未找到/disabled、PARAMETERIZED_SQL 路径（7 用例） |
-| `ScopeValidatorTest` | 数据源级/表级 scope 校验、defaultSchema 解析、`validateDataSource`、`resolveSubjectInScope`（13 用例） |
-| `ExecuteSqlExecutorTest` | EXECUTE_SQL 结构化参数绑定 + 执行（4 用例） |
-| `GetTableInfoExecutorTest` | GET_TABLE_INFO 参数 record、跨数据源 tables[]、scope 校验（3 用例） |
-| `SearchMetadataExecutorTest` | SEARCH_METADATA 参数绑定 + 空 scope（2 用例） |
-| `ToolParameterBinderTest` | 反序列化 + 校验、PARAM_INVALID 映射、动态工具透传（13 用例） |
-| `McpParameterSchemaGeneratorTest` | record → JSON Schema 生成（required/description/额外属性拒绝）（7 用例） |
-| `MetadataEntityResolverTest` | 表/列定位、null schema 匹配、不存在（5 用例） |
-| `UpdateTableInfoExecutorTest` | 写表元数据、部分失败、去重、审计、scope（6 用例） |
-| `UpdateColumnInfoExecutorTest` | 写列元数据、旧值捕获、审计（4 用例） |
-| `UpsertTermExecutorTest` | 术语创建/更新、subject 解析、部分失败、审计（4 用例） |
-| `McpPromptServiceTest` | Prompt 创建/更新/删除/列表、name 重复、参数双向校验（未定义/未使用）、模板语法错误、转义变量、null content（17 用例） |
-| `McpPromptControllerTest` | GET/POST/PUT/DELETE 端点集成测试（4 用例） |
-| `TemplatePreviewControllerTest` | TEXT 模式（简单变量、if 块）、SQL 模式（字符串/数值/布尔/null/数组格式化、原始变量、默认值、完整模板）、语法错误、空 mode、参数提取（22 用例） |
-| `SqlAnalyzerTest` | 75 条参数化用例：DML/DDL/MERGE/METADATA/TRANSACTION/SET 类型识别、表提取（含子查询/CTE）、多语句检测、事务预扫描、容错、注释绕过 |
-| `TableMetadataServiceTest` | 单表/批量元数据查询、样本值合并（8 用例） |
-| `SemanticSearchServiceTest` | ES 搜索编排、术语关联展开、数据源分组（4 用例） |
-| `McpServicePublishServiceTest` | 发布/二次发布版本递增、停用/启用、diff（未发布草稿/已修改草稿/审计字段不误报/prebuilt 变更明细）、回滚（内容写回草稿+新快照/目标不存在）、状态机前置条件、停用中发布（21 用例） |
-| `McpEndpointControllerTest` | 端点集成：404/503 状态语义、Origin 校验、协议版本校验、方法分发、错误 envelope（13 用例） |
-| `McpProtocolHandlerTest` | JSON-RPC 分发：initialize capabilities、tools/list（含元数据写工具）、tools/call（未知工具 / 执行异常 / 参数绑定）、prompts/list、prompts/get、未知方法（14 用例） |
-| `ToolDefinitionConverterTest` | 预置/自定义工具定义、inputSchema 生成、title/annotations、重名跳过、确定性顺序（8 用例） |
-| `PromptDefinitionConverterTest` | prompts/list 定义、prompts/get 渲染、必填参数校验（5 用例） |
-| `ToolResultConverterTest` | 成功 / 错误结果转换、METADATA_UPDATE 转换（5 用例） |
-| `SnapshotToolResolverTest` | 快照内工具解析、enabled 过滤、scope items 构建（5 用例） |
-
-**后端总计：830 测试，0 失败。**（2026-08-14 全量回归）
-
----
-
-## 6. 已实现 vs 未实现
+完整测试类清单见源码 `backend/src/test/java/com/dati/mcp/`。
+## 5. 已实现 vs 未实现
 
 | User Story | 标题 | 状态 | 说明 |
 |---|---|---|---|
@@ -1078,17 +986,10 @@ mcpService.status:
 
 ---
 
-## 7. 关联文档
+## 6. 关联文档
 
-- [US-01 需求文档](../prd/us/US-01.md)
-- [US-02 需求文档](../prd/us/US-02.md)
-- [US-03 需求文档](../prd/us/US-03.md)
-- [US-04 需求文档](../prd/us/US-04.md)（暂缓）
-- [US-05 需求文档](../prd/us/US-05.md)
-- [US-5.5 需求文档](../prd/us/US-5.5.md)
-- [US-07 需求文档](../prd/us/US-07.md)
-- [US-08 需求文档](../prd/us/US-08.md)
-- [MCP Builder PRD](../prd/2026-05-11-mcp-builder-prd.md)
-- [US-03 实施计划](../superpowers/plans/2026-05-21-us-03-mcp-tool.md)
-- [SQL 分析工具设计](../superpowers/specs/2026-06-19-sql-analyzer-design.md)
-- [SQL 分析工具实施计划](../superpowers/plans/2026-06-19-sql-analyzer.md)
+- 模板引擎：[template-engine.md](template-engine.md)
+- 授权架构：[permission.md](permission.md)（scope 校验与传播校验）
+- 数据源模块：[datasource.md](datasource.md)
+- 语义管理模块：[semantic.md](semantic.md)
+- E2E 用例：`e2e-tests/test-cases/mcp-service.md`、`e2e-tests/test-cases/mcp-endpoint.md`

@@ -272,7 +272,6 @@ frontend/src/
 
 ## 参考
 
-- 详细设计文档：[../superpowers/specs/2026-04-28-auth-design.md](../superpowers/specs/2026-04-28-auth-design.md)
 - 授权架构：[permission.md](permission.md)
 - 后端代码位置：`backend/src/main/java/com/dati/auth/`
 - 前端代码位置：`frontend/src/`

@@ -1,6 +1,6 @@
 # MCP Endpoint - 端到端测试
 
-对外 JSON-RPC 接口 `POST /{code}/mcp`（2025-11-25 协议、Streamable HTTP、无状态）。设计细节见 [docs/superpowers/specs/2026-08-06-mcp-endpoint-design.md](../../docs/superpowers/specs/2026-08-06-mcp-endpoint-design.md)。
+对外 JSON-RPC 接口 `POST /{code}/mcp`（2025-11-25 协议、Streamable HTTP、无状态）。设计细节见 [MCP Endpoint 架构](../../docs/architecture/mcp-service-management.md)。
 
 > **前置约定**：所有用例需要**已发布**的 MCP 服务（`status`=PUBLISHED，含 enabled 工具 + prompt）。
 > 数据准备流程：按 `mcp-service.md` 的 TC-MCP-008 创建服务并发布（携带 `data_scopes` 绑定种子数据源），
