@@ -1,6 +1,32 @@
 export default {
   home: {
-    subtitle: "数据智能平台",
+    heroTitle: "让 Agent 轻松接入数据库",
+    heroDesc: "把数据库变成 Agent 可用的工具 —— 自动生成安全的 MCP 服务",
+    brandTagline: "Data Intelligence",
+    docLink: "查看帮助文档",
+    workflow: {
+      title: "如何开始",
+      step1Title: "接入数据源",
+      step1Desc: "连接主流数据库，同步并管理表、列与列值元数据",
+      step2Title: "组织业务主题",
+      step2Desc: "按业务圈定表范围，维护业务术语",
+      step3Title: "生成与发布 MCP",
+      step3Desc: "内置元数据检索、SQL 执行、元数据维护等预置工具，支持自定义 SQL 工具与 Prompt",
+      countUnit: "{count} 个",
+    },
+    stats: {
+      dataSources: "数据源",
+      subjects: "主题",
+      mcpServices: "MCP 服务",
+    },
+    features: {
+      standardProtocol: "标准 MCP 协议",
+      standardProtocolDesc: "遵循 MCP 2025-11-25 Streamable HTTP 规范",
+      security: "认证与权限管控",
+      securityDesc: "API Key 认证 · 数据范围隔离 · SQL 操作策略",
+      ecosystem: "元数据自演化",
+      ecosystemDesc: "表、列、术语维护已封装为 MCP 工具，Agent 使用中可写回业务知识，元数据越用越准（写入可审计）",
+    },
   },
 
   auth: {

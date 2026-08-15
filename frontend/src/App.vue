@@ -13,6 +13,7 @@ const route = useRoute();
 const { t } = useI18n();
 
 const isAuthPage = computed(() => ["/login", "/register"].includes(route.path));
+const isHomePage = computed(() => route.path === "/");
 
 watch(
   () => authStore.isLoggedIn,
@@ -34,20 +35,31 @@ watch(
     </template>
     <template v-else>
       <BaseHeader />
-      <div class="main-container flex">
-        <BaseSide/>
-        <div class="flex-1 min-w-0 bg-[var(--ep-fill-color-light)] flex flex-col">
-          <div class="m-4 p-2 bg-[var(--ep-bg-color)] flex-1">
-            <RouterView id="main-content" tabindex="-1" />
+      <template v-if="isHomePage">
+        <div class="home-container bg-[var(--ep-bg-color)] overflow-y-auto">
+          <RouterView id="main-content" tabindex="-1" />
+        </div>
+      </template>
+      <template v-else>
+        <div class="main-container flex">
+          <BaseSide/>
+          <div class="flex-1 min-w-0 bg-[var(--ep-fill-color-light)] flex flex-col">
+            <div class="m-4 p-2 bg-[var(--ep-bg-color)] flex-1">
+              <RouterView id="main-content" tabindex="-1" />
+            </div>
           </div>
         </div>
-      </div>
+      </template>
     </template>
   </el-config-provider>
 </template>
 
 <style>
 .main-container {
+  height: calc(100vh - var(--ep-menu-item-height) - 4px);
+}
+
+.home-container {
   height: calc(100vh - var(--ep-menu-item-height) - 4px);
 }
 </style>

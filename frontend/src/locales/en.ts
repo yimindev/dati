@@ -1,6 +1,32 @@
 export default {
   home: {
-    subtitle: "Data Intelligence Platform",
+    heroTitle: "Effortless database access for agents",
+    heroDesc: "Turn your databases into tools your agents can use — auto-generate secure MCP services",
+    brandTagline: "Data Intelligence",
+    docLink: "View documentation",
+    workflow: {
+      title: "Get Started",
+      step1Title: "Connect Data Sources",
+      step1Desc: "Connect mainstream databases and manage table, column & value metadata",
+      step2Title: "Organize Business Subjects",
+      step2Desc: "Scope tables by business needs and maintain business terms",
+      step3Title: "Generate & Publish MCP",
+      step3Desc: "Built-in tools for metadata search, SQL execution & metadata updates, plus custom SQL tools and prompts",
+      countUnit: "{count} total",
+    },
+    stats: {
+      dataSources: "Data Sources",
+      subjects: "Subjects",
+      mcpServices: "MCP Services",
+    },
+    features: {
+      standardProtocol: "Standard MCP Protocol",
+      standardProtocolDesc: "Follows MCP 2025-11-25 Streamable HTTP spec",
+      security: "Auth & Access Control",
+      securityDesc: "API Key authentication · data scope isolation · SQL operation policies",
+      ecosystem: "Self-Evolving Metadata",
+      ecosystemDesc: "Table, column & term maintenance is exposed as MCP tools — agents write business knowledge back during use, making metadata better over time (fully audited)",
+    },
   },
 
   auth: {
