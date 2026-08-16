@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc -b && vite build",
+    "build:all": "pnpm docs:build && pnpm build",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",

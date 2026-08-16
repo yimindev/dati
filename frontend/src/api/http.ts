@@ -28,7 +28,7 @@ function normalizeError(err: unknown): ApiError {
 }
 
 export const http: AxiosInstance = axios.create({
-  baseURL: BASE_URL ?? '/api',
+  baseURL: BASE_URL ?? '',
   timeout: 15000,
   withCredentials: true,
 })
