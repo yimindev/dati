@@ -67,7 +67,7 @@ const doPreview = async () => {
 const resultRef = ref<HTMLElement>();
 const copyResult = () => {
   navigator.clipboard.writeText(result.value);
-  ElMessage.success(t("mcpService.copySuccess"));
+  ElMessage.success(t("common.copySuccess"));
 };
 </script>
 

@@ -102,7 +102,7 @@ async function removeKey(key: ApiKey) {
 async function copyText(text: string) {
   try {
     await navigator.clipboard.writeText(text);
-    ElMessage.success(t("apiKeys.copied"));
+    ElMessage.success(t("common.copySuccess"));
   } catch {
     ElMessage.error(t("common.copyFailed"));
   }

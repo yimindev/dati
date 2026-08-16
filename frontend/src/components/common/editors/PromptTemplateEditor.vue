@@ -18,6 +18,7 @@ const props = defineProps<{
   modelValue: string;
   label?: string;
   required?: boolean;
+  placeholder?: string;
 }>();
 
 const emit = defineEmits<{
@@ -36,7 +37,7 @@ const cm = useCodeMirror({
     bracketMatching(),
     EditorView.lineWrapping,
   ],
-  placeholder: "请分析 {{table_name}} 表的数据...",
+  placeholder: props.placeholder ?? t("mcpService.prompt.contentPlaceholder"),
 });
 </script>
 

@@ -48,9 +48,9 @@ const statusLabel = (status: string) => {
 const handleCopy = async (endpointPath: string) => {
   try {
     await navigator.clipboard.writeText(endpointPath);
-    ElMessage.success(t("mcpService.copySuccess"));
+    ElMessage.success(t("common.copySuccess"));
   } catch {
-    ElMessage.error(t("mcpService.copyFailed"));
+    ElMessage.error(t("common.copyFailed"));
   }
 };
 </script>

@@ -251,9 +251,9 @@ const handleCopy = async (text: string | number) => {
   if (!str) return;
   try {
     await navigator.clipboard.writeText(str);
-    ElMessage.success(t("mcpService.copySuccess"));
+    ElMessage.success(t("common.copySuccess"));
   } catch {
-    ElMessage.error(t("mcpService.copyFailed"));
+    ElMessage.error(t("common.copyFailed"));
   }
 };
 </script>

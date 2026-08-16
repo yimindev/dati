@@ -54,11 +54,11 @@ export default {
   },
 
   common: {
+    loading: "加载中...",
     noPermission: "没有权限执行此操作",
     // 通用操作
     save: "保存",
     cancel: "取消",
-    close: "关闭",
     confirm: "确认",
     confirmSync: "同步",
     edit: "编辑",
@@ -73,29 +73,18 @@ export default {
     add: "添加",
     search: "搜索",
     testConnection: "测试连接",
-    retry: "重试",
-    back: "返回",
-    nextStep: "下一步",
     refresh: "刷新",
-    yes: "是",
-    no: "否",
     warning: "警告",
-    all: "全选",
-    none: "取消全选",
     clear: "清空",
     selected: "已选",
     fullscreen: "全屏",
     exitFullscreen: "退出全屏",
     modified: "有变动",
-    unchanged: "无变动",
-    added: "新增",
-    deleted: "删除",
     rollback: "回滚",
     unsavedChanges: "存在未保存的修改",
     lastModifiedAt: "最后修改于：{time}",
 
     // 通用字段
-    id: "ID",
     name: "名称",
     type: "类型",
     description: "描述",
@@ -103,7 +92,6 @@ export default {
     updatedAt: "更新时间",
     actions: "操作",
     total: "共 {total} 条",
-    totalItems: "个",
     selectedItems: "个已选",
     schema: "Schema",
     username: "用户名",
@@ -112,13 +100,13 @@ export default {
     dataSource: "数据源",
     subject: "主题",
     aliases: "别名",
-    aliasesPlaceholder: "输入别名后按回车添加",
 
     // 通用消息
     saveSuccess: "保存成功",
     deleteSuccess: "删除成功",
     loadFailed: "加载失败",
     operationFailed: "操作失败",
+    copySuccess: "复制成功",
     copyFailed: "复制失败",
     confirmDelete: "确定要删除「{name}」吗？",
 
@@ -163,9 +151,6 @@ export default {
     jdbcUrl: "JDBC URL",
     connectionName: "连接名称",
     databaseType: "数据库类型",
-    defaultSchema: "默认 Schema",
-    defaultSchemaPlaceholder: "请选择默认 Schema",
-    testConnectionFirst: "测试连接后可选择默认 Schema",
 
     // 特有操作
     tableManage: "表管理",
@@ -173,7 +158,7 @@ export default {
     // 特有消息
     testSuccess: "连接测试成功",
     testFailed: "连接测试失败",
-    deleteConfirmMessage: '确定要删除数据源「{name}」吗？',
+    deleteConfirmMessage: "确定要删除数据源「{name}」吗？",
 
     // 列表页
     createButton: "创建数据源",
@@ -203,7 +188,6 @@ export default {
     deleteTerm: "删除术语",
     addRelation: "添加关联",
     removeRelation: "移除关联",
-    manageRelation: "管理关联",
     linkedEntities: "已关联实体",
 
     // 术语关联
@@ -213,14 +197,8 @@ export default {
     fieldLevel: "字段",
 
     // 关联弹窗
-    selectType: "选择类型",
-    selectTableStep: "选择表",
-    selectTarget: "选择目标",
     searchTable: "搜索表...",
-    filterSchema: "Schema",
     searchField: "搜索字段...",
-    existingRelations: "当前已有关联",
-    noRelations: "暂无关联",
     noSearchResults: "无匹配结果",
     noFieldsInTable: "该表暂无字段",
     relationAlreadyExists: "所选关联已存在",
@@ -240,7 +218,6 @@ export default {
     // 成功消息
     createSuccess: "主题创建成功",
     updateSuccess: "主题更新成功",
-    deleteSuccess: "主题删除成功",
     addTableSuccess: "添加表成功",
     removeTableSuccess: "移除表成功",
     addTermSuccess: "术语创建成功",
@@ -253,21 +230,16 @@ export default {
   tableInfo: {
     // 页面标题
     title: "表信息管理",
-    subtitle: "查看和管理数据源中的表",
 
     // 特有操作
     addTable: "添加表",
     syncColumns: "同步列",
     columnSettings: "列配置",
-    configInfo: "编辑",
 
     // 表单相关
     selectSchema: "请选择 Schema",
     availableTables: "可选表",
     selectedTables: "已选表",
-    noSelected: "暂无选中表",
-    alreadyAdded: "已添加",
-    selectedCount: "已选择 {count} 个表",
     selectAtLeastOne: "请至少选择一个表",
     addSelected: "添加选中表",
     emptyList: "暂无表",
@@ -348,8 +320,6 @@ export default {
     empty: "暂无授权用户",
     roleViewer: "只读",
     roleEditor: "编辑",
-    revokeConfirm: "确定要撤销该用户的授权吗？",
-    subtitle: "配置与管理成员的资源访问权限",
     authorizedUsers: "已授权成员",
     publicLabel: "公开访问",
     publicHint: "开启后，所有已登录用户均可只读访问",
@@ -358,6 +328,7 @@ export default {
     publicOn: "已设为公开（所有人只读可见）",
     publicConfirmButton: "开启公开",
   },
+
   mcpService: {
     title: "MCP 服务",
     serviceName: "服务",
@@ -366,7 +337,6 @@ export default {
     codeRequired: "服务标识不能为空",
     codeFormatError: "服务标识格式错误：仅支持小写字母、数字、连字符和下划线，1-64字符",
     listSubtitle: "管理和发布 MCP 服务",
-    detailTitle: "服务详情",
     createTitle: "创建 MCP 服务",
     status: {
       label: "状态",
@@ -377,10 +347,7 @@ export default {
     },
 
     endpointPath: "服务路径",
-    endpointUrl: "URL",
     toolCount: "工具数",
-    serviceList: "服务列表",
-    overview: "服务概览",
     dialogNote: "创建时可配置数据范围；创建后可在详情中管理工具与发布策略。",
     create: {
       dataScopeSection: "数据范围",
@@ -388,18 +355,13 @@ export default {
       addDataScope: "添加数据范围",
       emptyDataScope: "尚未添加数据范围，MCP 服务需至少一个数据源或主题",
     },
-    activeFilters: "已筛选 {count} 项",
     emptyList: "暂无 MCP 服务",
     emptySearchResult: "无匹配的 MCP 服务",
-    emptyDescription: "暂无描述",
-    emptyValue: "-",
     notPublished: "未发布",
     publish: "发布",
     publishChanges: "发布变更",
     disable: "停用",
     enable: "启用",
-    copySuccess: "复制成功",
-    copyFailed: "复制失败",
     publishSuccess: "发布成功！",
     publishSuccessDisabled: "发布成功！服务仍处于停用状态，需启用才对外服务。",
     disableSuccess: "服务已停用",
@@ -419,7 +381,6 @@ export default {
     releaseNotePlaceholder: "请输入本次发布的变更说明（如：更新 SQL 工具限制及 Prompt）",
     confirmPublish: "确认发布",
     hasUnpublishedChanges: "检测到有未发布的草稿变更",
-    hasUnpublishedChangesDesc: "线上接口正稳定运行在 v{version} 版本。您在草稿中对 Tool / Prompt / Scope 做的修改尚未在线上生效。点击右上角【发布变更】即可更新覆盖线上版本。",
     disableConfirmTitle: "停用服务确认",
     disableConfirmMsg: "停用后，外部 MCP Client 将无法继续请求此 Endpoint，确定停用？",
     versionNumber: "版本",
@@ -448,9 +409,7 @@ export default {
       searchSubject: "搜索主题...",
       alreadyAdded: "已添加",
       confirmAdd: "确认添加 ({count})",
-      selectFirst: "请至少选择一项",
       noResults: "未找到匹配项",
-      loadFailed: "加载失败",
       selected: "已选择",
       selectedCount: "已选择 {count} 项",
       noSelection: "未选择任何项",
@@ -507,7 +466,6 @@ export default {
       previewParamPlaceholder: "输入测试值...",
       previewEmptyValues: "请输入至少一个测试值",
       previewTextResult: "渲染结果",
-      previewSqlResult: "渲染结果",
       deleteConfirm: "删除后 MCP Client 将无法调用此工具，确认删除？",
       type: {
         SEARCH_METADATA: "元数据检索",
@@ -546,7 +504,6 @@ export default {
       noParams: "该工具无需输入参数",
       result: "执行结果",
       affectedRows: "影响行数：{count} 行",
-      rowLimitHint: "仅展示前 50 行，共 {total} 行",
       totalRows: "共 {total} 行",
       elapsed: "耗时 {ms}ms",
       executedSql: "执行的 SQL",
@@ -555,7 +512,6 @@ export default {
       writeResult: "写入结果 #{n}",
       tagPlaceholder: "输入后按回车添加",
       emptyResult: "查询结果为空",
-      comingSoon: "即将支持",
       hint: "填写参数并点击执行测试",
       adviceParamError: "请检查参数是否填写正确",
       adviceScopeError: "请联系管理员调整工具的 Data Scope 配置",
@@ -592,8 +548,6 @@ export default {
       termRow: "术语 {n}",
       termName: "术语名称",
       subjectPlaceholder: "选择主题",
-      termNameHint: "选择已有术语自动带入描述与别名；输入新名称则创建新术语",
-      termAutoFilledHint: "已带入该术语当前的描述与别名，可修改后更新",
     },
   },
 
@@ -605,12 +559,9 @@ export default {
     key: "API Key",
     createdAt: "创建时间",
     lastUsed: "最后使用时间",
-    neverUsed: "从未调用",
     expiresAt: "过期时间",
     expiresInDaysLabel: "过期时间（天）",
     expired: "已过期",
-    actions: "操作",
-    delete: "删除",
     deleteTitle: "删除 API Key",
     deleteConfirm: "确定删除 API Key「{name}」吗？删除后立即失效，且不可恢复。",
     deleted: "已删除",
@@ -624,12 +575,7 @@ export default {
     showOnceWarning: "此 API Key 仅在创建时显示一次，请妥善保存。",
     usageGuideTitle: "客户端调用示例",
     usageGuideDesc: "在 HTTP 请求头中添加 Authorization Header 即可完成认证：",
-    copied: "已复制到剪贴板",
     emptyList: "暂无 API Key，点击右上角创建",
   },
-
-  help: {
-    title: "帮助中心",
-    empty: "暂无文档",
-  },
 };
+

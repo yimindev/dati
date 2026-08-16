@@ -22,5 +22,6 @@
       "vite/client"
     ]
   },
-  "include": ["src/**/*.ts", "src/**/*.d.ts", "src/**/*.tsx", "src/**/*.vue"]
+  "include": ["src/**/*.ts", "src/**/*.d.ts", "src/**/*.tsx", "src/**/*.vue"],
+  "exclude": ["src/**/__tests__/*", "src/**/*.test.ts"]
 }

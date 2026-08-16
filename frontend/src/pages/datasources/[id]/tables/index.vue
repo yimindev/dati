@@ -422,7 +422,7 @@ onMounted(async () => {
     <!-- 元数据配置弹窗 -->
     <el-dialog
       v-model="metadataDialogVisible"
-      :title="t('tableInfo.configInfo')"
+      :title="t('common.edit')"
       width="600px"
     >
       <el-form v-if="currentTable" :model="currentTable" label-width="120px">

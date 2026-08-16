@@ -27,7 +27,7 @@ const formRef = ref<FormInstance>();
 const rules: FormRules = {
   name: [
     { required: true, message: t("common.required", { name: t("datasource.connectionName") }), trigger: "blur" },
-    { min: 1, max: 100, message: "长度在 1 到 100 个字符", trigger: "blur" },
+    { min: 1, max: 100, message: t("common.nameLengthError"), trigger: "blur" },
   ],
   type: [{ required: true, message: t("common.selectRequired", { name: t("datasource.databaseType") }), trigger: "change" }],
   jdbc_url: [
