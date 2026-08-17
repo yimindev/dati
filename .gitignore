@@ -27,6 +27,9 @@ target/
 # H2 Database files
 *.mv.db
 *.trace.db
+
+# Local env secrets (template: .env.example)
+.env
 /.superpowers/
 /.playwright-cli/
 /design/

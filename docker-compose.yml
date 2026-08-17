@@ -1,17 +1,34 @@
 services:
-  postgres:
-    image: postgres:17.6
-    container_name: pg17
+  dati-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        # Pass through to the image LABEL (defaults to "unknown" for daily builds)
+        APP_VERSION: ${DATI_VERSION:-unknown}
+    # Tag follows DATI_VERSION (release) or defaults to latest (daily builds)
+    image: dati/dati:${DATI_VERSION:-latest}
+    container_name: dati-app
     restart: unless-stopped
     ports:
-      - "5432:5432"
+      # 宿主端口 18085,避免与本地开发后端(8085)冲突;容器内部仍为 8085
+      - "18085:8085"
     environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=yimin123
-    mem_limit: 512m
+      - SPRING_PROFILES_ACTIVE=prod
+      # 默认使用内置 H2,数据文件持久化在 /app/db(dati_data 卷)。
+      # 外接数据库(如 PostgreSQL)时,自行配置:
+      #   SPRING_DATASOURCE_URL / SPRING_DATASOURCE_USERNAME / SPRING_DATASOURCE_PASSWORD
+      #   SPRING_DATASOURCE_DRIVER_CLASS_NAME / SPRING_JPA_DATABASE_PLATFORM
+      - SPRING_ELASTICSEARCH_URIS=http://elasticsearch:9200
+      - SPRING_ELASTICSEARCH_USERNAME=elastic
+      - SPRING_ELASTICSEARCH_PASSWORD=${ES_PASSWORD:?ES_PASSWORD must be set in .env}
+      - JWT_SECRET=${JWT_SECRET:?JWT_SECRET must be set in .env}
     volumes:
-      - pg_data:/var/lib/postgresql/data
+      - dati_data:/app/db
+    depends_on:
+      - elasticsearch
 
+  # Elasticsearch 需要 IK 分词插件
   elasticsearch:
     image: davyinsa/elasticsearch-ik:7.17.18
     container_name: es7
@@ -21,9 +38,9 @@ services:
     environment:
       - discovery.type=single-node
       - xpack.security.enabled=true
-      - ELASTIC_PASSWORD=yimin123
-      - "ES_JAVA_OPTS=-Xms1g -Xmx1g"    # 限制 JVM 堆为 1GB
-    mem_limit: 2g                         # 限制容器总内存为 2GB
+      - ELASTIC_PASSWORD=${ES_PASSWORD:?ES_PASSWORD must be set in .env}
+      - "ES_JAVA_OPTS=-Xms1g -Xmx1g" # 限制 JVM 堆为 1GB
+    mem_limit: 2g # 限制容器总内存为 2GB
     deploy:
       resources:
         limits:
@@ -32,5 +49,5 @@ services:
       - es_data:/usr/share/elasticsearch/data
 
 volumes:
+  dati_data:
   es_data:
-  pg_data:

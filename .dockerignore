@@ -1,0 +1,33 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# IDE & Editor
+.idea
+.vscode
+.junie
+.agents
+.superpowers
+*.iml
+.project
+.settings
+.DS_Store
+
+# Build outputs & dependencies
+**/target/
+**/node_modules/
+**/dist/
+**/.vitepress/cache/
+**/.vitepress/dist/
+frontend/public/docs/
+
+# Secrets (must never enter the build context)
+.env
+
+# Database files & logs
+db/
+*.log
+*.tmp
+logs/
+.playwright/
