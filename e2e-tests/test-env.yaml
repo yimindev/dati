@@ -41,3 +41,10 @@ external_services:
     url: "jdbc:postgresql://localhost:5432/postgres"
     username: "postgres"
     password: "yimin123"
+
+# MCP endpoint 验收（scripts/mcp-verify.sh 默认配置）
+mcp:
+  code: "mcp-verify-demo"        # 已发布的验收服务代码
+  tool_name: "list_genres"       # Inspector tools/call 演示工具
+  prompt: "analyze_genre"        # Inspector prompts/get 演示 prompt
+  proxy_port: 18085              # Conformance 代理端口（JWT 注入）

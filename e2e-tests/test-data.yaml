@@ -286,7 +286,7 @@ chinook:
         # 已验证：搜"音乐流派" → terms=[音乐流派] + data_sources=[e2e-chinook-seed: genre]
         term:
           name: "音乐流派"            # 与 semantic.seed_term_name 一致
-          aliases: ["genre", "音乐类型"]
+          aliases: ["音乐类型", "风格"]   # 与实际种子数据一致（历史用例更新所致，勿回改）
           description: "Chinook数据库中的音乐流派分类"
           relation_table: "genre"    # 术语关联的表（entity_type=FIELD）
           relation_field: "name"

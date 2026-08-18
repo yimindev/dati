@@ -88,7 +88,6 @@
 | DISABLED 服务 | POST `/<disabled-code>/mcp` | **503** + body 含 `error`（JSON-RPC error 结构） |
 | PUBLISHED 服务 | POST `/<published-code>/mcp` | **200** |
 | 非 POST 方法 | GET `/<published-code>/mcp` | **405** |
-| Accept 不含 `text/event-stream` | `Accept: application/json` | **400** |
 | 非 initialize 缺 `MCP-Protocol-Version` | 不带该头 | **400** |
 | `Accept` 任意值（含缺省） | 任意 Accept / 无 Accept | **200**（不校验） |
 | Origin 非 localhost 且不在白名单 | `Origin: http://evil.example.com` | **403** |

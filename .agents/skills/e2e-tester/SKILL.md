@@ -17,11 +17,11 @@ description: Use when you need to run E2E HTTP integration tests against the Dat
 
 ### 模式 A：当前进程（单模块快速验证）
 
-Agent 逐步执行用例，负责服务的完整生命周期：启动 → 执行 → 关闭。
+Agent 逐步执行用例，负责服务的完整生命周期：启动 → 执行 → 关闭。服务启停一律用 `scripts/service.sh`（配置从 test-env.yaml `server.*` 读取），不要自行拼启动命令。
 
 ### 模式 B：子进程（批量 / CI）
 
-调度器通过封装脚本并行运行多个模块：
+调度器通过封装脚本并行运行多个模块（子进程调度、stdin 重定向等细节已由脚本封装，直接调用即可）：
 
 ```bash
 # 全部模块
@@ -30,8 +30,6 @@ scripts/run-tests.sh
 # 指定模块
 scripts/run-tests.sh datasource subject term
 ```
-
-子进程关键：`pi -p` 后台运行时必须 `< /dev/null` 重定向 stdin，否则卡住。脚本已封装此细节，直接调用即可。
 
 ## 文件结构
 
@@ -107,7 +105,7 @@ Warnings: 1
 | `scripts/run-tests.sh` | 一键测试调度器 |
 | `scripts/bug-tracker.sh` | Bug 生命周期管理 |
 | `scripts/helpers.sh` | 公共辅助函数（source 使用） |
-| `scripts/mcp-verify.sh` | MCP endpoint 验收（Inspector CLI + Conformance 2025-11-25），配套 `scripts/mcp-conformance-proxy.js`（JWT 注入代理，Conformance CLI 不支持自定义 header）；`MCP_TOKEN` 支持 JWT 或用户 API Key（`sk_` 开头，推荐，永不过期） |
+| `scripts/mcp-verify.sh` | MCP endpoint 验收（Inspector CLI + Conformance 2025-11-25），配套 `scripts/mcp-conformance-proxy.js`（JWT 注入代理，Conformance CLI 不支持自定义 header）；目标服务配置从 test-env.yaml `mcp:` 读取，凭据用 test-data.yaml 固定 API Key（TC-AK-009） |
 | `scripts/api-key-verify.sh` | API Key 全生命周期 e2e（TC-AK-001~009，含固定 key 构造供 mcp-verify.sh 复用） |
 
 所有脚本支持 `--help` 查看详细用法。Agent 直接调用：
@@ -118,8 +116,9 @@ scripts/run-tests.sh datasource             # 单模块
 scripts/bug-tracker.sh fix BUG-20260724-001
 
 # MCP endpoint 验收（需已发布服务，用例见 e2e-tests/test-cases/mcp-endpoint.md）
-MCP_CODE=mcp-verify-demo MCP_TOKEN=<jwt> MCP_DS_ID=<dsId> \
-  scripts/mcp-verify.sh
+# 服务代码等配置默认从 test-env.yaml 读取，可环境变量覆盖
+# 凭据用 test-data.yaml 固定 API Key（TC-AK-009，永不过期，推荐）
+MCP_TOKEN=<sk_...> MCP_DS_ID=<dsId> scripts/mcp-verify.sh
 ```
 
 ## 常见陷阱
@@ -137,8 +136,7 @@ MCP_CODE=mcp-verify-demo MCP_TOKEN=<jwt> MCP_DS_ID=<dsId> \
 - `test-connection` **也需要认证**
 
 ### 服务
-- 启动命令必须指定 workingDirectory
-- 子进程 pi -p 必须 `< /dev/null` 重定向 stdin
+- 服务启停一律用 `scripts/service.sh`（test-env.yaml `server.*` 是唯一配置源），不要硬编码端口/路径/启动命令
 
 ### ES
 - 写入后查询 ES 前必须先 `es_refresh`，否则异步索引延迟会导致误报查不到数据

@@ -226,7 +226,7 @@
 6. **验证删除结果**：
    - 查服务详情 → 404
    - 查服务列表（按 name 搜索）→ 无该服务
-   - 查询该服务的 prompts / snapshots → 均 404（custom tools 已级联清除，`GET /tools` 返回 200 但 `custom` 为空数组 —— 预置工具为代码内置默认值，属既有行为）
+   - 查询该服务的 prompts / snapshots / tools → 均 404（custom tools 已级联清除，`GET /tools` 与 prompts/snapshots 一致返回 404，BUG-20260809-003 修复后行为）
    - 再次 `DELETE` 该 id → 404（幂等）
 
 ---

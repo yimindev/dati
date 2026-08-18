@@ -4,37 +4,53 @@
 # the Conformance CLI (2025-11-25), using a local proxy that injects the JWT.
 #
 # Usage:
-#   MCP_CODE=mcp-verify-demo MCP_TOKEN=<jwt-or-api-key> MCP_DS_ID=<dsId> \
+#   MCP_TOKEN=<jwt-or-api-key> MCP_DS_ID=<dsId> \
 #     .agents/skills/e2e-tester/scripts/mcp-verify.sh
+#
+# Target service code, tool/prompt names and proxy port are read from
+# e2e-tests/test-env.yaml (mcp.*), overridable via MCP_CODE/MCP_TOOL_NAME/
+# MCP_PROMPT/MCP_PROXY_PORT env vars.
 #
 # MCP_TOKEN accepts either a JWT (via login) or a user API key (sk_..., see
 # e2e-tests/test-cases/api-key.md TC-AK-009); API keys never expire and are the
 # recommended credential for repeated acceptance runs.
 #
 # Environment:
-#   MCP_BASE_URL   backend base URL (default http://localhost:8085)
-#   MCP_CODE       published service code (default mcp-verify-demo)
+#   MCP_BASE_URL   backend base URL (default test-env.yaml server.base_url)
+#   MCP_CODE       published service code (default test-env.yaml mcp.code)
 #   MCP_TOKEN      JWT or user API key (sk_...) - Authorization: Bearer <token>
 #   MCP_DS_ID      data source id for execute_sql tool call (optional)
-#   MCP_TOOL_NAME  custom tool name for tools/call demo (optional, default list_genres)
-#   MCP_PROMPT     prompt name for prompts/get (optional, default analyze_genre)
+#   MCP_TOOL_NAME  custom tool name for tools/call demo (optional, default test-env.yaml mcp.tool_name)
+#   MCP_PROMPT     prompt name for prompts/get (optional, default test-env.yaml mcp.prompt)
+#   MCP_PROXY_PORT conformance proxy port (optional, default test-env.yaml mcp.proxy_port)
 #   MCP_BASELINE   conformance expected-failures baseline (default <repo>/e2e-tests/conformance/baseline.yml)
 #   MCP_RESULTS    conformance results output dir (default <repo>/e2e-tests/conformance/results)
 
 set -euo pipefail
 
-MCP_BASE_URL="${MCP_BASE_URL:-http://localhost:8085}"
-MCP_CODE="${MCP_CODE:-mcp-verify-demo}"
-MCP_TOKEN="${MCP_TOKEN:?MCP_TOKEN is required}"
-MCP_DS_ID="${MCP_DS_ID:-}"
-MCP_TOOL_NAME="${MCP_TOOL_NAME:-list_genres}"
-MCP_PROMPT="${MCP_PROMPT:-analyze_genre}"
-PROXY_PORT="${MCP_PROXY_PORT:-18085}"
-SPEC_VERSION="2025-11-25"
-
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 SKILL_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 PROJECT_DIR="$(cd "$SKILL_DIR/../../.." && pwd)"
+ENV_FILE="$PROJECT_DIR/e2e-tests/test-env.yaml"
+
+# 配置优先级：环境变量 > test-env.yaml > 硬编码兜底
+if command -v yq &>/dev/null && [ -f "$ENV_FILE" ]; then
+    MCP_BASE_URL="${MCP_BASE_URL:-$(yq -r '.server.base_url' "$ENV_FILE")}"
+    MCP_CODE="${MCP_CODE:-$(yq -r '.mcp.code' "$ENV_FILE")}"
+    MCP_TOOL_NAME="${MCP_TOOL_NAME:-$(yq -r '.mcp.tool_name' "$ENV_FILE")}"
+    MCP_PROMPT="${MCP_PROMPT:-$(yq -r '.mcp.prompt' "$ENV_FILE")}"
+    PROXY_PORT="${MCP_PROXY_PORT:-$(yq -r '.mcp.proxy_port' "$ENV_FILE")}"
+else
+    MCP_BASE_URL="${MCP_BASE_URL:-http://localhost:8085}"
+    MCP_CODE="${MCP_CODE:-mcp-verify-demo}"
+    MCP_TOOL_NAME="${MCP_TOOL_NAME:-list_genres}"
+    MCP_PROMPT="${MCP_PROMPT:-analyze_genre}"
+    PROXY_PORT="${MCP_PROXY_PORT:-18085}"
+fi
+MCP_TOKEN="${MCP_TOKEN:?MCP_TOKEN is required}"
+MCP_DS_ID="${MCP_DS_ID:-}"
+SPEC_VERSION="2025-11-25"
+
 MCP_BASELINE="${MCP_BASELINE:-$PROJECT_DIR/e2e-tests/conformance/baseline.yml}"
 MCP_RESULTS="${MCP_RESULTS:-$PROJECT_DIR/e2e-tests/conformance/results}"
 

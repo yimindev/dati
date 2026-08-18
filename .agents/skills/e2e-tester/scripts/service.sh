@@ -6,14 +6,27 @@
 #   stop_service       停止后端
 #   wait_ready         等待服务就绪（不启动）
 #
-# 环境变量（可选）:
-#   BASE_URL    后端地址（默认 http://localhost:8085）
-#   WORK_DIR    项目根目录（默认 /Users/zhangyimin/IdeaProjects/dati）
+# 环境变量（可选，优先级高于 test-env.yaml）:
+#   BASE_URL    后端地址（默认 test-env.yaml server.base_url）
+#   WORK_DIR    项目根目录（默认 test-env.yaml server.working_directory）
+#   START_CMD   启动命令（默认 test-env.yaml server.start_command）
 #   LOG_FILE    启动日志路径（默认 /tmp/dati-e2e-service.log）
 
-BASE_URL="${BASE_URL:-http://localhost:8085}"
-WORK_DIR="${WORK_DIR:-/Users/zhangyimin/IdeaProjects/dati}"
-START_CMD="mvn -f backend/pom.xml spring-boot:run -Dspring-boot.run.workingDirectory=${WORK_DIR}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SKILL_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+PROJECT_DIR="$(cd "$SKILL_DIR/../../.." && pwd)"
+ENV_FILE="$PROJECT_DIR/e2e-tests/test-env.yaml"
+
+# 配置优先级：环境变量 > test-env.yaml server.* > 硬编码兜底
+if command -v yq &>/dev/null && [ -f "$ENV_FILE" ]; then
+    BASE_URL="${BASE_URL:-$(yq -r '.server.base_url' "$ENV_FILE")}"
+    WORK_DIR="${WORK_DIR:-$(yq -r '.server.working_directory' "$ENV_FILE")}"
+    START_CMD="${START_CMD:-$(yq -r '.server.start_command' "$ENV_FILE")}"
+else
+    BASE_URL="${BASE_URL:-http://localhost:8085}"
+    WORK_DIR="${WORK_DIR:-/Users/zhangyimin/IdeaProjects/dati}"
+    START_CMD="${START_CMD:-mvn -f backend/pom.xml spring-boot:run -Dspring-boot.run.workingDirectory=${WORK_DIR}}"
+fi
 LOG_FILE="${LOG_FILE:-/tmp/dati-e2e-service.log}"
 
 # 检查后端是否响应
