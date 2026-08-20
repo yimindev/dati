@@ -8,6 +8,7 @@ import type {
   TableMetadata,
   SearchHit,
   MetadataUpdateData,
+  TableListData,
 } from "~/api/mcp-tool-test";
 
 const props = defineProps<{
@@ -91,6 +92,10 @@ const errorAdvice = computed(() => {
       <MetadataUpdateResult
         v-else-if="response.data?.type === 'METADATA_UPDATE'"
         :data="response.data as MetadataUpdateData"
+      />
+      <TableListResult
+        v-else-if="response.data?.type === 'TABLE_LIST'"
+        :data="response.data as TableListData"
       />
     </template>
   </div>

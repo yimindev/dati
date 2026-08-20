@@ -2,6 +2,7 @@ package com.dati.mcp.domain.model;
 
 import com.dati.mcp.domain.model.param.ExecuteSqlArgs;
 import com.dati.mcp.domain.model.param.GetTableInfoArgs;
+import com.dati.mcp.domain.model.param.ListTablesArgs;
 import com.dati.mcp.domain.model.param.SearchMetadataArgs;
 import com.dati.mcp.domain.model.param.UpdateColumnInfoArgs;
 import com.dati.mcp.domain.model.param.UpdateTableInfoArgs;
@@ -23,6 +24,14 @@ public enum McpToolType {
         "Get Table Info",
         "Get detailed information about a specific table, including column names, types, descriptions, and related terms. Data is based on synced metadata. For latest structure, consider querying information_schema.",
         GetTableInfoArgs.class,
+        "{\"readOnlyHint\":true}",
+        true
+    ),
+    LIST_TABLES(
+        "list_tables",
+        "List Tables",
+        "List all tables in the service's data scope with schema, description and aliases. Table-level overview only — no columns. Use get_table_info to inspect a specific table.",
+        ListTablesArgs.class,
         "{\"readOnlyHint\":true}",
         true
     ),
@@ -88,6 +97,7 @@ public enum McpToolType {
         return switch (this) {
             case SEARCH_METADATA -> new ToolConfig.SearchMetadataConfig();
             case GET_TABLE_INFO -> new ToolConfig.GetTableInfoConfig();
+            case LIST_TABLES -> new ToolConfig.ListTablesConfig();
             case EXECUTE_SQL -> new ToolConfig.ExecuteSqlConfig();
             case UPDATE_TABLE_INFO, UPDATE_COLUMN_INFO, UPSERT_TERM -> new ToolConfig.UpdateMetadataConfig();
             case PARAMETERIZED_SQL -> new ToolConfig.ParamSqlConfig();

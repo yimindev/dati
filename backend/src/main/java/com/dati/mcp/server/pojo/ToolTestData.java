@@ -9,5 +9,6 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
     @JsonSubTypes.Type(value = TableMetadata.class, name = "TABLE_METADATA"),
     @JsonSubTypes.Type(value = SearchHit.class, name = "SEARCH_HIT"),
     @JsonSubTypes.Type(value = MetadataUpdateData.class, name = "METADATA_UPDATE"),
+    @JsonSubTypes.Type(value = TableListData.class, name = "TABLE_LIST"),
 })
 public interface ToolTestData {}

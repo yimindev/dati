@@ -252,7 +252,7 @@
 **前置：** 已登录，种子数据源已就绪
 
 1. 搜索种子数据源 → 创建 MCP 服务（携带 `data_scopes` 绑定该数据源）
-2. **懒初始化默认配置**：GET `/v1/mcp-services/{id}/tools` → prebuilt **6 个**：SEARCH_METADATA / GET_TABLE_INFO / EXECUTE_SQL `enabled`=**true**；**UPDATE_TABLE_INFO / UPDATE_COLUMN_INFO / UPSERT_TERM `enabled`=false（写工具默认关闭，需显式启用）**；SEARCH_METADATA / GET_TABLE_INFO 的 config 为 `{"timeout": 30}`；EXECUTE_SQL config 含 `sql_policy.allow_select`=true（其余 false）、`timeout`=30、`max_rows`=1000；UPDATE_TABLE_INFO / UPDATE_COLUMN_INFO / UPSERT_TERM 的 config 为 `{}`（无 per-service 配置，无 DB 记录时使用代码默认值）
+2. **懒初始化默认配置**：GET `/v1/mcp-services/{id}/tools` → prebuilt **7 个**：SEARCH_METADATA / GET_TABLE_INFO / LIST_TABLES / EXECUTE_SQL `enabled`=**true**；**UPDATE_TABLE_INFO / UPDATE_COLUMN_INFO / UPSERT_TERM `enabled`=false（写工具默认关闭，需显式启用）**；SEARCH_METADATA / GET_TABLE_INFO 的 config 为 `{"timeout": 30}`；LIST_TABLES 的 config 为 `{}`（无 per-service 配置）；EXECUTE_SQL config 含 `sql_policy.allow_select`=true（其余 false）、`timeout`=30、`max_rows`=1000；UPDATE_TABLE_INFO / UPDATE_COLUMN_INFO / UPSERT_TERM 的 config 为 `{}`（无 per-service 配置，无 DB 记录时使用代码默认值）
 3. **更新 EXECUTE_SQL 配置**：PUT `/v1/mcp-services/{id}/tools/EXECUTE_SQL`，body：`{"tool_type": "EXECUTE_SQL", "enabled": true, "config": "{\"sql_policy\":{\"allow_select\":true,\"allow_update\":true,\"allow_multi\":true},\"timeout\":60,\"max_rows\":500}"}`（config 为 JSON 字符串）→ 200
    - GET `/tools` 回读：EXECUTE_SQL config 与提交一致（`allow_update`=true、`allow_multi`=true、`timeout`=60、`max_rows`=500）
 4. **预置工具开关**：PUT `/tools/SEARCH_METADATA`，body：`{"tool_type": "SEARCH_METADATA", "enabled": false}` → 200；GET `/tools` 回读 SEARCH_METADATA `enabled`=false
@@ -291,8 +291,11 @@
 3. **SEARCH_METADATA（ES 搜索路径）**：POST `/tools/SEARCH_METADATA/test`，args `{"keywords": ["<mcp.subject.field_value_search>"]}` → HTTP 200
    - `success`=true，`data.type`=SEARCH_HIT，`data.keywords`=["<mcp.subject.field_value_search>"]
    - `data.data_sources` 或 `data.terms` 至少一个非空（`mcp.subject.table_columns` 中对应表的维度值命中，按数据源分组返回）
-4. **空关键词**：args `{"keywords": []}` → HTTP 200，`success`=false，`error.error_category`=PARAM_ERROR（PARAM_MISSING）
-5. 删除服务（清理）
+4. **LIST_TABLES（表级清单，无参数）**：POST `/tools/LIST_TABLES/test`，args `{}` → HTTP 200
+   - `success`=true，`data.type`=TABLE_LIST，`data.data_sources` 非空
+   - data_sources[0]：`id`=seedDsId，`name` 为种子数据源名；`tables` 含 `mcp.subject.term.relation_table`，每项含 `schema`/`table`/`description`/`aliases`，**无 `columns` 字段**
+5. **空关键词**：args `{"keywords": []}` → HTTP 200，`success`=false，`error.error_category`=PARAM_ERROR（PARAM_MISSING）
+6. 删除服务（清理）
 
 ---
 
@@ -350,7 +353,7 @@
 8. **主题外关键词（scope 过滤）**：args `{"keywords": ["<mcp.subject.outside_keyword>"]}` → success=true，`data.data_sources` 与 `data.terms` 均为空数组（不报错）
 9. **GET_TABLE_INFO 主题内表（正向）**：args `{"tables": [{"data_source_id": "<dsId>", "table": "<mcp.subject.term.relation_table>"}]}` → success=true，`data.tables` 非空，columns 与 `mcp.subject.table_columns.<同表>` 一致
 10. **EXECUTE_SQL 主题内表（正向）**：args `{"data_source_id": "<dsId>", "sql": "<mcp.subject.select_sql>"}` → success=true，results[0] SELECT、rows 非空（表级 scope 通过）
-11. **服务详情**：GET `/v1/mcp-services/{id}` → `tool_count`=6（6 个预置工具，无自定义）
+11. **服务详情**：GET `/v1/mcp-services/{id}` → `tool_count`=7（7 个预置工具，无自定义）
 12. 删除服务（清理）
 
 ---

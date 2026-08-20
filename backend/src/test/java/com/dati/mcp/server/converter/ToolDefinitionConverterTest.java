@@ -45,16 +45,36 @@ class ToolDefinitionConverterTest {
     }
 
     @Test
-    @DisplayName("prebuilt order is fixed: SEARCH_METADATA, GET_TABLE_INFO, EXECUTE_SQL")
+    @DisplayName("prebuilt order is fixed: SEARCH_METADATA, GET_TABLE_INFO, LIST_TABLES, EXECUTE_SQL")
     void prebuiltOrderIsFixed() {
         var content = new McpServiceSnapshot.SnapshotContent();
         content.setPrebuiltTools(List.of(
             TestFixtures.createTestPrebuiltToolDraft(McpToolType.EXECUTE_SQL, true, new ToolConfig.ExecuteSqlConfig()),
             TestFixtures.createTestPrebuiltToolDraft(McpToolType.GET_TABLE_INFO, true, new ToolConfig.GetTableInfoConfig()),
+            TestFixtures.createTestPrebuiltToolDraft(McpToolType.LIST_TABLES, true, new ToolConfig.ListTablesConfig()),
             TestFixtures.createTestPrebuiltToolDraft(McpToolType.SEARCH_METADATA, true, new ToolConfig.SearchMetadataConfig())));
         List<McpSchema.Tool> tools = converter.convert(content);
-        assertEquals(List.of("search_metadata", "get_table_info", "execute_sql"),
+        assertEquals(List.of("search_metadata", "get_table_info", "list_tables", "execute_sql"),
             tools.stream().map(McpSchema.Tool::name).toList());
+    }
+
+    @Test
+    @DisplayName("list_tables exposes empty inputSchema, readOnlyHint and fixed position after get_table_info")
+    void listTablesPrebuiltSchemaAndAnnotations() {
+        var content = new McpServiceSnapshot.SnapshotContent();
+        content.setPrebuiltTools(List.of(
+            TestFixtures.createTestPrebuiltToolDraft(McpToolType.GET_TABLE_INFO, true, new ToolConfig.GetTableInfoConfig()),
+            TestFixtures.createTestPrebuiltToolDraft(McpToolType.LIST_TABLES, true, new ToolConfig.ListTablesConfig())));
+        List<McpSchema.Tool> tools = converter.convert(content);
+
+        assertEquals(List.of("get_table_info", "list_tables"), tools.stream().map(McpSchema.Tool::name).toList());
+        McpSchema.Tool tool = tools.get(1);
+        assertEquals("list_tables", tool.name());
+        assertEquals("List Tables", tool.title());
+        assertEquals("object", tool.inputSchema().get("type"));
+        assertFalse(tool.inputSchema().containsKey("required"));
+        assertNotNull(tool.annotations());
+        assertTrue(tool.annotations().readOnlyHint());
     }
 
     @Test

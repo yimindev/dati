@@ -143,6 +143,10 @@ const handleTestClick = async () => {
           v-else-if="tool?.tool_type === 'SEARCH_METADATA'"
           ref="paramRef"
         />
+        <ListTablesParams
+          v-else-if="tool?.tool_type === 'LIST_TABLES'"
+          ref="paramRef"
+        />
 
         <!-- Execute button (bottom of left panel) -->
         <div

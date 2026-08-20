@@ -16,7 +16,7 @@ export interface ToolTestError {
   message: string;
 }
 
-export type ToolTestData = SqlExecution | TableMetadata | SearchHit | MetadataUpdateData;
+export type ToolTestData = SqlExecution | TableMetadata | SearchHit | MetadataUpdateData | TableListData;
 
 // ── METADATA_UPDATE (UPDATE_TABLE_INFO / UPDATE_COLUMN_INFO / UPSERT_TERM) ──
 
@@ -52,6 +52,11 @@ export interface SearchHit {
   keywords: string[];
   data_sources: DataSourceDef[];
   terms: TermDef[];
+}
+
+export interface TableListData {
+  type: "TABLE_LIST";
+  data_sources: DataSourceDef[];
 }
 
 export interface DataSourceDef {

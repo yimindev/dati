@@ -41,6 +41,7 @@ const toolTypeLabel = (status: string) => {
   switch (status) {
     case "SEARCH_METADATA": return t("mcpService.tool.type.SEARCH_METADATA");
     case "GET_TABLE_INFO": return t("mcpService.tool.type.GET_TABLE_INFO");
+    case "LIST_TABLES": return t("mcpService.tool.type.LIST_TABLES");
     case "EXECUTE_SQL": return t("mcpService.tool.type.EXECUTE_SQL");
     case "UPDATE_TABLE_INFO": return t("mcpService.tool.type.UPDATE_TABLE_INFO");
     case "UPDATE_COLUMN_INFO": return t("mcpService.tool.type.UPDATE_COLUMN_INFO");

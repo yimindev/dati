@@ -32,7 +32,7 @@ public class ToolDefinitionConverter {
     private final McpParameterSchemaGenerator schemaGenerator;
 
     private static final List<McpToolType> PREBUILT_ORDER = List.of(
-        McpToolType.SEARCH_METADATA, McpToolType.GET_TABLE_INFO,
+        McpToolType.SEARCH_METADATA, McpToolType.GET_TABLE_INFO, McpToolType.LIST_TABLES,
         McpToolType.EXECUTE_SQL, McpToolType.UPDATE_TABLE_INFO,
         McpToolType.UPDATE_COLUMN_INFO, McpToolType.UPSERT_TERM,
         McpToolType.PARAMETERIZED_SQL);

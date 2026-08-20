@@ -29,6 +29,11 @@ public interface ToolConfig {
         private int timeout = 30;
     }
 
+    /** LIST_TABLES has no per-service config — always lists the full service scope. */
+    @Data
+    class ListTablesConfig implements ToolConfig {
+    }
+
     @Data
     class ExecuteSqlConfig implements ToolConfig {
         private SqlPolicy sqlPolicy = new SqlPolicy();

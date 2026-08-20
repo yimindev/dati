@@ -36,10 +36,10 @@
 1. 发送 `tools/list`（无 params）
 2. 验证响应：
    - 状态码 200，`result.tools` 为数组
-   - 返回**全部 enabled 工具**：prebuilt **6 个**（`search_metadata`/`get_table_info`/`execute_sql`/`update_table_info`/`update_column_info`/`upsert_term`）+ 自定义工具（name=业务 name）
-   - **确定性排序**：prebuilt 固定顺序 SEARCH_METADATA → GET_TABLE_INFO → EXECUTE_SQL → UPDATE_TABLE_INFO → UPDATE_COLUMN_INFO → UPSERT_TERM，custom 按 name 字母序
-   - 每个工具含 `name`/`description`/`inputSchema`；**所有 prebuilt 另含 `title`**（`Search Metadata`/`Get Table Info`/`Execute SQL`/`Update Table Metadata`/`Update Column Metadata`/`Upsert Business Term`）；custom 含 `title`
-   - **annotations**：`search_metadata`/`get_table_info` 含 `readOnlyHint`=true；`update_table_info`/`update_column_info`/`upsert_term` 含 `readOnlyHint`=false、`destructiveHint`=false、`idempotentHint`=true、`openWorldHint`=true；`execute_sql` **无** annotations（可执行写 SQL，不声明只读）
+   - 返回**全部 enabled 工具**：prebuilt **7 个**（`search_metadata`/`get_table_info`/`list_tables`/`execute_sql`/`update_table_info`/`update_column_info`/`upsert_term`）+ 自定义工具（name=业务 name）
+   - **确定性排序**：prebuilt 固定顺序 SEARCH_METADATA → GET_TABLE_INFO → LIST_TABLES → EXECUTE_SQL → UPDATE_TABLE_INFO → UPDATE_COLUMN_INFO → UPSERT_TERM，custom 按 name 字母序
+   - 每个工具含 `name`/`description`/`inputSchema`；**所有 prebuilt 另含 `title`**（`Search Metadata`/`Get Table Info`/`List Tables`/`Execute SQL`/`Update Table Metadata`/`Update Column Metadata`/`Upsert Business Term`）；custom 含 `title`
+   - **annotations**：`search_metadata`/`get_table_info`/`list_tables` 含 `readOnlyHint`=true；`update_table_info`/`update_column_info`/`upsert_term` 含 `readOnlyHint`=false、`destructiveHint`=false、`idempotentHint`=true、`openWorldHint`=true；`execute_sql` **无** annotations（可执行写 SQL，不声明只读）
    - `inputSchema` 为对象，PARAMETERIZED_SQL 工具的 schema `properties`/`required` 与其 `parameters` 一致
    - **GET_TABLE_INFO schema 形态（decision 12 回归锚点）**：`properties.tables.items.properties` 含 `data_source_id`，`items.required`=["data_source_id", "table"]（`data_source_id` 在每行内，非顶层）
 3. **空服务语义**：服务无 enabled 工具 → `result.tools` 为**空数组**（不报错）
@@ -163,11 +163,11 @@
 
 ## TC-END-012 工具发现：元数据写入工具 title/annotations/inputSchema
 **级别：** P0
-**前置：** 已登录，已发布服务（**6 个预置工具均显式 enabled**——元数据写工具默认关闭，需发布前逐一 PUT 启用；数据范围绑定种子数据源）
+**前置：** 已登录，已发布服务（**7 个预置工具均显式 enabled**——元数据写工具默认关闭，需发布前逐一 PUT 启用；数据范围绑定种子数据源）
 
 1. 发送 `tools/list`（无 params）
 2. 验证响应：
-   - 状态码 200，`result.tools` 前 6 个为 prebuilt，顺序确定：`search_metadata` → `get_table_info` → `execute_sql` → `update_table_info` → `update_column_info` → `upsert_term`
+   - 状态码 200，`result.tools` 前 7 个为 prebuilt，顺序确定：`search_metadata` → `get_table_info` → `list_tables` → `execute_sql` → `update_table_info` → `update_column_info` → `upsert_term`
 3. **update_table_info（写工具）**：
    - `title` == `Update Table Metadata`
    - `annotations`：`readOnlyHint`=false、`destructiveHint`=false、`idempotentHint`=true、`openWorldHint`=true

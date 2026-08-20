@@ -13,14 +13,14 @@ MCP Service 管理模块提供 **MCP（Model Context Protocol）服务的生命�
 - 创建服务（`DRAFT`）、编辑基础信息、分页列表、详情查看。**创建即含数据范围**（必填，事务内创建服务 + 数据范围）
 - Service Code（唯一标识）+ Endpoint 路径运行时推导（`/{code}/mcp`）
 - 数据范围配置（数据源 + 主题引用模式，全量替换保存）
-- 预置工具开关与配置（SEARCH_METADATA / GET_TABLE_INFO / EXECUTE_SQL / UPDATE_TABLE_INFO / UPDATE_COLUMN_INFO / UPSERT_TERM）
+- 预置工具开关与配置（SEARCH_METADATA / GET_TABLE_INFO / LIST_TABLES / EXECUTE_SQL / UPDATE_TABLE_INFO / UPDATE_COLUMN_INFO / UPSERT_TERM）
 - 自定义工具 CRUD（参数化 SQL）
 - **结构化参数校验**：预置工具参数以 record 声明（`domain.model.param` 包），`tools/list` 的 inputSchema 由注解生成、运行时校验同一事实源（victools jsonschema + Jakarta Validation）
 - **元数据更新预置工具**：UPDATE_TABLE_INFO / UPDATE_COLUMN_INFO / UPSERT_TERM，LLM 直接写入共享元数据（表/列描述与别名、业务术语 upsert），每次写入同事务落审计日志（`mcp_metadata_audit_log`）
 - **Prompt 模板管理**（CRUD + 模板语法校验 + 参数一致性检查）
 - **模板预览引擎**（TEXT 模式渲染 / SQL 模式渲染 + 参数提取）
 - **SQL 安全分析引擎**（操作类型识别、表提取、多语句检测、事务/元数据/SET 分类）
-- **工具测试（Tool Test）**：参数输入 → 安全校验 → 执行 → 结果展示（支持 7 种工具类型、多语句 SQL、部分失败、scope 校验、逐条 METADATA_UPDATE 结果）
+- **工具测试（Tool Test）**：参数输入 → 安全校验 → 执行 → 结果展示（支持 8 种工具类型、多语句 SQL、部分失败、scope 校验、逐条 METADATA_UPDATE 结果）
 - **发布与版本管理（US-08）**：草稿-快照隔离、发布/发布变更、停用/启用、版本历史与回滚、草稿 vs 线上 diff
 - **删除服务（US-10）**：事务级联删除（快照/数据范围/工具/Prompt），前端与全站删除操作一致（简单确认弹窗）
 - **MCP Endpoint（JSON-RPC over HTTP）**：`POST /{code}/mcp` 协议入口，支持 `initialize` / `ping` / `tools/list` / `tools/call` / `prompts/list` / `prompts/get`；仅读取激活快照（草稿永不暴露）；服务状态语义（未知 code / DRAFT → 404，DISABLED → 503）；Origin DNS-rebinding 防护 + `MCP-Protocol-Version` 校验
@@ -48,10 +48,11 @@ com.dati.mcp/
 │   │   ├── McpServiceSnapshot.java      # 只读快照（content 全量打包）
 │   │   ├── McpServiceDataScope.java     # 数据范围实体
 │   │   ├── McpDataScopeType.java        # DATA_SOURCE / SUBJECT
-│   │   ├── McpToolType.java             # 工具类型枚举（6 预置 + 1 动态，含 parameterType record / title / annotations）
+│   │   ├── McpToolType.java             # 工具类型枚举（7 预置 + 1 动态，含 parameterType record / title / annotations）
 │   │   ├── param/                       # 预置工具参数 record（inputSchema 与运行时校验的单一事实源）
 │   │   │   ├── SearchMetadataArgs.java
 │   │   │   ├── GetTableInfoArgs.java
+│   │   │   ├── ListTablesArgs.java
 │   │   │   ├── ExecuteSqlArgs.java
 │   │   │   ├── UpdateTableInfoArgs.java
 │   │   │   ├── UpdateColumnInfoArgs.java
@@ -81,6 +82,7 @@ com.dati.mcp/
 │       ├── ExecuteSqlExecutor.java          # EXECUTE_SQL 执行器
 │       ├── ParameterizedSqlExecutor.java    # PARAMETERIZED_SQL 执行器
 │       ├── GetTableInfoExecutor.java        # GET_TABLE_INFO 执行器
+│       ├── ListTablesExecutor.java          # LIST_TABLES 执行器（表级清单，无列）
 │       ├── SearchMetadataExecutor.java      # SEARCH_METADATA 执行器
 │       ├── MetadataEntityResolver.java      # 元数据实体定位（dsId+schema+table → id，供写工具捕获旧值）
 │       ├── UpdateTableInfoExecutor.java     # UPDATE_TABLE_INFO 执行器（写表描述/别名 + 审计）
@@ -136,7 +138,7 @@ com.dati.mcp/
     │   ├── McpPromptVO.java, McpPromptRequest.java
     │   ├── ToolTestRequest.java, ToolTestResponse.java, ToolTestError.java, ToolTestData.java
     │   ├── SqlExecution.java, StatementResult.java
-    │   ├── TableMetadata.java, SearchHit.java
+    │   ├── TableMetadata.java, SearchHit.java, TableListData.java   # TABLE_LIST 表级清单（复用 DataSourceDef/TableDef）
     │   ├── MetadataUpdateData.java, MetadataUpdateResult.java   # METADATA_UPDATE 结果（逐条 old/new/error）
     │   └── TemplatePreviewRequest.java, TemplatePreviewResponse.java, TemplateExtractRequest.java, TemplateExtractResponse.java
     └── assembler/            # @Component extends BaseAssembler, Model ↔ VO
@@ -158,7 +160,7 @@ com.dati.semantic.domain.model/
 └── TermDef.java       # record(name, description, subjectName)
 ```
 
-这些 Def 类型是纯数据 record，不含运行时状态，被 MCP 层 pojo（`TableMetadata`、`SearchHit`）引用。
+这些 Def 类型是纯数据 record，不含运行时状态，被 MCP 层 pojo（`TableMetadata`、`SearchHit`、`TableListData`）引用。
 
 ### 2.2 核心类职责
 
@@ -221,8 +223,8 @@ com.dati.semantic.domain.model/
 
 | 类 | 职责 |
 |---|---|
-| `McpToolType` | 枚举 6 种预置 + `PARAMETERIZED_SQL`（动态，无预置名）。每项含 `toolName` / `title`（协议标题）/ `description` / `parameterType`（参数 record 类）/ `annotationsJson`（MCP ToolAnnotations：SEARCH_METADATA / GET_TABLE_INFO 标记 `readOnlyHint=true`，三个元数据写工具标记 `idempotentHint=true, openWorldHint=true`）和 `getDefaultConfig()` 方法。SEARCH_METADATA inputSchema 的 `keywords` 为 array<string> |
-| `ToolConfig` | `sealed interface`，子类：`SearchMetadataConfig` / `GetTableInfoConfig` / `ExecuteSqlConfig` / `ParamSqlConfig`。注：已移除 `confirmRequired` 字段（MCP 协议不支持二次确认） |
+| `McpToolType` | 枚举 7 种预置 + `PARAMETERIZED_SQL`（动态，无预置名）。每项含 `toolName` / `title`（协议标题）/ `description` / `parameterType`（参数 record 类）/ `annotationsJson`（MCP ToolAnnotations：SEARCH_METADATA / GET_TABLE_INFO / LIST_TABLES 标记 `readOnlyHint=true`，三个元数据写工具标记 `idempotentHint=true, openWorldHint=true`）和 `getDefaultConfig()` 方法。SEARCH_METADATA inputSchema 的 `keywords` 为 array<string>；LIST_TABLES 无参数（空 record → inputSchema `{"type":"object"}`） |
+| `ToolConfig` | `sealed interface`，子类：`SearchMetadataConfig` / `GetTableInfoConfig` / `ListTablesConfig` / `ExecuteSqlConfig` / `ParamSqlConfig` / `UpdateMetadataConfig`。注：已移除 `confirmRequired` 字段（MCP 协议不支持二次确认） |
 | `SqlPolicy` | SQL 权限策略（9 字段 + `allowMulti`）。提供 `validate(type)` 方法（内联 switch 逐条校验）。`validateAllowed(result)` 额外处理 MULTI 标记 |
 | `ToolParameter` | 工具参数描述：`name`、`type`（String / Number / Boolean / DateTime / Array）、`required`、`defaultValue`、`description` |
 | `McpPrebuiltToolConfig` | 领域实体。`serviceId` + `toolType` + `enabled` + `config: ToolConfig` |
@@ -283,6 +285,7 @@ com.dati.semantic.domain.model/
 | `ExecuteSqlExecutor` | EXECUTE_SQL 执行器。`ctx.args(ExecuteSqlArgs.class)` 取参，dsId + sql 从 record 取，`Statement.execute()` 执行，`SqlExecutorHelper.collect()` 收集多语句结果。每条语句独立 policy 校验和 try-catch |
 | `ParameterizedSqlExecutor` | PARAMETERIZED_SQL 执行器。dsId 从 config 取，`ctx.argumentsMap()` 取原始参数 → 模板渲染 → SQL，`PreparedStatement.execute()` 执行。支持 DateTime 类型参数转换（`DateTimeUtils.parseDateTime()`）。`bindings` 回传前端 |
 | `GetTableInfoExecutor` | GET_TABLE_INFO 执行器。`ctx.args(GetTableInfoArgs.class)` 取参，逐条 `tables[]` 项做数据源级 scope 校验（每项自带 data_source_id），通过 `TableMetadataService` 查询平台元数据。不存在的表静默跳过 |
+| `ListTablesExecutor` | LIST_TABLES 执行器。无参数（`ListTablesArgs` 空 record），通过 `McpServiceDataScopeService.getResolvedDataSourceIds()` 解析 scope → 逐数据源 `TableInfoDAO.findByDataSourceId()` 查表 → 组装表级清单（schema/name/description/aliases，columns=null 不输出）。空 scope 返回空结果。纯 DB 读、不查 ES/列 |
 | `SearchMetadataExecutor` | SEARCH_METADATA 执行器。`ctx.args(SearchMetadataArgs.class)` 取 keywords，通过 `McpServiceDataScopeService.getResolvedDataSourceIds()` 解析 scope → `SemanticSearchService.search()` → 组装分组结果。空 scope 返回空结果（不报错） |
 | `UpdateTableInfoExecutor` / `UpdateColumnInfoExecutor` / `UpsertTermExecutor` | 元数据写执行器（见「元数据更新工具」小节） |
 | `SqlExecutorHelper` | package-private 工具类：`collect(Statement)` — JDBC `getMoreResults() / getResultSet() / getUpdateCount()` 循环，每条独立 try-catch 返回 `StatementResult` |
@@ -499,9 +502,10 @@ McpServiceDataScope (per service, 多个)
   ├─ serviceId, scopeType (DATA_SOURCE|SUBJECT), referenceId, referenceName
   └─ 全量替换：先删后插
 
-McpToolType (enum, 每项含 toolName/title/description/parameterType/annotations)
+McpToolType (enum, 每项含 toolName/title/description/parameterType/annotations/defaultEnabled)
   ├─ SEARCH_METADATA ────→ SearchMetadataConfig { timeout }              readOnlyHint=true
   ├─ GET_TABLE_INFO  ────→ GetTableInfoConfig { timeout }                readOnlyHint=true
+  ├─ LIST_TABLES     ────→ ListTablesConfig { }（无 per-service 配置）   readOnlyHint=true
   ├─ EXECUTE_SQL     ────→ ExecuteSqlConfig { sqlPolicy, timeout, maxRows }
   ├─ UPDATE_TABLE_INFO ──→ UpdateMetadataConfig { }（无 per-service 配置） idempotent+openWorld
   ├─ UPDATE_COLUMN_INFO ─→ UpdateMetadataConfig { }                      idempotent+openWorld
@@ -591,6 +595,7 @@ McpMetadataAuditLog (per metadata write, 多个)
 |-----------|----------|----------|
 | `SQL_EXECUTION` | `SqlExecution{ executedSql, bindings?, results: StatementResult[] }` | EXECUTE_SQL / PARAMETERIZED_SQL |
 | `TABLE_METADATA` | `TableMetadata{ tables: TableDef[] }` | GET_TABLE_INFO |
+| `TABLE_LIST` | `TableListData{ dataSources: DataSourceDef[] }`（表级清单：schema/name/description/aliases，无列） | LIST_TABLES |
 | `SEARCH_HIT` | `SearchHit{ keywords, dataSources: DataSourceDef[], terms: TermDef[] }` | SEARCH_METADATA |
 | `METADATA_UPDATE` | `MetadataUpdateData{ results: MetadataUpdateResult[] }` | UPDATE_TABLE_INFO / UPDATE_COLUMN_INFO / UPSERT_TERM |
 
@@ -781,7 +786,7 @@ StatementResult.writeFailure(errorMessage)           // WRITE 失败
 - **Endpoint 是薄适配层**：HTTP 关注点（路由/状态码/头）在 `McpEndpointController`，协议逻辑在 `McpEndpointService` + `McpProtocolHandler`，工具执行复用草稿区同一套 `ToolExecutor` 体系（调试与线上调用同链路）
 - **无状态、无 session**：每个请求独立处理，不签发 `Mcp-Session-Id`（2025-11-25 规范允许）；Streamable HTTP 的 GET/SSE 流式传输留待后续
 - **协议错误与工具错误分离**：JSON-RPC 层错误（未知方法/未知工具/参数缺失）走 `JSONRPCError`；工具执行失败（`ToolExecuteException`）转为 `CallToolResult(isError=true)`，LLM 可读取错误信息自纠正
-- **tools/list 确定性输出**：预置固定顺序（SEARCH_METADATA → GET_TABLE_INFO → EXECUTE_SQL → UPDATE_TABLE_INFO → UPDATE_COLUMN_INFO → UPSERT_TERM → PARAMETERIZED_SQL）+ 自定义按名称排序，便于 Client 端 diff；与预置/先前自定义重名的自定义工具静默跳过（防输入误导）
+- **tools/list 确定性输出**：预置固定顺序（SEARCH_METADATA → GET_TABLE_INFO → LIST_TABLES → EXECUTE_SQL → UPDATE_TABLE_INFO → UPDATE_COLUMN_INFO → UPSERT_TERM → PARAMETERIZED_SQL）+ 自定义按名称排序，便于 Client 端 diff；与预置/先前自定义重名的自定义工具静默跳过（防输入误导）
 
 ---
 
@@ -814,10 +819,11 @@ src/
 │   │   ├── ToolTestResult.vue      # 结果容器：按 data.type 分发到 results/ 子组件
 │   │   ├── params/                 # 按工具类型的参数表单
 │   │   │   ├── ExecuteSqlParams.vue / GetTableInfoParams.vue / SearchMetadataParams.vue
-│   │   │   ├── ParameterizedSqlParams.vue
+│   │   │   ├── ListTablesParams.vue / ParameterizedSqlParams.vue
 │   │   │   └── UpdateTableInfoParams.vue / UpdateColumnInfoParams.vue / UpsertTermParams.vue
 │   │   └── results/                # 按结果类型的展示组件
 │   │       ├── SqlExecutionResult.vue / TableMetadataResult.vue / SearchHitResult.vue
+│   │       ├── TableListResult.vue
 │   │       └── MetadataUpdateResult.vue
 │   ├── DebugPublishTab.vue         # 版本管理 Tab（原「调试发布」）：版本历史 + 回滚 + Endpoint
 │   ├── DiffSummaryList.vue         # 变更摘要组件（popover 与发布弹窗共用，支持截断）
@@ -863,8 +869,10 @@ src/
 | `DiffSummaryList` | **变更摘要组件**。props：`items`（label/detail/added/modified/deleted）+ `limit?`（截断数）+ `title?`。内置 max-height 滚动。popover（hover 感知，截断 5 项）与发布弹窗（完整展示）共用。 |
 | `SqlSecurityConfig` | 可复用的 SQL 安全配置组件。权限 pill（SELECT/INSERT/UPDATE/DELETE/DDL/MULTI）+ maxRows + timeout。 |
 | `ExecuteSqlParams` / `GetTableInfoParams` / `SearchMetadataParams` / `ParameterizedSqlParams` | 读工具参数表单：SQL 编辑器（CodeMirror）、表/列下拉（useTablePicker）、关键词 `el-input-tag`、`ParameterInput` 动态表单等，按工具类型切换。 |
+| `ListTablesParams` | LIST_TABLES 参数表单：无参数，仅提示文案（`getArgs` 返回空对象）。 |
 | `UpdateTableInfoParams` / `UpdateColumnInfoParams` / `UpsertTermParams` | 写工具参数表单：可增删的条目列表 + useTablePicker 表/列级联选择，选中即回显当前 description/aliases（「先查后写」+ 别名全量替换提示），提交前 stripEmpty。 |
 | `SqlExecutionResult` / `TableMetadataResult` / `SearchHitResult` / `MetadataUpdateResult` | 结果展示组件：SELECT 表格/写操作卡片、表元数据卡片、术语 + 分组表卡片、逐条变更对照（old→new、CREATE/UPDATE 标签、失败条目 error_category 高亮）。 |
+| `TableListResult` | TABLE_LIST 结果组件：按数据源分组的表级清单卡片（schema.表名 + 描述 + 别名 tag + 总数统计）。 |
 | `useTablePicker` | 工具测试共享 composable：模块级 tables/columns 缓存（弹窗打开时重置），ds→schema/table 级联、表→列级联，选中后拉取并回显当前元数据值（description/aliases）。 |
 | `SqlEditor` | CodeMirror 6 + `@codemirror/lang-sql`。纯 SQL 语法高亮编辑器，用于 EXECUTE_SQL 工具测试的 SQL 输入。 |
 | `PromptTemplateEditor` | CodeMirror 6 包装。支持：模板语法高亮（`{{}}`、`{{#if}}`）、智能补全、自动闭合、bracket matching、行包裹。 |
@@ -880,7 +888,7 @@ src/
 - **预置工具区**：开关 + EXECUTE_SQL 的 Setting 图标 + 「测试」按钮。无删除、无编辑名称。
 - **自定义工具区**：Edit/Delete 图标 + 「测试」按钮。hover 变色（Edit 蓝色，Delete 红色）。
 - **配置弹窗**：权限 pills 切换（选中态紫色 → 蓝色高亮）。安全警告黄色提示。
-- **工具测试弹窗**：左右分栏布局（参数左 / 结果右），参数表单与结果组件按类型拆分子组件（`tool-test/params|results`）。`SqlEditor`（CodeMirror）用于 SQL 输入。PARAMETERIZED_SQL 使用 `ParameterInput` 动态表单。GET_TABLE_INFO / 元数据更新工具使用 `useTablePicker` 表/列选择器（选中表/列自动回显当前 description/aliases，写工具提示「别名全量替换、留空保持不变」）。SEARCH_METADATA 的关键词用 `el-input-tag` 输入。执行结果按 `data.type` 分发渲染：SELECT → `el-table` + 行数提示；WRITE → 操作摘要卡片；TABLE_METADATA → 每表一个卡片（表名/列/别名/样本值）；SEARCH_HIT → 术语卡片 + 按数据源分组表卡片；METADATA_UPDATE → 逐条变更对照（old→new、CREATE/UPDATE 标签、失败条目红字 error）。关闭弹窗时自动清空表单和结果。
+- **工具测试弹窗**：左右分栏布局（参数左 / 结果右），参数表单与结果组件按类型拆分子组件（`tool-test/params|results`）。`SqlEditor`（CodeMirror）用于 SQL 输入。PARAMETERIZED_SQL 使用 `ParameterInput` 动态表单。GET_TABLE_INFO / 元数据更新工具使用 `useTablePicker` 表/列选择器（选中表/列自动回显当前 description/aliases，写工具提示「别名全量替换、留空保持不变」）。SEARCH_METADATA 的关键词用 `el-input-tag` 输入；LIST_TABLES 无参数直接执行。执行结果按 `data.type` 分发渲染：SELECT → `el-table` + 行数提示；WRITE → 操作摘要卡片；TABLE_METADATA → 每表一个卡片（表名/列/别名/样本值）；TABLE_LIST → 按数据源分组的表清单卡片；SEARCH_HIT → 术语卡片 + 按数据源分组表卡片；METADATA_UPDATE → 逐条变更对照（old→new、CREATE/UPDATE 标签、失败条目红字 error）。关闭弹窗时自动清空表单和结果。
 - **删除确认（US-10）**：与全站其他删除操作一致 —— `ElMessageBox.confirm`（黄色警告图标 + 单句文案「确定要删除 MCP 服务「{name}」吗？」）。**删除入口仅在列表页行尾**（详情页不提供，与 US-08 定稿一致）。列表页删除成功 → 刷新列表（删除最后一条时回退一页）；删除失败 toast 提示可重试。
 - **抽屉表单**：使用 Element Plus `el-form` 的 `FormRules` 校验，保存前 `validate()`，异常时 `clearValidate()`。
 - **错误处理**：统一 `catch (e: any)` + `e?.message` 展示后端错误信息。
@@ -930,7 +938,7 @@ ToolTestDialog
     ├─ GET_TABLE_INFO:   GET /data-sources/{id}/table-infos → schema/table 下拉选项（useTablePicker）
     ├─ UPDATE_* / UPSERT_TERM: useTablePicker 级联选择 + 当前值回显 → stripEmpty 提交
     ├─ ALL:              POST /tools/{toolId}/test { arguments } → ToolTestResponse
-    └─ 结果分发:        data.type → SELECT table / WRITE card / TABLE_METADATA list / SEARCH_HIT groups / METADATA_UPDATE per-item list
+    └─ 结果分发:        data.type → SELECT table / WRITE card / TABLE_METADATA list / TABLE_LIST groups / SEARCH_HIT groups / METADATA_UPDATE per-item list
 
 详情页（发布与版本管理）
     ├─ 右上角按钮区（页面级）:
@@ -962,7 +970,7 @@ ToolTestDialog
 - `McpEndpointControllerTest` / `McpProtocolHandlerTest`：JSON-RPC 端点与协议分发
 - `SqlAnalyzerTest`：75 条参数化用例（类型识别 / 表提取 / 多语句 / 事务预扫描）
 - `ToolParameterBinderTest` / `McpParameterSchemaGeneratorTest`：结构化参数校验与 inputSchema 生成
-- 各 Executor 测试：`ExecuteSqlExecutorTest` / `GetTableInfoExecutorTest` / `SearchMetadataExecutorTest` / `UpdateTableInfoExecutorTest` / `UpdateColumnInfoExecutorTest` / `UpsertTermExecutorTest`
+- 各 Executor 测试：`ExecuteSqlExecutorTest` / `GetTableInfoExecutorTest` / `ListTablesExecutorTest` / `SearchMetadataExecutorTest` / `UpdateTableInfoExecutorTest` / `UpdateColumnInfoExecutorTest` / `UpsertTermExecutorTest`
 - `McpPromptServiceTest` / `TemplatePreviewControllerTest`：Prompt 校验与模板渲染
 
 完整测试类清单见源码 `backend/src/test/java/com/dati/mcp/`。
@@ -972,12 +980,12 @@ ToolTestDialog
 |---|---|---|---|
 | US-01 | 服务创建与基础管理 | ✅ 已实现 | 服务 CRUD、code 校验、分页列表 |
 | US-02 | 数据范围配置 | ✅ 已实现 | 数据源 + 主题引用，全量替换 |
-| US-03 | 工具管理 | ✅ 已实现 | 预置工具（6 种）+ 自定义工具 CRUD。**2026-08 追加元数据更新预置工具**（UPDATE_TABLE_INFO / UPDATE_COLUMN_INFO / UPSERT_TERM，见 2.2 元数据更新工具） |
+| US-03 | 工具管理 | ✅ 已实现 | 预置工具（7 种）+ 自定义工具 CRUD。**2026-08 追加元数据更新预置工具**（UPDATE_TABLE_INFO / UPDATE_COLUMN_INFO / UPSERT_TERM，见 2.2 元数据更新工具）；**追加 LIST_TABLES 表清单工具**（表级概览，供 LLM 全局视图后接 get_table_info） |
 | US-04 | 创建与配置 Resource | ❌ V1 暂缓 | 见 US-04 文档说明 |
 | US-05 | 创建与配置 Prompt | ✅ 已实现 | Prompt CRUD + 模板校验 + 参数一致性检查 |
 | US-5.5 | 模板引擎基础设施 | ✅ 已实现 | Handlebars 风格 Parser + Text/SQL Renderer |
 | US-06 | 管理服务 Token | ❌ V1 暂缓 | 统一在应用层认证，MCP 模块不单独设计 |
-| US-07 | 调试 Tool 调用 | ✅ 已实现 | 工具测试弹窗、7 种 Executor、scope 校验、异常处理、前端结果渲染（参数表单/结果组件拆分为 tool-test 子组件） |
+| US-07 | 调试 Tool 调用 | ✅ 已实现 | 工具测试弹窗、8 种 Executor、scope 校验、异常处理、前端结果渲染（参数表单/结果组件拆分为 tool-test 子组件） |
 | US-08 | 发布与版本管理 | ✅ 已实现 | 草稿-快照隔离、发布/发布变更、停用/启用、版本历史与回滚、草稿 vs 线上 diff。**MCP Endpoint 已实现**（JSON-RPC over HTTP，见 2.2 协议层），US-08 遗留任务 #2/#3/#4 已落地；遗留：Streamable HTTP 的 GET/SSE 流式传输与 session 管理 |
 | US-09 | 查看服务调用日志 | ❌ 未实现 | 无 `mcp_audit_log` 表和对应接口。**注**：元数据写入审计（`mcp_metadata_audit_log`）已实现，仅覆盖 UPDATE_TABLE_INFO / UPDATE_COLUMN_INFO / UPSERT_TERM 的写入变更（含旧值），不覆盖工具调用日志 |
 | US-10 | 删除 MCP 服务 | ✅ 已实现 | 事务级联删除（快照/数据范围/预置工具/自定义工具/Prompt），已发布服务可直接删除；前端与全站删除操作一致（`ElMessageBox.confirm` 简单确认）。**遗留**：「仅管理员可删除」待角色体系统一实现 |

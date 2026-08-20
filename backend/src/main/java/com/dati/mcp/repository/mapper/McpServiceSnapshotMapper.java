@@ -137,6 +137,7 @@ public class McpServiceSnapshotMapper {
         return switch (type) {
             case SEARCH_METADATA -> JsonUtils.fromJson(configJson, ToolConfig.SearchMetadataConfig.class);
             case GET_TABLE_INFO  -> JsonUtils.fromJson(configJson, ToolConfig.GetTableInfoConfig.class);
+            case LIST_TABLES     -> JsonUtils.fromJson(configJson, ToolConfig.ListTablesConfig.class);
             case EXECUTE_SQL     -> JsonUtils.fromJson(configJson, ToolConfig.ExecuteSqlConfig.class);
             case UPDATE_TABLE_INFO, UPDATE_COLUMN_INFO, UPSERT_TERM -> JsonUtils.fromJson(configJson, ToolConfig.UpdateMetadataConfig.class);
             case PARAMETERIZED_SQL -> JsonUtils.fromJson(configJson, ToolConfig.ParamSqlConfig.class);
