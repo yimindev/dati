@@ -28,6 +28,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -122,6 +123,11 @@ public class ColumnService {
                 .collect(Collectors.toMap(ColumnInfoPO::getName, Function.identity()));
         
         List<Column> dbColumns = jdbcMetaService.getColumns(datasourceId, null, tableInfo.getSchema(), tableInfo.getName());
+
+        Set<String> newColumnNames = dbColumns.stream().map(Column::name).collect(Collectors.toSet());
+        List<String> removedColumns = existingColumns.keySet().stream()
+                .filter(name -> !newColumnNames.contains(name))
+                .toList();
         
         columnInfoDAO.deleteByTableId(tableId);
         
@@ -138,6 +144,7 @@ public class ColumnService {
             
             if (existing != null) {
                 columnInfoPO.setAliases(existing.getAliases());
+                columnInfoPO.setExtractValueEnabled(existing.isExtractValueEnabled());
                 String dbComment = column.comment();
                 if (overwriteExisting && StringUtils.isNotEmpty(dbComment)) {
                     columnInfoPO.setDescription(dbComment);
@@ -158,7 +165,11 @@ public class ColumnService {
         
         List<ColumnInfoPO> savedList = columnInfoDAO.saveAll(columnInfoPOList);
         
-        semanticIndexService.deleteByEntityTableId(tableId);
+        // FIELD 结构索引整表重建；FIELD_VALUE 仅清理消失列，保留仍存在列的值（配置与数据均为用户资产，不随结构同步销毁）
+        semanticIndexService.deleteByTableIdAndType(tableId, SemanticEntityType.FIELD);
+        for (String removed : removedColumns) {
+            semanticIndexService.deleteByTableFieldAndType(tableId, removed, SemanticEntityType.FIELD_VALUE);
+        }
         
         List<SemanticSearchDocument> docs = savedList.stream().map(po -> {
             EntityReference entity = EntityReference.builder()

@@ -21,6 +21,8 @@ public interface SemanticSearchDAO extends ElasticsearchRepository<SemanticSearc
 
     void deleteByEntity_TableIdAndEntity_FieldAndType(String tableId, String field, SemanticEntityType type);
 
+    void deleteByEntity_TableIdAndType(String tableId, SemanticEntityType type);
+
     @Query("""
         {
           "bool": {

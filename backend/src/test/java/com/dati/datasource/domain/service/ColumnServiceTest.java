@@ -306,8 +306,71 @@ class ColumnServiceTest {
             // then
             verify(columnInfoDAO).deleteByTableId(TestFixtures.TEST_TABLE_ID);
             verify(columnInfoDAO).saveAll(anyList());
-            verify(semanticIndexService).deleteByEntityTableId(TestFixtures.TEST_TABLE_ID);
+            verify(semanticIndexService).deleteByTableIdAndType(TestFixtures.TEST_TABLE_ID, SemanticEntityType.FIELD);
             verify(semanticIndexService).saveBatch(anyList());
+        }
+    }
+
+    @Test
+    @DisplayName("Sync columns - preserves extractValueEnabled and FIELD_VALUE of existing columns, cleans dropped columns")
+    void syncColumns_shouldPreserveExtractValueEnabledAndKeepFieldValuesOfExistingColumns() throws SQLException {
+        // given
+        when(tableInfoDAO.findById(TestFixtures.TEST_TABLE_ID)).thenReturn(Optional.of(testTableInfoPO));
+
+        ColumnInfoPO existingGenre = new ColumnInfoPO();
+        existingGenre.setId("existing_genre_id");
+        existingGenre.setTableId(TestFixtures.TEST_TABLE_ID);
+        existingGenre.setName("genre");
+        existingGenre.setColumnType("VARCHAR");
+        existingGenre.setAliases(List.of("流派"));
+        existingGenre.setDescription("User maintained description");
+        existingGenre.setExtractValueEnabled(true);
+
+        ColumnInfoPO existingDropped = new ColumnInfoPO();
+        existingDropped.setId("existing_dropped_id");
+        existingDropped.setTableId(TestFixtures.TEST_TABLE_ID);
+        existingDropped.setName("dropped_col");
+        existingDropped.setColumnType("VARCHAR");
+        existingDropped.setExtractValueEnabled(true);
+
+        when(columnInfoDAO.findByTableId(TestFixtures.TEST_TABLE_ID))
+            .thenReturn(List.of(existingGenre, existingDropped));
+
+        Column mockColumn = mock(Column.class);
+        when(mockColumn.name()).thenReturn("genre");
+        when(mockColumn.type()).thenReturn("VARCHAR");
+        when(mockColumn.comment()).thenReturn("DB comment");
+
+        when(jdbcMetaService.getColumns(TestFixtures.TEST_DATASOURCE_ID, null, "public", "test_table"))
+            .thenReturn(List.of(mockColumn));
+
+        ColumnInfoPO savedPO = TestFixtures.createTestColumnInfoPO();
+        when(columnInfoDAO.saveAll(anyList())).thenReturn(List.of(savedPO));
+
+        try (MockedStatic<RequestContext> mocked = mockStatic(RequestContext.class)) {
+            mocked.when(RequestContext::getUser).thenReturn(null);
+
+            // when
+            columnService.syncColumns(TestFixtures.TEST_DATASOURCE_ID, TestFixtures.TEST_TABLE_ID, true);
+
+            // then - new PO keeps the user's extractValueEnabled and aliases config
+            verify(columnInfoDAO).saveAll(argThat(list -> {
+                List<ColumnInfoPO> columns = (List<ColumnInfoPO>) list;
+                ColumnInfoPO savedCol = columns.getFirst();
+                return savedCol.isExtractValueEnabled()
+                    && savedCol.getAliases().equals(List.of("流派"));
+            }));
+
+            // then - structure index rebuilt per FIELD type, no full-table delete
+            verify(semanticIndexService).deleteByTableIdAndType(
+                TestFixtures.TEST_TABLE_ID, SemanticEntityType.FIELD);
+            verify(semanticIndexService, never()).deleteByEntityTableId(any());
+
+            // then - FIELD_VALUE cleaned only for dropped columns, kept for existing ones
+            verify(semanticIndexService).deleteByTableFieldAndType(
+                TestFixtures.TEST_TABLE_ID, "dropped_col", SemanticEntityType.FIELD_VALUE);
+            verify(semanticIndexService, never()).deleteByTableFieldAndType(
+                TestFixtures.TEST_TABLE_ID, "genre", SemanticEntityType.FIELD_VALUE);
         }
     }
 

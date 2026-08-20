@@ -3,15 +3,19 @@
 # 若已修复的问题再次复现，必须从本文件移回 BUGS.yaml 并标记 REGRESSION。
 bugs:
   - id: BUG-20260820-001
-    title: UPDATE_COLUMN_INFO 写列元数据时静默关闭 extract_value_enabled 并级联删除 FIELD_VALUE 文档
-    module: MCP 服务管理
+    title: UPDATE_COLUMN_INFO/列同步 静默重置 extract_value_enabled 并级联删除 FIELD_VALUE 文档
+    module: MCP 服务管理 / 数据源管理
     severity: high
     fixed_at: 2026-08-20
     description: |
-      ColumnInfo 和 ColumnInfoVO 中 extractValueEnabled 与 aliases 移除默认初始值（默认为 null），
-      使局部更新时不传递相关字段保持原有状态，避免误触发 extract_value_enabled=false 及 FIELD_VALUE 级联删除。
-      同时修复 ColumnService 构建 SemanticSearchDocument 时使用已合并的 columnInfoPO.getDescription()。
-      ColumnMapper 与 ColumnAssembler 补充 null 安全防御。
+      两条路径均会静默丢失用户配置与值数据（e2e TC-DS-011 步骤 19 回归锚点）：
+      ① MCP UPDATE_COLUMN_INFO：executor 构造部分更新 ColumnInfo 时 extractValueEnabled/aliases 默认非 null，
+        updateColumn 的 null 判断恒真 → 无条件置 false → 触发 FIELD_VALUE 级联删除。
+        修复：ColumnInfo/ColumnInfoVO 移除默认值（null 表示未指定），Mapper/Assembler 补 null 防御；
+        ColumnService 重建 ES 文档改用合并后的 PO 描述。
+      ② 管理端列同步 syncColumns：重建 PO 不拷贝 existing.getExtractValueEnabled()，且整表删除 ES 文档。
+        修复：existing 分支保留 extractValueEnabled；ES 清理改按类型（deleteByTableIdAndType FIELD）+
+        仅对消失列按列删除 FIELD_VALUE，仍存在列的值文档（含 synonyms）保留。
 
   - id: BUG-012
     title: TABLE scope type 未实现，保存时返回 500 且无友好错误
@@ -290,3 +294,11 @@ bugs:
     fixed_at: 2026-08-09
     description: |
       探索种子数据时发现：同一术语「音乐流派」（b9d6763e）在主题术语列表接口返回 relations: []，而术语详情接口返回完整关联 [{entity_type: FIELD, table: genre, field: name}]。影响：依赖列表接口判断术语关联会误判数据缺失（本次差点因此误报种子数据不完整）；若前端列表展示关联也会显示为空。关联数据本身完整（TermRelation 表有记录，搜术语名实测可展开关联表）。
+  - id: BUG-20260820-001
+    title: （回归）
+    module: 
+    severity: 
+    fixed_at: 2026-08-20
+    description: |
+      曾标记为 FIXED，本次测试复现。
+        - id: BUG-20260820-002

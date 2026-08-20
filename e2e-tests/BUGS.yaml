@@ -3,3 +3,17 @@
 
 bugs:
 
+  - id: BUG-20260820-002
+    title: PUT /v1/data-sources/{id} 部分更新被 @Valid 拦截，无法仅更新 name
+    module: 数据源管理
+    severity: medium
+    found_at: 2026-08-20
+    description: |
+      TC-DS-003 步骤2：仅传 name 做部分更新返回 400 (CM001, jdbcUrl/username/type 不得为空)。服务层 updateDataSource 明确支持部分更新语义（null 字段回退当前值），但 Controller @Valid 使用与创建相同的 DataSource model（@NotNull type / @NotBlank jdbcUrl, username）导致校验拦截。openapi 中 PUT 与 POST 共用同一 schema。建议 PUT 单独使用宽松校验或复用 Service 层合并逻辑。
+  - id: BUG-20260820-003
+    title: POST /v1/data-sources/schemas 端点缺失（TC-DS-004 方式一不可用）
+    module: 数据源管理
+    severity: low
+    found_at: 2026-08-20
+    description: |
+      TC-DS-004 方式一要求 POST /schemas 传连接信息直接浏览 schema，返回 405 Method not allowed。后端与 openapi.json 均无此端点，仅存在 GET /{id}/schemas（需先创建数据源）。可能是未实现功能或用例已过时，需人工确认取舍。

@@ -232,8 +232,13 @@
 17. 再次查询维度值列表，确认更新的 values 的 synonyms 已生效
 18. **ES 验证 - FIELD_VALUE 同义词已更新**：查询 ES 中对应的 FIELD_VALUE 文档
     - 每条被更新的 value 的 `keywords` 包含其 synonyms 中的所有值
-19. **删除数据源（清理）**
-20. **ES 验证 - 全部清理**：查询 ES 中 `entity.datasourceId` = datasourceId 的所有文档，应返回 0 条
+19. **再次同步列（回归锚点：同步不得重置值抽取配置）**：再次 POST columns/sync（不传 overwrite_existing）
+    - **预期**：重新查询列列表，`extract_value_enabled` 仍为 **true**（用户配置而非数据库结构，应与 aliases 一样被保留）
+    - **预期**：`aliases`、`description` 仍为步骤 8 写入的值（既有保留语义不回归）
+    - **预期**：ES 中该列 FIELD_VALUE 文档数仍为 `value_count`（同步不应删除已抽取的维度值）
+    - **注**：当前实现（2026-08-20 前）会静默重置 `extract_value_enabled=false` 并删除全部 FIELD_VALUE 文档，本步骤为回归验证锚点
+20. 删除数据源（清理）
+21. **ES 验证 - 全部清理**：查询 ES 中 `entity.datasourceId` = datasourceId 的所有文档，应返回 0 条
 
 ---
 

@@ -262,4 +262,14 @@ class SemanticIndexServiceTest {
         verify(semanticSearchDAO).searchByTableFieldAndKeyword(tableId, field, keyword, SemanticEntityType.FIELD_VALUE.name(), pageable);
         assertThat(result.getContent()).hasSize(1);
     }
+
+    @Test
+    @DisplayName("Delete by table id and type - delegates to DAO")
+    void deleteByTableIdAndType_shouldDelegateToDAO() {
+        // when
+        semanticIndexService.deleteByTableIdAndType("table-001", SemanticEntityType.FIELD);
+
+        // then
+        verify(semanticSearchDAO).deleteByEntity_TableIdAndType("table-001", SemanticEntityType.FIELD);
+    }
 }

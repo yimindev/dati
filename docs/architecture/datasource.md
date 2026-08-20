@@ -141,7 +141,7 @@ backend/src/main/java/com/dati/datasource/
 **ColumnService**: 列管理
 - `getColumns(pageReq, tableId, keyword)`: 分页查询列列表
 - `updateColumn(id, columnInfo)`: 更新列元数据 → 同步 ES；当 `extractValueEnabled` 从 true 变为 false 时，自动清理该列对应的 FIELD_VALUE 文档
-- `syncColumns(datasourceId, tableId, overwriteExisting)`: 从 JDBC 获取最新列 → 删除旧 PO → 保存新 PO → 删除旧 ES FIELD 文档 → 重建 ES 文档。`overwriteExisting` 控制是否覆盖用户自定义的描述
+- `syncColumns(datasourceId, tableId, overwriteExisting)`: 从 JDBC 获取最新列 → 删除旧 PO → 保存新 PO → 重建 ES FIELD 文档。`overwriteExisting` 控制是否覆盖用户自定义的描述。**用户资产不随结构同步销毁**：existing 分支保留 `extractValueEnabled`（抽取开关）；ES 清理按类型精确执行（`deleteByTableIdAndType(FIELD)` 重建结构索引），仅对**消失列**按列删除 FIELD_VALUE，仍存在列的值文档（含用户编辑的 synonyms）原样保留
 
 **ColumnValueService**: 列值抽取与管理（NEW）
 - `extractValues(datasourceId, columnId, overwrite)`: 执行 `SELECT DISTINCT {column} FROM {table} LIMIT N` → 将每个值作为 FIELD_VALUE 类型写入 ES。由 `ColumnValueConfig` 控制采样限制（sampleLimit）和长度限制（lengthLimit）

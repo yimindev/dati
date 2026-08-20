@@ -60,6 +60,10 @@ public class SemanticIndexService {
         semanticSearchDAO.deleteByEntity_TableIdAndEntity_FieldAndType(tableId, field, type);
     }
 
+    public void deleteByTableIdAndType(String tableId, SemanticEntityType type) {
+        semanticSearchDAO.deleteByEntity_TableIdAndType(tableId, type);
+    }
+
     public List<SemanticSearchDocument> findByTableFieldAndType(String tableId, String field, SemanticEntityType type) {
         return semanticSearchDAO.findByEntity_TableIdAndEntity_FieldAndType(tableId, field, type);
     }
