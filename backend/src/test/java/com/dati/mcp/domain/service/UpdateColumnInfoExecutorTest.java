@@ -73,6 +73,7 @@ class UpdateColumnInfoExecutorTest {
         verify(columnService).updateColumn(eq("c1"), colCaptor.capture());
         assertThat(colCaptor.getValue().getDescription()).isEqualTo("order status");
         assertThat(colCaptor.getValue().getAliases()).containsExactly("stat");
+        assertThat(colCaptor.getValue().getExtractValueEnabled()).isNull();
 
         ArgumentCaptor<McpMetadataAuditLogPO> auditCaptor = ArgumentCaptor.forClass(McpMetadataAuditLogPO.class);
         verify(auditLogDAO).save(auditCaptor.capture());

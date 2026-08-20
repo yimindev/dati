@@ -4,7 +4,6 @@ import com.dati.base.pojo.BaseResourceVO;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
-import java.util.ArrayList;
 import java.util.List;
 
 @EqualsAndHashCode(callSuper = true)
@@ -15,8 +14,8 @@ public class ColumnInfoVO extends BaseResourceVO {
 
     private String columnType;
 
-    private List<String> aliases = new ArrayList<>();
+    private List<String> aliases;
 
-    private Boolean extractValueEnabled = false;
+    private Boolean extractValueEnabled;
 
 }

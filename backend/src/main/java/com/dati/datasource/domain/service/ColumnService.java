@@ -106,7 +106,7 @@ public class ColumnService {
                 .id("field:" + id)
                 .type(SemanticEntityType.FIELD)
                 .keywords(columnKeywords.stream().distinct().toList())
-                .description(columnInfo.getDescription())
+                .description(columnInfoPO.getDescription())
                 .entity(entity)
                 .build();
         semanticIndexService.save(doc);

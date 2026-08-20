@@ -196,6 +196,75 @@ class ColumnServiceTest {
     }
 
     @Test
+    @DisplayName("Update column - keeps extractValueEnabled and FIELD_VALUE data when not specified")
+    void updateColumn_withoutExtractValueEnabled_shouldPreserveStatusAndValues() {
+        // given
+        ColumnInfoPO existingPO = TestFixtures.createTestColumnInfoPO();
+        existingPO.setExtractValueEnabled(true);
+        existingPO.setDescription("Original description");
+        when(columnInfoDAO.findById(TestFixtures.TEST_COLUMN_ID)).thenReturn(Optional.of(existingPO));
+        when(columnInfoDAO.save(any())).thenReturn(existingPO);
+        when(tableInfoDAO.findById(TestFixtures.TEST_TABLE_ID)).thenReturn(Optional.of(testTableInfoPO));
+
+        ColumnInfo updateInfo = new ColumnInfo();
+        updateInfo.setDescription("New description");
+        // extractValueEnabled is left null (omitted)
+
+        // when
+        columnService.updateColumn(TestFixtures.TEST_COLUMN_ID, updateInfo);
+
+        // then
+        verify(columnInfoDAO).save(argThat(ColumnInfoPO::isExtractValueEnabled));
+        verify(semanticIndexService, never()).deleteByTableFieldAndType(any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("Update column - preserves existing description in semantic index when description is null")
+    void updateColumn_withoutDescription_shouldPreserveExistingDescriptionInSemanticIndex() {
+        // given
+        ColumnInfoPO existingPO = TestFixtures.createTestColumnInfoPO();
+        existingPO.setDescription("Original description");
+        when(columnInfoDAO.findById(TestFixtures.TEST_COLUMN_ID)).thenReturn(Optional.of(existingPO));
+        when(columnInfoDAO.save(any())).thenReturn(existingPO);
+        when(tableInfoDAO.findById(TestFixtures.TEST_TABLE_ID)).thenReturn(Optional.of(testTableInfoPO));
+
+        ColumnInfo updateInfo = new ColumnInfo();
+        updateInfo.setAliases(List.of("alias1"));
+        // description is left null
+
+        // when
+        columnService.updateColumn(TestFixtures.TEST_COLUMN_ID, updateInfo);
+
+        // then
+        ArgumentCaptor<SemanticSearchDocument> docCaptor = ArgumentCaptor.forClass(SemanticSearchDocument.class);
+        verify(semanticIndexService).save(docCaptor.capture());
+        assertThat(docCaptor.getValue().getDescription()).isEqualTo("Original description");
+    }
+
+    @Test
+    @DisplayName("Update column - keeps existing aliases when aliases not specified")
+    void updateColumn_withoutAliases_shouldPreserveExistingAliases() {
+        // given
+        ColumnInfoPO existingPO = TestFixtures.createTestColumnInfoPO();
+        existingPO.setAliases(List.of("genre", "流派"));
+        existingPO.setDescription("Original description");
+        when(columnInfoDAO.findById(TestFixtures.TEST_COLUMN_ID)).thenReturn(Optional.of(existingPO));
+        when(columnInfoDAO.save(any())).thenReturn(existingPO);
+        when(tableInfoDAO.findById(TestFixtures.TEST_TABLE_ID)).thenReturn(Optional.of(testTableInfoPO));
+
+        ColumnInfo updateInfo = new ColumnInfo();
+        updateInfo.setDescription("New description");
+        // aliases is left null (omitted)
+
+        // when
+        columnService.updateColumn(TestFixtures.TEST_COLUMN_ID, updateInfo);
+
+        // then
+        verify(columnInfoDAO).save(argThat(po -> po.getAliases() != null
+            && po.getAliases().equals(List.of("genre", "流派"))));
+    }
+
+    @Test
     @DisplayName("Update column - throws when column not found")
     void updateColumn_shouldThrowWhenNotFound() {
         // given

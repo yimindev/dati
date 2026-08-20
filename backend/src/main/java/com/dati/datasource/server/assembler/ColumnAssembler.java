@@ -8,6 +8,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -19,8 +20,8 @@ public class ColumnAssembler extends BaseAssembler {
         super.copyBaseInfo(columnInfo, columnInfoVO);
         columnInfoVO.setTableId(columnInfo.getTableId());
         columnInfoVO.setColumnType(columnInfo.getColumnType());
-        columnInfoVO.setAliases(columnInfo.getAliases());
-        columnInfoVO.setExtractValueEnabled(columnInfo.getExtractValueEnabled());
+        columnInfoVO.setAliases(columnInfo.getAliases() != null ? columnInfo.getAliases() : new ArrayList<>());
+        columnInfoVO.setExtractValueEnabled(Boolean.TRUE.equals(columnInfo.getExtractValueEnabled()));
         return columnInfoVO;
     }
 

@@ -54,5 +54,19 @@ class ColumnMapperTest {
         ColumnInfoPO po = ColumnMapper.toColumnInfoPO(info);
         assertNotNull(po);
         assertFalse(po.isExtractValueEnabled());
+        assertNotNull(po.getAliases());
+        assertTrue(po.getAliases().isEmpty());
+    }
+
+    @Test
+    @DisplayName("null handling - PO to Model")
+    void testNullAliasesPOToModel() {
+        ColumnInfoPO po = new ColumnInfoPO();
+        po.setAliases(null);
+
+        ColumnInfo info = ColumnMapper.toColumnInfo(po);
+        assertNotNull(info);
+        assertNotNull(info.getAliases());
+        assertTrue(info.getAliases().isEmpty());
     }
 }

@@ -2,6 +2,17 @@
 # 问题修复后从 BUGS.yaml 移入此处。
 # 若已修复的问题再次复现，必须从本文件移回 BUGS.yaml 并标记 REGRESSION。
 bugs:
+  - id: BUG-20260820-001
+    title: UPDATE_COLUMN_INFO 写列元数据时静默关闭 extract_value_enabled 并级联删除 FIELD_VALUE 文档
+    module: MCP 服务管理
+    severity: high
+    fixed_at: 2026-08-20
+    description: |
+      ColumnInfo 和 ColumnInfoVO 中 extractValueEnabled 与 aliases 移除默认初始值（默认为 null），
+      使局部更新时不传递相关字段保持原有状态，避免误触发 extract_value_enabled=false 及 FIELD_VALUE 级联删除。
+      同时修复 ColumnService 构建 SemanticSearchDocument 时使用已合并的 columnInfoPO.getDescription()。
+      ColumnMapper 与 ColumnAssembler 补充 null 安全防御。
+
   - id: BUG-012
     title: TABLE scope type 未实现，保存时返回 500 且无友好错误
     module: MCP 服务管理
