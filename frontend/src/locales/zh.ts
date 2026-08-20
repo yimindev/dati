@@ -353,7 +353,7 @@ export default {
       title: "接入配置",
       endpointTitle: "服务访问端点 (Endpoint)",
       manageApiKeys: "获取 API Key",
-      configTitle: "参考 JSON 配置",
+      configTitle: "JSON 配置",
       copySuccess: "接入配置已复制到剪贴板",
       configGuide: "不同客户端对配置格式的支持存在差异，可参考此示例按需调整。",
     },

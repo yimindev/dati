@@ -9,7 +9,6 @@ import { useRoute } from "vue-router";
 import { ElMessage, ElMessageBox } from "element-plus";
 import { useI18n } from "vue-i18n";
 import {
-  DocumentCopy,
   InfoFilled,
   SwitchButton,
   VideoPlay,
@@ -243,16 +242,6 @@ const handleSave = async () => {
     saving.value = false;
   }
 };
-
-const handleCopy = async (text: string) => {
-  if (!text) return;
-  try {
-    await navigator.clipboard.writeText(text);
-    ElMessage.success(t("common.copySuccess"));
-  } catch {
-    ElMessage.error(t("common.copyFailed"));
-  }
-};
 </script>
 
 <template>
@@ -383,40 +372,22 @@ const handleCopy = async (text: string) => {
 
     <!-- Tab Content Body -->
     <main class="detail-main min-w-0 flex-1">
-      <!-- Full-Width Responsive Dual-Card Grid Layout (7:5 Split) -->
-      <div v-if="activeTab === 'basic'" class="grid grid-cols-1 lg:grid-cols-12 gap-6 w-full">
-        <!-- Left Card: Basic Settings Form (7 cols out of 12) -->
-        <section class="panel p-6 lg:col-span-7 flex flex-col justify-between shadow-sm border border-[var(--ep-border-color-lighter)] rounded-xl bg-[var(--ep-bg-color)]">
+      <!-- Full-Width Responsive Dual-Card Grid Layout (1:1 Equal Split) -->
+      <div v-if="activeTab === 'basic'" class="grid grid-cols-1 lg:grid-cols-2 gap-6 w-full">
+        <!-- Left Card: Basic Settings Form -->
+        <section class="panel p-6 flex flex-col justify-between shadow-sm border border-[var(--ep-border-color-lighter)] rounded-xl bg-[var(--ep-bg-color)]">
           <el-form label-position="top" class="detail-form flex flex-col gap-4">
-            <!-- 只读元数据：服务标识 / 服务 ID（与表单同款 label，浅灰只读槽位） -->
+            <!-- 只读元数据：服务标识 / 服务 ID -->
             <el-form-item :label="t('mcpService.serviceCodeWithFormat')" class="!mb-0">
-              <div class="readonly-value">
-                <span class="flex-1 min-w-0 font-mono text-xs text-[var(--ep-text-color-primary)] truncate" :title="service?.code">
-                  {{ service?.code || '-' }}
-                </span>
-                <el-button
-                  v-if="service?.code"
-                  link
-                  :icon="DocumentCopy"
-                  class="!p-0 !h-auto text-[var(--ep-text-color-secondary)] hover:text-[var(--ep-color-primary)] shrink-0"
-                  @click="handleCopy(service.code)"
-                />
-              </div>
+              <span class="font-mono text-xs text-[var(--ep-text-color-secondary)] select-all">
+                {{ service?.code || '-' }}
+              </span>
             </el-form-item>
 
             <el-form-item :label="t('mcpService.serviceId')" class="!mb-0">
-              <div class="readonly-value">
-                <span class="flex-1 min-w-0 font-mono text-xs text-[var(--ep-text-color-primary)] truncate" :title="service?.id">
-                  {{ service?.id || '-' }}
-                </span>
-                <el-button
-                  v-if="service?.id"
-                  link
-                  :icon="DocumentCopy"
-                  class="!p-0 !h-auto text-[var(--ep-text-color-secondary)] hover:text-[var(--ep-color-primary)] shrink-0"
-                  @click="handleCopy(service.id)"
-                />
-              </div>
+              <span class="font-mono text-xs text-[var(--ep-text-color-secondary)] select-all">
+                {{ service?.id || '-' }}
+              </span>
             </el-form-item>
 
             <el-form-item :label="t('common.name')" required class="!mb-0">
@@ -431,7 +402,7 @@ const handleCopy = async (text: string) => {
               <el-input
                 v-model="formData.description"
                 type="textarea"
-                :rows="4"
+                :rows="5"
                 maxlength="500"
                 show-word-limit
                 :placeholder="t('common.placeholder.description')"
@@ -445,7 +416,7 @@ const handleCopy = async (text: string) => {
             </el-button>
 
             <div class="flex items-center gap-3 text-xs text-[var(--ep-text-color-secondary)]">
-              <span v-if="isDirty" class="text-amber-500 font-medium flex items-center gap-1">
+              <span v-if="isDirty" class="text-[var(--ep-color-warning)] font-medium flex items-center gap-1">
                 <el-icon><InfoFilled /></el-icon> {{ t("common.unsavedChanges") }}
               </span>
               <span>{{ t("common.lastModifiedAt", { time: service?.updated_at ? formatDateTime(service.updated_at) : '-' }) }}</span>
@@ -546,24 +517,5 @@ const handleCopy = async (text: string) => {
 .panel-heading span {
   color: var(--ep-text-color-secondary);
   font-size: 12px;
-}
-
-.detail-form :deep(.el-form-item__label) {
-  color: var(--ep-text-color-primary);
-  font-weight: 600;
-}
-
-/* 只读元数据槽位：尺寸/圆角/内边距对齐 el-input，浅灰底以示只读 */
-.readonly-value {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  width: 100%;
-  min-height: 32px;
-  padding: 0 12px;
-  border: 1px solid var(--ep-border-color-lighter);
-  border-radius: var(--ep-border-radius-base);
-  background: var(--ep-fill-color-light);
 }
 </style>

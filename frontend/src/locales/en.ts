@@ -353,7 +353,7 @@ export default {
       title: "Access Config",
       endpointTitle: "Service Endpoint",
       manageApiKeys: "Get API Key",
-      configTitle: "Reference JSON Config",
+      configTitle: "JSON Config",
       copySuccess: "Access config copied to clipboard",
       configGuide: "Client support for config formats varies — use this example as a reference and adjust as needed.",
     },
