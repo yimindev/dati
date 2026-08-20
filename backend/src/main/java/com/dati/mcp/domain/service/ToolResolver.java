@@ -62,7 +62,7 @@ public class ToolResolver {
         McpPrebuiltToolConfig cfg = new McpPrebuiltToolConfig();
         cfg.setServiceId(serviceId);
         cfg.setToolType(toolType);
-        cfg.setEnabled(true);
+        cfg.setEnabled(toolType.isDefaultEnabled());
         cfg.setConfig(toolType.getDefaultConfig());
         return cfg;
     }

@@ -68,6 +68,18 @@ class ToolResolverTest {
     }
 
     @Test
+    @DisplayName("resolve - metadata update tools default disabled when no DB record")
+    void resolvePrebuiltUpdateToolWithoutDbConfig_throwsDisabled() {
+        when(prebuiltDAO.findByServiceIdAndToolType(TestFixtures.TEST_MCP_SERVICE_ID, McpToolType.UPDATE_TABLE_INFO))
+                .thenReturn(Optional.empty());
+
+        ToolExecuteException ex = assertThrows(ToolExecuteException.class, () ->
+                toolResolver.resolve(TestFixtures.TEST_MCP_SERVICE_ID, "UPDATE_TABLE_INFO"));
+
+        assertThat(ex.getToolError()).isEqualTo(ToolError.TOOL_DISABLED);
+    }
+
+    @Test
     @DisplayName("resolve - throws MS_TOOL_DISABLED when prebuilt tool disabled")
     void resolvePrebuiltDisabled() {
         McpPrebuiltToolConfigPO po = new McpPrebuiltToolConfigPO();

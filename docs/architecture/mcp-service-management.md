@@ -689,7 +689,7 @@ StatementResult.writeFailure(errorMessage)           // WRITE 失败
 
 #### 工具分为「预置」和「自定义」
 
-- **预置工具**：名称/描述/title/annotations 存代码，inputSchema 由参数 record 生成（见「结构化参数校验」），per-service 仅存差异化 `enabled` + `config`。懒初始化默认启用。元数据更新三工具无 per-service 配置（`UpdateMetadataConfig {}`）。
+- **预置工具**：名称/描述/title/annotations 存代码，inputSchema 由参数 record 生成（见「结构化参数校验」），per-service 仅存差异化 `enabled` + `config`。懒初始化默认启用，**元数据更新三工具（UPDATE_TABLE_INFO / UPDATE_COLUMN_INFO / UPSERT_TERM）默认关闭**（`McpToolType.defaultEnabled`，需显式开启，防止 LLM 未经确认写共享元数据）。元数据更新三工具无 per-service 配置（`UpdateMetadataConfig {}`）。
 - **自定义工具**：用户完整 CRUD。统一路径 `/tools/`，请求体 `tool_type` 区分预置/自定义路由。
 - 开关合并到 `PUT` 接口，不再需要独立 toggle 端点。
 

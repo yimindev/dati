@@ -75,7 +75,7 @@ public class McpToolService {
                 McpPrebuiltToolConfig cfg = new McpPrebuiltToolConfig();
                 cfg.setServiceId(serviceId);
                 cfg.setToolType(type);
-                cfg.setEnabled(true);
+                cfg.setEnabled(type.isDefaultEnabled());
                 cfg.setConfig(type.getDefaultConfig());
                 return cfg;
             })
@@ -98,7 +98,7 @@ public class McpToolService {
                 McpPrebuiltToolConfigPO newPO = new McpPrebuiltToolConfigPO();
                 newPO.setServiceId(serviceId);
                 newPO.setToolType(toolType);
-                newPO.setEnabled(true);
+                newPO.setEnabled(toolType.isDefaultEnabled());
                 return newPO;
             });
         po.setEnabled(input.isEnabled());

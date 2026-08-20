@@ -97,6 +97,15 @@ class McpToolServiceTest {
         ToolsResult result = mcpToolService.listTools(TestFixtures.TEST_MCP_SERVICE_ID);
 
         assertThat(result.prebuilt()).hasSize(6);
+        // Read tools + EXECUTE_SQL default enabled; metadata update tools default disabled
+        assertThat(result.prebuilt())
+            .filteredOn(McpPrebuiltToolConfig::isEnabled)
+            .extracting(McpPrebuiltToolConfig::getToolType)
+            .containsExactlyInAnyOrder(McpToolType.SEARCH_METADATA, McpToolType.GET_TABLE_INFO, McpToolType.EXECUTE_SQL);
+        assertThat(result.prebuilt())
+            .filteredOn(cfg -> !cfg.isEnabled())
+            .extracting(McpPrebuiltToolConfig::getToolType)
+            .containsExactlyInAnyOrder(McpToolType.UPDATE_TABLE_INFO, McpToolType.UPDATE_COLUMN_INFO, McpToolType.UPSERT_TERM);
     }
 
     @Test

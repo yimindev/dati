@@ -6,6 +6,10 @@
 > 数据准备流程：按 `mcp-service.md` 的 TC-MCP-008 创建服务并发布（携带 `data_scopes` 绑定种子数据源），
 > 按 TC-MCP-003/004 配置 Prompt 和自定义工具。本模块用例按 `code` 查找服务复用。
 >
+> **默认关闭注意**：元数据写工具（UPDATE_TABLE_INFO / UPDATE_COLUMN_INFO / UPSERT_TERM）懒初始化默认 `enabled`=false，
+> 依赖这三个工具的用例（TC-END-002/012/013）需在发布前逐一 PUT `/v1/mcp-services/{id}/tools/{toolType}`
+> （body `{"tool_type": "<枚举名>", "enabled": true}`）显式启用，否则 `tools/list` 不返回、`tools/call` 报 TOOL_DISABLED。
+>
 > **请求头约定**：`Accept` 不校验（服务始终返回 JSON，任意 Accept 均可）；非 initialize 请求必须带 `MCP-Protocol-Version: 2025-11-25`；
 > 认证 `Authorization: Bearer <jwt>`。JSON-RPC body 为 camelCase（`method`/`params`/`id`）。
 
@@ -159,7 +163,7 @@
 
 ## TC-END-012 工具发现：元数据写入工具 title/annotations/inputSchema
 **级别：** P0
-**前置：** 已登录，已发布服务（全部预置工具 enabled，数据范围绑定种子数据源）
+**前置：** 已登录，已发布服务（**6 个预置工具均显式 enabled**——元数据写工具默认关闭，需发布前逐一 PUT 启用；数据范围绑定种子数据源）
 
 1. 发送 `tools/list`（无 params）
 2. 验证响应：
@@ -177,7 +181,7 @@
 
 ## TC-END-013 工具调用：元数据写入工具（部分失败、幂等 upsert、参数错误）
 **级别：** P0
-**前置：** 已登录，两个已发布服务：服务 A 数据范围绑定种子数据源（步骤 1/3）、服务 B 数据范围绑定种子主题（步骤 2，`scope_type`=SUBJECT）
+**前置：** 已登录，两个已发布服务：服务 A 数据范围绑定种子数据源（步骤 1/3）、服务 B 数据范围绑定种子主题（步骤 2，`scope_type`=SUBJECT）。**两服务发布前均需显式启用 UPDATE_TABLE_INFO 与 UPSERT_TERM**（写工具默认关闭）
 **数据：** `chinook.e2e.{seeded_datasource_name, seeded_subject_name, mcp.write_tool}`
 
 > **注意**：UPSERT_TERM 通过 `subject_name` 在服务 scope 内定位主题——服务 B 必须绑定种子主题（DATA_SOURCE scope 的服务会对术语返回 SCOPE_ERROR）。

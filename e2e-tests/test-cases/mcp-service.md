@@ -252,7 +252,7 @@
 **前置：** 已登录，种子数据源已就绪
 
 1. 搜索种子数据源 → 创建 MCP 服务（携带 `data_scopes` 绑定该数据源）
-2. **懒初始化默认配置**：GET `/v1/mcp-services/{id}/tools` → prebuilt **6 个**，均 `enabled`=true；SEARCH_METADATA / GET_TABLE_INFO 的 config 为 `{"timeout": 30}`；EXECUTE_SQL config 含 `sql_policy.allow_select`=true（其余 false）、`timeout`=30、`max_rows`=1000；UPDATE_TABLE_INFO / UPDATE_COLUMN_INFO / UPSERT_TERM 的 config 为 `{}`（无 per-service 配置，无 DB 记录时使用代码默认值）
+2. **懒初始化默认配置**：GET `/v1/mcp-services/{id}/tools` → prebuilt **6 个**：SEARCH_METADATA / GET_TABLE_INFO / EXECUTE_SQL `enabled`=**true**；**UPDATE_TABLE_INFO / UPDATE_COLUMN_INFO / UPSERT_TERM `enabled`=false（写工具默认关闭，需显式启用）**；SEARCH_METADATA / GET_TABLE_INFO 的 config 为 `{"timeout": 30}`；EXECUTE_SQL config 含 `sql_policy.allow_select`=true（其余 false）、`timeout`=30、`max_rows`=1000；UPDATE_TABLE_INFO / UPDATE_COLUMN_INFO / UPSERT_TERM 的 config 为 `{}`（无 per-service 配置，无 DB 记录时使用代码默认值）
 3. **更新 EXECUTE_SQL 配置**：PUT `/v1/mcp-services/{id}/tools/EXECUTE_SQL`，body：`{"tool_type": "EXECUTE_SQL", "enabled": true, "config": "{\"sql_policy\":{\"allow_select\":true,\"allow_update\":true,\"allow_multi\":true},\"timeout\":60,\"max_rows\":500}"}`（config 为 JSON 字符串）→ 200
    - GET `/tools` 回读：EXECUTE_SQL config 与提交一致（`allow_update`=true、`allow_multi`=true、`timeout`=60、`max_rows`=500）
 4. **预置工具开关**：PUT `/tools/SEARCH_METADATA`，body：`{"tool_type": "SEARCH_METADATA", "enabled": false}` → 200；GET `/tools` 回读 SEARCH_METADATA `enabled`=false
@@ -362,7 +362,7 @@
 
 > **背景**：LLM 把学到的表描述/别名写回共享元数据存储。写入立即可见（GET_TABLE_INFO 回读），单条失败不阻塞其他条目（部分失败语义）。测试后恢复基线（genre 表基线：`description`=""、`aliases`=[]），不污染种子数据。
 
-1. 搜索种子数据源 → 创建 MCP 服务（携带 `data_scopes` 绑定该数据源）
+1. 搜索种子数据源 → 创建 MCP 服务（携带 `data_scopes` 绑定该数据源）→ **启用 UPDATE_TABLE_INFO**：PUT `/v1/mcp-services/{id}/tools/UPDATE_TABLE_INFO`，body `{"tool_type": "UPDATE_TABLE_INFO", "enabled": true}` → 200（写工具默认关闭）
 2. **基线读取**：POST `/tools/GET_TABLE_INFO/test`，args `{"tables": [{"data_source_id": "<seedDsId>", "table": "<write_tool.table>"}]}` → 记录 `data.tables[0].description` 与 `aliases` 为基线（预期 `""` 与 `[]`）
 3. **写入表描述与别名**：POST `/tools/UPDATE_TABLE_INFO/test`，args `{"tables": [{"data_source_id": "<seedDsId>", "table": "<write_tool.table>", "description": "<write_tool.table_desc>", "aliases": ["<write_tool.table_aliases[0]>"]}]}` → HTTP 200
    - `success`=true，`data.type`=**METADATA_UPDATE**
@@ -386,7 +386,7 @@
 
 > **背景**：列描述/别名写入（列值语义是最高价值知识）。写后 GET_TABLE_INFO 回读验证（ColumnDef.comment=列描述）。测试后恢复基线。
 
-1. 搜索种子数据源 → 创建 MCP 服务（携带 `data_scopes` 绑定该数据源）
+1. 搜索种子数据源 → 创建 MCP 服务（携带 `data_scopes` 绑定该数据源）→ **启用 UPDATE_COLUMN_INFO**：PUT `/v1/mcp-services/{id}/tools/UPDATE_COLUMN_INFO`，body `{"tool_type": "UPDATE_COLUMN_INFO", "enabled": true}` → 200（写工具默认关闭）
 2. **基线读取**：GET_TABLE_INFO，args `{"tables": [{"data_source_id": "<seedDsId>", "table": "<write_tool.table>"}]}` → 记录列 `<write_tool.column>` 的 `comment` 与 `aliases` 为基线
 3. **写入列描述与别名**：POST `/tools/UPDATE_COLUMN_INFO/test`，args `{"columns": [{"data_source_id": "<seedDsId>", "table": "<write_tool.table>", "column": "<write_tool.column>", "description": "<write_tool.column_desc>", "aliases": ["<write_tool.column_aliases[0]>"]}]}` → HTTP 200
    - `data.results[0]`：`entity_type`=COLUMN、`entity`=`write_tool.column`、`success`=true、`change_type`=UPDATE
@@ -405,7 +405,7 @@
 
 > **背景**：LLM 写入的业务术语须在平台侧可见（跨工具一致性：MCP 写入 → 平台术语 API 可查），重复调用同 subject+name 走 UPDATE（幂等 upsert）。术语通过平台 API 清理（无 v1 管理 UI）。
 
-1. 搜索种子主题（`seeded_subject_name`）获取 subjectId，创建 MCP 服务（`data_scopes` 绑定该主题，`scope_type`=SUBJECT）
+1. 搜索种子主题（`seeded_subject_name`）获取 subjectId，创建 MCP 服务（`data_scopes` 绑定该主题，`scope_type`=SUBJECT）→ **启用 UPSERT_TERM**：PUT `/v1/mcp-services/{id}/tools/UPSERT_TERM`，body `{"tool_type": "UPSERT_TERM", "enabled": true}` → 200（写工具默认关闭）
 2. **创建术语**：POST `/tools/UPSERT_TERM/test`，args `{"terms": [{"subject_name": "<seeded_subject_name>", "name": "<write_tool.term_name>", "description": "<write_tool.term_desc>", "aliases": ["<write_tool.term_aliases[0]>"]}]}` → HTTP 200
    - `data.results[0]`：`entity_type`=TERM、`entity`=`write_tool.term_name`、`success`=true、`change_type`=**CREATE**、`old`=null、`new.description`=写入值
 3. **平台 API 验证（跨工具一致性）**：GET `/v1/subjects/{subjectId}/terms`（keyword=术语名）→ 术语存在，`name`/`description`/`aliases` 与写入一致
