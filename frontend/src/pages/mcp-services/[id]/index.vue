@@ -11,7 +11,6 @@ import { useI18n } from "vue-i18n";
 import {
   DocumentCopy,
   InfoFilled,
-  Link,
   SwitchButton,
   VideoPlay,
 } from "@element-plus/icons-vue";
@@ -28,6 +27,7 @@ import { listPrompts } from "~/api/mcp-prompt";
 import DataScopeTab from "~/components/mcp-service/DataScopeTab.vue";
 import DebugPublishTab from "~/components/mcp-service/DebugPublishTab.vue";
 import DiffSummaryList from "~/components/mcp-service/DiffSummaryList.vue";
+import McpAccessConfigCard from "~/components/mcp-service/McpAccessConfigCard.vue";
 import PromptsTab from "~/components/mcp-service/PromptsTab.vue";
 import ToolsTab from "~/components/mcp-service/ToolsTab.vue";
 import { formatDateTime } from "~/composables";
@@ -74,8 +74,6 @@ const statusLabel = (status?: string) => {
       return status || "";
   }
 };
-
-const endpointUrl = computed(() => service.value?.endpoint_path || "");
 
 const isDirty = computed(() =>
   !!service.value &&
@@ -246,11 +244,10 @@ const handleSave = async () => {
   }
 };
 
-const handleCopy = async (text: string | number) => {
-  const str = String(text);
-  if (!str) return;
+const handleCopy = async (text: string) => {
+  if (!text) return;
   try {
-    await navigator.clipboard.writeText(str);
+    await navigator.clipboard.writeText(text);
     ElMessage.success(t("common.copySuccess"));
   } catch {
     ElMessage.error(t("common.copyFailed"));
@@ -391,6 +388,37 @@ const handleCopy = async (text: string | number) => {
         <!-- Left Card: Basic Settings Form (7 cols out of 12) -->
         <section class="panel p-6 lg:col-span-7 flex flex-col justify-between shadow-sm border border-[var(--ep-border-color-lighter)] rounded-xl bg-[var(--ep-bg-color)]">
           <el-form label-position="top" class="detail-form flex flex-col gap-4">
+            <!-- 只读元数据：服务标识 / 服务 ID（与表单同款 label，浅灰只读槽位） -->
+            <el-form-item :label="t('mcpService.serviceCodeWithFormat')" class="!mb-0">
+              <div class="readonly-value">
+                <span class="flex-1 min-w-0 font-mono text-xs text-[var(--ep-text-color-primary)] truncate" :title="service?.code">
+                  {{ service?.code || '-' }}
+                </span>
+                <el-button
+                  v-if="service?.code"
+                  link
+                  :icon="DocumentCopy"
+                  class="!p-0 !h-auto text-[var(--ep-text-color-secondary)] hover:text-[var(--ep-color-primary)] shrink-0"
+                  @click="handleCopy(service.code)"
+                />
+              </div>
+            </el-form-item>
+
+            <el-form-item :label="t('mcpService.serviceId')" class="!mb-0">
+              <div class="readonly-value">
+                <span class="flex-1 min-w-0 font-mono text-xs text-[var(--ep-text-color-primary)] truncate" :title="service?.id">
+                  {{ service?.id || '-' }}
+                </span>
+                <el-button
+                  v-if="service?.id"
+                  link
+                  :icon="DocumentCopy"
+                  class="!p-0 !h-auto text-[var(--ep-text-color-secondary)] hover:text-[var(--ep-color-primary)] shrink-0"
+                  @click="handleCopy(service.id)"
+                />
+              </div>
+            </el-form-item>
+
             <el-form-item :label="t('common.name')" required class="!mb-0">
               <el-input
                 v-model="formData.name"
@@ -403,7 +431,7 @@ const handleCopy = async (text: string | number) => {
               <el-input
                 v-model="formData.description"
                 type="textarea"
-                :rows="6"
+                :rows="4"
                 maxlength="500"
                 show-word-limit
                 :placeholder="t('common.placeholder.description')"
@@ -411,7 +439,7 @@ const handleCopy = async (text: string | number) => {
             </el-form-item>
           </el-form>
 
-          <div class="mt-6 pt-4 border-t border-[var(--ep-border-color-lighter)] flex items-center justify-between">
+          <div class="mt-4 pt-4 border-t border-[var(--ep-border-color-lighter)] flex items-center justify-between">
             <el-button type="primary" :loading="saving" :disabled="!isDirty" @click="handleSave">
               {{ t("common.save") }}
             </el-button>
@@ -425,60 +453,8 @@ const handleCopy = async (text: string | number) => {
           </div>
         </section>
 
-        <!-- Right Card: Technical Access & Metadata Card (5 cols out of 12) -->
-        <aside class="panel p-6 lg:col-span-5 flex flex-col gap-5 shadow-sm border border-[var(--ep-border-color-lighter)] rounded-xl bg-[var(--ep-bg-color)]">
-
-          <!-- MCP Endpoint Box -->
-          <div class="endpoint-card p-4 rounded-lg bg-[var(--ep-fill-color-lighter)] border border-[var(--ep-border-color-lighter)] flex flex-col gap-2.5">
-            <div class="flex items-center justify-between">
-              <span class="text-xs font-semibold text-[var(--ep-text-color-primary)] flex items-center gap-1.5">
-                <el-icon class="text-[var(--ep-color-primary)]"><Link /></el-icon> {{ t("mcpService.endpointPath") }}
-              </span>
-              <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-[var(--ep-color-primary-light-9)] text-[var(--ep-color-primary)] font-medium">
-                Streamable HTTP
-              </span>
-            </div>
-
-            <div class="flex items-center justify-between gap-2 p-2.5 rounded-md bg-[var(--ep-bg-color)] border border-[var(--ep-border-color-lighter)] min-w-0">
-              <span class="font-mono text-xs text-[var(--ep-text-color-primary)] truncate" :title="endpointUrl || t('mcpService.notPublished')">
-                {{ endpointUrl || t('mcpService.notPublished') }}
-              </span>
-              <el-tooltip :content="t('common.copy')" placement="top">
-                <el-button
-                  v-if="endpointUrl"
-                  link
-                  :icon="DocumentCopy"
-                  class="!p-1 text-[var(--ep-color-primary)] hover:opacity-80"
-                  @click="handleCopy(endpointUrl)"
-                />
-              </el-tooltip>
-            </div>
-          </div>
-
-          <!-- Technical Attributes List -->
-          <div class="tech-attributes flex flex-col gap-3">
-            <div class="attr-row flex items-center justify-between p-3 rounded-lg bg-[var(--ep-fill-color-lighter)] text-xs">
-              <span class="text-[var(--ep-text-color-secondary)]">MCP 协议版本</span>
-              <span class="font-mono font-medium text-[var(--ep-text-color-primary)]">2025-11-25</span>
-            </div>
-
-            <div class="attr-row flex items-center justify-between p-3 rounded-lg bg-[var(--ep-fill-color-lighter)] text-xs">
-              <span class="text-[var(--ep-text-color-secondary)]">服务标识 (Code)</span>
-              <div class="flex items-center gap-1.5">
-                <span class="font-mono font-medium text-[var(--ep-text-color-primary)]">{{ service?.code || '-' }}</span>
-                <el-button v-if="service?.code" link :icon="DocumentCopy" class="!p-0 !h-auto text-[var(--ep-text-color-secondary)] hover:text-[var(--ep-color-primary)]" @click="handleCopy(service.code)" />
-              </div>
-            </div>
-
-            <div class="attr-row flex items-center justify-between p-3 rounded-lg bg-[var(--ep-fill-color-lighter)] text-xs gap-2">
-              <span class="text-[var(--ep-text-color-secondary)] shrink-0">ID</span>
-              <div class="flex items-center gap-1.5 min-w-0">
-                <span class="font-mono text-xs text-[var(--ep-text-color-primary)]" :title="service?.id">{{ service?.id || '-' }}</span>
-                <el-button v-if="service?.id" link :icon="DocumentCopy" class="!p-0 !h-auto text-[var(--ep-text-color-secondary)] hover:text-[var(--ep-color-primary)] shrink-0" @click="handleCopy(service.id)" />
-              </div>
-            </div>
-          </div>
-        </aside>
+        <!-- Right Card: Technical Access & Client Connection Configuration (5 cols out of 12) -->
+        <McpAccessConfigCard :service="service" />
       </div>
 
       <div v-else-if="activeTab === 'scope'" class="scope-panel p-[20px] shadow-sm">
@@ -575,5 +551,19 @@ const handleCopy = async (text: string | number) => {
 .detail-form :deep(.el-form-item__label) {
   color: var(--ep-text-color-primary);
   font-weight: 600;
+}
+
+/* 只读元数据槽位：尺寸/圆角/内边距对齐 el-input，浅灰底以示只读 */
+.readonly-value {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  min-height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--ep-border-color-lighter);
+  border-radius: var(--ep-border-radius-base);
+  background: var(--ep-fill-color-light);
 }
 </style>

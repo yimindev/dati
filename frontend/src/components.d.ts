@@ -61,6 +61,7 @@ declare module 'vue' {
     ExecuteSqlConfigDialog: typeof import('./components/mcp-service/ExecuteSqlConfigDialog.vue')['default']
     ExecuteSqlParams: typeof import('./components/mcp-service/tool-test/params/ExecuteSqlParams.vue')['default']
     GetTableInfoParams: typeof import('./components/mcp-service/tool-test/params/GetTableInfoParams.vue')['default']
+    McpAccessConfigCard: typeof import('./components/mcp-service/McpAccessConfigCard.vue')['default']
     McpServiceDialog: typeof import('./components/mcp-service/McpServiceDialog.vue')['default']
     McpServiceForm: typeof import('./components/mcp-service/McpServiceForm.vue')['default']
     McpServiceTable: typeof import('./components/mcp-service/McpServiceTable.vue')['default']

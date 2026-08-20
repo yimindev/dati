@@ -347,6 +347,16 @@ export default {
     },
 
     endpointPath: "Endpoint Path",
+    serviceCodeWithFormat: "Service Code",
+    serviceId: "Service ID",
+    accessConfig: {
+      title: "Access Config",
+      endpointTitle: "Service Endpoint",
+      manageApiKeys: "Get API Key",
+      configTitle: "Reference JSON Config",
+      copySuccess: "Access config copied to clipboard",
+      configGuide: "Client support for config formats varies — use this example as a reference and adjust as needed.",
+    },
     toolCount: "Tool Count",
     dialogNote: "Configure data scope during creation; tools and publishing are managed in the detail page.",
     create: {

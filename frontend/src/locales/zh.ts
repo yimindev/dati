@@ -347,6 +347,16 @@ export default {
     },
 
     endpointPath: "服务路径",
+    serviceCodeWithFormat: "服务标识 (Code)",
+    serviceId: "服务 ID",
+    accessConfig: {
+      title: "接入配置",
+      endpointTitle: "服务访问端点 (Endpoint)",
+      manageApiKeys: "获取 API Key",
+      configTitle: "参考 JSON 配置",
+      copySuccess: "接入配置已复制到剪贴板",
+      configGuide: "不同客户端对配置格式的支持存在差异，可参考此示例按需调整。",
+    },
     toolCount: "工具数",
     dialogNote: "创建时可配置数据范围；创建后可在详情中管理工具与发布策略。",
     create: {
