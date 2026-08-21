@@ -68,6 +68,7 @@ class McpProtocolHandlerTest {
         assertNotNull(result.capabilities().prompts());
         assertEquals("Test MCP Service", result.serverInfo().name());
         assertEquals("v1", result.serverInfo().version());
+        assertEquals("Test MCP service for unit tests", result.serverInfo().description());
     }
 
     @Test

@@ -96,8 +96,12 @@ public class McpProtocolHandler {
         if (hasEnabledPrompts(content)) {
             capabilities.prompts(false);
         }
-        var serverInfo = McpSchema.Implementation.builder(service.getName(),
-            "v" + (service.getActiveVersionNumber() == null ? 0 : service.getActiveVersionNumber())).build();
+        var serverInfoBuilder = McpSchema.Implementation.builder(service.getName(),
+            "v" + (service.getActiveVersionNumber() == null ? 0 : service.getActiveVersionNumber()));
+        if (service.getDescription() != null && !service.getDescription().isBlank()) {
+            serverInfoBuilder.description(service.getDescription());
+        }
+        var serverInfo = serverInfoBuilder.build();
         McpSchema.InitializeResult result = McpSchema.InitializeResult.builder(
             PROTOCOL_VERSION, capabilities.build(), serverInfo).build();
         return McpSchema.JSONRPCResponse.result(request.id(), result);
