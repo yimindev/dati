@@ -96,6 +96,7 @@ class UpsertTermExecutorTest {
 
         MetadataUpdateResult result = data.results().getFirst();
         assertThat(result.success()).isTrue();
+        assertThat(result.entity()).isEqualTo("销售.退货单");
         assertThat(result.changeType()).isEqualTo("CREATE");
         assertThat(result.old()).isNull();
         assertThat(result.newValue()).containsEntry("description", "return order");
@@ -127,6 +128,7 @@ class UpsertTermExecutorTest {
         assertThat(auditCaptor.getValue().getOldValue()).contains("old desc");
 
         MetadataUpdateResult result = data.results().getFirst();
+        assertThat(result.entity()).isEqualTo("销售.退货单");
         assertThat(result.changeType()).isEqualTo("UPDATE");
         assertThat(result.old()).containsEntry("description", "old desc");
         assertThat(result.newValue()).containsEntry("description", "new desc");
@@ -143,6 +145,7 @@ class UpsertTermExecutorTest {
 
         MetadataUpdateResult result = data.results().getFirst();
         assertThat(result.success()).isFalse();
+        assertThat(result.entity()).isEqualTo("财务.应收");
         assertThat(result.error().errorCategory()).isEqualTo("SCOPE_ERROR");
         verify(termDAO, never()).findBySubjectIdAndName(any(), any());
         verify(auditLogDAO, never()).save(any());

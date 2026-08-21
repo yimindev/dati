@@ -74,6 +74,7 @@ public class UpdateTableInfoExecutor implements ToolExecutor {
 
     private MetadataUpdateResult updateOne(ToolExecutionContext ctx,
                                            UpdateTableInfoArgs.UpdateTableItem item) {
+        String entity = QualifiedName.of(item.schema(), item.table());
         try {
             scopeValidator.validateDataSource(ctx.scopeItems(), item.dataSourceId());
             MetadataEntityResolver.TableTarget target = resolver
@@ -89,9 +90,9 @@ public class UpdateTableInfoExecutor implements ToolExecutor {
             Map<String, Object> neu = valueMap(update.getDescription(), update.getAliases());
 
             saveAudit(ctx, "TABLE", target.tableId(), item.table(), "UPDATE", old, neu);
-            return new MetadataUpdateResult("TABLE", item.table(), true, "UPDATE", old, neu, null);
+            return new MetadataUpdateResult("TABLE", entity, true, "UPDATE", old, neu, null);
         } catch (ToolExecuteException e) {
-            return new MetadataUpdateResult("TABLE", item.table(), false, null, null, null,
+            return new MetadataUpdateResult("TABLE", entity, false, null, null, null,
                 new MetadataUpdateResult.MetadataUpdateError(e.getErrorCategory(), e.getMessage()));
         }
     }

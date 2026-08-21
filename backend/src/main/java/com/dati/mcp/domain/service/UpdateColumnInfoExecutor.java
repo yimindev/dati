@@ -74,6 +74,7 @@ public class UpdateColumnInfoExecutor implements ToolExecutor {
 
     private MetadataUpdateResult updateOne(ToolExecutionContext ctx,
                                            UpdateColumnInfoArgs.UpdateColumnItem item) {
+        String entity = QualifiedName.of(item.schema(), item.table(), item.column());
         try {
             scopeValidator.validateDataSource(ctx.scopeItems(), item.dataSourceId());
             MetadataEntityResolver.ColumnTarget target = resolver
@@ -91,9 +92,9 @@ public class UpdateColumnInfoExecutor implements ToolExecutor {
                 item.aliases() != null ? item.aliases() : target.aliases());
 
             saveAudit(ctx, "COLUMN", target.columnId(), item.column(), "UPDATE", old, neu);
-            return new MetadataUpdateResult("COLUMN", item.column(), true, "UPDATE", old, neu, null);
+            return new MetadataUpdateResult("COLUMN", entity, true, "UPDATE", old, neu, null);
         } catch (ToolExecuteException e) {
-            return new MetadataUpdateResult("COLUMN", item.column(), false, null, null, null,
+            return new MetadataUpdateResult("COLUMN", entity, false, null, null, null,
                 new MetadataUpdateResult.MetadataUpdateError(e.getErrorCategory(), e.getMessage()));
         }
     }

@@ -71,18 +71,20 @@ public class UpsertTermExecutor implements ToolExecutor {
 
     private MetadataUpdateResult upsertOne(ToolExecutionContext ctx,
                                            UpsertTermArgs.UpsertTermItem item) {
+        String entity = QualifiedName.of(item.subjectName(), item.name());
         try {
             String subjectId = scopeValidator.resolveSubjectInScope(ctx.scopeItems(), item.subjectName());
             Optional<TermPO> existing = termDAO.findBySubjectIdAndName(subjectId, item.name());
-            return existing.map(termPO -> updateExisting(ctx, termPO, item)).orElseGet(() -> createNew(ctx, subjectId, item));
+            return existing.map(termPO -> updateExisting(ctx, termPO, item, entity))
+                .orElseGet(() -> createNew(ctx, subjectId, item, entity));
         } catch (ToolExecuteException e) {
-            return new MetadataUpdateResult("TERM", item.name(), false, null, null, null,
+            return new MetadataUpdateResult("TERM", entity, false, null, null, null,
                 new MetadataUpdateResult.MetadataUpdateError(e.getErrorCategory(), e.getMessage()));
         }
     }
 
     private MetadataUpdateResult updateExisting(ToolExecutionContext ctx, TermPO po,
-                                                UpsertTermArgs.UpsertTermItem item) {
+                                                UpsertTermArgs.UpsertTermItem item, String entity) {
         Map<String, Object> old = valueMap(po.getDescription(), po.getAliases());
         Term update = new Term();
         update.setDescription(item.description() != null ? item.description() : po.getDescription());
@@ -91,11 +93,11 @@ public class UpsertTermExecutor implements ToolExecutor {
         Map<String, Object> neu = valueMap(update.getDescription(), update.getAliases());
 
         saveAudit(ctx, po.getId(), item.name(), "UPDATE", old, neu);
-        return new MetadataUpdateResult("TERM", item.name(), true, "UPDATE", old, neu, null);
+        return new MetadataUpdateResult("TERM", entity, true, "UPDATE", old, neu, null);
     }
 
     private MetadataUpdateResult createNew(ToolExecutionContext ctx, String subjectId,
-                                           UpsertTermArgs.UpsertTermItem item) {
+                                           UpsertTermArgs.UpsertTermItem item, String entity) {
         Term create = new Term();
         create.setSubjectId(subjectId);
         create.setName(item.name());
@@ -105,7 +107,7 @@ public class UpsertTermExecutor implements ToolExecutor {
         Map<String, Object> neu = valueMap(created.getDescription(), created.getAliases());
 
         saveAudit(ctx, created.getId(), item.name(), "CREATE", null, neu);
-        return new MetadataUpdateResult("TERM", item.name(), true, "CREATE", null, neu, null);
+        return new MetadataUpdateResult("TERM", entity, true, "CREATE", null, neu, null);
     }
 
     private void saveAudit(ToolExecutionContext ctx, String entityId, String entityName,

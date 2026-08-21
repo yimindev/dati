@@ -87,8 +87,26 @@ class UpdateColumnInfoExecutorTest {
         MetadataUpdateResult result = data.results().getFirst();
         assertThat(result.success()).isTrue();
         assertThat(result.entityType()).isEqualTo("COLUMN");
+        assertThat(result.entity()).isEqualTo("public.orders.status");
         assertThat(result.old()).containsEntry("description", "old col desc");
         assertThat(result.newValue()).containsEntry("description", "order status");
+    }
+
+    @Test
+    @DisplayName("updates column without schema formats entity as table.column")
+    void updatesColumnWithoutSchema() {
+        when(resolver.resolveColumn("ds-1", null, "orders", "status"))
+            .thenReturn(Optional.of(new MetadataEntityResolver.ColumnTarget(
+                "c1", "t1", "old col desc", List.of("st"))));
+
+        UpdateColumnInfoArgs args = new UpdateColumnInfoArgs(List.of(
+            new UpdateColumnInfoArgs.UpdateColumnItem("ds-1", null, "orders", "status",
+                "order status", List.of("stat"))));
+        MetadataUpdateData data = (MetadataUpdateData) executor.execute(ctx(args));
+
+        MetadataUpdateResult result = data.results().getFirst();
+        assertThat(result.success()).isTrue();
+        assertThat(result.entity()).isEqualTo("orders.status");
     }
 
     @Test

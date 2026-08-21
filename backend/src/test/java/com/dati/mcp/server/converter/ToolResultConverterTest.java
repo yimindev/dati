@@ -89,6 +89,10 @@ class ToolResultConverterTest {
         assertTrue(text.contains("\"new\":{"));
         assertTrue(text.contains("\"description\":\"new desc\""));
         assertTrue(text.contains("\"error_category\":\"SCOPE_ERROR\""));
+        // Check that null fields are omitted
+        assertFalse(text.contains("\"error\":null"));
+        assertFalse(text.contains("\"old\":null"));
+        assertFalse(text.contains("\"change_type\":null"));
         assertNotNull(result.structuredContent());
     }
 }

@@ -99,6 +99,22 @@ class UpdateTableInfoExecutorTest {
     }
 
     @Test
+    @DisplayName("updates table with schema prefixes entity name with schema")
+    void updatesTableWithSchema() {
+        when(resolver.resolveTable("ds-1", "public", "orders"))
+            .thenReturn(Optional.of(new MetadataEntityResolver.TableTarget(
+                "t1", "old desc", List.of())));
+
+        MetadataUpdateData data = (MetadataUpdateData) executor.execute(ctx(
+            new UpdateTableInfoArgs(List.of(new UpdateTableInfoArgs.UpdateTableItem(
+                "ds-1", "public", "orders", "new desc", null)))));
+
+        MetadataUpdateResult result = data.results().getFirst();
+        assertThat(result.success()).isTrue();
+        assertThat(result.entity()).isEqualTo("public.orders");
+    }
+
+    @Test
     @DisplayName("omitted description/aliases keep current values")
     void omittedFieldsKeepExisting() {
         when(resolver.resolveTable("ds-1", null, "orders"))
