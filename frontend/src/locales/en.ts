@@ -477,6 +477,7 @@ export default {
       previewEmptyValues: "Please enter at least one test value",
       previewTextResult: "Result",
       deleteConfirm: "Deleting will prevent agents from calling this tool. Confirm?",
+      disabledTestHint: "Tool is disabled. Enable it to run test.",
       type: {
         SEARCH_METADATA: "Metadata Search",
         GET_TABLE_INFO: "Table Info",

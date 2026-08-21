@@ -477,6 +477,7 @@ export default {
       previewEmptyValues: "请输入至少一个测试值",
       previewTextResult: "渲染结果",
       deleteConfirm: "删除后 MCP Client 将无法调用此工具，确认删除？",
+      disabledTestHint: "工具已停用，开启后可测试",
       type: {
         SEARCH_METADATA: "元数据检索",
         GET_TABLE_INFO: "表结构查询",

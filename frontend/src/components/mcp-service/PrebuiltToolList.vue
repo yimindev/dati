@@ -93,8 +93,16 @@ const toolTypeLabel = (status: string) => {
             @click="sqlConfigVisible = true"
           ><Setting /></el-icon>
         </el-tooltip>
-        <el-tooltip :content="t('common.test')" placement="top">
-          <el-icon class="config-icon" :aria-label="t('common.test')" @click="openTest(tool)"><CaretRight /></el-icon>
+        <el-tooltip
+          :content="tool.enabled ? t('common.test') : t('mcpService.tool.disabledTestHint')"
+          placement="top"
+        >
+          <el-icon
+            class="config-icon"
+            :class="{ 'icon-disabled': !tool.enabled }"
+            :aria-label="t('common.test')"
+            @click="tool.enabled ? openTest(tool) : undefined"
+          ><CaretRight /></el-icon>
         </el-tooltip>
         <el-switch
           :model-value="tool.enabled"
@@ -156,4 +164,12 @@ const toolTypeLabel = (status: string) => {
   transition: color 0.15s;
 }
 .config-icon:hover { color: var(--ep-color-primary); }
+.config-icon.icon-disabled {
+  cursor: not-allowed;
+  color: var(--ep-text-color-placeholder);
+  opacity: 0.45;
+}
+.config-icon.icon-disabled:hover {
+  color: var(--ep-text-color-placeholder);
+}
 </style>

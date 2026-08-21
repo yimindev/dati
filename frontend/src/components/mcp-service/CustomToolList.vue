@@ -144,8 +144,16 @@ const handleDialogSaved = () => {
           <el-tooltip :content="t('common.delete')" placement="top">
             <el-icon class="action-icon action-delete" :aria-label="t('common.delete')" @click="handleDelete(tool)"><Delete /></el-icon>
           </el-tooltip>
-          <el-tooltip :content="t('common.test')" placement="top">
-            <el-icon class="action-icon" :aria-label="t('common.test')" @click="openTest(tool)"><CaretRight /></el-icon>
+          <el-tooltip
+            :content="tool.enabled ? t('common.test') : t('mcpService.tool.disabledTestHint')"
+            placement="top"
+          >
+            <el-icon
+              class="action-icon"
+              :class="{ 'icon-disabled': !tool.enabled }"
+              :aria-label="t('common.test')"
+              @click="tool.enabled ? openTest(tool) : undefined"
+            ><CaretRight /></el-icon>
           </el-tooltip>
           <el-switch
             :model-value="tool.enabled"
@@ -208,5 +216,13 @@ const handleDialogSaved = () => {
   transition: color 0.15s;
 }
 .action-icon:hover { color: var(--ep-color-primary); }
+.action-icon.icon-disabled {
+  cursor: not-allowed;
+  color: var(--ep-text-color-placeholder);
+  opacity: 0.45;
+}
+.action-icon.icon-disabled:hover {
+  color: var(--ep-text-color-placeholder);
+}
 .action-delete:hover { color: var(--ep-color-danger); }
 </style>
