@@ -12,6 +12,7 @@ import com.dati.datasource.domain.service.JdbcMetaService;
 import com.dati.datasource.server.assembler.DSAssembler;
 import com.dati.datasource.server.pojo.DatasourceVO;
 import com.dati.datasource.server.pojo.SqlExecuteRequest;
+import com.dati.datasource.server.pojo.request.UpdateDataSourceRequest;
 import com.dati.db.Column;
 import com.dati.db.Table;
 import jakarta.validation.Valid;
@@ -59,7 +60,15 @@ public class DataSourceController {
     }
 
     @PutMapping("/{id}")
-    public IdResponse updateDataSource(@PathVariable String id, @Valid @RequestBody DataSource dataSource) {
+    public IdResponse updateDataSource(@PathVariable String id, @Valid @RequestBody UpdateDataSourceRequest request) {
+        DataSource dataSource = new DataSource();
+        dataSource.setName(request.getName());
+        dataSource.setDescription(request.getDescription());
+        dataSource.setJdbcUrl(request.getJdbcUrl());
+        dataSource.setUsername(request.getUsername());
+        dataSource.setPassword(request.getPassword());
+        dataSource.setType(request.getType());
+        dataSource.setDefaultSchema(request.getDefaultSchema());
         dsAssembler.fillUpdateUserFromRequest(dataSource);
         dataSourceService.updateDataSource(id, dataSource);
         return new IdResponse(id);

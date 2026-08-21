@@ -50,17 +50,17 @@
 
 ---
 
-## TC-DS-004 浏览数据库 Schema（两种方式）
+## TC-DS-004 浏览数据库 Schema
 **级别：** P1
 **前置：** 已登录
 **注意：** 需要真实数据库连接
 
-1. **方式一（无需创建数据源）**：直接用 postgres_local 的连接信息调用 POST /schemas，传入 jdbc_url、username、password、type
-2. 验证返回结果：字符串数组，包含 `chinook.e2e.datasource.expected_schemas` 中的所有 schema
-3. **方式二（已有数据源）**：创建 PostgreSQL 数据源（使用 postgres_local）
-4. 通过 GET /{id}/schemas 获取该数据源的 schema 列表
-5. 验证与方式一返回的结果一致（都包含 `expected_schemas` 中的 schema），不包含 null 或空字符串
-6. 删除该数据源（清理）
+1. 创建 PostgreSQL 数据源（使用 postgres_local）
+2. 通过 GET /{id}/schemas 获取该数据源的 schema 列表
+3. 验证返回结果：字符串数组，包含 `chinook.e2e.datasource.expected_schemas` 中的所有 schema，不包含 null 或空字符串
+4. 删除该数据源（清理）
+
+> 注：原「方式一（POST /schemas 无需创建数据源）」已移除。后端与前端流程均无此设计——创建表单仅提供"测试连接"，schema 浏览在数据源详情页（已有数据源 id）进行，属过时用例。见 BUG-20260820-003。
 
 ---
 

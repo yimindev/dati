@@ -127,6 +127,21 @@ class DataSourceControllerTest {
     }
 
     @Test
+    @DisplayName("Update data source - partial update with only name should succeed")
+    void updateDataSource_partialUpdate_shouldNotRequireAllFields() throws Exception {
+        // given
+        doNothing().when(dsAssembler).fillUpdateUserFromRequest(any());
+        doNothing().when(dataSourceService).updateDataSource(anyString(), any());
+
+        // when & then: PUT with only name (no type/jdbcUrl/username) must not be blocked by @Valid
+        mockMvc.perform(put("/v1/data-sources/{id}", TestFixtures.TEST_DATASOURCE_ID)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":\"renamed\"}"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.id").exists());
+    }
+
+    @Test
     @DisplayName("Delete data source - success")
     void deleteDataSource_shouldReturnId() throws Exception {
         // given
