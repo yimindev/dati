@@ -8,7 +8,6 @@ import com.dati.common.template.TemplateParseException;
 import com.dati.common.template.TemplateParser;
 import com.dati.mcp.domain.model.McpPrompt;
 import com.dati.mcp.repository.dao.McpPromptDAO;
-import com.dati.mcp.repository.dao.McpServiceDAO;
 import com.dati.mcp.repository.po.McpPromptPO;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -39,10 +38,10 @@ class McpPromptServiceTest {
     private McpPromptDAO promptDAO;
 
     @Mock
-    private McpServiceDAO mcpServiceDAO;
+    private TemplateParser templateParser;
 
     @Mock
-    private TemplateParser templateParser;
+    private com.dati.permission.domain.service.PermissionService permissionService;
 
     @Captor
     ArgumentCaptor<List<McpPromptPO>> captor;
@@ -69,7 +68,6 @@ class McpPromptServiceTest {
     @Test
     @DisplayName("Create Prompt - success")
     void createPrompt_success() {
-        when(mcpServiceDAO.existsById(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(true);
         when(promptDAO.existsByServiceIdAndName(TestFixtures.TEST_MCP_SERVICE_ID, "analyze_table")).thenReturn(false);
         CompiledTemplate compiled = mock(CompiledTemplate.class);
         when(compiled.getVariables()).thenReturn(Set.of("table"));
@@ -84,7 +82,6 @@ class McpPromptServiceTest {
     @Test
     @DisplayName("Create Prompt - throws on duplicate name")
     void createPrompt_nameExists_throws() {
-        when(mcpServiceDAO.existsById(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(true);
         when(promptDAO.existsByServiceIdAndName(TestFixtures.TEST_MCP_SERVICE_ID, "analyze_table")).thenReturn(true);
 
         DatiException ex = assertThrows(DatiException.class, () ->
@@ -96,7 +93,6 @@ class McpPromptServiceTest {
     @Test
     @DisplayName("content references {{xxx}} not defined in parameters → rejected")
     void createPrompt_undefined_throws() {
-        when(mcpServiceDAO.existsById(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(true);
         testPrompt.setContent("请分析 {{table}} 和 {{status}} 的数据。");
         CompiledTemplate compiled = mock(CompiledTemplate.class);
         when(compiled.getVariables()).thenReturn(Set.of("table", "status"));
@@ -112,7 +108,6 @@ class McpPromptServiceTest {
     @Test
     @DisplayName("parameter defined but not referenced in content → rejected (two-way validation)")
     void createPrompt_unusedParameter_throws() {
-        when(mcpServiceDAO.existsById(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(true);
         testPrompt.setContent("请分析 {{table}} 表的数据。");
         testPrompt.setParameters(java.util.List.of(
             TestFixtures.createTestPromptParameter("table", "表名", true),
@@ -132,7 +127,6 @@ class McpPromptServiceTest {
     @Test
     @DisplayName("content template syntax error (unclosed {{) → rejected")
     void createPrompt_unclosedBraces_throws() {
-        when(mcpServiceDAO.existsById(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(true);
         testPrompt.setContent("请分析 {{table 表的数据。");
         when(templateParser.parse(testPrompt.getContent()))
             .thenThrow(new TemplateParseException("Unclosed '{{'"));
@@ -146,7 +140,6 @@ class McpPromptServiceTest {
     @Test
     @DisplayName("content template syntax error (missing {{/if}}) → rejected")
     void createPrompt_unclosedIf_throws() {
-        when(mcpServiceDAO.existsById(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(true);
         testPrompt.setContent("{{#if table}}请分析 {{table}}");
         when(templateParser.parse(testPrompt.getContent()))
             .thenThrow(new TemplateParseException("Unclosed '{{#if table}}'"));
@@ -160,7 +153,6 @@ class McpPromptServiceTest {
     @Test
     @DisplayName("escaped \\{{ in content is not treated as a variable")
     void createPrompt_escapedPlaceholder_notAVariable() {
-        when(mcpServiceDAO.existsById(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(true);
         when(promptDAO.existsByServiceIdAndName(TestFixtures.TEST_MCP_SERVICE_ID, "analyze_table")).thenReturn(false);
         testPrompt.setContent("请使用 \\{{table}} 的写法。");
         testPrompt.setParameters(List.of());
@@ -176,7 +168,6 @@ class McpPromptServiceTest {
     @Test
     @DisplayName("null content does not throw")
     void createPrompt_nullContent_allowed() {
-        when(mcpServiceDAO.existsById(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(true);
         when(promptDAO.existsByServiceIdAndName(TestFixtures.TEST_MCP_SERVICE_ID, "analyze_table")).thenReturn(false);
         testPrompt.setContent(null);
         testPrompt.setParameters(List.of());
@@ -290,7 +281,6 @@ class McpPromptServiceTest {
     @Test
     @DisplayName("Query Prompt list - success")
     void listPrompts_returnsList() {
-        when(mcpServiceDAO.existsById(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(true);
         when(promptDAO.findAllByServiceIdOrderByCreatedAtDesc(TestFixtures.TEST_MCP_SERVICE_ID))
             .thenReturn(List.of(testPromptPO));
 
@@ -303,7 +293,8 @@ class McpPromptServiceTest {
     @Test
     @DisplayName("Query Prompt list - throws MS_SERVICE_NOT_FOUND when service does not exist")
     void listPrompts_serviceNotFound_shouldThrow() {
-        when(mcpServiceDAO.existsById(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(false);
+        org.mockito.Mockito.doThrow(new DatiException(ErrorCode.MS_SERVICE_NOT_FOUND))
+            .when(permissionService).requireMcpService(TestFixtures.TEST_MCP_SERVICE_ID, com.dati.permission.domain.model.Permission.VIEW);
 
         DatiException e = assertThrows(DatiException.class,
             () -> promptService.listPrompts(TestFixtures.TEST_MCP_SERVICE_ID));

@@ -12,6 +12,7 @@ import com.dati.datasource.repository.po.TableInfoPO;
 import com.dati.datasource.server.pojo.AddTableRequest;
 import com.dati.db.Column;
 import com.dati.db.Table;
+import com.dati.permission.domain.service.PermissionService;
 import com.dati.semantic.domain.service.SemanticIndexService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -27,6 +28,7 @@ import org.springframework.data.domain.PageImpl;
 import java.sql.SQLException;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 
 import com.dati.base.exception.DatiException;
 import com.dati.base.exception.ErrorCode;
@@ -57,6 +59,9 @@ class TableServiceTest {
 
     @Mock
     private SemanticIndexService semanticIndexService;
+
+    @Mock
+    private PermissionService permissionService;
 
     @InjectMocks
     private TableService tableService;
@@ -217,7 +222,7 @@ class TableServiceTest {
     @Test
     @DisplayName("Delete table - table not found throws DS_TABLE_NOT_FOUND")
     void deleteTable_tableNotFound_throwsTableNotFound() {
-        when(tableInfoDAO.existsById("ghost-id")).thenReturn(false);
+        when(tableInfoDAO.findById("ghost-id")).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> tableService.deleteTable("ghost-id"))
                 .isInstanceOf(DatiException.class)
@@ -228,7 +233,7 @@ class TableServiceTest {
     @DisplayName("Delete table - success")
     void deleteTable_shouldDeleteTableAndColumnsAndESDocuments() {
         // given
-        when(tableInfoDAO.existsById(TestFixtures.TEST_TABLE_ID)).thenReturn(true);
+        when(tableInfoDAO.findById(TestFixtures.TEST_TABLE_ID)).thenReturn(Optional.of(testTableInfoPO));
 
         // when
         tableService.deleteTable(TestFixtures.TEST_TABLE_ID);

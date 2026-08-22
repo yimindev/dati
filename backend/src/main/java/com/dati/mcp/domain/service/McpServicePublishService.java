@@ -121,9 +121,9 @@ public class McpServicePublishService {
     }
 
     public List<McpServiceSnapshot> getSnapshots(String serviceId) {
-        if (!mcpServiceDAO.existsById(serviceId)) {
-            throw new DatiException(ErrorCode.MS_SERVICE_NOT_FOUND, serviceId);
-        }
+        McpServicePO servicePO = mcpServiceDAO.findById(serviceId)
+                .orElseThrow(() -> new DatiException(ErrorCode.MS_SERVICE_NOT_FOUND, serviceId));
+        permissionService.requireCurrentUser(ResourceType.MCP_SERVICE, serviceId, Permission.VIEW, servicePO.getCreatedBy());
         return snapshotDAO.findAllByServiceIdOrderByVersionNumberDesc(serviceId).stream()
                 .map(McpServiceSnapshotMapper::toModel)
                 .collect(Collectors.toList());
@@ -132,6 +132,7 @@ public class McpServicePublishService {
     public McpServiceDiffVO getDiff(String serviceId) {
         McpServicePO servicePO = mcpServiceDAO.findById(serviceId)
                 .orElseThrow(() -> new DatiException(ErrorCode.MS_SERVICE_NOT_FOUND, serviceId));
+        permissionService.requireCurrentUser(ResourceType.MCP_SERVICE, serviceId, Permission.VIEW, servicePO.getCreatedBy());
 
         McpServiceDiffVO diff = new McpServiceDiffVO();
         diff.setActiveVersionNumber(servicePO.getActiveVersionNumber());
@@ -261,6 +262,7 @@ public class McpServicePublishService {
     public McpServiceSnapshot rollback(String serviceId, Integer targetVersionNumber, String releaseNote) {
         McpServicePO servicePO = mcpServiceDAO.findById(serviceId)
                 .orElseThrow(() -> new DatiException(ErrorCode.MS_SERVICE_NOT_FOUND, serviceId));
+        permissionService.requireCurrentUser(ResourceType.MCP_SERVICE, serviceId, Permission.EDIT, servicePO.getCreatedBy());
 
         McpServiceSnapshotPO targetSnapshotPO = snapshotDAO.findByServiceIdAndVersionNumber(serviceId, targetVersionNumber)
                 .orElseThrow(() -> new DatiException(ErrorCode.MS_SERVICE_VERSION_NOT_FOUND,

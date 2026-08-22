@@ -121,7 +121,8 @@ class SubjectServiceTest {
     @Test
     @DisplayName("createSubject - nonexistent datasource throws DS_NOT_FOUND")
     void createSubject_nonexistentDatasource_throwsException() {
-        when(dataSourceDAO.existsById("bad-ds-id")).thenReturn(false);
+        org.mockito.Mockito.doThrow(new DatiException(ErrorCode.DS_NOT_FOUND))
+                .when(permissionService).requireDataSource("bad-ds-id", com.dati.permission.domain.model.Permission.VIEW);
 
         Subject model = new Subject();
         model.setName("Sub");
@@ -434,7 +435,7 @@ class SubjectServiceTest {
 
         Page<TableInfoPO> poPage = new org.springframework.data.domain.PageImpl<>(List.of(ti1, ti2), pageable, 2);
 
-        when(subjectDAO.existsById(subjectId)).thenReturn(true);
+        when(subjectDAO.findById(subjectId)).thenReturn(Optional.of(sampleSubjectPO));
         when(subjectTableDAO.findTablesBySubjectId(subjectId, pageable)).thenReturn(poPage);
 
         Page<TableInfo> result = subjectService.getTablesBySubjectId(subjectId, null, pageable);
@@ -460,7 +461,7 @@ class SubjectServiceTest {
 
         Page<TableInfoPO> poPage = new org.springframework.data.domain.PageImpl<>(List.of(ti1), pageable, 1);
 
-        when(subjectDAO.existsById(subjectId)).thenReturn(true);
+        when(subjectDAO.findById(subjectId)).thenReturn(Optional.of(sampleSubjectPO));
         when(subjectTableDAO.findTablesBySubjectIdAndNameContaining(subjectId, keyword, pageable)).thenReturn(poPage);
 
         Page<TableInfo> result = subjectService.getTablesBySubjectId(subjectId, keyword, pageable);
@@ -475,7 +476,7 @@ class SubjectServiceTest {
         String subjectId = "non-existent";
         Pageable pageable = PageRequest.of(0, 10);
 
-        when(subjectDAO.existsById(subjectId)).thenReturn(false);
+        when(subjectDAO.findById(subjectId)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> subjectService.getTablesBySubjectId(subjectId, null, pageable))
                 .isInstanceOf(DatiException.class)

@@ -55,6 +55,9 @@ class McpEndpointControllerTest {
     @MockitoBean
     private McpProtocolHandler protocolHandler;
 
+    @MockitoBean
+    private com.dati.permission.domain.service.PermissionService permissionService;
+
     private McpServicePO service;
 
     @BeforeEach
@@ -65,6 +68,7 @@ class McpEndpointControllerTest {
         service.setActiveVersionNumber(1);
         when(mcpServiceDAO.findByCode("test-mcp-service")).thenReturn(Optional.of(service));
         when(authenticationService.authenticate(any())).thenReturn(Optional.of(new User()));
+        when(permissionService.can(any(), any(), any(), any(), any(), any())).thenReturn(true);
         when(snapshotDAO.findById("snapshot-001"))
             .thenReturn(Optional.of(TestFixtures.createTestSnapshotPO()));
     }

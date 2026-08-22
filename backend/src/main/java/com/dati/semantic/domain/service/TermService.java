@@ -4,6 +4,8 @@ import com.dati.base.exception.DatiException;
 import com.dati.base.exception.ErrorCode;
 import com.dati.common.StringUtils;
 import com.dati.datasource.repository.po.TableInfoPO;
+import com.dati.permission.domain.model.Permission;
+import com.dati.permission.domain.service.PermissionService;
 import com.dati.semantic.domain.SemanticEntityType;
 import com.dati.semantic.domain.TermRelationType;
 import com.dati.semantic.domain.model.Term;
@@ -41,22 +43,25 @@ public class TermService {
     private final SubjectTableDAO subjectTableDAO;
     private final TableInfoDAO tableInfoDAO;
     private final SemanticIndexService semanticIndexService;
-
     private final SubjectDAO subjectDAO;
+    private final PermissionService permissionService;
 
     public TermService(TermDAO termDAO, TermRelationDAO termRelationDAO,
                        SubjectTableDAO subjectTableDAO, TableInfoDAO tableInfoDAO,
-                       SemanticIndexService semanticIndexService, SubjectDAO subjectDAO) {
+                       SemanticIndexService semanticIndexService, SubjectDAO subjectDAO,
+                       PermissionService permissionService) {
         this.termDAO = termDAO;
         this.termRelationDAO = termRelationDAO;
         this.subjectTableDAO = subjectTableDAO;
         this.tableInfoDAO = tableInfoDAO;
         this.semanticIndexService = semanticIndexService;
         this.subjectDAO = subjectDAO;
+        this.permissionService = permissionService;
     }
 
     @Transactional
     public Term createTerm(Term term) {
+        permissionService.requireSubject(term.getSubjectId(), Permission.EDIT);
         TermPO termPO = TermMapper.toPO(term);
         termDAO.save(termPO);
 
@@ -87,6 +92,7 @@ public class TermService {
     public Term updateTerm(String id, Term term) {
         TermPO termPO = termDAO.findById(id)
                 .orElseThrow(() -> new DatiException(ErrorCode.SM_TERM_NOT_FOUND, id));
+        permissionService.requireSubject(termPO.getSubjectId(), Permission.EDIT);
 
         if (term.getName() != null) {
             termPO.setName(term.getName());
@@ -123,9 +129,9 @@ public class TermService {
 
     @Transactional
     public void deleteTerm(String id) {
-        if (!termDAO.existsById(id)) {
-            throw new DatiException(ErrorCode.SM_TERM_NOT_FOUND, id);
-        }
+        TermPO termPO = termDAO.findById(id)
+                .orElseThrow(() -> new DatiException(ErrorCode.SM_TERM_NOT_FOUND, id));
+        permissionService.requireSubject(termPO.getSubjectId(), Permission.EDIT);
         termRelationDAO.deleteByTermId(id);
         termDAO.deleteById(id);
         semanticIndexService.deleteById("term:" + id);
@@ -135,6 +141,7 @@ public class TermService {
     public void linkEntity(String termId, TermRelationType entityType, String tableId, String fieldName) {
         TermPO termPO = termDAO.findById(termId)
                 .orElseThrow(() -> new DatiException(ErrorCode.SM_TERM_NOT_FOUND, termId));
+        permissionService.requireSubject(termPO.getSubjectId(), Permission.EDIT);
 
         if (entityType == TermRelationType.FIELD && fieldName == null) {
             throw new DatiException(ErrorCode.INVALID_PARAMETER, "fieldName is required");
@@ -154,9 +161,9 @@ public class TermService {
 
     @Transactional
     public void unlinkEntity(String termId, String tableId, String fieldName) {
-        if (!termDAO.existsById(termId)) {
-            throw new DatiException(ErrorCode.SM_TERM_NOT_FOUND, termId);
-        }
+        TermPO termPO = termDAO.findById(termId)
+                .orElseThrow(() -> new DatiException(ErrorCode.SM_TERM_NOT_FOUND, termId));
+        permissionService.requireSubject(termPO.getSubjectId(), Permission.EDIT);
         if (fieldName == null) {
             termRelationDAO.deleteByTermIdAndTableId(termId, tableId);
         } else {
@@ -168,9 +175,7 @@ public class TermService {
 
     @Transactional(readOnly = true)
     public Page<Term> getTermsBySubject(String subjectId, @Nullable String keyword, Pageable pageable) {
-        if (!subjectDAO.existsById(subjectId)) {
-            throw new DatiException(ErrorCode.SM_SUBJECT_NOT_FOUND, subjectId);
-        }
+        permissionService.requireSubject(subjectId, Permission.VIEW);
         Page<TermPO> pos = StringUtils.isEmpty(keyword)
                 ? termDAO.findBySubjectId(subjectId, pageable)
                 : termDAO.findBySubjectIdAndKeyword(subjectId, keyword, pageable);
@@ -208,6 +213,7 @@ public class TermService {
     public Term getTermById(String id) {
         TermPO termPO = termDAO.findById(id)
                 .orElseThrow(() -> new DatiException(ErrorCode.SM_TERM_NOT_FOUND, id));
+        permissionService.requireSubject(termPO.getSubjectId(), Permission.VIEW);
         return TermMapper.toTerm(termPO);
     }
 

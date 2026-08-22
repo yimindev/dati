@@ -20,32 +20,11 @@ export interface DataSourcePayload {
   type: string;
 }
 
-// 列信息（常用字段集合，按蛇形命名）
-export interface ColumnVO {
-  name: string;
-  type_name?: string;
-  data_type?: number;
-  column_size?: number;
-  nullable?: boolean;
-  remarks?: string;
-  ordinal_position?: number;
-  is_primary_key?: boolean;
-  is_auto_increment?: boolean;
-}
-
 // 表信息
 export interface TableVO {
   name: string;
   comment?: string;
 }
-
-// 执行 SQL 的请求体
-export interface SqlExecuteRequest {
-  sql: string;
-}
-
-// 执行 SQL 返回的每一行是动态列集合，这里使用索引签名（避免 Record/any）
-export type SqlRow = { [column: string]: unknown };
 
 // 查询 catalog 的可选参数
 export interface CatalogParam {
@@ -102,34 +81,6 @@ export function getTables(
   return get<TableVO[]>(
     `/v1/data-sources/${encodeURIComponent(id)}/schemas/${encodeURIComponent(schema)}/tables`,
     params,
-    signal
-  )
-}
-
-// 列列表（GET /v1/data-sources/{id}/schemas/{schema}/tables/{table}/columns?catalog=...）
-export function getColumns(
-  id: string,
-  schema: string,
-  table: string,
-  params?: CatalogParam,
-  signal?: AbortSignal
-): Promise<ColumnVO[]> {
-  return get<ColumnVO[]>(
-    `/v1/data-sources/${encodeURIComponent(id)}/schemas/${encodeURIComponent(schema)}/tables/${encodeURIComponent(table)}/columns`,
-    params,
-    signal
-  )
-}
-
-// 执行 SQL（POST /v1/data-sources/{id}/execute-sql）
-export function executeSql(
-  id: string,
-  body: SqlExecuteRequest,
-  signal?: AbortSignal
-): Promise<SqlRow[]> {
-  return post<SqlRow[], SqlExecuteRequest>(
-    `/v1/data-sources/${encodeURIComponent(id)}/execute-sql`,
-    body,
     signal
   )
 }

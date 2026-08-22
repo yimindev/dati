@@ -12,7 +12,6 @@ import com.dati.mcp.domain.model.McpToolType;
 import com.dati.mcp.domain.model.ToolConfig;
 import com.dati.mcp.repository.dao.McpCustomToolDAO;
 import com.dati.mcp.repository.dao.McpPrebuiltToolConfigDAO;
-import com.dati.mcp.repository.dao.McpServiceDAO;
 import com.dati.mcp.repository.po.McpCustomToolPO;
 import com.dati.mcp.repository.po.McpPrebuiltToolConfigPO;
 import org.junit.jupiter.api.BeforeEach;
@@ -50,13 +49,13 @@ class McpToolServiceTest {
     private McpCustomToolDAO customToolDAO;
 
     @Mock
-    private McpServiceDAO mcpServiceDAO;
-
-    @Mock
     private TemplateParser templateParser;
 
     @Mock
     private com.dati.common.template.SqlRenderer sqlRenderer;
+
+    @Mock
+    private com.dati.permission.domain.service.PermissionService permissionService;
 
     @Captor
     ArgumentCaptor<List<McpCustomToolPO>> captor;
@@ -84,7 +83,8 @@ class McpToolServiceTest {
     @Test
     @DisplayName("List - throws MS_SERVICE_NOT_FOUND when service does not exist")
     void listTools_serviceNotFound_shouldThrow() {
-        when(mcpServiceDAO.existsById(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(false);
+        org.mockito.Mockito.doThrow(new DatiException(ErrorCode.MS_SERVICE_NOT_FOUND))
+            .when(permissionService).requireMcpService(TestFixtures.TEST_MCP_SERVICE_ID, com.dati.permission.domain.model.Permission.VIEW);
 
         DatiException e = assertThrows(DatiException.class,
             () -> mcpToolService.listTools(TestFixtures.TEST_MCP_SERVICE_ID));
@@ -94,7 +94,6 @@ class McpToolServiceTest {
     @Test
     @DisplayName("List - returns prebuilt defaults and empty custom list when no DB records")
     void listTools_noConfig_returnsDefaults() {
-        when(mcpServiceDAO.existsById(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(true);
         when(prebuiltDAO.findAllByServiceId(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(List.of());
         when(customToolDAO.findAllByServiceIdOrderByCreatedAtDesc(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(List.of());
 
@@ -116,7 +115,6 @@ class McpToolServiceTest {
     @Test
     @DisplayName("List - includes configured prebuilt and custom tools from DB")
     void listTools_withConfig_returnsAll() {
-        when(mcpServiceDAO.existsById(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(true);
         McpPrebuiltToolConfigPO esPO = new McpPrebuiltToolConfigPO();
         esPO.setId("pre-cfg-001");
         esPO.setServiceId(TestFixtures.TEST_MCP_SERVICE_ID);
@@ -183,7 +181,6 @@ class McpToolServiceTest {
     @Test
     @DisplayName("Create custom tool - success")
     void createCustomTool_success() {
-        when(mcpServiceDAO.existsById(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(true);
         when(customToolDAO.existsByServiceIdAndName(TestFixtures.TEST_MCP_SERVICE_ID, "list_tasks")).thenReturn(false);
         CompiledTemplate compiled = mock(CompiledTemplate.class);
         when(compiled.getVariables()).thenReturn(Set.of());
@@ -199,7 +196,6 @@ class McpToolServiceTest {
     @Test
     @DisplayName("Create custom tool - throws on invalid name format")
     void createCustomTool_invalidName_throws() {
-        when(mcpServiceDAO.existsById(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(true);
         testCustomTool.setName("invalid name!");
 
         DatiException ex = assertThrows(DatiException.class, () ->
@@ -212,7 +208,6 @@ class McpToolServiceTest {
     @Test
     @DisplayName("Create custom tool - throws on duplicate name")
     void createCustomTool_nameExists_throws() {
-        when(mcpServiceDAO.existsById(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(true);
         when(customToolDAO.existsByServiceIdAndName(TestFixtures.TEST_MCP_SERVICE_ID, "list_tasks")).thenReturn(true);
 
         DatiException ex = assertThrows(DatiException.class, () ->
@@ -224,7 +219,8 @@ class McpToolServiceTest {
     @Test
     @DisplayName("Create custom tool - throws when service not found")
     void createCustomTool_serviceNotFound_throws() {
-        when(mcpServiceDAO.existsById(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(false);
+        org.mockito.Mockito.doThrow(new DatiException(ErrorCode.MS_SERVICE_NOT_FOUND))
+            .when(permissionService).requireMcpService(TestFixtures.TEST_MCP_SERVICE_ID, com.dati.permission.domain.model.Permission.EDIT);
 
         DatiException ex = assertThrows(DatiException.class, () ->
             mcpToolService.createCustomTool(TestFixtures.TEST_MCP_SERVICE_ID, testCustomTool)
@@ -235,7 +231,6 @@ class McpToolServiceTest {
     @Test
     @DisplayName("Create Parameterized SQL - template syntax error (unclosed {{) → rejected")
     void createCustomTool_templateSyntaxError_throws() {
-        when(mcpServiceDAO.existsById(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(true);
         when(customToolDAO.existsByServiceIdAndName(TestFixtures.TEST_MCP_SERVICE_ID, "list_tasks")).thenReturn(false);
 
         ToolConfig.ParamSqlConfig badCfg = new ToolConfig.ParamSqlConfig();
@@ -255,7 +250,6 @@ class McpToolServiceTest {
     @Test
     @DisplayName("Create Parameterized SQL - template references undefined parameter → rejected")
     void createCustomTool_undefinedParameter_throws() {
-        when(mcpServiceDAO.existsById(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(true);
         when(customToolDAO.existsByServiceIdAndName(TestFixtures.TEST_MCP_SERVICE_ID, "list_tasks")).thenReturn(false);
 
         ToolConfig.ParamSqlConfig cfg = new ToolConfig.ParamSqlConfig();
@@ -278,7 +272,6 @@ class McpToolServiceTest {
     @Test
     @DisplayName("Create Parameterized SQL - system variables in template are allowed without parameters")
     void createCustomTool_systemVariablesInTemplate_succeeds() {
-        when(mcpServiceDAO.existsById(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(true);
         when(customToolDAO.existsByServiceIdAndName(TestFixtures.TEST_MCP_SERVICE_ID, "list_tasks")).thenReturn(false);
 
         ToolConfig.ParamSqlConfig cfg = new ToolConfig.ParamSqlConfig();
@@ -303,7 +296,6 @@ class McpToolServiceTest {
     @Test
     @DisplayName("Create Parameterized SQL - valid template passes validation")
     void createCustomTool_validTemplate_succeeds() {
-        when(mcpServiceDAO.existsById(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(true);
         when(customToolDAO.existsByServiceIdAndName(TestFixtures.TEST_MCP_SERVICE_ID, "list_tasks")).thenReturn(false);
 
         ToolConfig.ParamSqlConfig cfg = new ToolConfig.ParamSqlConfig();
@@ -323,7 +315,6 @@ class McpToolServiceTest {
     @Test
     @DisplayName("Create Parameterized SQL - empty template rejected")
     void createCustomTool_emptyTemplate_rejected() {
-        when(mcpServiceDAO.existsById(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(true);
         when(customToolDAO.existsByServiceIdAndName(TestFixtures.TEST_MCP_SERVICE_ID, "empty_tool")).thenReturn(false);
 
         ToolConfig.ParamSqlConfig cfg = new ToolConfig.ParamSqlConfig();

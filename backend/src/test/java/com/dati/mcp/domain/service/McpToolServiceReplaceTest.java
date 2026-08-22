@@ -11,8 +11,10 @@ import com.dati.mcp.repository.dao.McpServiceDAO;
 import com.dati.mcp.repository.mapper.McpCustomToolMapper;
 import com.dati.mcp.repository.po.McpCustomToolPO;
 import com.dati.mcp.repository.po.McpServicePO;
+import com.dati.permission.domain.service.PermissionService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.test.context.ActiveProfiles;
@@ -42,8 +44,10 @@ class McpToolServiceReplaceTest {
     @Autowired
     private McpServiceDAO mcpServiceDAO;
 
+    private final PermissionService permissionService = Mockito.mock(PermissionService.class);
+
     private McpToolService service() {
-        return new McpToolService(prebuiltDAO, customToolDAO, mcpServiceDAO, new HandlebarsStyleParser(), new SqlRenderer());
+        return new McpToolService(prebuiltDAO, customToolDAO, new HandlebarsStyleParser(), new SqlRenderer(), permissionService);
     }
 
     private McpServicePO saveService() {

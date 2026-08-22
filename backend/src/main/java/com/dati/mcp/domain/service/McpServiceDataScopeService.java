@@ -67,9 +67,9 @@ public class McpServiceDataScopeService {
     }
 
     public List<McpServiceDataScope> getDataScope(String serviceId) {
-        if (!mcpServiceDAO.existsById(serviceId)) {
-            throw new DatiException(ErrorCode.MS_SERVICE_NOT_FOUND, serviceId);
-        }
+        McpServicePO servicePO = mcpServiceDAO.findById(serviceId)
+                .orElseThrow(() -> new DatiException(ErrorCode.MS_SERVICE_NOT_FOUND, serviceId));
+        permissionService.requireCurrentUser(ResourceType.MCP_SERVICE, serviceId, Permission.VIEW, servicePO.getCreatedBy());
         return dataScopeDAO.findAllByServiceId(serviceId).stream()
                 .map(McpServiceDataScopeMapper::toModel)
                 .toList();
@@ -102,7 +102,9 @@ public class McpServiceDataScopeService {
     }
 
     public Set<String> getResolvedDataSourceIds(String serviceId) {
-        List<McpServiceDataScope> scopes = getDataScope(serviceId);
+        List<McpServiceDataScope> scopes = dataScopeDAO.findAllByServiceId(serviceId).stream()
+                .map(McpServiceDataScopeMapper::toModel)
+                .toList();
 
         Set<String> dsIds = new LinkedHashSet<>();
 

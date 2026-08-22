@@ -70,7 +70,7 @@ public class ParameterizedSqlExecutor implements ToolExecutor {
         // config time, so operation-type permissions would be self-restriction.
         SqlAnalysisResult analysis = SqlAnalyzer.analyze(sql);
 
-        DataSource dataSource = dataSourceService.getDataSource(dsId)
+        DataSource dataSource = dataSourceService.getDataSourceInternal(dsId)
             .orElseThrow(() -> new ToolExecuteException(ToolError.DATA_SOURCE_NOT_FOUND, dsId));
 
         scopeValidator.validate(ctx.scopeItems(), dsId, analysis.tables(), dataSource.getDefaultSchema());

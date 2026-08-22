@@ -69,7 +69,7 @@ class ExecuteSqlExecutorTest {
     @Test
     @DisplayName("missing data source still reported as DATA_SOURCE_NOT_FOUND")
     void missingDataSource() {
-        when(dataSourceService.getDataSource("ghost")).thenReturn(Optional.empty());
+        when(dataSourceService.getDataSourceInternal("ghost")).thenReturn(Optional.empty());
         ExecuteSqlArgs args = new ExecuteSqlArgs("ghost", "SELECT * FROM orders");
 
         assertThatThrownBy(() -> executor.execute(ctx(args)))
@@ -81,7 +81,7 @@ class ExecuteSqlExecutorTest {
     @Test
     @DisplayName("scope violation still enforced")
     void scopeStillEnforced() {
-        when(dataSourceService.getDataSource("ds-1"))
+        when(dataSourceService.getDataSourceInternal("ds-1"))
             .thenReturn(Optional.of(TestFixtures.createTestDataSource()));
         doThrow(new ToolExecuteException(ToolError.SCOPE_VIOLATION, "orders not in scope"))
             .when(scopeValidator).validate(anyList(), eq("ds-1"), anySet(), eq("public"));
@@ -95,7 +95,7 @@ class ExecuteSqlExecutorTest {
     @Test
     @DisplayName("SELECT executes and returns results")
     void executesSelect() throws Exception {
-        when(dataSourceService.getDataSource("ds-1"))
+        when(dataSourceService.getDataSourceInternal("ds-1"))
             .thenReturn(Optional.of(TestFixtures.createTestDataSource()));
         Statement stmt = mock(Statement.class);
         when(stmt.getUpdateCount()).thenReturn(-1);

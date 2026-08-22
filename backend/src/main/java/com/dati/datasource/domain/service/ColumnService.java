@@ -15,6 +15,9 @@ import com.dati.datasource.repository.dao.ColumnInfoDAO;
 import com.dati.datasource.repository.dao.TableInfoDAO;
 import com.dati.datasource.repository.mapper.ColumnMapper;
 import com.dati.datasource.repository.po.ColumnInfoPO;
+import com.dati.datasource.repository.po.TableInfoPO;
+import com.dati.permission.domain.model.Permission;
+import com.dati.permission.domain.service.PermissionService;
 import com.dati.semantic.domain.SemanticEntityType;
 import com.dati.semantic.domain.service.SemanticIndexService;
 import com.dati.semantic.repository.po.EntityReference;
@@ -36,21 +39,26 @@ import java.util.stream.Collectors;
 public class ColumnService {
 
     private final ColumnInfoDAO columnInfoDAO;
-
     private final TableInfoDAO tableInfoDAO;
-
     private final JdbcMetaService jdbcMetaService;
-
     private final SemanticIndexService semanticIndexService;
+    private final PermissionService permissionService;
 
-    public ColumnService(ColumnInfoDAO columnInfoDAO, TableInfoDAO tableInfoDAO, JdbcMetaService jdbcMetaService, SemanticIndexService semanticIndexService) {
+    public ColumnService(ColumnInfoDAO columnInfoDAO, TableInfoDAO tableInfoDAO,
+                         JdbcMetaService jdbcMetaService, SemanticIndexService semanticIndexService,
+                         PermissionService permissionService) {
         this.columnInfoDAO = columnInfoDAO;
         this.tableInfoDAO = tableInfoDAO;
         this.jdbcMetaService = jdbcMetaService;
         this.semanticIndexService = semanticIndexService;
+        this.permissionService = permissionService;
     }
 
     public Page<ColumnInfo> getColumns(PageReq pageReq, String tableId, String keyword) {
+        TableInfoPO tablePO = tableInfoDAO.findById(tableId)
+                .orElseThrow(() -> new DatiException(ErrorCode.DS_TABLE_NOT_FOUND, tableId));
+        permissionService.requireDataSource(tablePO.getDataSourceId(), Permission.VIEW);
+
         Sort sortBy = Sort.by(Sort.Direction.ASC, BasePO.Fields.createdAt);
         if (StringUtils.isEmpty(keyword)) {
             return columnInfoDAO.findByTableId(tableId, pageReq.toPageRequest().withSort(sortBy)).map(ColumnMapper::toColumnInfo);
@@ -61,6 +69,9 @@ public class ColumnService {
     public void updateColumn(String id, ColumnInfo columnInfo) {
         ColumnInfoPO columnInfoPO = columnInfoDAO.findById(id)
                 .orElseThrow(() -> new DatiException(ErrorCode.DS_NOT_FOUND, "Column not found: " + id));
+        TableInfoPO tablePO = tableInfoDAO.findById(columnInfoPO.getTableId())
+                .orElseThrow(() -> new DatiException(ErrorCode.DS_TABLE_NOT_FOUND, columnInfoPO.getTableId()));
+        permissionService.requireDataSource(tablePO.getDataSourceId(), Permission.EDIT);
 
         boolean wasEnabled = columnInfoPO.isExtractValueEnabled();
 
@@ -115,6 +126,7 @@ public class ColumnService {
 
     @Transactional
     public void syncColumns(String datasourceId, String tableId, boolean overwriteExisting) throws SQLException {
+        permissionService.requireDataSource(datasourceId, Permission.EDIT);
         TableInfo tableInfo = TableMapper.toTableInfo(tableInfoDAO.findById(tableId)
                 .orElseThrow(() -> new DatiException(ErrorCode.DS_TABLE_NOT_FOUND, tableId)));
         

@@ -14,16 +14,17 @@ import com.dati.db.analysis.SqlOperationType;
 import com.dati.mcp.domain.model.DetectedAnnotations;
 import com.dati.mcp.domain.model.McpCustomTool;
 import com.dati.mcp.domain.model.McpPrebuiltToolConfig;
+import com.dati.mcp.domain.model.McpToolType;
 import com.dati.mcp.domain.model.ToolConfig;
 import com.dati.mcp.domain.model.ToolParameter;
-import com.dati.mcp.domain.model.McpToolType;
 import com.dati.mcp.repository.dao.McpCustomToolDAO;
 import com.dati.mcp.repository.dao.McpPrebuiltToolConfigDAO;
-import com.dati.mcp.repository.dao.McpServiceDAO;
 import com.dati.mcp.repository.mapper.McpCustomToolMapper;
 import com.dati.mcp.repository.mapper.McpPrebuiltToolConfigMapper;
 import com.dati.mcp.repository.po.McpCustomToolPO;
 import com.dati.mcp.repository.po.McpPrebuiltToolConfigPO;
+import com.dati.permission.domain.model.Permission;
+import com.dati.permission.domain.service.PermissionService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -44,20 +45,20 @@ public class McpToolService {
 
     private final McpPrebuiltToolConfigDAO prebuiltDAO;
     private final McpCustomToolDAO customToolDAO;
-    private final McpServiceDAO mcpServiceDAO;
     private final TemplateParser templateParser;
     private final SqlRenderer sqlRenderer;
+    private final PermissionService permissionService;
 
     public McpToolService(McpPrebuiltToolConfigDAO prebuiltDAO,
                           McpCustomToolDAO customToolDAO,
-                          McpServiceDAO mcpServiceDAO,
                           TemplateParser templateParser,
-                          SqlRenderer sqlRenderer) {
+                          SqlRenderer sqlRenderer,
+                          PermissionService permissionService) {
         this.prebuiltDAO = prebuiltDAO;
         this.customToolDAO = customToolDAO;
-        this.mcpServiceDAO = mcpServiceDAO;
         this.templateParser = templateParser;
         this.sqlRenderer = sqlRenderer;
+        this.permissionService = permissionService;
     }
 
     // ── 列表 ──
@@ -65,9 +66,7 @@ public class McpToolService {
     /** 返回分组数据 */
     @Transactional(readOnly = true)
     public ToolsResult listTools(String serviceId) {
-        if (!mcpServiceDAO.existsById(serviceId)) {
-            throw new DatiException(ErrorCode.MS_SERVICE_NOT_FOUND, serviceId);
-        }
+        permissionService.requireMcpService(serviceId, Permission.VIEW);
         return new ToolsResult(buildPrebuiltList(serviceId), buildCustomList(serviceId));
     }
 
@@ -103,6 +102,7 @@ public class McpToolService {
 
     @Transactional
     public void updatePrebuiltTool(String serviceId, McpToolType toolType, McpPrebuiltToolConfig input) {
+        permissionService.requireMcpService(serviceId, Permission.EDIT);
         McpPrebuiltToolConfigPO po = prebuiltDAO.findByServiceIdAndToolType(serviceId, toolType)
             .orElseGet(() -> {
                 McpPrebuiltToolConfigPO newPO = new McpPrebuiltToolConfigPO();
@@ -122,7 +122,7 @@ public class McpToolService {
 
     @Transactional
     public String createCustomTool(String serviceId, McpCustomTool tool) {
-        validateServiceExists(serviceId);
+        permissionService.requireMcpService(serviceId, Permission.EDIT);
         validateToolName(tool.getName());
         if (customToolDAO.existsByServiceIdAndName(serviceId, tool.getName())) {
             throw new DatiException(ErrorCode.MS_TOOL_NAME_EXISTS, tool.getName());
@@ -139,6 +139,7 @@ public class McpToolService {
 
     @Transactional
     public void updateCustomTool(McpCustomTool tool) {
+        permissionService.requireMcpService(tool.getServiceId(), Permission.EDIT);
         McpCustomToolPO po = customToolDAO.findByServiceIdAndId(tool.getServiceId(), tool.getId())
             .orElseThrow(() -> new DatiException(ErrorCode.MS_TOOL_NOT_FOUND, tool.getId()));
         if (tool.getName() != null) {
@@ -168,6 +169,7 @@ public class McpToolService {
 
     @Transactional
     public void deleteCustomTool(String serviceId, String toolId) {
+        permissionService.requireMcpService(serviceId, Permission.EDIT);
         McpCustomToolPO po = customToolDAO.findByServiceIdAndId(serviceId, toolId)
             .orElseThrow(() -> new DatiException(ErrorCode.MS_TOOL_NOT_FOUND, toolId));
         customToolDAO.delete(po);
@@ -202,12 +204,6 @@ public class McpToolService {
     }
 
     // ── helpers ──
-
-    private void validateServiceExists(String serviceId) {
-        if (!mcpServiceDAO.existsById(serviceId)) {
-            throw new DatiException(ErrorCode.MS_SERVICE_NOT_FOUND, serviceId);
-        }
-    }
 
     private void validateToolName(String name) {
         if (name == null || !TOOL_NAME_PATTERN.matcher(name).matches()) {

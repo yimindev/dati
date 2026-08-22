@@ -1,15 +1,18 @@
 package com.dati.semantic.domain.service;
 
-import com.dati.base.exception.DatiException;
-import com.dati.base.exception.ErrorCode;
 import com.dati.auth.authentication.User;
 import com.dati.auth.domain.service.UserGroupService;
 import com.dati.base.RequestContext;
+import com.dati.base.exception.DatiException;
+import com.dati.base.exception.ErrorCode;
 import com.dati.common.StringUtils;
 import com.dati.datasource.domain.model.TableInfo;
 import com.dati.datasource.repository.dao.TableInfoDAO;
 import com.dati.datasource.repository.mapper.TableMapper;
 import com.dati.datasource.repository.po.TableInfoPO;
+import com.dati.permission.domain.model.Permission;
+import com.dati.permission.domain.model.ResourceType;
+import com.dati.permission.domain.service.PermissionService;
 import com.dati.semantic.domain.SemanticEntityType;
 import com.dati.semantic.domain.model.Subject;
 import com.dati.semantic.repository.dao.SubjectDAO;
@@ -20,9 +23,6 @@ import com.dati.semantic.repository.po.SemanticSearchDocument;
 import com.dati.semantic.repository.po.SubjectPO;
 import com.dati.semantic.repository.po.SubjectTablePO;
 import com.dati.semantic.server.pojo.vo.SubjectAvailableTableVO;
-import com.dati.permission.domain.service.PermissionService;
-import com.dati.permission.domain.model.Permission;
-import com.dati.permission.domain.model.ResourceType;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -30,7 +30,6 @@ import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.dati.datasource.repository.dao.DataSourceDAO;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -43,19 +42,17 @@ public class SubjectService {
     private final SubjectDAO subjectDAO;
     private final SubjectTableDAO subjectTableDAO;
     private final TableInfoDAO tableInfoDAO;
-    private final DataSourceDAO dataSourceDAO;
     private final SemanticIndexService semanticIndexService;
     private final PermissionService permissionService;
     private final UserGroupService userGroupService;
 
     public SubjectService(SubjectDAO subjectDAO, SubjectTableDAO subjectTableDAO,
-                          TableInfoDAO tableInfoDAO, DataSourceDAO dataSourceDAO,
+                          TableInfoDAO tableInfoDAO,
                           SemanticIndexService semanticIndexService,
                           PermissionService permissionService, UserGroupService userGroupService) {
         this.subjectDAO = subjectDAO;
         this.subjectTableDAO = subjectTableDAO;
         this.tableInfoDAO = tableInfoDAO;
-        this.dataSourceDAO = dataSourceDAO;
         this.semanticIndexService = semanticIndexService;
         this.permissionService = permissionService;
         this.userGroupService = userGroupService;
@@ -63,8 +60,8 @@ public class SubjectService {
 
     @Transactional
     public Subject createSubject(Subject subject) {
-        if (subject.getDatasourceId() != null && !dataSourceDAO.existsById(subject.getDatasourceId())) {
-            throw new DatiException(ErrorCode.DS_NOT_FOUND, subject.getDatasourceId());
+        if (subject.getDatasourceId() != null) {
+            permissionService.requireDataSource(subject.getDatasourceId(), Permission.VIEW);
         }
         SubjectPO subjectPO = SubjectMapper.toPO(subject);
         subjectDAO.save(subjectPO);
@@ -199,6 +196,7 @@ public class SubjectService {
     public List<SubjectAvailableTableVO> getAvailableTables(String subjectId, String schema) {
         SubjectPO subjectPO = subjectDAO.findById(subjectId)
                 .orElseThrow(() -> new DatiException(ErrorCode.SM_SUBJECT_NOT_FOUND, subjectId));
+        permissionService.requireCurrentUser(ResourceType.SUBJECT, subjectId, Permission.VIEW, subjectPO.getCreatedBy());
 
         List<SubjectTablePO> linkedTables = subjectTableDAO.findBySubjectId(subjectId);
         List<String> linkedTableIds = linkedTables.stream()
@@ -223,9 +221,9 @@ public class SubjectService {
     @Transactional(readOnly = true)
     public Page<TableInfo> getTablesBySubjectId(
             String subjectId, @Nullable String keyword, Pageable pageable) {
-        if (!subjectDAO.existsById(subjectId)) {
-            throw new DatiException(ErrorCode.SM_SUBJECT_NOT_FOUND, subjectId);
-        }
+        SubjectPO subjectPO = subjectDAO.findById(subjectId)
+                .orElseThrow(() -> new DatiException(ErrorCode.SM_SUBJECT_NOT_FOUND, subjectId));
+        permissionService.requireCurrentUser(ResourceType.SUBJECT, subjectId, Permission.VIEW, subjectPO.getCreatedBy());
 
         return (StringUtils.isEmpty(keyword)
                 ? subjectTableDAO.findTablesBySubjectId(subjectId, pageable)

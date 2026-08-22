@@ -99,7 +99,7 @@ class ParameterizedSqlExecutorTest {
     @Test
     @DisplayName("execute - DELETE template runs without policy check (no SQL_POLICY_VIOLATION)")
     void execute_deleteTemplate_noPolicyBlock() throws SQLException {
-        when(dataSourceService.getDataSource("ds-1")).thenReturn(Optional.of(dataSource()));
+        when(dataSourceService.getDataSourceInternal("ds-1")).thenReturn(Optional.of(dataSource()));
         PreparedStatement stmt = mockStatementNoResults();
         Connection conn = mock(Connection.class);
         when(conn.prepareStatement(anyString())).thenReturn(stmt);
@@ -128,7 +128,7 @@ class ParameterizedSqlExecutorTest {
     @Test
     @DisplayName("execute - scope violation still enforced")
     void execute_scopeViolation_stillEnforced() {
-        when(dataSourceService.getDataSource("ds-1")).thenReturn(Optional.of(dataSource()));
+        when(dataSourceService.getDataSourceInternal("ds-1")).thenReturn(Optional.of(dataSource()));
         doThrow(new ToolExecuteException(ToolError.SCOPE_VIOLATION, "table 'tasks' not in scope"))
             .when(scopeValidator).validate(any(), any(), any(), any());
 
@@ -146,7 +146,7 @@ class ParameterizedSqlExecutorTest {
     @Test
     @DisplayName("execute - SQL exception mapped to SQL_EXECUTION_ERROR")
     void execute_sqlException_mappedToSqlExecutionError() throws SQLException {
-        when(dataSourceService.getDataSource("ds-1")).thenReturn(Optional.of(dataSource()));
+        when(dataSourceService.getDataSourceInternal("ds-1")).thenReturn(Optional.of(dataSource()));
         PreparedStatement stmt = mock(PreparedStatement.class);
         when(stmt.execute()).thenThrow(new SQLException("boom"));
         Connection conn = mock(Connection.class);
@@ -176,7 +176,7 @@ class ParameterizedSqlExecutorTest {
         user.setDisplayName("Alice W.");
         com.dati.base.RequestContext.setUser(user);
 
-        when(dataSourceService.getDataSource("ds-1")).thenReturn(Optional.of(dataSource()));
+        when(dataSourceService.getDataSourceInternal("ds-1")).thenReturn(Optional.of(dataSource()));
         PreparedStatement stmt = mockStatementNoResults();
         Connection conn = mock(Connection.class);
         when(conn.prepareStatement(anyString())).thenReturn(stmt);
@@ -203,7 +203,7 @@ class ParameterizedSqlExecutorTest {
     @Test
     @DisplayName("execute - system variable without user context uses default value if present")
     void execute_systemVariableUser_nullUser_withDefault() throws SQLException {
-        when(dataSourceService.getDataSource("ds-1")).thenReturn(Optional.of(dataSource()));
+        when(dataSourceService.getDataSourceInternal("ds-1")).thenReturn(Optional.of(dataSource()));
         PreparedStatement stmt = mockStatementNoResults();
         Connection conn = mock(Connection.class);
         when(conn.prepareStatement(anyString())).thenReturn(stmt);
@@ -229,7 +229,7 @@ class ParameterizedSqlExecutorTest {
     @Test
     @DisplayName("execute - system variable without user context and no default binds null")
     void execute_systemVariableUser_nullUser_withoutDefault() throws SQLException {
-        when(dataSourceService.getDataSource("ds-1")).thenReturn(Optional.of(dataSource()));
+        when(dataSourceService.getDataSourceInternal("ds-1")).thenReturn(Optional.of(dataSource()));
         PreparedStatement stmt = mockStatementNoResults();
         Connection conn = mock(Connection.class);
         when(conn.prepareStatement(anyString())).thenReturn(stmt);
@@ -259,7 +259,7 @@ class ParameterizedSqlExecutorTest {
         user.setId("usr-legit");
         com.dati.base.RequestContext.setUser(user);
 
-        when(dataSourceService.getDataSource("ds-1")).thenReturn(Optional.of(dataSource()));
+        when(dataSourceService.getDataSourceInternal("ds-1")).thenReturn(Optional.of(dataSource()));
         PreparedStatement stmt = mockStatementNoResults();
         Connection conn = mock(Connection.class);
         when(conn.prepareStatement(anyString())).thenReturn(stmt);
@@ -285,7 +285,7 @@ class ParameterizedSqlExecutorTest {
     @Test
     @DisplayName("execute - system variables _now and _date injected")
     void execute_systemVariableTime_nowAndDate() throws SQLException {
-        when(dataSourceService.getDataSource("ds-1")).thenReturn(Optional.of(dataSource()));
+        when(dataSourceService.getDataSourceInternal("ds-1")).thenReturn(Optional.of(dataSource()));
         PreparedStatement stmt = mockStatementNoResults();
         Connection conn = mock(Connection.class);
         when(conn.prepareStatement(anyString())).thenReturn(stmt);

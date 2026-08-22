@@ -8,6 +8,8 @@ import com.dati.mcp.server.pojo.ToolTestData;
 import com.dati.mcp.server.pojo.ToolTestError;
 import com.dati.mcp.server.pojo.ToolTestRequest;
 import com.dati.mcp.server.pojo.ToolTestResponse;
+import com.dati.permission.domain.model.Permission;
+import com.dati.permission.domain.service.PermissionService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -24,17 +26,21 @@ public class McpToolTestService {
     private final McpServiceDataScopeDAO scopeDAO;
     private final ToolParameterBinder parameterBinder;
     private final Map<McpToolType, ToolExecutor> executorMap;
+    private final PermissionService permissionService;
 
     public McpToolTestService(ToolResolver toolResolver, McpServiceDataScopeDAO scopeDAO,
                               List<ToolExecutor> toolExecutorList,
-                              ToolParameterBinder parameterBinder) {
+                              ToolParameterBinder parameterBinder,
+                              PermissionService permissionService) {
         this.toolResolver = toolResolver;
         this.scopeDAO = scopeDAO;
         this.parameterBinder = parameterBinder;
         this.executorMap = toolExecutorList.stream().collect(Collectors.toMap(ToolExecutor::getToolType, Function.identity()));
+        this.permissionService = permissionService;
     }
 
     public ToolTestResponse test(String serviceId, String toolId, ToolTestRequest request) {
+        permissionService.requireMcpService(serviceId, Permission.EDIT);
         long start = System.currentTimeMillis();
         try {
             ToolResolver.ResolvedTool tool = toolResolver.resolve(serviceId, toolId);

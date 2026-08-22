@@ -50,7 +50,7 @@ class AclServiceTest {
     @BeforeEach
     void setUp() {
         service = new AclService(aclDAO, userService, dataSourceDAO, subjectDAO,
-                mcpServiceDAO, new PermissionService(checker, "admin"));
+                mcpServiceDAO, new PermissionService(checker, dataSourceDAO, subjectDAO, mcpServiceDAO, "admin"));
         User user = new User();
         user.setId("u-1");
         user.setName("u1");

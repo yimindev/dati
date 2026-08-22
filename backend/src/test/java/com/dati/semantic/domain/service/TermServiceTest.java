@@ -61,6 +61,9 @@ class TermServiceTest {
     @Mock
     private TableInfoDAO tableInfoDAO;
 
+    @Mock
+    private com.dati.permission.domain.service.PermissionService permissionService;
+
     @InjectMocks
     private TermService termService;
 
@@ -140,8 +143,11 @@ class TermServiceTest {
     void unlinkEntity_shouldDeleteTableRelation() {
         String termId = "term-001";
         String tableId = "table-001";
+        TermPO termPO = new TermPO();
+        termPO.setId(termId);
+        termPO.setSubjectId("subject-001");
 
-        when(termDAO.existsById(termId)).thenReturn(true);
+        when(termDAO.findById(termId)).thenReturn(Optional.of(termPO));
 
         termService.unlinkEntity(termId, tableId, null);
 
@@ -154,6 +160,9 @@ class TermServiceTest {
         String termId = "term-001";
         String tableId = "table-001";
         String fieldName = "customer_name";
+        TermPO termPO = new TermPO();
+        termPO.setId(termId);
+        termPO.setSubjectId("subject-001");
 
         TermRelationPO relation = new TermRelationPO();
         relation.setId("relation-001");
@@ -162,7 +171,7 @@ class TermServiceTest {
         relation.setTableId(tableId);
         relation.setFieldName(fieldName);
 
-        when(termDAO.existsById(termId)).thenReturn(true);
+        when(termDAO.findById(termId)).thenReturn(Optional.of(termPO));
         when(termRelationDAO.findByTermIdAndTableIdAndFieldName(termId, tableId, fieldName))
                 .thenReturn(Optional.of(relation));
 
@@ -177,8 +186,11 @@ class TermServiceTest {
         String termId = "term-001";
         String tableId = "table-001";
         String fieldName = "customer_name";
+        TermPO termPO = new TermPO();
+        termPO.setId(termId);
+        termPO.setSubjectId("subject-001");
 
-        when(termDAO.existsById(termId)).thenReturn(true);
+        when(termDAO.findById(termId)).thenReturn(Optional.of(termPO));
         when(termRelationDAO.findByTermIdAndTableIdAndFieldName(termId, tableId, fieldName))
                 .thenReturn(Optional.empty());
 
@@ -241,7 +253,6 @@ class TermServiceTest {
         termPO.setUpdatedAt(java.time.Instant.now());
 
         Page<TermPO> poPage = new PageImpl<>(List.of(termPO), pageable, 1);
-        when(subjectDAO.existsById(subjectId)).thenReturn(true);
         when(termDAO.findBySubjectIdAndKeyword(subjectId, keyword, pageable)).thenReturn(poPage);
         when(termRelationDAO.findByTermIdIn(any())).thenReturn(List.of());
 
@@ -257,7 +268,8 @@ class TermServiceTest {
     void getTermsBySubject_nonexistentSubject_throwsSM001() {
         String subjectId = "bad-subject-id";
         Pageable pageable = PageRequest.of(0, 10);
-        when(subjectDAO.existsById(subjectId)).thenReturn(false);
+        org.mockito.Mockito.doThrow(new DatiException(ErrorCode.SM_SUBJECT_NOT_FOUND))
+                .when(permissionService).requireSubject(subjectId, com.dati.permission.domain.model.Permission.VIEW);
 
         assertThatThrownBy(() -> termService.getTermsBySubject(subjectId, null, pageable))
                 .isInstanceOf(DatiException.class)
@@ -285,7 +297,6 @@ class TermServiceTest {
         termPO2.setUpdatedAt(java.time.Instant.now());
 
         Page<TermPO> poPage = new PageImpl<>(List.of(termPO1, termPO2), pageable, 2);
-        when(subjectDAO.existsById(subjectId)).thenReturn(true);
         when(termDAO.findBySubjectId(eq(subjectId), eq(pageable))).thenReturn(poPage);
         when(termRelationDAO.findByTermIdIn(any())).thenReturn(List.of());
 

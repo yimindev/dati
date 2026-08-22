@@ -1,5 +1,7 @@
 package com.dati.mcp.server.endpoint;
 
+import com.dati.auth.authentication.User;
+import com.dati.base.RequestContext;
 import com.dati.common.JsonUtils;
 import com.dati.mcp.domain.model.McpServiceSnapshot;
 import com.dati.mcp.domain.model.McpServiceStatus;
@@ -8,6 +10,9 @@ import com.dati.mcp.repository.dao.McpServiceSnapshotDAO;
 import com.dati.mcp.repository.mapper.McpServiceSnapshotMapper;
 import com.dati.mcp.repository.po.McpServicePO;
 import com.dati.mcp.repository.po.McpServiceSnapshotPO;
+import com.dati.permission.domain.model.Permission;
+import com.dati.permission.domain.model.ResourceType;
+import com.dati.permission.domain.service.PermissionService;
 import io.modelcontextprotocol.json.McpJsonDefaults;
 import io.modelcontextprotocol.json.McpJsonMapper;
 import io.modelcontextprotocol.spec.McpSchema;
@@ -35,16 +40,19 @@ public class McpEndpointService {
     private final McpServiceDAO mcpServiceDAO;
     private final McpServiceSnapshotDAO snapshotDAO;
     private final McpProtocolHandler protocolHandler;
+    private final PermissionService permissionService;
     private final Set<String> allowedOrigins;
     private final McpJsonMapper jsonMapper = McpJsonDefaults.getMapper();
 
     public McpEndpointService(McpServiceDAO mcpServiceDAO,
                               McpServiceSnapshotDAO snapshotDAO,
                               McpProtocolHandler protocolHandler,
+                              PermissionService permissionService,
                               @Value("${dati.mcp.allowed-origins:}") String allowedOrigins) {
         this.mcpServiceDAO = mcpServiceDAO;
         this.snapshotDAO = snapshotDAO;
         this.protocolHandler = protocolHandler;
+        this.permissionService = permissionService;
         this.allowedOrigins = Arrays.stream(allowedOrigins.split(","))
             .map(String::trim)
             .filter(s -> !s.isEmpty())
@@ -65,6 +73,12 @@ public class McpEndpointService {
         if (service.getStatus() == McpServiceStatus.DISABLED) {
             return new McpEndpointResult(HttpStatus.SERVICE_UNAVAILABLE,
                 errorEnvelope(body, McpSchema.ErrorCodes.INTERNAL_ERROR, "Service is disabled"));
+        }
+        User user = RequestContext.getUser();
+        if (user != null && !permissionService.can(user.getId(), user.getName(), ResourceType.MCP_SERVICE,
+                service.getId(), Permission.VIEW, service.getCreatedBy())) {
+            return new McpEndpointResult(HttpStatus.FORBIDDEN,
+                errorEnvelope(body, McpSchema.ErrorCodes.INTERNAL_ERROR, "Permission denied"));
         }
         // 2. Transport validation: Origin DNS-rebinding protection (loopback or
         //    whitelisted origins only) and MCP-Protocol-Version (initialize exempt).

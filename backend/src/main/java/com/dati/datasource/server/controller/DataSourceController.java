@@ -8,12 +8,9 @@ import com.dati.base.pojo.PageReq;
 import com.dati.base.pojo.PageResponse;
 import com.dati.datasource.domain.model.DataSource;
 import com.dati.datasource.domain.service.DataSourceService;
-import com.dati.datasource.domain.service.JdbcMetaService;
 import com.dati.datasource.server.assembler.DSAssembler;
 import com.dati.datasource.server.pojo.DatasourceVO;
-import com.dati.datasource.server.pojo.SqlExecuteRequest;
 import com.dati.datasource.server.pojo.request.UpdateDataSourceRequest;
-import com.dati.db.Column;
 import com.dati.db.Table;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
@@ -30,7 +27,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.sql.SQLException;
 import java.util.List;
-import java.util.Map;
 
 @Slf4j
 @RestController
@@ -38,13 +34,10 @@ import java.util.Map;
 public class DataSourceController {
 
     private final DataSourceService dataSourceService;
-    private final JdbcMetaService jdbcMetaService;
-
     private final DSAssembler dsAssembler;
 
-    public DataSourceController(DataSourceService dataSourceService, JdbcMetaService jdbcMetaService, DSAssembler dsAssembler) {
+    public DataSourceController(DataSourceService dataSourceService, DSAssembler dsAssembler) {
         this.dataSourceService = dataSourceService;
-        this.jdbcMetaService = jdbcMetaService;
         this.dsAssembler = dsAssembler;
     }
 
@@ -94,11 +87,10 @@ public class DataSourceController {
                 .orElseThrow(() -> new DatiException(ErrorCode.DS_NOT_FOUND, id)));
     }
 
-
     @GetMapping("/{id}/schemas")
     public List<String> getSchemas(@PathVariable String id, @RequestParam(name = "catalog", required = false) String catalog) {
         try {
-            return jdbcMetaService.getSchemas(id, catalog);
+            return dataSourceService.getSchemas(id, catalog);
         } catch (SQLException e) {
             log.error("Failed to get schemas for datasource {}", id, e);
             throw new DatiException(ErrorCode.DS_SQL_ERROR, e.getMessage());
@@ -108,29 +100,9 @@ public class DataSourceController {
     @GetMapping("/{id}/schemas/{schema}/tables")
     public List<Table> getTables(@PathVariable String id, @PathVariable String schema, @RequestParam(name = "catalog", required = false) String catalog) {
         try {
-            return jdbcMetaService.getTables(id, catalog, schema);
+            return dataSourceService.getTables(id, catalog, schema);
         } catch (SQLException e) {
             log.error("Failed to get tables for datasource {}", id, e);
-            throw new DatiException(ErrorCode.DS_SQL_ERROR, e.getMessage());
-        }
-    }
-
-    @GetMapping("/{id}/schemas/{schema}/tables/{table}/columns")
-    public List<Column> getColumns(@PathVariable String id, @PathVariable String schema, @PathVariable String table, @RequestParam(name = "catalog", required = false) String catalog) {
-        try {
-            return jdbcMetaService.getColumns(id, catalog, schema, table);
-        } catch (SQLException e) {
-            log.error("Failed to get columns for datasource {}", id, e);
-            throw new DatiException(ErrorCode.DS_SQL_ERROR, e.getMessage());
-        }
-    }
-
-    @PostMapping("/{id}/execute-sql")
-    public List<Map<String, Object>> executeSql(@PathVariable String id, @RequestBody SqlExecuteRequest sqlExecuteRequest) {
-        try {
-            return jdbcMetaService.executeSql(id, sqlExecuteRequest.sql());
-        } catch (SQLException e) {
-            log.error("Failed to execute SQL for datasource {}", id, e);
             throw new DatiException(ErrorCode.DS_SQL_ERROR, e.getMessage());
         }
     }

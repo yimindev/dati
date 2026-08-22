@@ -1,12 +1,15 @@
 package com.dati.datasource.domain.service;
 
 import com.dati.base.exception.DatiException;
+import com.dati.base.exception.ErrorCode;
 import com.dati.base.pojo.PageReq;
 import com.dati.config.ColumnValueConfig;
 import com.dati.datasource.repository.dao.ColumnInfoDAO;
 import com.dati.datasource.repository.dao.TableInfoDAO;
 import com.dati.datasource.repository.po.ColumnInfoPO;
 import com.dati.datasource.repository.po.TableInfoPO;
+import com.dati.permission.domain.model.Permission;
+import com.dati.permission.domain.service.PermissionService;
 import com.dati.semantic.domain.SemanticEntityType;
 import com.dati.semantic.domain.service.SemanticIndexService;
 import com.dati.semantic.repository.po.EntityReference;
@@ -20,7 +23,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -33,23 +35,33 @@ public class ColumnValueService {
     private final JdbcMetaService jdbcMetaService;
     private final SemanticIndexService semanticIndexService;
     private final ColumnValueConfig columnValueConfig;
+    private final PermissionService permissionService;
 
     public ColumnValueService(
             ColumnInfoDAO columnInfoDAO,
             TableInfoDAO tableInfoDAO,
             JdbcMetaService jdbcMetaService,
             SemanticIndexService semanticIndexService,
-            ColumnValueConfig columnValueConfig) {
+            ColumnValueConfig columnValueConfig,
+            PermissionService permissionService) {
         this.columnInfoDAO = columnInfoDAO;
         this.tableInfoDAO = tableInfoDAO;
         this.jdbcMetaService = jdbcMetaService;
         this.semanticIndexService = semanticIndexService;
         this.columnValueConfig = columnValueConfig;
+        this.permissionService = permissionService;
     }
 
     public void extractValues(String datasourceId, String columnId, boolean overwrite) throws SQLException {
         ColumnInfoPO columnPO = columnInfoDAO.findById(columnId)
-                .orElseThrow(() -> new DatiException("Column not found: " + columnId));
+                .orElseThrow(() -> new DatiException(ErrorCode.NOT_FOUND, "Column not found: " + columnId));
+        TableInfoPO tablePO = tableInfoDAO.findById(columnPO.getTableId())
+                .orElseThrow(() -> new DatiException(ErrorCode.DS_TABLE_NOT_FOUND, "Table not found: " + columnPO.getTableId()));
+
+        if (datasourceId != null && !datasourceId.equals(tablePO.getDataSourceId())) {
+            throw new DatiException(ErrorCode.INVALID_PARAMETER, "Column does not belong to data source: " + datasourceId);
+        }
+        permissionService.requireDataSource(tablePO.getDataSourceId(), Permission.EDIT);
 
         String tableId = columnPO.getTableId();
         String columnName = columnPO.getName();
@@ -65,9 +77,9 @@ public class ColumnValueService {
         Integer lengthLimit = columnValueConfig.getColumnValueLengthLimit();
 
         String sql = String.format("SELECT DISTINCT %s FROM %s LIMIT %d",
-                columnName, getTableName(tableId), sampleLimit);
+                columnName, tablePO.getName(), sampleLimit);
 
-        List<Map<String, Object>> results = jdbcMetaService.executeSql(datasourceId, sql);
+        List<Map<String, Object>> results = jdbcMetaService.executeSql(tablePO.getDataSourceId(), sql);
 
         Set<String> existingValues = overwrite
                 ? Collections.emptySet()
@@ -88,7 +100,7 @@ public class ColumnValueService {
                 }
                 String id = UUID.randomUUID().toString();
                 EntityReference entity = EntityReference.builder()
-                        .datasourceId(datasourceId)
+                        .datasourceId(tablePO.getDataSourceId())
                         .tableId(tableId)
                         .field(columnName)
                         .build();
@@ -124,6 +136,13 @@ public class ColumnValueService {
     }
 
     public void saveValues(String columnId, List<ValueItem> values, List<String> deletedIds) {
+        ColumnInfoPO columnPO = columnInfoDAO.findById(columnId)
+                .orElseThrow(() -> new DatiException("Column not found: " + columnId));
+        TableInfoPO tablePO = tableInfoDAO.findById(columnPO.getTableId())
+                .orElseThrow(() -> new DatiException("Table not found: " + columnPO.getTableId()));
+        String datasourceId = tablePO.getDataSourceId();
+        permissionService.requireDataSource(datasourceId, Permission.EDIT);
+
         if (deletedIds != null && !deletedIds.isEmpty()) {
             for (String id : deletedIds) {
                 semanticIndexService.deleteById(id);
@@ -131,13 +150,6 @@ public class ColumnValueService {
         }
 
         if (values != null && !values.isEmpty()) {
-            ColumnInfoPO columnPO = columnInfoDAO.findById(columnId)
-                    .orElseThrow(() -> new DatiException("Column not found: " + columnId));
-
-            String datasourceId = tableInfoDAO.findById(columnPO.getTableId())
-                    .orElseThrow(() -> new DatiException("Table not found: " + columnPO.getTableId()))
-                    .getDataSourceId();
-
             List<SemanticSearchDocument> docs = new ArrayList<>();
             for (ValueItem item : values) {
                 EntityReference entity = EntityReference.builder()
@@ -171,6 +183,9 @@ public class ColumnValueService {
     public Page<ValueItem> getValues(String columnId, PageReq pageReq, String keyword) {
         ColumnInfoPO columnPO = columnInfoDAO.findById(columnId)
                 .orElseThrow(() -> new DatiException("Column not found: " + columnId));
+        TableInfoPO tablePO = tableInfoDAO.findById(columnPO.getTableId())
+                .orElseThrow(() -> new DatiException("Table not found: " + columnPO.getTableId()));
+        permissionService.requireDataSource(tablePO.getDataSourceId(), Permission.VIEW);
 
         Page<SemanticSearchDocument> docsPage = semanticIndexService.findByTableFieldAndTypePaginated(
                 columnPO.getTableId(),
@@ -181,13 +196,6 @@ public class ColumnValueService {
         );
 
         return docsPage.map(ColumnValueService::toValueItem);
-    }
-
-    private String getTableName(String tableId) {
-        return Optional.ofNullable(tableId)
-                .flatMap(tableInfoDAO::findById)
-                .map(TableInfoPO::getName)
-                .orElseThrow(() -> new DatiException("Table not found: " + tableId));
     }
 
     @Data

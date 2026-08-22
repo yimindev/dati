@@ -18,6 +18,8 @@ import com.dati.datasource.repository.po.TableInfoPO;
 import com.dati.datasource.server.pojo.AddTableRequest;
 import com.dati.db.Column;
 import com.dati.db.Table;
+import com.dati.permission.domain.model.Permission;
+import com.dati.permission.domain.service.PermissionService;
 import com.dati.semantic.domain.SemanticEntityType;
 import com.dati.semantic.domain.service.SemanticIndexService;
 import com.dati.semantic.repository.po.EntityReference;
@@ -42,15 +44,20 @@ public class TableService {
     private final ColumnInfoDAO columnInfoDAO;
     private final JdbcMetaService jdbcMetaService;
     private final SemanticIndexService semanticIndexService;
+    private final PermissionService permissionService;
 
-    public TableService(TableInfoDAO tableInfoDAO, ColumnInfoDAO columnInfoDAO, JdbcMetaService jdbcMetaService, SemanticIndexService semanticIndexService) {
+    public TableService(TableInfoDAO tableInfoDAO, ColumnInfoDAO columnInfoDAO,
+                        JdbcMetaService jdbcMetaService, SemanticIndexService semanticIndexService,
+                        PermissionService permissionService) {
         this.tableInfoDAO = tableInfoDAO;
         this.columnInfoDAO = columnInfoDAO;
         this.jdbcMetaService = jdbcMetaService;
         this.semanticIndexService = semanticIndexService;
+        this.permissionService = permissionService;
     }
 
     public Page<TableInfo> getTables(PageReq pageReq, String datasourceId, String keyword) {
+        permissionService.requireDataSource(datasourceId, Permission.VIEW);
         Sort sortBy = Sort.by(Sort.Direction.DESC, BasePO.Fields.createdAt);
         if (StringUtils.isEmpty(keyword)) {
             return tableInfoDAO.findByDataSourceId(datasourceId, pageReq.toPageRequest().withSort(sortBy)).map(TableMapper::toTableInfo);
@@ -59,6 +66,7 @@ public class TableService {
     }
 
     public List<String> getAddedTableNames(String datasourceId) {
+        permissionService.requireDataSource(datasourceId, Permission.VIEW);
         return tableInfoDAO.findByDataSourceId(datasourceId).stream()
                 .map(BaseResourcePO::getName)
                 .collect(Collectors.toList());
@@ -66,6 +74,7 @@ public class TableService {
 
     @Transactional
     public List<String> batchAddTables(String datasourceId, List<AddTableRequest> tables) {
+        permissionService.requireDataSource(datasourceId, Permission.EDIT);
         if (tables.isEmpty()) {
             return Collections.emptyList();
         }
@@ -169,15 +178,17 @@ public class TableService {
 
     @Transactional
     public void deleteTable(String tableId) {
-        if (!tableInfoDAO.existsById(tableId)) {
-            throw new DatiException(ErrorCode.DS_TABLE_NOT_FOUND, tableId);
-        }
+        TableInfoPO po = tableInfoDAO.findById(tableId)
+                .orElseThrow(() -> new DatiException(ErrorCode.DS_TABLE_NOT_FOUND, tableId));
+        permissionService.requireDataSource(po.getDataSourceId(), Permission.EDIT);
         deleteTables(List.of(tableId));
     }
 
     @Transactional
     public void updateTable(String tableId, TableInfo tableInfo) {
-        TableInfoPO existingPO = tableInfoDAO.findById(tableId).orElseThrow();
+        TableInfoPO existingPO = tableInfoDAO.findById(tableId)
+                .orElseThrow(() -> new DatiException(ErrorCode.DS_TABLE_NOT_FOUND, tableId));
+        permissionService.requireDataSource(existingPO.getDataSourceId(), Permission.EDIT);
 
         existingPO.setAliases(tableInfo.getAliases());
         existingPO.setDescription(tableInfo.getDescription());

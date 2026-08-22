@@ -10,6 +10,7 @@ import com.dati.datasource.repository.dao.TableInfoDAO;
 import com.dati.datasource.repository.po.ColumnInfoPO;
 import com.dati.datasource.repository.po.TableInfoPO;
 import com.dati.db.Column;
+import com.dati.permission.domain.service.PermissionService;
 import com.dati.semantic.domain.SemanticEntityType;
 import com.dati.semantic.domain.service.SemanticIndexService;
 import com.dati.semantic.repository.po.SemanticSearchDocument;
@@ -36,8 +37,10 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
@@ -60,6 +63,9 @@ class ColumnServiceTest {
     @Mock
     private SemanticIndexService semanticIndexService;
 
+    @Mock
+    private PermissionService permissionService;
+
     @InjectMocks
     private ColumnService columnService;
 
@@ -72,6 +78,7 @@ class ColumnServiceTest {
         testColumnInfo = TestFixtures.createTestColumnInfo();
         testColumnInfoPO = TestFixtures.createTestColumnInfoPO();
         testTableInfoPO = TestFixtures.createTestTableInfoPO();
+        lenient().when(tableInfoDAO.findById(anyString())).thenReturn(Optional.of(testTableInfoPO));
     }
 
     @Test

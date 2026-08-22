@@ -18,10 +18,12 @@ import com.dati.db.DbType;
 import com.dati.db.HikariPoolManager;
 import com.dati.db.JdbcConnector;
 import com.dati.db.JdbcUtils;
+import com.dati.db.Table;
 import com.dati.permission.domain.service.PermissionService;
 import com.dati.permission.domain.model.Permission;
 import com.dati.permission.domain.model.ResourceType;
 import com.dati.semantic.domain.service.SemanticIndexService;
+import jakarta.annotation.Nullable;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -211,6 +213,24 @@ public class DataSourceService {
                     permissionService.requireCurrentUser(ResourceType.DATA_SOURCE, id, Permission.VIEW, po.getCreatedBy());
                     return DSMapper.toDataSource(po);
                 });
+    }
+
+    /**
+     * Internal data source loading (used by MCP tool execution and internal components;
+     * bypasses direct user-level data source permission checks).
+     */
+    public Optional<DataSource> getDataSourceInternal(String id) {
+        return dataSourceDAO.findById(id).map(DSMapper::toDataSource);
+    }
+
+    public List<String> getSchemas(String id, @Nullable String catalog) throws SQLException {
+        permissionService.requireDataSource(id, Permission.VIEW);
+        return jdbcMetaService.getSchemas(id, catalog);
+    }
+
+    public List<Table> getTables(String id, @Nullable String catalog, String schema) throws SQLException {
+        permissionService.requireDataSource(id, Permission.VIEW);
+        return jdbcMetaService.getTables(id, catalog, schema);
     }
 
     public record DsBrief(String name, DbType dbType, String defaultSchema, String description) {}

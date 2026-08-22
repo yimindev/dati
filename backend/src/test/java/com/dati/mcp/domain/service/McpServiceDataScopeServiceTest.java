@@ -96,7 +96,10 @@ class McpServiceDataScopeServiceTest {
             }
             return null;
         }).when(permissionService).require(anyString(), anyString(), any(), anyString(), any(), anyString());
-        // 默认服务存在；不存在的场景由具体测试覆盖
+        McpServicePO sampleService = TestFixtures.createTestMcpServicePO();
+        sampleService.setId(TestFixtures.TEST_MCP_SERVICE_ID);
+        sampleService.setCreatedBy(TestFixtures.TEST_USER_ID);
+        lenient().when(mcpServiceDAO.findById(anyString())).thenReturn(Optional.of(sampleService));
         lenient().when(mcpServiceDAO.existsById(anyString())).thenReturn(true);
         testDataSourceScope = new McpServiceDataScope();
         testDataSourceScope.setServiceId(TestFixtures.TEST_MCP_SERVICE_ID);
@@ -161,7 +164,7 @@ class McpServiceDataScopeServiceTest {
     @Test
     @DisplayName("Query data scope - throws MS_SERVICE_NOT_FOUND when service does not exist")
     void getDataScope_serviceNotFound_shouldThrow() {
-        when(mcpServiceDAO.existsById(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(false);
+        when(mcpServiceDAO.findById(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(Optional.empty());
 
         DatiException e = assertThrows(DatiException.class,
             () -> dataScopeService.getDataScope(TestFixtures.TEST_MCP_SERVICE_ID));

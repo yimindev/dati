@@ -235,7 +235,7 @@ class McpServicePublishServiceTest {
     @Test
     @DisplayName("Query snapshots - throws MS_SERVICE_NOT_FOUND when service does not exist")
     void getSnapshots_serviceNotFound_shouldThrow() {
-        when(mcpServiceDAO.existsById("non-exist")).thenReturn(false);
+        when(mcpServiceDAO.findById("non-exist")).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> publishService.getSnapshots("non-exist"))
                 .isInstanceOf(DatiException.class)

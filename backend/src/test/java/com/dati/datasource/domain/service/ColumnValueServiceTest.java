@@ -54,6 +54,9 @@ class ColumnValueServiceTest {
     @Mock
     private SemanticIndexService semanticIndexService;
 
+    @Mock
+    private com.dati.permission.domain.service.PermissionService permissionService;
+
     @Captor
     private ArgumentCaptor<List<SemanticSearchDocument>> captor;
 
@@ -70,7 +73,7 @@ class ColumnValueServiceTest {
         columnValueConfig.setColumnValueLengthLimit(256);
 
         columnValueService = new ColumnValueService(
-                columnInfoDAO, tableInfoDAO, jdbcMetaService, semanticIndexService, columnValueConfig);
+                columnInfoDAO, tableInfoDAO, jdbcMetaService, semanticIndexService, columnValueConfig, permissionService);
 
         testColumnPO = new ColumnInfoPO();
         testColumnPO.setId("col1");
@@ -79,7 +82,11 @@ class ColumnValueServiceTest {
 
         testTablePO = new TableInfoPO();
         testTablePO.setId("table1");
+        testTablePO.setDataSourceId("ds1");
         testTablePO.setName("users");
+
+        org.mockito.Mockito.lenient().when(columnInfoDAO.findById("col1")).thenReturn(Optional.of(testColumnPO));
+        org.mockito.Mockito.lenient().when(tableInfoDAO.findById("table1")).thenReturn(Optional.of(testTablePO));
     }
 
     private SemanticSearchDocument createValueDoc(String id, List<String> keywords) {
@@ -170,13 +177,25 @@ class ColumnValueServiceTest {
         }
 
         @Test
-        @DisplayName("throws IllegalArgumentException when columnId not found")
+        @DisplayName("throws DatiException when columnId not found")
         void extractValues_columnNotFound() {
             when(columnInfoDAO.findById("invalid")).thenReturn(Optional.empty());
 
             assertThrows(DatiException.class, () ->
                     columnValueService.extractValues("ds1", "invalid", false)
             );
+        }
+
+        @Test
+        @DisplayName("throws INVALID_PARAMETER when datasourceId does not match column table datasource")
+        void extractValues_mismatchedDatasource_throwsInvalidParameter() {
+            when(columnInfoDAO.findById("col1")).thenReturn(Optional.of(testColumnPO));
+            when(tableInfoDAO.findById("table1")).thenReturn(Optional.of(testTablePO)); // testTablePO has datasourceId="ds1"
+
+            DatiException ex = assertThrows(DatiException.class, () ->
+                    columnValueService.extractValues("ds_wrong", "col1", false)
+            );
+            assertThat(ex.getCode()).isEqualTo(com.dati.base.exception.ErrorCode.INVALID_PARAMETER);
         }
     }
 

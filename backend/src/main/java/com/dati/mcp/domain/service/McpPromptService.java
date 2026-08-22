@@ -9,9 +9,10 @@ import com.dati.common.template.TemplateParser;
 import com.dati.mcp.domain.model.McpPrompt;
 import com.dati.mcp.domain.model.PromptParameter;
 import com.dati.mcp.repository.dao.McpPromptDAO;
-import com.dati.mcp.repository.dao.McpServiceDAO;
 import com.dati.mcp.repository.mapper.McpPromptMapper;
 import com.dati.mcp.repository.po.McpPromptPO;
+import com.dati.permission.domain.model.Permission;
+import com.dati.permission.domain.service.PermissionService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,20 +24,20 @@ import java.util.Set;
 public class McpPromptService {
 
     private final McpPromptDAO promptDAO;
-    private final McpServiceDAO mcpServiceDAO;
     private final TemplateParser templateParser;
+    private final PermissionService permissionService;
 
     public McpPromptService(McpPromptDAO promptDAO,
-                            McpServiceDAO mcpServiceDAO,
-                            TemplateParser templateParser) {
+                            TemplateParser templateParser,
+                            PermissionService permissionService) {
         this.promptDAO = promptDAO;
-        this.mcpServiceDAO = mcpServiceDAO;
         this.templateParser = templateParser;
+        this.permissionService = permissionService;
     }
 
     @Transactional
     public String createPrompt(String serviceId, McpPrompt prompt) {
-        validateServiceExists(serviceId);
+        permissionService.requireMcpService(serviceId, Permission.EDIT);
         if (promptDAO.existsByServiceIdAndName(serviceId, prompt.getName())) {
             throw new DatiException(ErrorCode.MS_PROMPT_NAME_EXISTS, prompt.getName());
         }
@@ -48,6 +49,7 @@ public class McpPromptService {
 
     @Transactional
     public void updatePrompt(McpPrompt prompt, Boolean enabled) {
+        permissionService.requireMcpService(prompt.getServiceId(), Permission.EDIT);
         McpPromptPO po = promptDAO.findByServiceIdAndId(prompt.getServiceId(), prompt.getId())
             .orElseThrow(() -> new DatiException(ErrorCode.MS_PROMPT_NOT_FOUND, prompt.getId()));
         if (prompt.getName() != null && !po.getName().equals(prompt.getName())
@@ -79,6 +81,7 @@ public class McpPromptService {
 
     @Transactional
     public void deletePrompt(String serviceId, String promptId) {
+        permissionService.requireMcpService(serviceId, Permission.EDIT);
         McpPromptPO po = promptDAO.findByServiceIdAndId(serviceId, promptId)
             .orElseThrow(() -> new DatiException(ErrorCode.MS_PROMPT_NOT_FOUND, promptId));
         promptDAO.delete(po);
@@ -86,7 +89,7 @@ public class McpPromptService {
 
     @Transactional(readOnly = true)
     public List<McpPrompt> listPrompts(String serviceId) {
-        validateServiceExists(serviceId);
+        permissionService.requireMcpService(serviceId, Permission.VIEW);
         return promptDAO.findAllByServiceIdOrderByCreatedAtDesc(serviceId)
             .stream().map(McpPromptMapper::toModel).toList();
     }
@@ -102,12 +105,6 @@ public class McpPromptService {
                     .map(McpPromptMapper::toPO)
                     .toList();
             promptDAO.saveAll(pos);
-        }
-    }
-
-    private void validateServiceExists(String serviceId) {
-        if (!mcpServiceDAO.existsById(serviceId)) {
-            throw new DatiException(ErrorCode.MS_SERVICE_NOT_FOUND, serviceId);
         }
     }
 
