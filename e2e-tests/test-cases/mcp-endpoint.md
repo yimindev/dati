@@ -197,3 +197,31 @@
    - **再次调用同参数** → `change_type`==**UPDATE**、`old.description`==`term_desc`（幂等 upsert，不重复创建）
 3. **参数错误 → isError 结果（既有 ToolExecuteException 语义）**：`tools/call` update_table_info，arguments.description 为 501 字符 → 状态码 200，`result.isError`==**true**，`result.content[0].text` 含 `size must be between 0 and 500`（binder 层 PARAM_INVALID 走 isError 供 LLM 自纠错，与 TC-END-003 的 SQL 策略违规一致；非 JSON-RPC error）
 4. **清理**：平台 API DELETE `/v1/terms/{id}` 删除测试术语（按步骤 2 术语名查询 id）；删除两个测试服务
+
+---
+
+## TC-END-014 参数化 SQL 系统参数协议链路端到端验证 (Schema 隔离 + 运行时注入)
+**级别：** P0
+**前置：** 已登录，已发布服务（含绑定种子数据源的 PARAMETERIZED_SQL 自定义工具，sql_template 包含业务参数与系统参数 `_user.id` / `_now`）
+**数据：** `chinook.e2e.seeded_datasource_name`
+
+1. **准备服务与工具**：
+   - 创建 MCP 服务（绑定种子数据源）
+   - 创建自定义工具（`tool_type`=PARAMETERIZED_SQL，`name`="query_genre_by_user"）：
+     - `sql_template`: `SELECT genreid, name FROM genre WHERE genreid = {{genre_id}} {{#if _user.name}}AND '{{_user.name}}' = '{{_user.name}}'{{/if}}`
+     - `parameters`: `[{"name": "genre_id", "type": "Number", "required": true}]`
+   - 发布服务（`POST /publish`）
+2. **协议 Schema 隔离验证 (`tools/list`)**：
+   - 向 `POST /{code}/mcp` 发送 `tools/list`
+   - 检查该工具 `query_genre_by_user` 的 `inputSchema`：
+     - `properties` **仅包含业务参数 `genre_id`**，**绝对不包含** `_user.name` 等系统变量
+     - `required` 仅包含 `["genre_id"]`
+3. **协议调用运行时注入验证 (`tools/call`)**：
+   - 发送 `tools/call`，params `{name: "query_genre_by_user", arguments: {"genre_id": 1}}`（仅传业务参数）
+   - 验证 HTTP 200，`result.isError` == false
+   - `result.structuredContent.type` == `SQL_EXECUTION`
+   - `result.structuredContent.results[0].rows` 包含 genreid=1 的记录（服务端认证身份与系统变量成功解析注入）
+4. **防伪造/防篡改验证**：
+   - 发送 `tools/call`，params `{name: "query_genre_by_user", arguments: {"genre_id": 1, "_user.name": "attacker"}}`
+   - 验证 HTTP 200，`result.isError` == false（客户端伪造参数被服务端真实上下文强制覆盖）
+5. 删除服务（清理）

@@ -416,3 +416,29 @@
 5. 平台 API 回读 → `description` 已更新为 `term_desc_v2`
 6. **主题不在范围**：args `terms[0].subject_name`=`write_tool.outside_subject` → HTTP 200，`results[0].success`=false，`error.error_category`=**SCOPE_ERROR**
 7. **清理**：平台 API DELETE `/v1/terms/{id}` 删除测试术语（按步骤 3 查到的 id），删除服务
+
+---
+
+## TC-MCP-024 PARAMETERIZED_SQL 自定义工具内置系统变量执行与防篡改
+**级别：** P1
+**前置：** 已登录，种子数据源已就绪（TC-SEM-000）
+**数据：** `chinook.e2e.seeded_datasource_name`
+
+1. 搜索种子数据源获取 datasourceId → 创建 MCP 服务（携带 `data_scopes` 绑定该数据源）
+2. **创建包含系统变量的 PARAMETERIZED_SQL 工具**：POST `/v1/mcp-services/{id}/tools`
+   - `tool_type`: `PARAMETERIZED_SQL`
+   - `name`: `query_user_audit`
+   - `config`（JSON 字符串）：
+     ```json
+     {
+       "data_source_id": "<seedDsId>",
+       "sql_template": "SELECT count(*) as cnt FROM genre WHERE 1=1 {{#if _user.name}}AND '{{_user.name}}' = '{{_user.name}}'{{/if}} AND '{{_date}}' LIKE '____-__-__'",
+       "parameters": []
+     }
+     ```
+3. **测试执行（正向注入）**：POST `/v1/mcp-services/{id}/tools/{toolId}/test`，args `{}`
+   - 验证 HTTP 200，`success`=true
+   - `data.type`=SQL_EXECUTION，`data.results[0].rows` 成功返回（服务端自动注入当前登录用户的 `_user.name` 与当前日期 `_date`）
+4. **防篡改验证**：再次测试执行，args 传入 `{"_user.name": "fake_hacker_name"}`
+   - 验证 HTTP 200，`success`=true，底层执行依然以当前真实登录用户的用户名执行（系统变量优先覆盖客户端传参）
+5. 删除服务（清理）
