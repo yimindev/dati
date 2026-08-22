@@ -29,7 +29,10 @@ import java.sql.SQLException;
 import java.util.List;
 import java.util.Optional;
 
+import com.dati.base.exception.DatiException;
+import com.dati.base.exception.ErrorCode;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
@@ -381,9 +384,11 @@ class ColumnServiceTest {
         when(tableInfoDAO.findById(TestFixtures.TEST_TABLE_ID)).thenReturn(Optional.empty());
 
         // when & then
-        assertThrows(Exception.class, () ->
+        assertThatThrownBy(() ->
             columnService.syncColumns(TestFixtures.TEST_DATASOURCE_ID, TestFixtures.TEST_TABLE_ID, true)
-        );
+        ).isInstanceOf(DatiException.class)
+         .satisfies(e -> assertThat(((DatiException) e).getCode()).isEqualTo(ErrorCode.DS_TABLE_NOT_FOUND));
+
         verify(columnInfoDAO, never()).deleteByTableId(any());
         verify(columnInfoDAO, never()).saveAll(any());
     }

@@ -28,7 +28,10 @@ import java.sql.SQLException;
 import java.util.Collections;
 import java.util.List;
 
+import com.dati.base.exception.DatiException;
+import com.dati.base.exception.ErrorCode;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
@@ -194,6 +197,31 @@ class TableServiceTest {
         // then
         assertThat(result).isEmpty();
         verify(tableInfoDAO, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Batch add tables - table not in datasource throws DS_TABLE_NOT_FOUND")
+    void batchAddTables_tableNotInDatasource_throwsTableNotFound() throws SQLException {
+        AddTableRequest request = new AddTableRequest();
+        request.setName("ghost_table");
+        request.setSchema("public");
+
+        when(jdbcMetaService.getTables(TestFixtures.TEST_DATASOURCE_ID, null, "public"))
+                .thenReturn(List.of(new Table("other_table", "")));
+
+        assertThatThrownBy(() -> tableService.batchAddTables(TestFixtures.TEST_DATASOURCE_ID, List.of(request)))
+                .isInstanceOf(DatiException.class)
+                .satisfies(e -> assertThat(((DatiException) e).getCode()).isEqualTo(ErrorCode.DS_TABLE_NOT_FOUND));
+    }
+
+    @Test
+    @DisplayName("Delete table - table not found throws DS_TABLE_NOT_FOUND")
+    void deleteTable_tableNotFound_throwsTableNotFound() {
+        when(tableInfoDAO.existsById("ghost-id")).thenReturn(false);
+
+        assertThatThrownBy(() -> tableService.deleteTable("ghost-id"))
+                .isInstanceOf(DatiException.class)
+                .satisfies(e -> assertThat(((DatiException) e).getCode()).isEqualTo(ErrorCode.DS_TABLE_NOT_FOUND));
     }
 
     @Test

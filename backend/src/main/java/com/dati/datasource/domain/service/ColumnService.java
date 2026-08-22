@@ -116,7 +116,7 @@ public class ColumnService {
     @Transactional
     public void syncColumns(String datasourceId, String tableId, boolean overwriteExisting) throws SQLException {
         TableInfo tableInfo = TableMapper.toTableInfo(tableInfoDAO.findById(tableId)
-                .orElseThrow(() -> new DatiException(ErrorCode.DS_NOT_FOUND, "Table not found: " + tableId)));
+                .orElseThrow(() -> new DatiException(ErrorCode.DS_TABLE_NOT_FOUND, tableId)));
         
         Map<String, ColumnInfoPO> existingColumns = columnInfoDAO.findByTableId(tableId)
                 .stream()

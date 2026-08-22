@@ -2,6 +2,16 @@
 # 问题修复后从 BUGS.yaml 移入此处。
 # 若已修复的问题再次复现，必须从本文件移回 BUGS.yaml 并标记 REGRESSION。
 bugs:
+  - id: BUG-20260821-001
+    title: 表不存在错误使用 DS002(Data source not found) 错误码，语义误导
+    module: 数据源管理
+    severity: low
+    fixed_at: 2026-08-22
+    description: |
+      TC-DS-012 中表错误场景改用独立的错误码 DS007(DS_TABLE_NOT_FOUND)，“Table not found: {0}”。
+      修复 TableService（batchAddTables / deleteTable）与 ColumnService（syncColumns），
+      消除了 "Data source not found: Table not found: ..." 的双重冲突提示与错误码混淆。
+
   - id: BUG-20260820-001
     title: UPDATE_COLUMN_INFO/列同步 静默重置 extract_value_enabled 并级联删除 FIELD_VALUE 文档
     module: MCP 服务管理 / 数据源管理

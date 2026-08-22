@@ -1,12 +1,4 @@
 # 待修复问题清单
 # Agent 跑完 E2E 测试后自动维护此文件
 
-bugs:
-
-  - id: BUG-20260821-001
-    title: 表不存在错误使用 DS002(Data source not found) 错误码，语义误导
-    module: 数据源管理
-    severity: low
-    found_at: 2026-08-21
-    description: |
-      TC-DS-012 中 3 个表错误场景（添加不存在的表/删除不存在的表/对不存在的表同步列）均返回 404，但错误码为 DS002、message 前缀 'Data source not found: Table not found: ...'。错误码与消息均指向数据源而非表，排查时产生误导。建议表级错误使用独立的错误码（如 DS 系列表相关码），message 直接以 'Table not found' 开头。
+bugs: []

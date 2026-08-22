@@ -86,8 +86,7 @@ public class TableService {
 
         for (AddTableRequest request : tables) {
             if (!validTableNames.contains(request.getName())) {
-                throw new DatiException(ErrorCode.DS_NOT_FOUND,
-                        "Table not found in datasource: " + request.getName());
+                throw new DatiException(ErrorCode.DS_TABLE_NOT_FOUND, request.getName());
             }
             TableInfo tableInfo = new TableInfo();
             tableInfo.setDatasourceId(datasourceId);
@@ -171,7 +170,7 @@ public class TableService {
     @Transactional
     public void deleteTable(String tableId) {
         if (!tableInfoDAO.existsById(tableId)) {
-            throw new DatiException(ErrorCode.DS_NOT_FOUND, "Table not found: " + tableId);
+            throw new DatiException(ErrorCode.DS_TABLE_NOT_FOUND, tableId);
         }
         deleteTables(List.of(tableId));
     }
