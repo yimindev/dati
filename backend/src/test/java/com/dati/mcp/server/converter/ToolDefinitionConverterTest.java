@@ -197,4 +197,61 @@ class ToolDefinitionConverterTest {
         assertEquals(Boolean.FALSE, tool.annotations().destructiveHint());
         assertEquals(Boolean.TRUE, tool.annotations().idempotentHint());
     }
+
+    @Test
+    @DisplayName("execute_sql description dynamically includes default allowed operations (SELECT) and max rows")
+    void executeSqlDefaultAllowedOperations() {
+        var content = new McpServiceSnapshot.SnapshotContent();
+        content.setPrebuiltTools(List.of(
+            TestFixtures.createTestPrebuiltToolDraft(McpToolType.EXECUTE_SQL, true, new ToolConfig.ExecuteSqlConfig())));
+        List<McpSchema.Tool> tools = converter.convert(content);
+        assertEquals(1, tools.size());
+        assertEquals("Execute an SQL query or statement against a data source. Allowed operations: SELECT. Max rows: 1000",
+                tools.getFirst().description());
+    }
+
+    @Test
+    @DisplayName("execute_sql description reflects custom allowed operations, multi-statement, and custom max rows")
+    void executeSqlCustomAllowedOperations() {
+        ToolConfig.ExecuteSqlConfig cfg = new ToolConfig.ExecuteSqlConfig();
+        cfg.setMaxRows(500);
+        com.dati.mcp.domain.model.SqlPolicy policy = new com.dati.mcp.domain.model.SqlPolicy();
+        policy.setAllowSelect(true);
+        policy.setAllowInsert(true);
+        policy.setAllowUpdate(true);
+        policy.setAllowMulti(true);
+        cfg.setSqlPolicy(policy);
+
+        var content = new McpServiceSnapshot.SnapshotContent();
+        content.setPrebuiltTools(List.of(
+            TestFixtures.createTestPrebuiltToolDraft(McpToolType.EXECUTE_SQL, true, cfg)));
+        List<McpSchema.Tool> tools = converter.convert(content);
+        assertEquals(1, tools.size());
+        assertEquals("Execute an SQL query or statement against a data source. Allowed operations: SELECT, INSERT, UPDATE (multi-statement supported). Max rows: 500",
+                tools.getFirst().description());
+    }
+
+    @Test
+    @DisplayName("execute_sql description shows ALL when all operations are allowed with max rows")
+    void executeSqlAllAllowedOperations() {
+        ToolConfig.ExecuteSqlConfig cfg = new ToolConfig.ExecuteSqlConfig();
+        com.dati.mcp.domain.model.SqlPolicy policy = new com.dati.mcp.domain.model.SqlPolicy();
+        policy.setAllowSelect(true);
+        policy.setAllowInsert(true);
+        policy.setAllowUpdate(true);
+        policy.setAllowDelete(true);
+        policy.setAllowDdl(true);
+        policy.setAllowMetadata(true);
+        policy.setAllowTransaction(true);
+        policy.setAllowSet(true);
+        cfg.setSqlPolicy(policy);
+
+        var content = new McpServiceSnapshot.SnapshotContent();
+        content.setPrebuiltTools(List.of(
+            TestFixtures.createTestPrebuiltToolDraft(McpToolType.EXECUTE_SQL, true, cfg)));
+        List<McpSchema.Tool> tools = converter.convert(content);
+        assertEquals(1, tools.size());
+        assertEquals("Execute an SQL query or statement against a data source. Allowed operations: ALL. Max rows: 1000",
+                tools.getFirst().description());
+    }
 }

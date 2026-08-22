@@ -3,6 +3,7 @@ package com.dati.mcp.server.converter;
 import com.dati.common.JsonUtils;
 import com.dati.mcp.domain.model.McpServiceSnapshot;
 import com.dati.mcp.domain.model.McpToolType;
+import com.dati.mcp.domain.model.SqlPolicy;
 import com.dati.mcp.domain.model.ToolConfig;
 import com.dati.mcp.domain.model.ToolParameter;
 import com.dati.mcp.domain.service.McpParameterSchemaGenerator;
@@ -50,7 +51,7 @@ public class ToolDefinitionConverter {
                     .filter(t -> t.toolType() == type && t.enabled())
                     .findFirst()
                     .ifPresent(t -> {
-                        tools.add(buildPrebuilt(type));
+                        tools.add(buildPrebuilt(t));
                         usedNames.add(type.getToolName());
                     });
             }
@@ -65,10 +66,16 @@ public class ToolDefinitionConverter {
         return tools;
     }
 
-    private McpSchema.Tool buildPrebuilt(McpToolType type) {
+    private McpSchema.Tool buildPrebuilt(McpServiceSnapshot.PrebuiltToolDraft draft) {
+        McpToolType type = draft.toolType();
+        String description = type.getDescription();
+        if (type == McpToolType.EXECUTE_SQL && draft.config() instanceof ToolConfig.ExecuteSqlConfig cfg) {
+            description = formatExecuteSqlDescription(description, cfg.getSqlPolicy(), cfg.getMaxRows());
+        }
+
         var builder = McpSchema.Tool.builder(type.getToolName(),
                 schemaGenerator.generate(type.getParameterType()))
-            .description(type.getDescription());
+            .description(description);
         if (type.getTitle() != null) {
             builder.title(type.getTitle());
         }
@@ -77,6 +84,51 @@ public class ToolDefinitionConverter {
             builder.annotations(annotations);
         }
         return builder.build();
+    }
+
+    private String formatExecuteSqlDescription(String baseDescription, SqlPolicy policy, int maxRows) {
+        if (policy == null && maxRows <= 0) {
+            return baseDescription;
+        }
+
+        String base = (baseDescription != null && baseDescription.endsWith("."))
+                ? baseDescription.substring(0, baseDescription.length() - 1)
+                : baseDescription;
+
+        StringBuilder sb = new StringBuilder(base);
+
+        if (policy != null) {
+            List<String> ops = new ArrayList<>();
+            if (policy.isAllowSelect()) ops.add("SELECT");
+            if (policy.isAllowInsert()) ops.add("INSERT");
+            if (policy.isAllowUpdate()) ops.add("UPDATE");
+            if (policy.isAllowDelete()) ops.add("DELETE");
+            if (policy.isAllowDdl()) ops.add("DDL");
+            if (policy.isAllowMetadata()) ops.add("METADATA");
+            if (policy.isAllowTransaction()) ops.add("TRANSACTION");
+            if (policy.isAllowSet()) ops.add("SET");
+
+            String allowed;
+            if (ops.size() == 8) {
+                allowed = "ALL";
+            } else if (ops.isEmpty()) {
+                allowed = "NONE";
+            } else {
+                allowed = String.join(", ", ops);
+            }
+
+            if (policy.isAllowMulti()) {
+                allowed += " (multi-statement supported)";
+            }
+
+            sb.append(". Allowed operations: ").append(allowed);
+        }
+
+        if (maxRows > 0) {
+            sb.append(". Max rows: ").append(maxRows);
+        }
+
+        return sb.toString();
     }
 
     /** Parses the enum-declared annotations JSON; null/blank means no annotations. */
