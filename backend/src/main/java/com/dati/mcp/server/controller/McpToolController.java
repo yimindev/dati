@@ -1,6 +1,7 @@
 package com.dati.mcp.server.controller;
 
 import com.dati.base.pojo.IdResponse;
+import com.dati.mcp.domain.model.DetectedAnnotations;
 import com.dati.mcp.domain.model.McpCustomTool;
 import com.dati.mcp.domain.model.McpPrebuiltToolConfig;
 import com.dati.mcp.domain.service.McpToolService;
@@ -9,6 +10,8 @@ import com.dati.mcp.domain.service.ToolsResult;
 import com.dati.mcp.server.assembler.McpToolAssembler;
 import com.dati.mcp.server.pojo.CreateCustomToolRequest;
 import com.dati.mcp.server.pojo.CustomToolRequest;
+import com.dati.mcp.server.pojo.DetectAnnotationsRequest;
+import com.dati.mcp.server.pojo.DetectAnnotationsResponse;
 import com.dati.mcp.server.pojo.ToolTestRequest;
 import com.dati.mcp.server.pojo.ToolTestResponse;
 import com.dati.mcp.server.pojo.ToolsResponse;
@@ -84,5 +87,17 @@ public class McpToolController {
                                       @PathVariable String toolId,
                                       @RequestBody ToolTestRequest request) {
         return mcpToolTestService.test(serviceId, toolId, request);
+    }
+
+    @PostMapping("/detect-annotations")
+    public DetectAnnotationsResponse detectAnnotations(@PathVariable String serviceId,
+                                                        @Valid @RequestBody DetectAnnotationsRequest request) {
+        DetectedAnnotations detected = mcpToolService.detectAnnotations(request.getTemplate(), request.getParameters());
+        return new DetectAnnotationsResponse(
+                detected.readOnly(),
+                detected.idempotent(),
+                detected.destructive(),
+                detected.detectedOperation()
+        );
     }
 }

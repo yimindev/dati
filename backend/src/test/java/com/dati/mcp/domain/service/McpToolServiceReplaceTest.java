@@ -2,6 +2,7 @@ package com.dati.mcp.domain.service;
 
 import com.dati.TestFixtures;
 import com.dati.common.template.HandlebarsStyleParser;
+import com.dati.common.template.SqlRenderer;
 import com.dati.mcp.domain.model.McpCustomTool;
 import com.dati.mcp.domain.model.McpServiceStatus;
 import com.dati.mcp.repository.dao.McpCustomToolDAO;
@@ -42,7 +43,7 @@ class McpToolServiceReplaceTest {
     private McpServiceDAO mcpServiceDAO;
 
     private McpToolService service() {
-        return new McpToolService(prebuiltDAO, customToolDAO, mcpServiceDAO, new HandlebarsStyleParser());
+        return new McpToolService(prebuiltDAO, customToolDAO, mcpServiceDAO, new HandlebarsStyleParser(), new SqlRenderer());
     }
 
     private McpServicePO saveService() {

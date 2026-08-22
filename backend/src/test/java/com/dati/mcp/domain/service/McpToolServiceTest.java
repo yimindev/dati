@@ -33,6 +33,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -53,6 +54,9 @@ class McpToolServiceTest {
 
     @Mock
     private TemplateParser templateParser;
+
+    @Mock
+    private com.dati.common.template.SqlRenderer sqlRenderer;
 
     @Captor
     ArgumentCaptor<List<McpCustomToolPO>> captor;
@@ -395,4 +399,49 @@ class McpToolServiceTest {
         assertThat(captor.getValue().getFirst().getName()).isEqualTo("restored_tool");
     }
 
+    // ── 智能检测行为标注 ──
+
+    @Test
+    @DisplayName("detectAnnotations - blank template throws INVALID_PARAMETER")
+    void detectAnnotations_blankTemplate_throwsException() {
+        assertThrows(DatiException.class, () -> mcpToolService.detectAnnotations("   ", List.of()));
+    }
+
+    @Test
+    @DisplayName("detectAnnotations - SELECT statement returns readOnly=true, idempotent=true, destructive=false")
+    void detectAnnotations_select_returnsReadOnly() {
+        CompiledTemplate compiled = mock(CompiledTemplate.class);
+        when(compiled.getVariables()).thenReturn(Set.of("status"));
+        when(templateParser.parse("SELECT * FROM tasks WHERE status = {{status}}")).thenReturn(compiled);
+        when(sqlRenderer.render(eq(compiled), any())).thenReturn(new com.dati.common.template.PreparedSql("SELECT * FROM tasks WHERE status = ?", List.of()));
+
+        com.dati.mcp.domain.model.DetectedAnnotations result = mcpToolService.detectAnnotations(
+                "SELECT * FROM tasks WHERE status = {{status}}",
+                List.of(new com.dati.mcp.domain.model.ToolParameter("status", "String", false, null, null))
+        );
+
+        assertThat(result.readOnly()).isTrue();
+        assertThat(result.idempotent()).isTrue();
+        assertThat(result.destructive()).isFalse();
+        assertThat(result.detectedOperation()).isEqualTo("SELECT");
+    }
+
+    @Test
+    @DisplayName("detectAnnotations - DELETE statement returns destructive=true, readOnly=false")
+    void detectAnnotations_delete_returnsDestructive() {
+        CompiledTemplate compiled = mock(CompiledTemplate.class);
+        when(compiled.getVariables()).thenReturn(Set.of());
+        when(templateParser.parse("DELETE FROM tasks")).thenReturn(compiled);
+        when(sqlRenderer.render(eq(compiled), any())).thenReturn(new com.dati.common.template.PreparedSql("DELETE FROM tasks", List.of()));
+
+        com.dati.mcp.domain.model.DetectedAnnotations result = mcpToolService.detectAnnotations(
+                "DELETE FROM tasks",
+                List.of()
+        );
+
+        assertThat(result.readOnly()).isFalse();
+        assertThat(result.idempotent()).isFalse();
+        assertThat(result.destructive()).isTrue();
+        assertThat(result.detectedOperation()).isEqualTo("DELETE");
+    }
 }

@@ -4,8 +4,14 @@ import com.dati.base.exception.DatiException;
 import com.dati.base.exception.ErrorCode;
 import com.dati.common.JsonUtils;
 import com.dati.common.template.CompiledTemplate;
+import com.dati.common.template.PreparedSql;
+import com.dati.common.template.SqlRenderer;
 import com.dati.common.template.TemplateParseException;
 import com.dati.common.template.TemplateParser;
+import com.dati.db.analysis.SqlAnalysisResult;
+import com.dati.db.analysis.SqlAnalyzer;
+import com.dati.db.analysis.SqlOperationType;
+import com.dati.mcp.domain.model.DetectedAnnotations;
 import com.dati.mcp.domain.model.McpCustomTool;
 import com.dati.mcp.domain.model.McpPrebuiltToolConfig;
 import com.dati.mcp.domain.model.ToolConfig;
@@ -22,6 +28,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -39,15 +46,18 @@ public class McpToolService {
     private final McpCustomToolDAO customToolDAO;
     private final McpServiceDAO mcpServiceDAO;
     private final TemplateParser templateParser;
+    private final SqlRenderer sqlRenderer;
 
     public McpToolService(McpPrebuiltToolConfigDAO prebuiltDAO,
                           McpCustomToolDAO customToolDAO,
                           McpServiceDAO mcpServiceDAO,
-                          TemplateParser templateParser) {
+                          TemplateParser templateParser,
+                          SqlRenderer sqlRenderer) {
         this.prebuiltDAO = prebuiltDAO;
         this.customToolDAO = customToolDAO;
         this.mcpServiceDAO = mcpServiceDAO;
         this.templateParser = templateParser;
+        this.sqlRenderer = sqlRenderer;
     }
 
     // ── 列表 ──
@@ -235,5 +245,122 @@ public class McpToolService {
             throw new DatiException(ErrorCode.MS_TOOL_ARG_MISMATCH,
                 "Template references undefined parameter(s): " + String.join(", ", undefinedParams));
         }
+    }
+
+    public DetectedAnnotations detectAnnotations(String template, List<ToolParameter> parameters) {
+        if (template == null || template.isBlank()) {
+            throw new DatiException(ErrorCode.INVALID_PARAMETER, "template cannot be blank");
+        }
+
+        CompiledTemplate compiled;
+        try {
+            compiled = templateParser.parse(template);
+        } catch (TemplateParseException e) {
+            throw new DatiException(ErrorCode.INVALID_PARAMETER, e.getMessage());
+        }
+
+        Map<String, Object> mockValues = generateMockValues(compiled, parameters);
+        SqlAnalysisResult analysis;
+        try {
+            PreparedSql ps = sqlRenderer.render(compiled, mockValues);
+            analysis = SqlAnalyzer.analyze(ps.sql());
+        } catch (Exception e) {
+            analysis = SqlAnalyzer.analyze(template);
+        }
+
+        SqlOperationType op = analysis.type();
+        if (op == SqlOperationType.MULTI && analysis.statementTypes() != null && !analysis.statementTypes().isEmpty()) {
+            if (analysis.statementTypes().stream().anyMatch(t -> t == SqlOperationType.DELETE || t == SqlOperationType.DDL)) {
+                op = SqlOperationType.DELETE;
+            } else if (analysis.statementTypes().stream().anyMatch(t -> t == SqlOperationType.INSERT || t == SqlOperationType.UPDATE || t == SqlOperationType.MERGE)) {
+                op = SqlOperationType.UPDATE;
+            } else if (analysis.statementTypes().stream().allMatch(t -> t == SqlOperationType.SELECT || t == SqlOperationType.METADATA)) {
+                op = SqlOperationType.SELECT;
+            }
+        }
+
+        Boolean readOnly = null;
+        Boolean idempotent = null;
+        Boolean destructive = null;
+        String detectedOperation = op != null ? op.name() : "UNKNOWN";
+
+        if (op != null) {
+            switch (op) {
+                case SELECT, METADATA -> {
+                    readOnly = true;
+                    idempotent = true;
+                    destructive = false;
+                }
+                case UPDATE, MERGE -> {
+                    readOnly = false;
+                    idempotent = true;
+                    destructive = false;
+                }
+                case INSERT -> {
+                    readOnly = false;
+                    idempotent = false;
+                    destructive = false;
+                }
+                case DELETE, DDL -> {
+                    readOnly = false;
+                    idempotent = false;
+                    destructive = true;
+                }
+                default -> {
+                    String trimmed = template.trim().toUpperCase();
+                    if (trimmed.startsWith("SELECT") || trimmed.startsWith("WITH")) {
+                        readOnly = true;
+                        idempotent = true;
+                        destructive = false;
+                        detectedOperation = "SELECT";
+                    } else if (trimmed.startsWith("DELETE") || trimmed.startsWith("DROP") || trimmed.startsWith("TRUNCATE")) {
+                        readOnly = false;
+                        idempotent = false;
+                        destructive = true;
+                        detectedOperation = "DELETE";
+                    } else if (trimmed.startsWith("UPDATE")) {
+                        readOnly = false;
+                        idempotent = true;
+                        destructive = false;
+                        detectedOperation = "UPDATE";
+                    } else if (trimmed.startsWith("INSERT")) {
+                        readOnly = false;
+                        idempotent = false;
+                        destructive = false;
+                        detectedOperation = "INSERT";
+                    }
+                }
+            }
+        }
+
+        return new DetectedAnnotations(readOnly, idempotent, destructive, detectedOperation);
+    }
+
+    private Map<String, Object> generateMockValues(CompiledTemplate compiled, List<ToolParameter> parameters) {
+        Map<String, Object> values = new HashMap<>();
+        Map<String, String> typeMap = new HashMap<>();
+        if (parameters != null) {
+            for (ToolParameter p : parameters) {
+                if (p.getName() != null) {
+                    typeMap.put(p.getName(), p.getType());
+                }
+            }
+        }
+        for (String var : compiled.getVariables()) {
+            String type = typeMap.getOrDefault(var, "String");
+            values.put(var, createMockValue(type));
+        }
+        return values;
+    }
+
+    private Object createMockValue(String type) {
+        if (type == null) return "mock";
+        return switch (type.toLowerCase()) {
+            case "number", "integer", "int", "double", "float" -> 1;
+            case "boolean", "bool" -> true;
+            case "datetime", "date", "time", "timestamp" -> "2026-01-01 00:00:00";
+            case "array", "list" -> List.of("mock_item");
+            default -> "mock";
+        };
     }
 }

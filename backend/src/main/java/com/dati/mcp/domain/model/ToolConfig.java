@@ -48,6 +48,9 @@ public interface ToolConfig {
         private List<ToolParameter> parameters = new ArrayList<>();
         private int timeout = 30;
         private int maxRows = 1000;
+        private Boolean readOnly;
+        private Boolean idempotent;
+        private Boolean destructive;
     }
 
     /** Metadata update tools (UPDATE_TABLE_INFO / UPDATE_COLUMN_INFO / UPSERT_TERM) have no per-service config. */

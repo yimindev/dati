@@ -164,4 +164,37 @@ class ToolDefinitionConverterTest {
         // EXECUTE_SQL declares neither read-only nor write annotations (can run write SQL)
         assertNull(sql.annotations());
     }
+
+    @Test
+    @DisplayName("custom tool annotations are null when unset")
+    void customToolAnnotationsNullWhenUnset() {
+        ToolConfig.ParamSqlConfig cfg = new ToolConfig.ParamSqlConfig();
+        cfg.setSqlTemplate("SELECT 1");
+        var content = new McpServiceSnapshot.SnapshotContent();
+        content.setCustomTools(List.of(
+            TestFixtures.createTestCustomToolDraft("raw_sql", McpToolType.PARAMETERIZED_SQL, true, cfg)));
+        List<McpSchema.Tool> tools = converter.convert(content);
+        assertEquals(1, tools.size());
+        assertNull(tools.getFirst().annotations());
+    }
+
+    @Test
+    @DisplayName("custom tool annotations reflect configured values")
+    void customToolAnnotationsReflectConfig() {
+        ToolConfig.ParamSqlConfig cfg = new ToolConfig.ParamSqlConfig();
+        cfg.setSqlTemplate("SELECT 1");
+        cfg.setReadOnly(true);
+        cfg.setDestructive(false);
+        cfg.setIdempotent(true);
+        var content = new McpServiceSnapshot.SnapshotContent();
+        content.setCustomTools(List.of(
+            TestFixtures.createTestCustomToolDraft("read_query", McpToolType.PARAMETERIZED_SQL, true, cfg)));
+        List<McpSchema.Tool> tools = converter.convert(content);
+        assertEquals(1, tools.size());
+        McpSchema.Tool tool = tools.getFirst();
+        assertNotNull(tool.annotations());
+        assertEquals(Boolean.TRUE, tool.annotations().readOnlyHint());
+        assertEquals(Boolean.FALSE, tool.annotations().destructiveHint());
+        assertEquals(Boolean.TRUE, tool.annotations().idempotentHint());
+    }
 }

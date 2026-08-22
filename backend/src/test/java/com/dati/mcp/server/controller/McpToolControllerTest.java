@@ -223,4 +223,20 @@ class McpToolControllerTest {
             .andExpect(jsonPath("$.data.results[1].success").value(false))
             .andExpect(jsonPath("$.data.results[1].error.error_category").value("SCOPE_ERROR"));
     }
+
+    @Test
+    @DisplayName("POST /tools/detect-annotations - delegates to mcpToolService and returns response")
+    void testDetectAnnotations() throws Exception {
+        when(mcpToolService.detectAnnotations(eq("SELECT 1"), any()))
+                .thenReturn(new com.dati.mcp.domain.model.DetectedAnnotations(true, true, false, "SELECT"));
+
+        mockMvc.perform(post("/v1/mcp-services/{serviceId}/tools/detect-annotations", TestFixtures.TEST_MCP_SERVICE_ID)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"template\":\"SELECT 1\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.read_only").value(true))
+                .andExpect(jsonPath("$.idempotent").value(true))
+                .andExpect(jsonPath("$.destructive").value(false))
+                .andExpect(jsonPath("$.detected_operation").value("SELECT"));
+    }
 }

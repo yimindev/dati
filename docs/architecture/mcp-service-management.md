@@ -767,8 +767,7 @@ StatementResult.writeFailure(errorMessage)           // WRITE 失败
 
 - 信任模型：EXECUTE_SQL 的 `sqlPolicy` 是沙箱（LLM 运行时传任意 SQL）；PARAMETERIZED_SQL 的模板由作者配置时编写，运行时仅注入参数值，作者给自己写权限属于自我设限，逻辑冗余。
 - 已从 `ParamSqlConfig` 移除 `sqlPolicy` 字段与 `ParameterizedSqlExecutor` 中的 `policy.validate()` 调用（旧数据中残留的 `sql_policy` JSON 键被 `@JsonIgnoreProperties(ignoreUnknown=true)` 静默丢弃，无需迁移）。
-- 保留的护栏：`ScopeValidator` 表级 scope 校验（基于渲染后 SQL 的表引用）与 `timeout` / `maxRows` 执行限制。
-- 遗留：PARAMETERIZED_SQL 的 MCP annotations 仍未实现 —— 预置工具的 annotations 已落地（枚举 `annotationsJson` 声明 + `ToolDefinitionConverter.buildAnnotations` 解析），动态工具无声明来源，待后续从模板静态分析推导。
+- PARAMETERIZED_SQL 的 MCP annotations 支持显式配置 —— `ParamSqlConfig` 包含可空的 `readOnly`、`idempotent`、`destructive` 字段，默认保持为 `null`；当作者配置时由 `ToolDefinitionConverter` 组装对应 `ToolAnnotations` 下发给 MCP Client。
 
 #### SQL 安全分析引擎独立于 MCP 模块
 

@@ -2,9 +2,9 @@
 import { computed, reactive, ref, watch } from "vue";
 import { ElMessage, type FormInstance, type FormRules } from "element-plus";
 import { useI18n } from "vue-i18n";
-import { Delete, Plus } from "@element-plus/icons-vue";
+import { Delete, Plus, InfoFilled, MagicStick } from "@element-plus/icons-vue";
 import type { McpToolVO, ToolParameter } from "~/api/mcp-tool";
-import { createCustomTool, updateTool } from "~/api/mcp-tool";
+import { createCustomTool, updateTool, detectToolAnnotations } from "~/api/mcp-tool";
 import { getDataScope } from "~/api/mcp-service";
 import { extractTemplateVariables } from "~/api/template-preview";
 
@@ -43,6 +43,20 @@ const rules: FormRules = {
   ],
 };
 
+type TriState = "unset" | "true" | "false";
+
+const toTriState = (v: boolean | null | undefined): TriState => {
+  if (v === true) return "true";
+  if (v === false) return "false";
+  return "unset";
+};
+
+const fromTriState = (v: TriState): boolean | null => {
+  if (v === "true") return true;
+  if (v === "false") return false;
+  return null;
+};
+
 const form = reactive({
   name: "",
   title: "",
@@ -52,7 +66,16 @@ const form = reactive({
   parameters: [] as ToolParameter[],
   maxRows: 1000,
   timeout: 30,
+  readOnly: "unset" as TriState,
+  idempotent: "unset" as TriState,
+  destructive: "unset" as TriState,
 });
+
+const triStateOptions = computed(() => [
+  { label: t("mcpService.tool.annotationUnset"), value: "unset" },
+  { label: t("mcpService.tool.annotationYes"), value: "true" },
+  { label: t("mcpService.tool.annotationNo"), value: "false" },
+]);
 
 const loadForm = () => {
   if (props.tool) {
@@ -65,6 +88,9 @@ const loadForm = () => {
     form.parameters = cfg?.parameters ? [...cfg.parameters] : [];
     form.maxRows = cfg?.max_rows ?? 1000;
     form.timeout = cfg?.timeout ?? 30;
+    form.readOnly = toTriState(cfg?.read_only);
+    form.idempotent = toTriState(cfg?.idempotent);
+    form.destructive = toTriState(cfg?.destructive);
   } else {
     Object.assign(form, {
       name: "",
@@ -75,6 +101,9 @@ const loadForm = () => {
       parameters: [],
       maxRows: 1000,
       timeout: 30,
+      readOnly: "unset",
+      idempotent: "unset",
+      destructive: "unset",
     });
   }
   formRef.value?.clearValidate();
@@ -139,7 +168,30 @@ const removeParam = (i: number) => {
   form.parameters.splice(i, 1);
 };
 
-
+const detecting = ref(false);
+const handleDetectAnnotations = async () => {
+  if (!form.sqlTemplate?.trim()) {
+    ElMessage.warning(t("mcpService.tool.detectEmptySql"));
+    return;
+  }
+  detecting.value = true;
+  try {
+    const resp = await detectToolAnnotations(props.serviceId, {
+      template: form.sqlTemplate,
+      parameters: form.parameters.map((p) => ({ name: p.name, type: p.type })),
+    });
+    form.readOnly = toTriState(resp.read_only);
+    form.idempotent = toTriState(resp.idempotent);
+    form.destructive = toTriState(resp.destructive);
+    ElMessage.success(
+      t("mcpService.tool.detectSuccess", { op: resp.detected_operation || "SQL" }),
+    );
+  } catch (err: any) {
+    ElMessage.error(err?.message || t("common.operationFailed"));
+  } finally {
+    detecting.value = false;
+  }
+};
 
 const handleSave = async () => {
   const valid = await formRef.value?.validate().catch(() => false);
@@ -158,6 +210,9 @@ const handleSave = async () => {
       parameters: form.parameters,
       timeout: form.timeout,
       max_rows: form.maxRows,
+      read_only: fromTriState(form.readOnly),
+      idempotent: fromTriState(form.idempotent),
+      destructive: fromTriState(form.destructive),
     });
 
     if (isEdit.value) {
@@ -298,7 +353,7 @@ const handleSave = async () => {
       </section>
 
       <!-- Execution Limits -->
-      <section class="flex flex-col">
+      <section class="flex flex-col mb-6">
         <h4 class="m-0 mb-4 text-sm font-semibold text-[var(--ep-text-color-primary)] flex items-center gap-2">{{ t("mcpService.tool.execLimit") }}</h4>
         <div class="flex items-start gap-8">
           <div class="w-44">
@@ -308,6 +363,65 @@ const handleSave = async () => {
           <div class="w-44">
             <label class="block mb-1.5 text-[var(--ep-text-color-primary)]">{{ t("mcpService.tool.timeout") }} (s)</label>
             <el-input-number v-model="form.timeout" :min="1" :max="300" size="small" class="w-full" />
+          </div>
+        </div>
+      </section>
+
+      <!-- MCP Annotations -->
+      <section class="flex flex-col">
+        <div class="flex items-center justify-between mb-4">
+          <h4 class="m-0 text-sm font-semibold text-[var(--ep-text-color-primary)] flex items-center gap-2">
+            {{ t("mcpService.tool.annotationsSection") }}
+          </h4>
+          <el-button
+            type="primary"
+            link
+            size="small"
+            :icon="MagicStick"
+            :loading="detecting"
+            @click="handleDetectAnnotations"
+          >
+            {{ t("mcpService.tool.detectAnnotations") }}
+          </el-button>
+        </div>
+        <div class="flex flex-wrap items-start gap-8">
+          <!-- readOnly -->
+          <div>
+            <div class="flex items-center gap-1 mb-1.5">
+              <label class="text-[var(--ep-text-color-primary)]">{{ t("mcpService.tool.readOnlyLabel") }}</label>
+              <el-tooltip :content="t('mcpService.tool.readOnlyDesc')" placement="top">
+                <el-icon class="text-[var(--ep-text-color-secondary)] cursor-pointer text-xs"><InfoFilled /></el-icon>
+              </el-tooltip>
+            </div>
+            <el-radio-group v-model="form.readOnly">
+              <el-radio v-for="opt in triStateOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</el-radio>
+            </el-radio-group>
+          </div>
+
+          <!-- idempotent -->
+          <div>
+            <div class="flex items-center gap-1 mb-1.5">
+              <label class="text-[var(--ep-text-color-primary)]">{{ t("mcpService.tool.idempotentLabel") }}</label>
+              <el-tooltip :content="t('mcpService.tool.idempotentDesc')" placement="top">
+                <el-icon class="text-[var(--ep-text-color-secondary)] cursor-pointer text-xs"><InfoFilled /></el-icon>
+              </el-tooltip>
+            </div>
+            <el-radio-group v-model="form.idempotent">
+              <el-radio v-for="opt in triStateOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</el-radio>
+            </el-radio-group>
+          </div>
+
+          <!-- destructive -->
+          <div>
+            <div class="flex items-center gap-1 mb-1.5">
+              <label class="text-[var(--ep-text-color-primary)]">{{ t("mcpService.tool.destructiveLabel") }}</label>
+              <el-tooltip :content="t('mcpService.tool.destructiveDesc')" placement="top">
+                <el-icon class="text-[var(--ep-text-color-secondary)] cursor-pointer text-xs"><InfoFilled /></el-icon>
+              </el-tooltip>
+            </div>
+            <el-radio-group v-model="form.destructive">
+              <el-radio v-for="opt in triStateOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</el-radio>
+            </el-radio-group>
           </div>
         </div>
       </section>

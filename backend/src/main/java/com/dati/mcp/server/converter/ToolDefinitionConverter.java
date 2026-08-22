@@ -99,6 +99,15 @@ public class ToolDefinitionConverter {
         if (t.title() != null && !t.title().isBlank()) {
             builder.title(t.title());
         }
+        if (t.toolType() == McpToolType.PARAMETERIZED_SQL && t.config() instanceof ToolConfig.ParamSqlConfig cfg) {
+            if (cfg.getReadOnly() != null || cfg.getDestructive() != null || cfg.getIdempotent() != null) {
+                builder.annotations(McpSchema.ToolAnnotations.builder()
+                    .readOnlyHint(cfg.getReadOnly())
+                    .destructiveHint(cfg.getDestructive())
+                    .idempotentHint(cfg.getIdempotent())
+                    .build());
+            }
+        }
         return builder.build();
     }
 

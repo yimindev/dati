@@ -25,9 +25,11 @@ export interface ParamSqlConfig {
   data_source_id: string;
   sql_template: string;
   parameters: ToolParameter[];
-  sql_policy: SqlPolicy;
   timeout: number;
   max_rows: number;
+  read_only?: boolean | null;
+  idempotent?: boolean | null;
+  destructive?: boolean | null;
 }
 
 export interface McpToolVO {
@@ -95,6 +97,33 @@ export function deleteCustomTool(serviceId: string, toolId: string, signal?: Abo
   return del<IdResponse>(
     `/v1/mcp-services/${encodeURIComponent(serviceId)}/tools/${encodeURIComponent(toolId)}`,
     undefined,
+    signal,
+  );
+}
+
+export interface DetectAnnotationsRequest {
+  template: string;
+  parameters?: Array<{
+    name: string;
+    type: string;
+  }>;
+}
+
+export interface DetectAnnotationsResponse {
+  read_only?: boolean | null;
+  idempotent?: boolean | null;
+  destructive?: boolean | null;
+  detected_operation?: string;
+}
+
+export function detectToolAnnotations(
+  serviceId: string,
+  body: DetectAnnotationsRequest,
+  signal?: AbortSignal,
+): Promise<DetectAnnotationsResponse> {
+  return post<DetectAnnotationsResponse, DetectAnnotationsRequest>(
+    `/v1/mcp-services/${encodeURIComponent(serviceId)}/tools/detect-annotations`,
+    body,
     signal,
   );
 }
