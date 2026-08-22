@@ -2,6 +2,8 @@
 
 DatI (Data Intelligence) is a platform that provides unified data access capabilities for LLMs. Connect to various data sources and automatically generate MCP (Model Context Protocol) compliant interfaces.
 
+![DatI Architecture](/images/dati-visual-positioning.svg)
+
 ## Core Concepts
 
 | Concept | Description |

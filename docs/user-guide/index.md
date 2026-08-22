@@ -2,6 +2,8 @@
 
 DatI（Data Intelligence）是一个为 LLM 提供统一数据访问能力的平台。你可以快速连接各种数据源，并自动生成符合 MCP（Model Context Protocol）标准的接口。
 
+![DatI 架构示意图](/images/dati-visual-positioning.svg)
+
 ## 核心概念
 
 | 概念 | 说明 |

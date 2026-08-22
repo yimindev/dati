@@ -1,0 +1,158 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 340" width="100%" height="100%">
+  <defs>
+    <style>
+      text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+      .box { fill: #FFFFFF; stroke: #334155; stroke-width: 1.5; rx: 6px; }
+      .box-more { fill: #FFFFFF; stroke: #94A3B8; stroke-width: 1.5; stroke-dasharray: 4 3; rx: 6px; }
+      .layer-tag { font-size: 11px; font-weight: 600; fill: #64748B; letter-spacing: 0.5px; text-anchor: middle; }
+      .agent-title { font-size: 13px; font-weight: 600; fill: #0F172A; text-anchor: middle; }
+      .more-title { font-size: 14px; font-weight: 600; fill: #64748B; text-anchor: middle; letter-spacing: 1px; }
+      .dati-title { font-size: 18px; font-weight: 700; fill: #0F172A; text-anchor: middle; }
+      .mcp-text { font-size: 12px; font-weight: 700; fill: #0F172A; text-anchor: middle; letter-spacing: 0.5px; }
+      .db-title { font-size: 13px; font-weight: 600; fill: #334155; text-anchor: middle; }
+      .line { stroke: #94A3B8; stroke-width: 1.5; fill: none; }
+      .arrow { fill: #94A3B8; }
+    </style>
+  </defs>
+
+  <!-- Clean Background -->
+  <rect width="820" height="340" fill="#FFFFFF" rx="8" stroke="#E2E8F0" stroke-width="1" />
+
+  <!-- ================= LINES / CONNECTORS ================= -->
+  <!-- Top Agents to MCP Pill -->
+  <path d="M 102 84 L 102 110 L 410 110" class="line" />
+  <path d="M 247 84 L 247 110 L 410 110" class="line" />
+  <path d="M 392 84 L 392 110 L 410 110" class="line" />
+  <path d="M 537 84 L 537 110 L 410 110" class="line" />
+  <path d="M 682 84 L 682 110 L 410 110" class="line" />
+
+  <!-- MCP Pill to DatI -->
+  <line x1="410" y1="126" x2="410" y2="152" class="line" />
+  <polygon points="406,148 410,154 414,148" class="arrow" />
+
+  <!-- DatI to Bottom DBs -->
+  <path d="M 410 204 L 410 230 L 102 230 L 102 258" class="line" />
+  <polygon points="99,254 102,260 105,254" class="arrow" />
+
+  <path d="M 410 204 L 410 230 L 247 230 L 247 258" class="line" />
+  <polygon points="244,254 247,260 250,254" class="arrow" />
+
+  <path d="M 410 204 L 410 230 L 392 230 L 392 258" class="line" />
+  <polygon points="389,254 392,260 395,254" class="arrow" />
+
+  <path d="M 410 204 L 410 230 L 537 230 L 537 258" class="line" />
+  <polygon points="534,254 537,260 540,254" class="arrow" />
+
+  <path d="M 410 204 L 410 230 L 682 230 L 682 258" class="line" />
+  <polygon points="679,254 682,260 685,254" class="arrow" />
+
+
+  <!-- ================= LAYER 1: TOP (MCP CLIENTS) ================= -->
+  <!-- Layer Label -->
+  <text x="410" y="24" class="layer-tag">MCP CLIENTS</text>
+
+  <!-- Client 1: NL2SQL Agent -->
+  <g transform="translate(40, 36)">
+    <rect width="125" height="48" class="box" />
+    <text x="62.5" y="29" class="agent-title">NL2SQL Agent</text>
+  </g>
+
+  <!-- Client 2: OpenCode -->
+  <g transform="translate(185, 36)">
+    <rect width="125" height="48" class="box" />
+    <text x="62.5" y="29" class="agent-title">OpenCode</text>
+  </g>
+
+  <!-- Client 3: WorkBuddy -->
+  <g transform="translate(330, 36)">
+    <rect width="125" height="48" class="box" />
+    <text x="62.5" y="29" class="agent-title">WorkBuddy</text>
+  </g>
+
+  <!-- Client 4: Dify -->
+  <g transform="translate(475, 36)">
+    <rect width="125" height="48" class="box" />
+    <text x="62.5" y="29" class="agent-title">Dify</text>
+  </g>
+
+  <!-- Client 5: More... -->
+  <g transform="translate(620, 36)">
+    <rect width="125" height="48" class="box-more" />
+    <text x="62.5" y="29" class="more-title">...</text>
+  </g>
+
+
+  <!-- ================= MCP BADGE ================= -->
+  <g transform="translate(375, 98)">
+    <rect width="70" height="24" rx="12" fill="#F8FAFC" stroke="#64748B" stroke-width="1.5" />
+    <text x="35" y="16" class="mcp-text">MCP</text>
+  </g>
+
+
+  <!-- ================= LAYER 2: MIDDLE (DatI) ================= -->
+  <g transform="translate(300, 154)">
+    <rect width="220" height="50" rx="8" fill="#F8FAFC" stroke="#0F172A" stroke-width="2" />
+    <text x="110" y="32" class="dati-title">DatI</text>
+  </g>
+
+
+  <!-- ================= LAYER 3: BOTTOM (DATABASES) ================= -->
+  <!-- Layer Label -->
+  <text x="410" y="248" class="layer-tag">DATA SOURCES</text>
+
+  <!-- DB 1: MySQL -->
+  <g transform="translate(40, 260)">
+    <rect width="125" height="48" class="box" stroke="#64748B" />
+    <g transform="translate(15, 14)" stroke="#64748B" stroke-width="1.2" fill="none">
+      <ellipse cx="10" cy="4" rx="8" ry="3" fill="#F1F5F9" />
+      <path d="M 2 4 V 16 A 8 3 0 0 0 18 16 V 4" />
+      <path d="M 2 10 A 8 3 0 0 0 18 10" />
+    </g>
+    <text x="72" y="29" class="db-title">MySQL</text>
+  </g>
+
+  <!-- DB 2: PostgreSQL -->
+  <g transform="translate(185, 260)">
+    <rect width="125" height="48" class="box" stroke="#64748B" />
+    <g transform="translate(12, 14)" stroke="#64748B" stroke-width="1.2" fill="none">
+      <ellipse cx="10" cy="4" rx="8" ry="3" fill="#F1F5F9" />
+      <path d="M 2 4 V 16 A 8 3 0 0 0 18 16 V 4" />
+      <path d="M 2 10 A 8 3 0 0 0 18 10" />
+    </g>
+    <text x="74" y="29" class="db-title">PostgreSQL</text>
+  </g>
+
+  <!-- DB 3: ClickHouse -->
+  <g transform="translate(330, 260)">
+    <rect width="125" height="48" class="box" stroke="#64748B" />
+    <g transform="translate(13, 14)" stroke="#64748B" stroke-width="1.2" fill="none">
+      <ellipse cx="10" cy="4" rx="8" ry="3" fill="#F1F5F9" />
+      <path d="M 2 4 V 16 A 8 3 0 0 0 18 16 V 4" />
+      <path d="M 2 10 A 8 3 0 0 0 18 10" />
+    </g>
+    <text x="74" y="29" class="db-title">ClickHouse</text>
+  </g>
+
+  <!-- DB 4: Doris -->
+  <g transform="translate(475, 260)">
+    <rect width="125" height="48" class="box" stroke="#64748B" />
+    <g transform="translate(20, 14)" stroke="#64748B" stroke-width="1.2" fill="none">
+      <ellipse cx="10" cy="4" rx="8" ry="3" fill="#F1F5F9" />
+      <path d="M 2 4 V 16 A 8 3 0 0 0 18 16 V 4" />
+      <path d="M 2 10 A 8 3 0 0 0 18 10" />
+    </g>
+    <text x="72" y="29" class="db-title">Doris</text>
+  </g>
+
+  <!-- DB 5: More... -->
+  <g transform="translate(620, 260)">
+    <rect width="125" height="48" class="box-more" />
+    <g transform="translate(26, 14)" stroke="#94A3B8" stroke-width="1.2" fill="none">
+      <ellipse cx="10" cy="4" rx="8" ry="3" fill="#F8FAFC" />
+      <path d="M 2 4 V 16 A 8 3 0 0 0 18 16 V 4" />
+      <path d="M 2 10 A 8 3 0 0 0 18 10" />
+    </g>
+    <text x="76" y="29" class="more-title">...</text>
+  </g>
+
+</svg>

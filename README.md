@@ -2,9 +2,13 @@
 
 DatI（Data Intelligence）是一个为 AI 大模型提供**统一数据接入能力**的基础设施平台。它能帮助你：
 
-- **快速接入多种数据源**：支持主流数据库（MySQL、PostgreSQL、ClickHouse、Oracle 等 10 种）
+- **快速接入多种数据源**：支持主流数据库（MySQL、PostgreSQL 等）
 - **灵活构建 MCP 服务**：自动生成符合 [Model Context Protocol](https://modelcontextprotocol.io/) 标准的服务接口
-- **即插即用**：让 AI 大模型（如 Claude、GPT 等）能够无缝访问你的业务数据
+- **即插即用**：让 AI 大模型与 Agent（如 OpenCode、WorkBuddy、Dify 等）能够无缝访问业务数据
+
+<p>
+  <img src="docs/images/dati-visual-positioning.svg" alt="DatI Architecture" width="100%"/>
+</p>
 
 ## 适用场景
 
