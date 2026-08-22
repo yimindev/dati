@@ -1,6 +1,7 @@
 package com.dati.semantic.domain.service;
 
 import com.dati.base.exception.DatiException;
+import com.dati.base.exception.ErrorCode;
 import com.dati.datasource.repository.dao.TableInfoDAO;
 import com.dati.datasource.repository.po.TableInfoPO;
 import com.dati.semantic.domain.SemanticEntityType;
@@ -8,6 +9,7 @@ import com.dati.semantic.domain.TermRelationType;
 import com.dati.semantic.domain.model.Term;
 import com.dati.semantic.domain.model.TermRelation;
 import com.dati.semantic.repository.dao.SubjectDAO;
+import com.dati.semantic.repository.dao.SubjectTableDAO;
 import com.dati.semantic.repository.dao.TermDAO;
 import com.dati.semantic.repository.dao.TermRelationDAO;
 import com.dati.semantic.repository.po.SemanticSearchDocument;
@@ -52,6 +54,9 @@ class TermServiceTest {
 
     @Mock
     private SubjectDAO subjectDAO;
+
+    @Mock
+    private SubjectTableDAO subjectTableDAO;
 
     @Mock
     private TableInfoDAO tableInfoDAO;
@@ -109,10 +114,34 @@ class TermServiceTest {
     }
 
     @Test
+    @DisplayName("linkEntity - throws when duplicate relation exists")
+    void linkEntity_duplicateRelation_throwsInvalidParameter() {
+        String termId = "term-001";
+        String tableId = "table-001";
+        String fieldName = "customer_name";
+
+        TermPO term = new TermPO();
+        term.setId(termId);
+        term.setSubjectId("subject-001");
+        term.setName("客户");
+
+        when(termDAO.findById(termId)).thenReturn(Optional.of(term));
+        when(subjectTableDAO.existsBySubjectIdAndTableId("subject-001", tableId)).thenReturn(true);
+        when(termRelationDAO.findByTermIdAndTableIdAndFieldName(termId, tableId, fieldName))
+                .thenReturn(Optional.of(new TermRelationPO()));
+
+        assertThatThrownBy(() -> termService.linkEntity(termId, TermRelationType.FIELD, tableId, fieldName))
+                .isInstanceOf(DatiException.class)
+                .satisfies(e -> assertThat(((DatiException) e).getCode()).isEqualTo(ErrorCode.INVALID_PARAMETER));
+    }
+
+    @Test
     @DisplayName("unlinkEntity - null fieldName deletes TABLE-level relation")
     void unlinkEntity_shouldDeleteTableRelation() {
         String termId = "term-001";
         String tableId = "table-001";
+
+        when(termDAO.existsById(termId)).thenReturn(true);
 
         termService.unlinkEntity(termId, tableId, null);
 
@@ -133,12 +162,29 @@ class TermServiceTest {
         relation.setTableId(tableId);
         relation.setFieldName(fieldName);
 
+        when(termDAO.existsById(termId)).thenReturn(true);
         when(termRelationDAO.findByTermIdAndTableIdAndFieldName(termId, tableId, fieldName))
                 .thenReturn(Optional.of(relation));
 
         termService.unlinkEntity(termId, tableId, fieldName);
 
         verify(termRelationDAO).delete(relation);
+    }
+
+    @Test
+    @DisplayName("unlinkEntity - nonexistent relation throws NOT_FOUND")
+    void unlinkEntity_nonexistentRelation_throwsNotFound() {
+        String termId = "term-001";
+        String tableId = "table-001";
+        String fieldName = "customer_name";
+
+        when(termDAO.existsById(termId)).thenReturn(true);
+        when(termRelationDAO.findByTermIdAndTableIdAndFieldName(termId, tableId, fieldName))
+                .thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> termService.unlinkEntity(termId, tableId, fieldName))
+                .isInstanceOf(DatiException.class)
+                .satisfies(e -> assertThat(((DatiException) e).getCode()).isEqualTo(ErrorCode.NOT_FOUND));
     }
 
     @Test
@@ -195,6 +241,7 @@ class TermServiceTest {
         termPO.setUpdatedAt(java.time.Instant.now());
 
         Page<TermPO> poPage = new PageImpl<>(List.of(termPO), pageable, 1);
+        when(subjectDAO.existsById(subjectId)).thenReturn(true);
         when(termDAO.findBySubjectIdAndKeyword(subjectId, keyword, pageable)).thenReturn(poPage);
         when(termRelationDAO.findByTermIdIn(any())).thenReturn(List.of());
 
@@ -203,6 +250,18 @@ class TermServiceTest {
         assertThat(result.getTotalElements()).isEqualTo(1);
         assertThat(result.getContent().getFirst().getName()).isEqualTo("客户分析");
         assertThat(result.getContent().getFirst().getRelations()).isNotNull();
+    }
+
+    @Test
+    @DisplayName("getTermsBySubject - nonexistent subject throws SM_SUBJECT_NOT_FOUND")
+    void getTermsBySubject_nonexistentSubject_throwsSM001() {
+        String subjectId = "bad-subject-id";
+        Pageable pageable = PageRequest.of(0, 10);
+        when(subjectDAO.existsById(subjectId)).thenReturn(false);
+
+        assertThatThrownBy(() -> termService.getTermsBySubject(subjectId, null, pageable))
+                .isInstanceOf(DatiException.class)
+                .satisfies(e -> assertThat(((DatiException) e).getCode()).isEqualTo(ErrorCode.SM_SUBJECT_NOT_FOUND));
     }
 
     @Test
@@ -226,6 +285,7 @@ class TermServiceTest {
         termPO2.setUpdatedAt(java.time.Instant.now());
 
         Page<TermPO> poPage = new PageImpl<>(List.of(termPO1, termPO2), pageable, 2);
+        when(subjectDAO.existsById(subjectId)).thenReturn(true);
         when(termDAO.findBySubjectId(eq(subjectId), eq(pageable))).thenReturn(poPage);
         when(termRelationDAO.findByTermIdIn(any())).thenReturn(List.of());
 

@@ -144,22 +144,33 @@ public class TermService {
             throw new DatiException(ErrorCode.SM_TABLE_NOT_IN_SUBJECT, tableId, termPO.getSubjectId());
         }
 
+        if (fieldName != null && termRelationDAO.findByTermIdAndTableIdAndFieldName(termId, tableId, fieldName).isPresent()) {
+            throw new DatiException(ErrorCode.INVALID_PARAMETER, "Term relation already exists");
+        }
+
         TermRelationPO relationPO = TermRelationMapper.toPO(termId, entityType, tableId, fieldName);
         termRelationDAO.save(relationPO);
     }
 
     @Transactional
     public void unlinkEntity(String termId, String tableId, String fieldName) {
+        if (!termDAO.existsById(termId)) {
+            throw new DatiException(ErrorCode.SM_TERM_NOT_FOUND, termId);
+        }
         if (fieldName == null) {
             termRelationDAO.deleteByTermIdAndTableId(termId, tableId);
         } else {
-            termRelationDAO.findByTermIdAndTableIdAndFieldName(termId, tableId, fieldName)
-                    .ifPresent(termRelationDAO::delete);
+            TermRelationPO po = termRelationDAO.findByTermIdAndTableIdAndFieldName(termId, tableId, fieldName)
+                    .orElseThrow(() -> new DatiException(ErrorCode.NOT_FOUND, "Term relation not found"));
+            termRelationDAO.delete(po);
         }
     }
 
     @Transactional(readOnly = true)
     public Page<Term> getTermsBySubject(String subjectId, @Nullable String keyword, Pageable pageable) {
+        if (!subjectDAO.existsById(subjectId)) {
+            throw new DatiException(ErrorCode.SM_SUBJECT_NOT_FOUND, subjectId);
+        }
         Page<TermPO> pos = StringUtils.isEmpty(keyword)
                 ? termDAO.findBySubjectId(subjectId, pageable)
                 : termDAO.findBySubjectIdAndKeyword(subjectId, keyword, pageable);

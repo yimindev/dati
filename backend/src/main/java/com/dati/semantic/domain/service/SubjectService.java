@@ -30,6 +30,7 @@ import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.dati.datasource.repository.dao.DataSourceDAO;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -42,16 +43,19 @@ public class SubjectService {
     private final SubjectDAO subjectDAO;
     private final SubjectTableDAO subjectTableDAO;
     private final TableInfoDAO tableInfoDAO;
+    private final DataSourceDAO dataSourceDAO;
     private final SemanticIndexService semanticIndexService;
     private final PermissionService permissionService;
     private final UserGroupService userGroupService;
 
     public SubjectService(SubjectDAO subjectDAO, SubjectTableDAO subjectTableDAO,
-                          TableInfoDAO tableInfoDAO, SemanticIndexService semanticIndexService,
+                          TableInfoDAO tableInfoDAO, DataSourceDAO dataSourceDAO,
+                          SemanticIndexService semanticIndexService,
                           PermissionService permissionService, UserGroupService userGroupService) {
         this.subjectDAO = subjectDAO;
         this.subjectTableDAO = subjectTableDAO;
         this.tableInfoDAO = tableInfoDAO;
+        this.dataSourceDAO = dataSourceDAO;
         this.semanticIndexService = semanticIndexService;
         this.permissionService = permissionService;
         this.userGroupService = userGroupService;
@@ -59,6 +63,9 @@ public class SubjectService {
 
     @Transactional
     public Subject createSubject(Subject subject) {
+        if (subject.getDatasourceId() != null && !dataSourceDAO.existsById(subject.getDatasourceId())) {
+            throw new DatiException(ErrorCode.DS_NOT_FOUND, subject.getDatasourceId());
+        }
         SubjectPO subjectPO = SubjectMapper.toPO(subject);
         subjectDAO.save(subjectPO);
 

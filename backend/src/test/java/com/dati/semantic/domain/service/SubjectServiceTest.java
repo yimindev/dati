@@ -48,6 +48,8 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.dati.datasource.repository.dao.DataSourceDAO;
+
 @ExtendWith(MockitoExtension.class)
 @DisplayName("SubjectService unit tests")
 class SubjectServiceTest {
@@ -60,6 +62,9 @@ class SubjectServiceTest {
 
     @Mock
     private TableInfoDAO tableInfoDAO;
+
+    @Mock
+    private DataSourceDAO dataSourceDAO;
 
     @Mock
     private SemanticIndexService semanticIndexService;
@@ -92,6 +97,7 @@ class SubjectServiceTest {
             }
             return null;
         }).when(permissionService).requireCurrentUser(any(), anyString(), any(), anyString());
+        lenient().when(dataSourceDAO.existsById(anyString())).thenReturn(true);
         sampleSubjectPO = new SubjectPO();
         sampleSubjectPO.setId("subject-001");
         sampleSubjectPO.setName("Test Subject");
@@ -110,6 +116,20 @@ class SubjectServiceTest {
     @AfterEach
     void tearDown() {
         RequestContext.getContext().clear();
+    }
+
+    @Test
+    @DisplayName("createSubject - nonexistent datasource throws DS_NOT_FOUND")
+    void createSubject_nonexistentDatasource_throwsException() {
+        when(dataSourceDAO.existsById("bad-ds-id")).thenReturn(false);
+
+        Subject model = new Subject();
+        model.setName("Sub");
+        model.setDatasourceId("bad-ds-id");
+
+        assertThatThrownBy(() -> subjectService.createSubject(model))
+                .isInstanceOf(DatiException.class)
+                .satisfies(e -> assertThat(((DatiException) e).getCode()).isEqualTo(ErrorCode.DS_NOT_FOUND));
     }
 
     @Test
