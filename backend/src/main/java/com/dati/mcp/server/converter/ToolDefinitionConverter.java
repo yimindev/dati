@@ -1,5 +1,7 @@
 package com.dati.mcp.server.converter;
 
+import com.dati.auth.authentication.User;
+import com.dati.base.RequestContext;
 import com.dati.common.JsonUtils;
 import com.dati.mcp.domain.model.McpServiceSnapshot;
 import com.dati.mcp.domain.model.McpToolType;
@@ -126,6 +128,12 @@ public class ToolDefinitionConverter {
 
         if (maxRows > 0) {
             sb.append(". Max rows: ").append(maxRows);
+        }
+
+        User user = RequestContext.getUser();
+        if (user != null) {
+            sb.append(". Context: current user name: ").append(user.getName())
+              .append(", user id: ").append(user.getId());
         }
 
         return sb.toString();

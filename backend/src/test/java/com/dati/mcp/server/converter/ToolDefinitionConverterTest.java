@@ -254,4 +254,25 @@ class ToolDefinitionConverterTest {
         assertEquals("Execute an SQL query or statement against a data source. Allowed operations: ALL. Max rows: 1000",
                 tools.getFirst().description());
     }
+
+    @Test
+    @DisplayName("execute_sql description includes user context when RequestContext has user")
+    void executeSqlIncludesUserContext() {
+        try {
+            com.dati.auth.authentication.User user = new com.dati.auth.authentication.User();
+            user.setId("u-123");
+            user.setName("alice");
+            user.setDisplayName("Alice");
+            com.dati.base.RequestContext.setUser(user);
+            var content = new McpServiceSnapshot.SnapshotContent();
+            content.setPrebuiltTools(List.of(
+                TestFixtures.createTestPrebuiltToolDraft(McpToolType.EXECUTE_SQL, true, new ToolConfig.ExecuteSqlConfig())));
+            List<McpSchema.Tool> tools = converter.convert(content);
+            assertEquals(1, tools.size());
+            assertEquals("Execute an SQL query or statement against a data source. Allowed operations: SELECT. Max rows: 1000. Context: current user name: alice, user id: u-123",
+                tools.getFirst().description());
+        } finally {
+            com.dati.base.RequestContext.clear();
+        }
+    }
 }
