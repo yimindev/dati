@@ -80,7 +80,8 @@ com.dati.mcp/
 │       ├── ToolExecutor.java               # 接口：getToolType() + execute(ctx)
 │       ├── ToolExecutionContext.java        # record：serviceId, toolType, config, boundArgs, scopeItems
 │       ├── ExecuteSqlExecutor.java          # EXECUTE_SQL 执行器
-│       ├── ParameterizedSqlExecutor.java    # PARAMETERIZED_SQL 执行器
+│       ├── ParameterizedSqlExecutor.java    # PARAMETERIZED_SQL 执行器（自动注入系统变量 _user.* / _now / _date）
+│       ├── SystemVariableResolver.java      # 系统变量解析器（提取 RequestContext 用户与系统时间）
 │       ├── GetTableInfoExecutor.java        # GET_TABLE_INFO 执行器
 │       ├── ListTablesExecutor.java          # LIST_TABLES 执行器（表级清单，无列）
 │       ├── SearchMetadataExecutor.java      # SEARCH_METADATA 执行器
@@ -283,7 +284,8 @@ com.dati.semantic.domain.model/
 | `ScopeValidator` | 两层 scope 校验：① 数据源级 — 遍历 scopeItems 收集所有覆盖的 dsId（DATA_SOURCE 直接 + SUBJECT 展开）；② 表级 — 构建允许的 TableRef 集合，对比 SQL 分析结果。支持 `defaultSchema` 参数解析 schema-less 表引用。另提供 `validateDataSource()`（仅数据源级，供元数据写工具）与 `resolveSubjectInScope()`（按名称在 scope SUBJECT 中定位 subjectId，供 UPSERT_TERM） |
 | `McpToolTestService` | 测试编排（极简，无分支）：`resolve()` → 查 scope → `ToolParameterBinder.bind()` 绑定参数 → `execute()` → 计时 → 组装响应。`ToolExecuteException` 在此层 catch 并转为 `ToolTestResponse(success=false, error=...)` |
 | `ExecuteSqlExecutor` | EXECUTE_SQL 执行器。`ctx.args(ExecuteSqlArgs.class)` 取参，dsId + sql 从 record 取，`Statement.execute()` 执行，`SqlExecutorHelper.collect()` 收集多语句结果。每条语句独立 policy 校验和 try-catch |
-| `ParameterizedSqlExecutor` | PARAMETERIZED_SQL 执行器。dsId 从 config 取，`ctx.argumentsMap()` 取原始参数 → 模板渲染 → SQL，`PreparedStatement.execute()` 执行。支持 DateTime 类型参数转换（`DateTimeUtils.parseDateTime()`）。`bindings` 回传前端 |
+| `ParameterizedSqlExecutor` | PARAMETERIZED_SQL 执行器。dsId 从 config 取，合并客户端参数与系统内置参数（`SystemVariableResolver.resolve()`，含 `_user.id` / `_user.name` / `_user.display_name` / `_now` / `_date`，系统参数强制覆盖以防伪造）→ 模板渲染 → SQL，`PreparedStatement.execute()` 执行。支持 DateTime 类型参数转换（`DateTimeUtils.parseDateTime()`）。`bindings` 回传前端 |
+| `SystemVariableResolver` | 系统变量解析器。从 `RequestContext.getUser()` 和系统时钟解析 `_user.*` 与 `_now` / `_date`，提供 `isSystemVariable()` 供模板参数扫描与抽取时过滤 |
 | `GetTableInfoExecutor` | GET_TABLE_INFO 执行器。`ctx.args(GetTableInfoArgs.class)` 取参，逐条 `tables[]` 项做数据源级 scope 校验（每项自带 data_source_id），通过 `TableMetadataService` 查询平台元数据。不存在的表静默跳过 |
 | `ListTablesExecutor` | LIST_TABLES 执行器。无参数（`ListTablesArgs` 空 record），通过 `McpServiceDataScopeService.getResolvedDataSourceIds()` 解析 scope → 逐数据源 `TableInfoDAO.findByDataSourceId()` 查表 → 组装表级清单（schema/name/description/aliases，columns=null 不输出）。空 scope 返回空结果。纯 DB 读、不查 ES/列 |
 | `SearchMetadataExecutor` | SEARCH_METADATA 执行器。`ctx.args(SearchMetadataArgs.class)` 取 keywords，通过 `McpServiceDataScopeService.getResolvedDataSourceIds()` 解析 scope → `SemanticSearchService.search()` → 组装分组结果。空 scope 返回空结果（不报错） |

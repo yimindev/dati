@@ -32,7 +32,7 @@ const cm = useCodeMirror({
   extensions: [
     sql(),
     syntaxHighlighting(datiSqlHighlight),
-    autocompletion({ override: [templateCompletions()] }),
+    autocompletion({ override: [templateCompletions(t)] }),
     templateAutoClose(),
     templateDecorations(),
     bracketMatching(),

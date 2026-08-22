@@ -52,6 +52,29 @@ The default is used when the parameter has no value:
 LIMIT {{limit:100}}
 ```
 
+## Built-in System Parameters
+
+In parameterized SQL, you can use built-in system parameters starting with `_`. These are securely injected by the server at runtime (no need to define them in parameter lists; LLMs cannot manipulate them):
+
+| System Parameter | Description | Example |
+| :--- | :--- | :--- |
+| `{{_user.id}}` | Current caller's user ID | `usr_0194a2b3...` |
+| `{{_user.name}}` | Current caller's username | `admin` |
+| `{{_user.display_name}}` | Current caller's display name | `Alice` |
+| `{{_now}}` | Current timestamp (`yyyy-MM-dd HH:mm:ss`) | `2026-08-22 15:30:00` |
+| `{{_date}}` | Current date (`yyyy-MM-dd`) | `2026-08-22` |
+
+**Example:**
+```sql
+SELECT * FROM orders
+WHERE owner_id = {{_user.id}}
+  AND created_at <= {{_now}}
+```
+
+> [!TIP]
+> - System parameters also support default values, e.g. `{{_user.id:anonymous}}`. If the user is unauthenticated or context is missing, it falls back to the default value.
+> - Typing `{{_` in the SQL editor automatically triggers autocompletion for system parameters.
+
 ## Conditional Rendering
 
 `{{#if paramName}}...{{/if}}`: the content is dropped when the parameter is null, otherwise rendered (null check only, no nesting):

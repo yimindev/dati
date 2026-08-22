@@ -10,6 +10,7 @@ import com.dati.common.template.TemplateParseException;
 import com.dati.common.template.TemplateParser;
 import com.dati.common.template.TemplateRenderException;
 import com.dati.common.template.TextRenderer;
+import com.dati.mcp.domain.service.SystemVariableResolver;
 import com.dati.mcp.domain.model.TemplateRenderMode;
 import com.dati.mcp.server.pojo.TemplateExtractRequest;
 import com.dati.mcp.server.pojo.TemplateExtractResponse;
@@ -22,8 +23,10 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/v1/template")
@@ -32,13 +35,16 @@ public class TemplatePreviewController {
     private final TemplateParser parser;
     private final TextRenderer textRenderer;
     private final SqlRenderer sqlRenderer;
+    private final SystemVariableResolver systemVariableResolver;
 
     public TemplatePreviewController(TemplateParser parser,
                                       TextRenderer textRenderer,
-                                      SqlRenderer sqlRenderer) {
+                                      SqlRenderer sqlRenderer,
+                                      SystemVariableResolver systemVariableResolver) {
         this.parser = parser;
         this.textRenderer = textRenderer;
         this.sqlRenderer = sqlRenderer;
+        this.systemVariableResolver = systemVariableResolver;
     }
 
     @PostMapping("/preview")
@@ -50,8 +56,11 @@ public class TemplatePreviewController {
             throw new DatiException(ErrorCode.INVALID_PARAMETER, e.getMessage());
         }
 
-        Map<String, Object> values = request.getValues() != null
-                ? request.getValues() : Map.of();
+        Map<String, Object> values = new HashMap<>();
+        if (request.getValues() != null) {
+            values.putAll(request.getValues());
+        }
+        values.putAll(systemVariableResolver.resolve());
 
         TemplatePreviewResponse response = new TemplatePreviewResponse();
 
@@ -73,8 +82,9 @@ public class TemplatePreviewController {
     public ResponseEntity<TemplateExtractResponse> extract(@Valid @RequestBody TemplateExtractRequest request) {
         try {
             CompiledTemplate compiled = parser.parse(request.getTemplate());
-            Set<String> variables = compiled.getVariables();
-            // Filter out system variables if any (currently none documented, but good to keep in mind)
+            Set<String> variables = compiled.getVariables().stream()
+                    .filter(v -> !SystemVariableResolver.isSystemVariable(v))
+                    .collect(Collectors.toSet());
             return ResponseEntity.ok(new TemplateExtractResponse(variables));
         } catch (TemplateParseException e) {
             throw new DatiException(ErrorCode.INVALID_PARAMETER, e.getMessage());

@@ -276,6 +276,31 @@ class McpToolServiceTest {
     }
 
     @Test
+    @DisplayName("Create Parameterized SQL - system variables in template are allowed without parameters")
+    void createCustomTool_systemVariablesInTemplate_succeeds() {
+        when(mcpServiceDAO.existsById(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(true);
+        when(customToolDAO.existsByServiceIdAndName(TestFixtures.TEST_MCP_SERVICE_ID, "list_tasks")).thenReturn(false);
+
+        ToolConfig.ParamSqlConfig cfg = new ToolConfig.ParamSqlConfig();
+        cfg.setDataSourceId(TestFixtures.TEST_DATASOURCE_ID);
+        cfg.setSqlTemplate("SELECT * FROM tasks WHERE owner_id = {{_user.id}} AND created_at <= {{_now}}");
+        cfg.setParameters(List.of());
+        testCustomTool.setConfig(cfg);
+        CompiledTemplate compiled = mock(CompiledTemplate.class);
+        when(compiled.getVariables()).thenReturn(Set.of("_user.id", "_now"));
+        when(templateParser.parse(anyString())).thenReturn(compiled);
+        when(customToolDAO.save(any())).thenAnswer(inv -> {
+            McpCustomToolPO po = inv.getArgument(0);
+            po.setId("tool-123");
+            return po;
+        });
+
+        String created = mcpToolService.createCustomTool(TestFixtures.TEST_MCP_SERVICE_ID, testCustomTool);
+        assertThat(created).isEqualTo("tool-123");
+        verify(customToolDAO).save(any());
+    }
+
+    @Test
     @DisplayName("Create Parameterized SQL - valid template passes validation")
     void createCustomTool_validTemplate_succeeds() {
         when(mcpServiceDAO.existsById(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(true);

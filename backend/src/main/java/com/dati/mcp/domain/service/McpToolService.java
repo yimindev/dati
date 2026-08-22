@@ -233,7 +233,9 @@ public class McpToolService {
         }
 
         // 2. Variable ↔ parameter consistency
-        Set<String> templateVars = new HashSet<>(compiled.getVariables());
+        Set<String> templateVars = compiled.getVariables().stream()
+                .filter(v -> !SystemVariableResolver.isSystemVariable(v))
+                .collect(Collectors.toSet());
         Set<String> paramNames = cfg.getParameters().stream()
             .map(ToolParameter::getName)
             .filter(name -> name != null && !name.isBlank())

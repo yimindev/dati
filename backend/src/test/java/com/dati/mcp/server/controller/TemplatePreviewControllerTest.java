@@ -17,6 +17,11 @@ import java.util.List;
 import java.util.Map;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import com.dati.auth.authentication.User;
+import com.dati.base.RequestContext;
+import com.dati.mcp.domain.service.SystemVariableResolver;
+import org.junit.jupiter.api.AfterEach;
+
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @DisplayName("TemplatePreviewController unit tests")
@@ -27,15 +32,22 @@ class TemplatePreviewControllerTest {
 
     @BeforeEach
     void setUp() {
+        RequestContext.clear();
         TemplatePreviewController controller = new TemplatePreviewController(
                 new HandlebarsStyleParser(),
                 new TextRenderer(),
-                new SqlRenderer()
+                new SqlRenderer(),
+                new SystemVariableResolver()
         );
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .build();
         objectMapper = new ObjectMapper();
+    }
+
+    @AfterEach
+    void tearDown() {
+        RequestContext.clear();
     }
 
     // ===== Text 模式 =====
@@ -396,5 +408,47 @@ class TemplatePreviewControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(body)))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("Extract params - filters out system variables (_user.*, _now, _date)")
+    void testExtractVariablesWithSystemVariables() throws Exception {
+        Map<String, Object> body = Map.of(
+                "template", "SELECT * FROM tasks WHERE owner_id = {{_user.id}} AND name = {{_user.name}} AND created_at <= {{_now}} AND status = {{status}} AND id = {{id}}"
+        );
+
+        mockMvc.perform(post("/v1/template/extract")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(body)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.variables").isArray())
+                .andExpect(jsonPath("$.variables.length()").value(2))
+                .andExpect(jsonPath("$.variables[?(@ == 'status')]").exists())
+                .andExpect(jsonPath("$.variables[?(@ == 'id')]").exists())
+                .andExpect(jsonPath("$.variables[?(@ == '_user.id')]").doesNotExist())
+                .andExpect(jsonPath("$.variables[?(@ == '_user.name')]").doesNotExist())
+                .andExpect(jsonPath("$.variables[?(@ == '_now')]").doesNotExist());
+    }
+
+    @Test
+    @DisplayName("Preview - auto-injects system variables from RequestContext")
+    void testPreviewWithSystemVariables() throws Exception {
+        User user = new User();
+        user.setId("usr-456");
+        user.setName("bob");
+        user.setDisplayName("Bob Builder");
+        RequestContext.setUser(user);
+
+        Map<String, Object> body = Map.of(
+                "mode", "SQL",
+                "template", "SELECT * FROM tasks WHERE owner = {{_user.id}} AND status = {{status}}",
+                "values", Map.of("status", "open", "_user.id", "fake-injected-id")
+        );
+
+        mockMvc.perform(post("/v1/template/preview")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(body)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.rendered").value("SELECT * FROM tasks WHERE owner = 'usr-456' AND status = 'open'"));
     }
 }

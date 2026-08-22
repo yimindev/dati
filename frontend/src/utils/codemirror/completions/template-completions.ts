@@ -4,6 +4,21 @@ import type { EditorView } from "@codemirror/view"
 
 const DIRECTIVES = ['if', 'where'] as const
 
+export interface SystemVariable {
+  name: string
+  detail: string
+  i18nKey: string
+}
+
+// Keep in sync with backend SystemVariableResolver.SYSTEM_VARIABLES
+export const SYSTEM_VARIABLES: readonly SystemVariable[] = [
+  { name: '_user.id', detail: 'Current user ID', i18nKey: 'mcpService.tool.sysVarUserId' },
+  { name: '_user.name', detail: 'Current username', i18nKey: 'mcpService.tool.sysVarUserName' },
+  { name: '_user.display_name', detail: 'Current user display name', i18nKey: 'mcpService.tool.sysVarUserDisplayName' },
+  { name: '_now', detail: 'Current timestamp (yyyy-MM-dd HH:mm:ss)', i18nKey: 'mcpService.tool.sysVarNow' },
+  { name: '_date', detail: 'Current date (yyyy-MM-dd)', i18nKey: 'mcpService.tool.sysVarDate' },
+] as const
+
 /**
  * Extract variable names from `{{var}}`, `{{{var}}}`, `{{#if var}}`,
  * and default-value forms like `{{var:default}}` in the template.
@@ -67,7 +82,7 @@ function analyseUnclosed(textBeforeCursor: string): string[] {
   return [...new Set(stack)]
 }
 
-export function templateCompletions(): (ctx: CompletionContext) => CompletionResult | null {
+export function templateCompletions(t?: (key: string) => string): (ctx: CompletionContext) => CompletionResult | null {
   return (ctx: CompletionContext): CompletionResult | null => {
     const pos = ctx.pos
 
@@ -110,48 +125,64 @@ export function templateCompletions(): (ctx: CompletionContext) => CompletionRes
     }
 
     // ----- {{{ name| → variables only -----
-    const tripleMatch = ctx.matchBefore(/\{\{\{(\w*)$/)
+    const tripleMatch = ctx.matchBefore(/\{\{\{([\w.]*)$/)
     if (tripleMatch) {
       const hasBackslash = ctx.state.doc.sliceString(tripleMatch.from - 1, tripleMatch.from) === '\\'
       if (hasBackslash) return null
 
-      const partial = (tripleMatch.text.match(/\{\{\{(\w*)$/) ?? [])[1] ?? ''
+      const partial = (tripleMatch.text.match(/\{\{\{([\w.]*)$/) ?? [])[1] ?? ''
       const fullText = ctx.state.doc.toString()
       const varNames = scanVariables(fullText, pos)
+      const sysNames = SYSTEM_VARIABLES.map((s) => s.name)
+      const combined = [...new Set([...varNames, ...sysNames])]
 
-      if (varNames.length === 0) return null
-
-      const options = varNames
+      const options = combined
         .filter((v) => v.startsWith(partial))
         .map((v) => ({ label: v, type: 'variable' as const, apply: `{{{${v}}}}}` }))
       return options.length ? { from: tripleMatch.from, options, filter: false } : null
     }
 
     // ----- {{ name| → variables + directives -----
-    const doubleMatch = ctx.matchBefore(/\{\{(?!\{)(\w*)$/)
+    const doubleMatch = ctx.matchBefore(/\{\{(?!\{)([\w.]*)$/)
     if (doubleMatch) {
       const hasBackslash =
         ctx.state.doc.sliceString(doubleMatch.from - 1, doubleMatch.from) === '\\'
       if (hasBackslash) return null
 
-      const partial = (doubleMatch.text.match(/\{\{(?!\{)(\w*)$/) ?? [])[1] ?? ''
+      const partial = (doubleMatch.text.match(/\{\{(?!\{)([\w.]*)$/) ?? [])[1] ?? ''
       const fullText = ctx.state.doc.toString()
       const varNames = scanVariables(fullText, pos)
 
       const options: Array<CompletionResult['options'][number]> = []
+      const seen = new Set<string>()
+      const sysNameSet = new Set(SYSTEM_VARIABLES.map((s) => s.name))
 
-      // Variables
+      // 1. Template scanned variables (non-system)
       for (const v of varNames) {
-        if (v.startsWith(partial)) {
+        if (v.startsWith(partial) && !sysNameSet.has(v)) {
           options.push({ label: v, type: 'variable' as const, apply: `{{${v}}}` })
+          seen.add(v)
         }
       }
 
-      // Directive #if
+      // 2. System built-in variables
+      for (const sys of SYSTEM_VARIABLES) {
+        if (sys.name.startsWith(partial) && !seen.has(sys.name)) {
+          options.push({
+            label: sys.name,
+            type: 'variable' as const,
+            detail: t ? t(sys.i18nKey) : sys.detail,
+            apply: `{{${sys.name}}}`,
+          })
+          seen.add(sys.name)
+        }
+      }
+
+      // 3. Directive #if
       if ('if'.startsWith(partial)) {
         options.push({ label: '#if', type: 'keyword' as const, apply: '{{#if ' })
       }
-      // Directive #where
+      // 4. Directive #where
       if ('where'.startsWith(partial)) {
         options.push({
           label: '#where',

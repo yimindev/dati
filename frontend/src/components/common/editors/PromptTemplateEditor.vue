@@ -31,7 +31,7 @@ const cm = useCodeMirror({
   modelValue: useVModel(props, "modelValue", emit),
   extensions: [
     // override 方式不依赖 Language 实例（languageData 方式需 @codemirror/language 的 Language 才会被 autocompletion 读取）
-    autocompletion({ override: [templateCompletions()] }),
+    autocompletion({ override: [templateCompletions(t)] }),
     templateAutoClose(),
     templateDecorations(),
     bracketMatching(),

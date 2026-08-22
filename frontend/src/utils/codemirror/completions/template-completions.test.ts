@@ -60,7 +60,7 @@ describe('templateCompletions', () => {
     it('same variable appears nearest, deduplicated', () => {
       // {{x}} at pos 0, {{x}} at pos 7, cursor after second {{x}} → x once
       const result = completions(ctx('{{x}}   {{x}} {{|}}'))
-      const vars = labels(result).filter((l) => !l.startsWith('#'))
+      const vars = labels(result).filter((l) => !l.startsWith('#') && !l.startsWith('_'))
       expect(vars).toEqual(['x'])
     })
 
@@ -80,7 +80,7 @@ describe('templateCompletions', () => {
     it('multiple occurrences use closest distance', () => {
       // {{x}} at 0 (far), {{x}} right before cursor at 16 (near)
       const result = completions(ctx('{{x}}              {{x}} {{|}}'))
-      const vars = labels(result).filter((l) => !l.startsWith('#'))
+      const vars = labels(result).filter((l) => !l.startsWith('#') && !l.startsWith('_'))
       expect(vars).toEqual(['x'])
     })
 
@@ -214,6 +214,47 @@ describe('templateCompletions', () => {
     it('returns null for \\{{{ trigger (triple brace)', () => {
       const result = completions(ctx('\\{{{|}}}'))
       expect(result).toBeNull()
+    })
+  })
+
+  // ---- system variables ----
+  describe('system variables', () => {
+    it('suggests system variables when {{_ is typed', () => {
+      const result = completions(ctx('{{_|}}'))
+      expect(labels(result)).toContain('_user.id')
+      expect(labels(result)).toContain('_user.name')
+      expect(labels(result)).toContain('_user.display_name')
+      expect(labels(result)).toContain('_now')
+      expect(labels(result)).toContain('_date')
+    })
+
+    it('filters system variables by prefix {{_user.', () => {
+      const result = completions(ctx('{{_user.|}}'))
+      expect(labels(result)).toContain('_user.id')
+      expect(labels(result)).toContain('_user.name')
+      expect(labels(result)).toContain('_user.display_name')
+      expect(labels(result)).not.toContain('_now')
+      expect(labels(result)).not.toContain('_date')
+    })
+
+    it('applies system variable with double braces', () => {
+      const result = completions(ctx('{{_now|}}'))
+      const nowApply = applyTexts(result).find((a) => a.includes('_now'))
+      expect(nowApply).toBe('{{_now}}')
+    })
+
+    it('suggests system variables in triple braces {{{_|', () => {
+      const result = completions(ctx('{{{|}}}'))
+      expect(labels(result)).toContain('_user.id')
+      expect(labels(result)).toContain('_now')
+    })
+
+    it('uses i18n translator for detail when provided', () => {
+      const tMock = (key: string) => `translated:${key}`
+      const i18nCompletions = templateCompletions(tMock)
+      const result = i18nCompletions(ctx('{{_user.id|}}'))
+      const opt = result?.options?.find((o) => o.label === '_user.id')
+      expect(opt?.detail).toBe('translated:mcpService.tool.sysVarUserId')
     })
   })
 

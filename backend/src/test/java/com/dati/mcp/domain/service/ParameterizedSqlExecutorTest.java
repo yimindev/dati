@@ -1,5 +1,6 @@
 package com.dati.mcp.domain.service;
 
+import com.dati.base.RequestContext;
 import com.dati.common.template.HandlebarsStyleParser;
 import com.dati.common.template.SqlRenderer;
 import com.dati.datasource.domain.model.DataSource;
@@ -12,6 +13,7 @@ import com.dati.mcp.domain.model.ToolConfig;
 import com.dati.mcp.domain.model.ToolError;
 import com.dati.mcp.server.pojo.SqlExecution;
 import com.dati.mcp.server.pojo.ToolTestData;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -60,9 +62,16 @@ class ParameterizedSqlExecutorTest {
 
     @BeforeEach
     void setUp() {
+        RequestContext.clear();
         // mocks are injected by MockitoExtension before this runs
         executor = new ParameterizedSqlExecutor(
-            scopeValidator, dataSourceService, new HandlebarsStyleParser(), new SqlRenderer());
+            scopeValidator, dataSourceService, new HandlebarsStyleParser(), new SqlRenderer(),
+            new SystemVariableResolver());
+    }
+
+    @AfterEach
+    void tearDown() {
+        RequestContext.clear();
     }
 
     private ToolConfig.ParamSqlConfig paramSqlConfig(String sqlTemplate) {
@@ -155,6 +164,148 @@ class ParameterizedSqlExecutorTest {
                 .isInstanceOf(ToolExecuteException.class)
                 .satisfies(e -> assertThat(((ToolExecuteException) e).getToolError())
                     .isEqualTo(ToolError.SQL_EXECUTION_ERROR));
+        }
+    }
+
+    @Test
+    @DisplayName("execute - system variable _user.id injected from RequestContext")
+    void execute_systemVariableUser_authenticated() throws SQLException {
+        com.dati.auth.authentication.User user = new com.dati.auth.authentication.User();
+        user.setId("usr-999");
+        user.setName("alice");
+        user.setDisplayName("Alice W.");
+        com.dati.base.RequestContext.setUser(user);
+
+        when(dataSourceService.getDataSource("ds-1")).thenReturn(Optional.of(dataSource()));
+        PreparedStatement stmt = mockStatementNoResults();
+        Connection conn = mock(Connection.class);
+        when(conn.prepareStatement(anyString())).thenReturn(stmt);
+
+        ToolExecutionContext ctx = new ToolExecutionContext(
+            "svc-1", McpToolType.PARAMETERIZED_SQL,
+            paramSqlConfig("SELECT * FROM tasks WHERE owner_id = {{_user.id}} AND author = {{_user.name}}"),
+            Map.of(), List.of());
+
+        try (MockedStatic<HikariPoolManager> hpm = mockStatic(HikariPoolManager.class)) {
+            hpm.when(() -> HikariPoolManager.getConnection(any(JdbcConnector.class))).thenReturn(conn);
+
+            ToolTestData data = executor.execute(ctx);
+
+            assertThat(data).isInstanceOf(SqlExecution.class);
+            SqlExecution exec = (SqlExecution) data;
+            assertThat(exec.executedSql()).isEqualTo("SELECT * FROM tasks WHERE owner_id = ? AND author = ?");
+            assertThat(exec.bindings()).containsExactly("usr-999", "alice");
+            verify(stmt).setObject(1, "usr-999");
+            verify(stmt).setObject(2, "alice");
+        }
+    }
+
+    @Test
+    @DisplayName("execute - system variable without user context uses default value if present")
+    void execute_systemVariableUser_nullUser_withDefault() throws SQLException {
+        when(dataSourceService.getDataSource("ds-1")).thenReturn(Optional.of(dataSource()));
+        PreparedStatement stmt = mockStatementNoResults();
+        Connection conn = mock(Connection.class);
+        when(conn.prepareStatement(anyString())).thenReturn(stmt);
+
+        ToolExecutionContext ctx = new ToolExecutionContext(
+            "svc-1", McpToolType.PARAMETERIZED_SQL,
+            paramSqlConfig("SELECT * FROM tasks WHERE owner_id = {{_user.id:anonymous}}"),
+            Map.of(), List.of());
+
+        try (MockedStatic<HikariPoolManager> hpm = mockStatic(HikariPoolManager.class)) {
+            hpm.when(() -> HikariPoolManager.getConnection(any(JdbcConnector.class))).thenReturn(conn);
+
+            ToolTestData data = executor.execute(ctx);
+
+            assertThat(data).isInstanceOf(SqlExecution.class);
+            SqlExecution exec = (SqlExecution) data;
+            assertThat(exec.executedSql()).isEqualTo("SELECT * FROM tasks WHERE owner_id = ?");
+            assertThat(exec.bindings()).containsExactly("anonymous");
+            verify(stmt).setObject(1, "anonymous");
+        }
+    }
+
+    @Test
+    @DisplayName("execute - system variable without user context and no default binds null")
+    void execute_systemVariableUser_nullUser_withoutDefault() throws SQLException {
+        when(dataSourceService.getDataSource("ds-1")).thenReturn(Optional.of(dataSource()));
+        PreparedStatement stmt = mockStatementNoResults();
+        Connection conn = mock(Connection.class);
+        when(conn.prepareStatement(anyString())).thenReturn(stmt);
+
+        ToolExecutionContext ctx = new ToolExecutionContext(
+            "svc-1", McpToolType.PARAMETERIZED_SQL,
+            paramSqlConfig("SELECT * FROM tasks WHERE owner_id = {{_user.id}}"),
+            Map.of(), List.of());
+
+        try (MockedStatic<HikariPoolManager> hpm = mockStatic(HikariPoolManager.class)) {
+            hpm.when(() -> HikariPoolManager.getConnection(any(JdbcConnector.class))).thenReturn(conn);
+
+            ToolTestData data = executor.execute(ctx);
+
+            assertThat(data).isInstanceOf(SqlExecution.class);
+            SqlExecution exec = (SqlExecution) data;
+            assertThat(exec.executedSql()).isEqualTo("SELECT * FROM tasks WHERE owner_id = ?");
+            assertThat(exec.bindings()).containsOnlyNulls();
+            verify(stmt).setObject(1, null);
+        }
+    }
+
+    @Test
+    @DisplayName("execute - client argument cannot override server-side system variable")
+    void execute_systemVariable_overridesClientArgument() throws SQLException {
+        com.dati.auth.authentication.User user = new com.dati.auth.authentication.User();
+        user.setId("usr-legit");
+        com.dati.base.RequestContext.setUser(user);
+
+        when(dataSourceService.getDataSource("ds-1")).thenReturn(Optional.of(dataSource()));
+        PreparedStatement stmt = mockStatementNoResults();
+        Connection conn = mock(Connection.class);
+        when(conn.prepareStatement(anyString())).thenReturn(stmt);
+
+        ToolExecutionContext ctx = new ToolExecutionContext(
+            "svc-1", McpToolType.PARAMETERIZED_SQL,
+            paramSqlConfig("SELECT * FROM tasks WHERE owner_id = {{_user.id}}"),
+            Map.of("_user.id", "hacker-injected-id"), List.of());
+
+        try (MockedStatic<HikariPoolManager> hpm = mockStatic(HikariPoolManager.class)) {
+            hpm.when(() -> HikariPoolManager.getConnection(any(JdbcConnector.class))).thenReturn(conn);
+
+            ToolTestData data = executor.execute(ctx);
+
+            assertThat(data).isInstanceOf(SqlExecution.class);
+            SqlExecution exec = (SqlExecution) data;
+            assertThat(exec.executedSql()).isEqualTo("SELECT * FROM tasks WHERE owner_id = ?");
+            assertThat(exec.bindings()).containsExactly("usr-legit");
+            verify(stmt).setObject(1, "usr-legit");
+        }
+    }
+
+    @Test
+    @DisplayName("execute - system variables _now and _date injected")
+    void execute_systemVariableTime_nowAndDate() throws SQLException {
+        when(dataSourceService.getDataSource("ds-1")).thenReturn(Optional.of(dataSource()));
+        PreparedStatement stmt = mockStatementNoResults();
+        Connection conn = mock(Connection.class);
+        when(conn.prepareStatement(anyString())).thenReturn(stmt);
+
+        ToolExecutionContext ctx = new ToolExecutionContext(
+            "svc-1", McpToolType.PARAMETERIZED_SQL,
+            paramSqlConfig("SELECT * FROM tasks WHERE created_at <= {{_now}} AND report_date = {{_date}}"),
+            Map.of(), List.of());
+
+        try (MockedStatic<HikariPoolManager> hpm = mockStatic(HikariPoolManager.class)) {
+            hpm.when(() -> HikariPoolManager.getConnection(any(JdbcConnector.class))).thenReturn(conn);
+
+            ToolTestData data = executor.execute(ctx);
+
+            assertThat(data).isInstanceOf(SqlExecution.class);
+            SqlExecution exec = (SqlExecution) data;
+            assertThat(exec.executedSql()).isEqualTo("SELECT * FROM tasks WHERE created_at <= ? AND report_date = ?");
+            assertThat(exec.bindings()).hasSize(2);
+            assertThat(exec.bindings().get(0)).isNotNull();
+            assertThat(exec.bindings().get(1)).isEqualTo(java.time.LocalDate.now().toString());
         }
     }
 }

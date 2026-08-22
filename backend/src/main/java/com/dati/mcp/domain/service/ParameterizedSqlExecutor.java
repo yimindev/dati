@@ -25,7 +25,9 @@ import org.springframework.stereotype.Component;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -36,13 +38,16 @@ public class ParameterizedSqlExecutor implements ToolExecutor {
     private final DataSourceService dataSourceService;
     private final TemplateParser templateParser;
     private final SqlRenderer sqlRenderer;
+    private final SystemVariableResolver systemVariableResolver;
 
     public ParameterizedSqlExecutor(ScopeValidator scopeValidator, DataSourceService dataSourceService,
-                                    TemplateParser templateParser, SqlRenderer sqlRenderer) {
+                                    TemplateParser templateParser, SqlRenderer sqlRenderer,
+                                    SystemVariableResolver systemVariableResolver) {
         this.scopeValidator = scopeValidator;
         this.dataSourceService = dataSourceService;
         this.templateParser = templateParser;
         this.sqlRenderer = sqlRenderer;
+        this.systemVariableResolver = systemVariableResolver;
     }
 
     @Override
@@ -56,7 +61,9 @@ public class ParameterizedSqlExecutor implements ToolExecutor {
         String dsId = config.getDataSourceId();
 
         CompiledTemplate compiled = templateParser.parse(config.getSqlTemplate());
-        PreparedSql prepared = sqlRenderer.render(compiled, ctx.argumentsMap());
+        Map<String, Object> params = new HashMap<>(ctx.argumentsMap());
+        params.putAll(systemVariableResolver.resolve());
+        PreparedSql prepared = sqlRenderer.render(compiled, params);
         String sql = prepared.sql();
 
         // No runtime SQL policy for PARAMETERIZED_SQL: the template is authored at
