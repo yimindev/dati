@@ -58,7 +58,7 @@ start_service() {
     fi
     echo "[service] 启动后端..." >&2
     cd "$WORK_DIR" || exit 1
-    nohup $START_CMD > "$LOG_FILE" 2>&1 &
+    nohup bash -c "$START_CMD" > "$LOG_FILE" 2>&1 &
     echo "[service] PID=$!" >&2
     wait_ready
 }

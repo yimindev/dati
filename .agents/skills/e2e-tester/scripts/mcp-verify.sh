@@ -72,7 +72,7 @@ if [ -n "$MCP_DS_ID" ]; then
 fi
 npx -y @modelcontextprotocol/inspector@latest --cli \
   --server-url "$ENDPOINT" --header "Authorization: Bearer $MCP_TOKEN" \
-  --method tools/call --tool-name "$MCP_TOOL_NAME" "${ARGS[@]}" --tool-arg "genre=Rock"
+  --method tools/call --tool-name "$MCP_TOOL_NAME" ${ARGS[@]+"${ARGS[@]}"} --tool-arg "genre=Rock"
 
 echo ""
 echo "==> [3/4] Inspector CLI: prompts/get (${MCP_PROMPT})"
