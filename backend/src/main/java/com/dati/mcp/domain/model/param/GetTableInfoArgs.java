@@ -19,7 +19,7 @@ public record GetTableInfoArgs(
         @JsonPropertyDescription("Data source ID")
         String dataSourceId,
 
-        @JsonPropertyDescription("Table schema; defaults to the data source default schema")
+        @JsonPropertyDescription("Table schema (optional)")
         String schema,
 
         @JsonProperty("table") @NotNull @NotBlank
@@ -27,7 +27,7 @@ public record GetTableInfoArgs(
         String table,
 
         @Size(max = 100)
-        @JsonPropertyDescription("Optional list of column names to retrieve")
+        @JsonPropertyDescription("Optional column name filter")
         List<@Size(max = 100) String> fields
     ) {}
 }

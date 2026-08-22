@@ -17,19 +17,19 @@ public record UpsertTermArgs(
 ) {
     public record UpsertTermItem(
         @JsonProperty("subject_name") @NotNull @NotBlank @Size(max = 200)
-        @JsonPropertyDescription("Subject name the term belongs to (from SEARCH_METADATA results)")
+        @JsonPropertyDescription("Subject name the term belongs to")
         String subjectName,
 
         @JsonProperty("name") @NotNull @NotBlank @Size(max = 200)
-        @JsonPropertyDescription("Term name, e.g. the business word used by the user")
+        @JsonPropertyDescription("Term name")
         String name,
 
         @Size(max = 500)
-        @JsonPropertyDescription("Term description; replaces the existing one")
+        @JsonPropertyDescription("Term description (omit to keep current)")
         String description,
 
         @Size(max = 20)
-        @JsonPropertyDescription("Complete alias list; REPLACES all existing aliases")
+        @JsonPropertyDescription("Complete alias list, replaces existing (omit to keep current)")
         List<@Size(max = 100) String> aliases
     ) {}
 }

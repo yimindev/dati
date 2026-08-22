@@ -20,7 +20,7 @@ public record UpdateColumnInfoArgs(
         @JsonPropertyDescription("Data source ID")
         String dataSourceId,
 
-        @JsonPropertyDescription("Table schema; defaults to the data source default schema")
+        @JsonPropertyDescription("Table schema (optional)")
         String schema,
 
         @JsonProperty("table") @NotNull @NotBlank
@@ -32,11 +32,11 @@ public record UpdateColumnInfoArgs(
         String column,
 
         @Size(max = 500)
-        @JsonPropertyDescription("New column description; replaces the existing one")
+        @JsonPropertyDescription("New description (omit to keep current)")
         String description,
 
         @Size(max = 20)
-        @JsonPropertyDescription("Complete alias list; REPLACES all existing aliases")
+        @JsonPropertyDescription("Complete alias list, replaces existing (omit to keep current)")
         List<@Size(max = 100) String> aliases
     ) {}
 }

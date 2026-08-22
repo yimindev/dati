@@ -14,7 +14,7 @@ public enum McpToolType {
     SEARCH_METADATA(
         "search_metadata",
         "Search Metadata",
-        "Search metadata across data sources based on keywords. Returns matching tables, columns, and terms grouped by data source.",
+        "Search tables, columns, sample values, and business terms by keywords across data sources.",
         SearchMetadataArgs.class,
         "{\"readOnlyHint\":true}",
         true
@@ -22,7 +22,7 @@ public enum McpToolType {
     GET_TABLE_INFO(
         "get_table_info",
         "Get Table Info",
-        "Get detailed information about a specific table, including column names, types, descriptions, and related terms. Data is based on synced metadata. For latest structure, consider querying information_schema.",
+        "Get full column schemas (names, types, comments, sample values) for up to 20 tables.",
         GetTableInfoArgs.class,
         "{\"readOnlyHint\":true}",
         true
@@ -30,7 +30,7 @@ public enum McpToolType {
     LIST_TABLES(
         "list_tables",
         "List Tables",
-        "List all tables in the service's data scope with schema, description and aliases. Table-level overview only — no columns. Use get_table_info to inspect a specific table.",
+        "List all available tables with schema, name, and description (table-level only, no columns).",
         ListTablesArgs.class,
         "{\"readOnlyHint\":true}",
         true
@@ -38,7 +38,7 @@ public enum McpToolType {
     EXECUTE_SQL(
         "execute_sql",
         "Execute SQL",
-        "Execute an arbitrary SQL statement against a data source within the service's data scope. Permissions (SELECT/INSERT/UPDATE/DELETE/DDL) are configurable per service.",
+        "Execute an SQL query or statement against a data source.",
         ExecuteSqlArgs.class,
         null,
         true
@@ -46,7 +46,7 @@ public enum McpToolType {
     UPDATE_TABLE_INFO(
         "update_table_info",
         "Update Table Metadata",
-        "Update table metadata (description, aliases) in the shared metadata store. `aliases` REPLACES the entire existing list — query current values via get_table_info first. Changes are shared by all services and take effect immediately; only write facts you are confident about.",
+        "Enrich table description or aliases after analysis to improve future queries.",
         UpdateTableInfoArgs.class,
         "{\"readOnlyHint\":false,\"destructiveHint\":false,\"idempotentHint\":true,\"openWorldHint\":true}",
         false
@@ -54,7 +54,7 @@ public enum McpToolType {
     UPDATE_COLUMN_INFO(
         "update_column_info",
         "Update Column Metadata",
-        "Update column metadata (description, aliases) in the shared metadata store. `aliases` REPLACES the entire existing list — query current values via get_table_info first. Column value semantics (enum meanings, units, formats) are the most valuable knowledge to add. Changes are shared by all services and take effect immediately.",
+        "Enrich column description (e.g. enum meanings, value formats) or aliases after analysis to improve future queries.",
         UpdateColumnInfoArgs.class,
         "{\"readOnlyHint\":false,\"destructiveHint\":false,\"idempotentHint\":true,\"openWorldHint\":true}",
         false
@@ -62,7 +62,7 @@ public enum McpToolType {
     UPSERT_TERM(
         "upsert_term",
         "Upsert Business Term",
-        "Create or update a business term (business word ↔ platform term) in the shared metadata store. Terms belong to a subject; `subject_name` locates the subject by name (first match within service scope). Creates the term when missing, otherwise updates description/aliases. Changes are shared by all services and take effect immediately.",
+        "Enrich business vocabulary by creating or updating terms under a subject after analysis.",
         UpsertTermArgs.class,
         "{\"readOnlyHint\":false,\"destructiveHint\":false,\"idempotentHint\":true,\"openWorldHint\":true}",
         false
