@@ -1,24 +1,22 @@
-# DatI - AI 数据接入基础设施
+# DatI - AI 数据接入平台
 
-DatI（Data Intelligence）是一个为 AI 大模型提供**统一数据接入能力**的基础设施平台。它能帮助你：
+DatI（Data Intelligence）是一个为 AI 大模型提供**统一数据接入能力**的基础设施平台。主要功能：
 
-- **快速接入多种数据源**：支持主流数据库（MySQL、PostgreSQL 等）
-- **灵活构建 MCP 服务**：自动生成符合 [Model Context Protocol](https://modelcontextprotocol.io/) 标准的服务接口
-- **即插即用**：让 AI 大模型与 Agent（如 OpenCode、WorkBuddy、Dify 等）能够无缝访问业务数据
-
+- **数据源接入**：支持主流数据库（MySQL、PostgreSQL、ClickHouse、Doris 等）
+- **语义建模**：对表、列、列值、业务术语进行统一管理与检索
+- **构建 MCP 服务**：预置元数据检索、SQL 执行等标准工具，支持参数化 SQL 查询，可自动生成符合 [MCP](https://modelcontextprotocol.io/) 标准的服务接口
 <p>
   <img src="docs/images/dati-visual-positioning.svg" alt="DatI Architecture" width="100%"/>
 </p>
 
 ## 适用场景
 
-- **NL2SQL 应用构建**：接入业务数据库，进行元数据查询、SQL 执行
-- **数据分析助手**：通过配置元数据、术语，为 Agent 提供业务数据分析能力
-- **快速 MCP 服务**：通过自定义 SQL 快速构建数据查询 MCP 服务
+- **智能问数**：接入业务数据库，通过业务元数据配置以及通用预置工具即可支持 NL2SQL 分析工作流
+- **轻应用搭建**：将数据库封装为 MCP 服务，Agent 通过对话即可直接对业务数据增删改查，快速构建轻量级应用
 
 ## 技术栈
 
-- **后端**：Spring Boot 3.5.x + Java 21 + JPA + Flyway
+- **后端**：Spring Boot 3.5.x + Java 21 + JPA
 - **前端**：Vue 3 + TypeScript + Vite + Element Plus + TailwindCSS 4
 - **数据库**：H2（开发）/ MySQL / PostgreSQL（生产）
 - **搜索引擎**：Elasticsearch（语义检索）
