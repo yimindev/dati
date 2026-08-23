@@ -95,7 +95,7 @@ backend/src/main/java/com/dati/datasource/
 
 **DataSource**
 - `id`, `name`, `description`: 基础信息（继承 BaseResource）
-- `type`: 数据库类型 (DbType enum，支持 MYSQL/POSTGRESQL/CLICKHOUSE/ORACLE 等 10 种)
+- `type`: 数据库类型 (DbType enum：MYSQL / MARIADB / POSTGRESQL / ORACLE / SQLSERVER / CLICKHOUSE / DORIS / TRINO / UNKNOWN)
 - `jdbcUrl`, `username`, `password`: 连接信息（Model 中为明文，PO 中 password 加密存储）
 - `defaultSchema`: 默认 Schema，由服务端在创建/连接信息变更时实际探测写入，**忽略客户端传入的值**（`DSMapper` 创建映射时不复制该字段）
 
@@ -119,7 +119,7 @@ backend/src/main/java/com/dati/datasource/
 - 通过 `DbClientFactory.getDbClient(DbType)` 获取对应的 DbClient 实现
 - 调用 `HikariPoolManager` 管理 HikariCP 连接池
 - `executeSql()`: 使用 `JdbcTemplate` 执行 SQL 并返回 `List<Map<String, Object>>`
-- `resolveCurrentSchema(connector, dbType)`: 探测连接的默认 schema。**由本方法统一管理连接的获取与释放**（`try-with-resources` 包裹 `HikariPoolManager.getConnection()`），`DbClient.getCurrentSchema(Connection)` 仅负责在已有连接上执行 SQL，不再自行管理连接生命周期；若 `dbType` 不受支持则抛出 `DatiException(DS_UNSUPPORTED_TYPE)`
+- `resolveCurrentSchema(connector, dbType)`: 探测连接的默认 schema，委托 `DbClient.getCurrentSchema(JdbcConnector)` 执行（连接生命周期由各 DbClient 内部通过 `HikariPoolManager.getConnection()` 管理，`try-with-resources` 自动释放）；若 `dbType` 不受支持则抛出 `DatiException(DS_UNSUPPORTED_TYPE)`
 
 **DataSourceService**: 数据源核心业务逻辑与双通道访问
 - `testConnection(JdbcConnector)`: 测试数据库连接
@@ -355,7 +355,7 @@ DataSourceService.deleteDataSource()
 ## 6. 关键技术点
 
 - **连接池管理**: 使用 HikariCP，通过 `HikariPoolManager`（ConcurrentHashMap）统一管理，ShutdownHook 自动清理；预期的连接池初始化失败（如认证失败、网络不通）会被 `HikariPoolManager.getDataSource()` 捕获并转换为 `SQLException`，由上层统一处理为业务异常，而不是让未处理的 `PoolInitializationException` 直接抛出
-- **多数据库支持**: `DbClientFactory` 简单工厂模式，通过 `DbClient` 接口 + `AbstractDbClient` 模板方法抽象不同数据库的 JDBC 操作。目前已实现 `MysqlDbClient`（Schema = Catalog）和 `PostgresqlDbClient`
+- **多数据库支持**: `DbClientFactory` 简单工厂模式，通过 `DbClient` 接口 + `AbstractDbClient` 模板方法抽象不同数据库的 JDBC 操作。已实现 `MysqlDbClient` / `MariaDbClient` / `DorisDbClient`（Schema = Catalog，`SELECT DATABASE()`）、`PostgresqlDbClient`（`SELECT current_schema()`）、`ClickhouseDbClient`（`SELECT currentDatabase()`）。新增类型步骤见[第 7 章](#7-新增数据源类型)
 - **密码安全**: PO 中存储 `encryptedPassword`（`EncryptionUtils.encrypt()`），Mapper 层做加解密转换，VO 层不返回密码
 - **DDD 架构**: 严格分层 `controller → service → repository/dao`
 - **前后端分离**: 前端 Vue 3 + TypeScript + Element Plus，后端 REST API
@@ -365,7 +365,52 @@ DataSourceService.deleteDataSource()
 - **列值抽取**: 通过 `ColumnValueService` 执行 `SELECT DISTINCT` 抽取列的去重值到 ES，支持覆盖/追加两种模式，受 `ColumnValueConfig` 限制采样数量和值长度
 - **值匹配开关**: 仅字符串类型列（varchar/char/text）支持，开启后可管理列值；关闭时自动清理 ES 中的 FIELD_VALUE 数据
 
-## 7. 参考
+## 7. 新增数据源类型
+
+以 ClickHouse / Doris / MariaDB 接入为模板，新增数据库类型需同步修改后端与前端（编码规范见 `.agents/rules/backend.md` → Adding a New Datasource Type）。
+
+### 7.1 后端步骤（TDD）
+
+1. **添加 JDBC 驱动依赖**：`backend/pom.xml` 添加 `runtime` 依赖；若版本不在 Spring Boot BOM 中，在根 `pom.xml` 增加版本属性 + `dependencyManagement` 条目（参考 `clickhouse-jdbc.version`）。
+2. **扩展 `DbType` 枚举**：新增类型值。
+3. **先写测试**（`backend/src/test/java/com/dati/db/client/`）：
+   - `XxxDbClientTest`：mock `DatabaseMetaData` / `Statement` / `ResultSet`，并用 `mockStatic(HikariPoolManager.class)` 拦截连接获取（参考 `ClickhouseDbClientTest`）。
+   - 扩展 `DbClientFactoryTest` 断言新类型映射。
+   - 可选：真实服务集成测试，用 `Assumptions.assumeTrue(isReachable(host, port))` 在服务未启动时自动跳过（参考 `ClickhouseAndDorisIntegrationTest`）。
+4. **实现 `XxxDbClient extends AbstractDbClient`**，只覆写与 `DatabaseMetaData` 默认行为不同的方法：
+   - `getDbType()`：必覆写。
+   - `getSchemas(connector, catalog)`：MySQL 系（schema 即 catalog）委托 `super.getCatalogs()`。
+   - `getCurrentSchema(connector)`：数据库方言 SQL，如 MySQL/MariaDB/Doris `SELECT DATABASE()`、PostgreSQL `SELECT current_schema()`、ClickHouse `SELECT currentDatabase()`。
+   - `getTables` / `getColumns`：仅当驱动元数据语义不同（如 catalog/schema 参数位置）时覆写。
+5. **注册工厂**：在 `DbClientFactory` 静态块注册 `DbType → DbClient`。
+
+### 7.2 前端步骤
+
+1. `DatasourceForm.vue`：`<el-option>` 增加类型选项（value 与 `DbType` 枚举名一致）。
+2. `SearchHitResult.vue` / `TableListResult.vue`：`dbTypeLabel` 增加标签，`dbTypeColor` 增加颜色映射（仅使用 `var(--ep-color-*)`）。
+
+### 7.3 驱动选择规则（重要）
+
+`HikariPoolManager` 与 `JdbcUtils` 依赖 `DriverManager` 自动探测，**不显式设置 `driverClassName`**，因此 classpath 上每个 URL 前缀必须恰好只有一个驱动接受：
+
+| URL 前缀 | 驱动 | 说明 |
+|---|---|---|
+| `jdbc:mysql://` | mysql-connector-j（`com.mysql.cj.jdbc.Driver`） | MySQL 与 Doris 共用；MariaDB 驱动不接受此前缀（除非 URL 含 `permitMysqlScheme` 标记） |
+| `jdbc:mariadb://` | mariadb-java-client（`org.mariadb.jdbc.Driver`） | 该前缀下也可连 MySQL 服务器 |
+| `jdbc:postgresql://` | postgresql（`org.postgresql.Driver`） | |
+| `jdbc:clickhouse://` | clickhouse-jdbc（`com.clickhouse.jdbc.ClickHouseDriver`） | |
+
+新增驱动时须确认它不会同时注册到已有 URL 前缀，否则连接选择将变得不确定。
+
+### 7.4 验证清单
+
+- [ ] `mvn -Dtest='XxxDbClientTest,DbClientFactoryTest' test` 通过
+- [ ] 有真实服务时集成测试通过（无服务时自动跳过）
+- [ ] 前端 `pnpm build` 通过
+- [ ] `DbType` 枚举、`DatasourceForm.vue`、两个结果组件标签映射同步更新
+- [ ] 确认存量数据中不存在已删除的 `DbType` 值（否则 `DbType.valueOf` 抛异常）
+
+## 8. 参考
 
 - 语义模型集成（ES）：[semantic.md](semantic.md)
 - 模板引擎：[template-engine.md](template-engine.md)
