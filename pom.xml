@@ -10,7 +10,7 @@
     </parent>
     <groupId>com.dati</groupId>
     <artifactId>dati-parent</artifactId>
-    <version>0.2.0</version>
+    <version>0.3.0</version>
     <name>data-conn-ai</name>
     <packaging>pom</packaging>
 
