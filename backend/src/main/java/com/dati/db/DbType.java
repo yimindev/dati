@@ -6,10 +6,8 @@ public enum DbType {
     POSTGRESQL,
     ORACLE,
     SQLSERVER,
-    H2,
     CLICKHOUSE,
-    SQLITE,
-    DUCKDB,
+    DORIS,
     TRINO,
     UNKNOWN
 }

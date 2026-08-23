@@ -83,13 +83,11 @@ defineExpose({
       >
         <el-option label="MySQL" value="MYSQL" />
         <el-option label="PostgreSQL" value="POSTGRESQL" />
-        <el-option label="Clickhouse" value="CLICKHOUSE" />
+        <el-option label="MariaDB" value="MARIADB" />
+        <el-option label="ClickHouse" value="CLICKHOUSE" />
+        <el-option label="Apache Doris" value="DORIS" />
         <el-option label="Oracle" value="ORACLE" />
         <el-option label="SQLServer" value="SQLSERVER" />
-        <el-option label="H2" value="H2" />
-        <el-option label="MariaDB" value="MARIADB" />
-        <el-option label="DuckDB" value="DUCKDB" />
-        <el-option label="SQLite" value="SQLITE" />
         <el-option label="Trino" value="TRINO" />
       </el-select>
     </el-form-item>

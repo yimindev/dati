@@ -16,13 +16,11 @@ const dbTypeLabel = (type: string) =>
   ({
     POSTGRESQL: "PostgreSQL",
     MYSQL: "MySQL",
+    MARIADB: "MariaDB",
     CLICKHOUSE: "ClickHouse",
+    DORIS: "Doris",
     ORACLE: "Oracle",
     SQLSERVER: "SQL Server",
-    H2: "H2",
-    MARIADB: "MariaDB",
-    DUCKDB: "DuckDB",
-    SQLITE: "SQLite",
     TRINO: "Trino",
   })[type] || type;
 
@@ -30,7 +28,9 @@ const dbTypeColor = (type: string) =>
   ({
     POSTGRESQL: "var(--ep-color-primary)",
     MYSQL: "var(--ep-color-warning)",
+    MARIADB: "var(--ep-color-warning)",
     CLICKHOUSE: "var(--ep-color-success)",
+    DORIS: "var(--ep-color-primary)",
     ORACLE: "var(--ep-color-danger)",
   })[type] || "var(--ep-color-info)";
 </script>

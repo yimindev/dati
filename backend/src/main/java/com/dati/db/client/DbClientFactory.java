@@ -12,6 +12,9 @@ public class DbClientFactory {
     static {
         dbClientMap.put(DbType.MYSQL, new MysqlDbClient());
         dbClientMap.put(DbType.POSTGRESQL, new PostgresqlDbClient());
+        dbClientMap.put(DbType.MARIADB, new MariaDbClient());
+        dbClientMap.put(DbType.CLICKHOUSE, new ClickhouseDbClient());
+        dbClientMap.put(DbType.DORIS, new DorisDbClient());
     }
 
     public static DbClient getDbClient(DbType dbType) {
