@@ -157,3 +157,5 @@ unlinkTermRelation(termId, tableId, fieldName, signal?): IdResponse
 5. **关键词搜索**：主题列表按名称搜索，已关联的表按表名搜索，术语按名称/别名搜索；均采用 Java 层分支（keyword 空/非空分别调用不同 DAO 方法），避免 `IS NULL OR` 影响查询计划
 6. **数据源名称富集**：`SubjectVO.datasourceName` 由 `SubjectAssembler` 批量解析——`toVO()` 和 `toVOList()` 内部通过 `DataSourceService.getDataSourceNameMap()` 一次查询完成所有 ID→名称映射
 7. **DTO 命名**：后端使用 `camelCase`，前端 API 层转换为 `snake_case`（后端统一按 dev profile 的 snake_case 处理）
+8. **分层权限管控**：主题（`SUBJECT`）作为根资源受 ACL 控制。创建主题需校验关联数据源的 `VIEW` 权限；主题及其子资源（`SubjectTable`、`Term`、`TermRelation`）的读写操作均级联校验所属 `SUBJECT` 的 `VIEW` 或 `EDIT` 权限
+

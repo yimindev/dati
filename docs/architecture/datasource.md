@@ -67,31 +67,29 @@ backend/src/main/java/com/dati/datasource/
 | PUT | `/v1/data-sources/{id}` | 更新数据源（null 字段不覆盖） |
 | DELETE | `/v1/data-sources/{id}` | 删除数据源（级联清理表/列/ES索引） |
 | GET | `/v1/data-sources` | 分页查询数据源列表，支持 keyword 搜索 |
-| GET | `/v1/data-sources/{id}/schemas` | 获取数据库 Schema 列表 |
-| GET | `/v1/data-sources/{id}/schemas/{schema}/tables` | 获取表列表 |
-| GET | `/v1/data-sources/{id}/schemas/{schema}/tables/{table}/columns` | 获取列信息 |
-| POST | `/v1/data-sources/{id}/execute-sql` | 执行 SQL 语句 |
+| GET | `/v1/data-sources/{id}/schemas` | 获取数据库 Schema 列表（校验 VIEW 权限） |
+| GET | `/v1/data-sources/{id}/schemas/{schema}/tables` | 获取表列表（校验 VIEW 权限） |
 
 #### 2.2.2 表管理（TableController，前缀 `/v1/data-sources/{datasourceId}`）
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
-| GET | `/v1/data-sources/{datasourceId}/tables` | 分页查询已添加的表列表，支持 keyword 搜索 |
-| GET | `/v1/data-sources/{datasourceId}/tables/added-names` | 获取已添加的表名列表（用于添加时去重） |
-| POST | `/v1/data-sources/{datasourceId}/tables/batch` | 批量添加表（从数据库同步表+列+ES索引） |
-| DELETE | `/v1/data-sources/{datasourceId}/tables/{tableId}` | 删除表（级联删列+ES索引） |
-| PUT | `/v1/data-sources/{datasourceId}/tables/{tableId}` | 更新表元数据（别名、描述）并同步 ES |
+| GET | `/v1/data-sources/{datasourceId}/tables` | 分页查询已添加的表列表，支持 keyword 搜索（校验 VIEW 权限） |
+| GET | `/v1/data-sources/{datasourceId}/tables/added-names` | 获取已添加的表名列表（校验 VIEW 权限） |
+| POST | `/v1/data-sources/{datasourceId}/tables/batch` | 批量添加表（从数据库同步表+列+ES索引，校验 EDIT 权限） |
+| DELETE | `/v1/data-sources/{datasourceId}/tables/{tableId}` | 删除表（级联删列+ES索引，校验 EDIT 权限） |
+| PUT | `/v1/data-sources/{datasourceId}/tables/{tableId}` | 更新表元数据（别名、描述）并同步 ES（校验 EDIT 权限） |
 
 #### 2.2.3 列管理（ColumnController，前缀 `/v1/data-sources/{datasourceId}/tables/{tableId}/columns`）
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
-| GET | `.../columns` | 分页查询列列表，支持 keyword 搜索 |
-| PUT | `.../columns/{id}` | 更新列元数据（别名、描述、值匹配开关） |
-| POST | `.../columns/sync` | 从数据库同步最新列信息，支持 overwrite_existing 参数 |
-| POST | `.../columns/{columnId}/values/extract` | 从数据库抽取列的去重值到 ES |
-| GET | `.../columns/{columnId}/values` | 分页查询列值列表，支持 keyword 搜索 |
-| PUT | `.../columns/{columnId}/values` | 保存列值（增/删/改同义词） |
+| GET | `.../columns` | 分页查询列列表，支持 keyword 搜索（校验 VIEW 权限） |
+| PUT | `.../columns/{id}` | 更新列元数据（别名、描述、值匹配开关，校验 EDIT 权限） |
+| POST | `.../columns/sync` | 从数据库同步最新列信息（校验 EDIT 权限） |
+| POST | `.../columns/{columnId}/values/extract` | 从数据库抽取列去重值写入 ES（强校验所属数据源一致性 + EDIT 权限） |
+| GET | `.../columns/{columnId}/values` | 分页查询列值列表，支持 keyword 搜索（校验 VIEW 权限） |
+| PUT | `.../columns/{columnId}/values` | 保存列值（增/删/改同义词，校验 EDIT 权限） |
 
 ### 2.3 核心领域模型
 
@@ -123,30 +121,33 @@ backend/src/main/java/com/dati/datasource/
 - `executeSql()`: 使用 `JdbcTemplate` 执行 SQL 并返回 `List<Map<String, Object>>`
 - `resolveCurrentSchema(connector, dbType)`: 探测连接的默认 schema。**由本方法统一管理连接的获取与释放**（`try-with-resources` 包裹 `HikariPoolManager.getConnection()`），`DbClient.getCurrentSchema(Connection)` 仅负责在已有连接上执行 SQL，不再自行管理连接生命周期；若 `dbType` 不受支持则抛出 `DatiException(DS_UNSUPPORTED_TYPE)`
 
-**DataSourceService**: 数据源核心业务逻辑
+**DataSourceService**: 数据源核心业务逻辑与双通道访问
 - `testConnection(JdbcConnector)`: 测试数据库连接
-- `addDataSource(DataSource)`: **持久化前**探测真实 `defaultSchema`（忽略客户端传入值），探测失败（`SQLException`、不支持的类型、探测结果为空）均转换为明确的 `DatiException` 业务错误，**不落库**；探测成功后密码加密并单次 `save`
-- `updateDataSource(id, DataSource)`: 仅覆盖非 null 字段；仅当 `jdbcUrl`/`username`/`password`/`type` 任一实际发生变化时，才基于合并后的候选连接信息重新探测 `defaultSchema`——探测在写入 `po`/保存前完成，失败时不修改、不保存原数据；探测成功后连同其它字段单次 `save`，保存成功后再使用**变更前的旧连接信息**关闭旧的 HikariCP 连接池（非连接字段变化或保存失败均不触发探测/关闭）。方法不加 `@Transactional`，避免将探测这类外部网络 I/O 包裹进元数据库事务
-- `deleteDataSource(id)`: 删除时关闭连接池 → 清理关联的 Column → Table → ES 语义索引
-- `listDataSources(keyword, pageable)`: 分页查询，支持按名称或 ID 搜索
-- `getDataSourceNameMap(ids)`: 批量获取数据源名称映射
+- `addDataSource(DataSource)`: **持久化前**探测真实 `defaultSchema`（忽略客户端传入值），探测失败转换为明确业务异常不落库；保存成功密码加密存储
+- `updateDataSource(id, DataSource)`: 校验 `DATA_SOURCE (EDIT)`；非 null 覆盖；仅连接变更时重新探测并关闭旧连接池
+- `deleteDataSource(id)`: 校验 `DATA_SOURCE (EDIT)`；关闭连接池 → 清理关联 Column → Table → ES 语义索引
+- `listDataSources(keyword, pageable)`: 分页查询（SQL 层按 owner / ACL 静默过滤）
+- `getDataSource(id)`: **用户通道** — 查询并强制执行当前用户针对数据源的 `VIEW` 鉴权，密码脱敏返回
+- `getDataSourceInternal(id)`: **内部通道** — 供 MCP 工具执行引擎等内部组件使用，解耦用户级数据源直属权限，由 MCP 服务层 DataScope 统一管控访问范围
+- `getSchemas(id, catalog)` / `getTables(id, catalog, schema)`: 校验 `DATA_SOURCE (VIEW)` 权限后查询元数据
+- `getDataSourceNameMap(ids)` / `getDataSourceBriefs(ids)`: 批量轻量查询
 
-**TableService**: 表管理 + ES 语义索引同步
-- `getTables(pageReq, datasourceId, keyword)`: 分页查询表列表
-- `getAddedTableNames(datasourceId)`: 获取已添加表名（用于添加表时避免重复）
-- `batchAddTables(datasourceId, tables)`: **事务方法** — 保存 Table PO → 通过 JDBC 获取列信息 → 保存 Column PO → 批量构建 TABLE + FIELD 类型的 SemanticSearchDocument 写入 ES
-- `deleteTable(tableId)` / `deleteTables(tableIds)`: 级联删除列 + ES 清理
-- `updateTable(tableId, tableInfo)`: 更新别名/描述 → 同步 ES
+**TableService**: 表管理 + ES 语义索引同步（级联校验所属数据源权限）
+- `getTables(pageReq, datasourceId, keyword)`: 分页查询表列表（校验 `requireDataSource(dsId, VIEW)`）
+- `getAddedTableNames(datasourceId)`: 获取已添加表名（校验 `requireDataSource(dsId, VIEW)`）
+- `batchAddTables(datasourceId, tables)`: **事务方法** — 校验 `requireDataSource(dsId, EDIT)` → 保存 Table PO → JDBC 获取列信息 → 保存 Column PO → 批量构建 TABLE + FIELD 写入 ES
+- `deleteTable(tableId)` / `deleteTables(tableIds)`: 校验所属数据源 `EDIT` 权限 → 级联删除列 + 清理 ES
+- `updateTable(tableId, tableInfo)`: 校验所属数据源 `EDIT` 权限 → 更新别名/描述 → 同步 ES
 
-**ColumnService**: 列管理
-- `getColumns(pageReq, tableId, keyword)`: 分页查询列列表
-- `updateColumn(id, columnInfo)`: 更新列元数据 → 同步 ES；当 `extractValueEnabled` 从 true 变为 false 时，自动清理该列对应的 FIELD_VALUE 文档
-- `syncColumns(datasourceId, tableId, overwriteExisting)`: 从 JDBC 获取最新列 → 删除旧 PO → 保存新 PO → 重建 ES FIELD 文档。`overwriteExisting` 控制是否覆盖用户自定义的描述。**用户资产不随结构同步销毁**：existing 分支保留 `extractValueEnabled`（抽取开关）；ES 清理按类型精确执行（`deleteByTableIdAndType(FIELD)` 重建结构索引），仅对**消失列**按列删除 FIELD_VALUE，仍存在列的值文档（含用户编辑的 synonyms）原样保留
+**ColumnService**: 列管理（级联校验所属数据源权限）
+- `getColumns(pageReq, tableId, keyword)`: 分页查询列列表（反查 table 所属数据源校验 `VIEW` 权限）
+- `updateColumn(id, columnInfo)`: 更新列元数据 → 校验所属数据源 `EDIT` 权限 → 同步 ES
+- `syncColumns(datasourceId, tableId, overwriteExisting)`: 校验 `requireDataSource(dsId, EDIT)` → 从 JDBC 获取最新列 → 增量同步 PO 与 ES 文档（保留未消失列的用户编辑同义词与配置）
 
 **ColumnValueService**: 列值抽取与管理（NEW）
-- `extractValues(datasourceId, columnId, overwrite)`: 执行 `SELECT DISTINCT {column} FROM {table} LIMIT N` → 将每个值作为 FIELD_VALUE 类型写入 ES。由 `ColumnValueConfig` 控制采样限制（sampleLimit）和长度限制（lengthLimit）
-- `saveValues(columnId, values, deletedIds)`: 手动增/删/改列值，同时更新 ES
-- `getValues(columnId, pageReq, keyword)`: 分页查询列值，支持搜索
+- `extractValues(datasourceId, columnId, overwrite)`: 强校验 `columnId` 所属表与传入 `datasourceId` 一致性 → 校验所属数据源 `EDIT` 权限 → 执行 `SELECT DISTINCT {column} FROM {table} LIMIT N` → 写入 ES `FIELD_VALUE` 文档
+- `saveValues(columnId, values, deletedIds)`: 校验所属数据源 `EDIT` 权限 → 手动增/删/改列值同义词并更新 ES
+- `getValues(columnId, pageReq, keyword)`: 校验所属数据源 `VIEW` 权限 → 分页查询列值同义词
 
 ## 3. 前端架构
 
@@ -190,8 +191,6 @@ listDataSources(page, size, keyword) // GET /v1/data-sources
 // 元数据查询
 getSchemas(id)                    // GET /v1/data-sources/{id}/schemas
 getTables(id, schema)            // GET /v1/data-sources/{id}/schemas/{schema}/tables
-getColumns(id, schema, table)    // GET /v1/data-sources/{id}/schemas/{schema}/tables/{table}/columns
-executeSql(id, sql)              // POST /v1/data-sources/{id}/execute-sql
 
 // === 表管理 (tableinfo.ts) ===
 listTableInfos(datasourceId, page, size, keyword)  // GET .../tables

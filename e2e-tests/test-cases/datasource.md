@@ -64,43 +64,22 @@
 
 ---
 
-## TC-DS-005 浏览 Schema 下的 Tables 和 Columns
+## TC-DS-005 浏览 Schema 下的 Tables
 **级别：** P1
 **前置：** 已登录
 **注意：** 需要真实数据库连接
-**数据：** `chinook.e2e.datasource.{core_tables, browse_table1, browse_table1_columns, browse_table2, browse_table2_columns}`
+**数据：** `chinook.e2e.datasource.core_tables`
 
 1. 创建 PostgreSQL 数据源（使用 postgres_local）
-2. 获取 `chinook.e2e.datasource.expected_schema` 的 table 列表
+2. 通过 GET `/v1/data-sources/{id}/schemas/{schema}/tables` 获取 `chinook.e2e.datasource.expected_schema` 的 table 列表
 3. 验证返回结果：
    - 是数组，非空，每个 table 对象包含 `name` 字段
    - 包含 `chinook.e2e.datasource.core_tables` 中的所有表名
-4. 获取 `chinook.e2e.datasource.browse_table1` 的 column 列表
-5. 验证返回结果：
-   - 是数组，非空，每个 column 包含 `name` 和类型相关信息
-   - 包含 `chinook.e2e.datasource.browse_table1_columns` 中的列名
-6. 获取 `chinook.e2e.datasource.browse_table2` 的 column 列表
-7. 验证包含 `chinook.e2e.datasource.browse_table2_columns` 中的列名
-8. 删除该数据源（清理）
+4. 删除该数据源（清理）
 
----
-
-## TC-DS-006 执行 SQL 查询
-**级别：** P1
-**前置：** 已登录
-**注意：** 需要真实数据库连接
-**数据：** `chinook.sample_queries`，`chinook.e2e.datasource.{album_row_count, join_result_fields}`
-
-1. 创建 PostgreSQL 数据源（使用 postgres_local）
-2. 执行 simple_count SQL（参考 chinook.sample_queries.simple_count）
-3. 验证返回结果：
-   - 是数组，至少 1 行
-   - 第一行包含 `total` 字段，值为 `chinook.e2e.datasource.album_row_count`
-4. 执行 join_three_tables SQL（参考 chinook.sample_queries.join_three_tables）
-5. 验证返回结果：
-   - 是数组，每行包含 `chinook.e2e.datasource.join_result_fields` 中的所有字段
-   - 数据有意义（非空值、非乱码）
-6. 删除该数据源（清理）
+> 注：原始的未加表直接探查 JDBC 列接口（`GET .../tables/{table}/columns`）及直接执行 SQL 接口（`POST .../execute-sql`，原 TC-DS-006）已全部从 DataSourceController 移除。
+> - 表列元数据管理统一通过「添加表 → 同步列」工作流执行（见 TC-DS-010 / TC-DS-011）；
+> - SQL 执行统一在 MCP 服务与工具层通过受控快照及 DataScope 范围约束执行（见 TC-MCP-005 / TC-END-003）。
 
 ---
 

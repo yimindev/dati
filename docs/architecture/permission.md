@@ -26,7 +26,7 @@
 
 | 组件 | 职责 | 位置 |
 |------|------|------|
-| `PermissionService` | 判定门面：admin → owner → checker 三层短路；`require` / `requireCurrentUser` | `permission/domain/service/` |
+| `PermissionService` | 判定门面：admin → owner → checker 三层短路；提供 `requireCurrentUser` 及 `requireDataSource` / `requireSubject` / `requireMcpService` 语义化断言方法（支持 ID 与 PO 实体重载，避免二次查库） | `permission/domain/service/` |
 | `PermissionChecker` | 授权判定 SPI：`can(userId, resourceType, resourceId, permission)` | `permission/domain/service/` |
 | `AclPermissionChecker` | 默认实现：用户个体行 → 用户所在组行，anyMatch(covers) | `permission/domain/service/` |
 | `AclService` | 授权管理：grant / revoke / list，写入前校验当前用户 EDIT | `permission/domain/service/` |
@@ -105,15 +105,48 @@ WHERE d.createdBy = :userId                      -- owner 分支
 
 **已知设计问题**：grant 返回 ACL 记录 id，revoke 返回资源 id，响应语义不对称（待统一）。
 
-## 业务接入点
+## 分层与级联权限体系（Cascading Permissions）
 
-| 操作 | 校验 | 位置 |
-|------|------|------|
-| 数据源 / 主题 / MCP 服务 update、delete、详情 | `requireCurrentUser(EDIT / VIEW)` | 各 `*Service` |
-| 主题加表 / 删表 | `requireCurrentUser(EDIT)` | `SubjectService` |
-| MCP 服务 publish / enable / disable | `requireCurrentUser(EDIT)` | `McpServicePublishService` |
-| MCP 数据范围保存 | `requireCurrentUser(EDIT)` + 传播校验 | `McpServiceDataScopeService` |
-| MCP 服务创建 / 更新 | 传播校验：绑定资源至少 VIEW | `McpServiceService` |
+平台权限以三大根资源（`DATA_SOURCE`、`SUBJECT`、`MCP_SERVICE`）为锚点。所有子资源的操作鉴权向上级联至其所属的根资源：
+
+### 1. 资源鉴权映射表
+
+| 根资源类型 | 覆盖操作 / 子资源 | 所需权限 | 鉴权方法 | 校验位置 |
+|---|---|---|---|---|
+| **DATA_SOURCE** | 数据源详情 / 元数据（schemas / tables）查询 | `VIEW` | `requireDataSource(id, VIEW)` | `DataSourceService` |
+| | 数据源更新 / 删除 / 物理库断开 | `EDIT` | `requireDataSource(po, EDIT)` | `DataSourceService` |
+| | 表查询（`getTables`, `getAddedTableNames`） | `VIEW` | `requireDataSource(dsId, VIEW)` | `TableService` |
+| | 批量加表 / 删表 / 改表元数据 | `EDIT` | `requireDataSource(dsId, EDIT)` | `TableService` |
+| | 列查询（`getColumns`） | `VIEW` | `requireDataSource(dsId, VIEW)` | `ColumnService` |
+| | 列元数据更新 / 列结构同步（`syncColumns`） | `EDIT` | `requireDataSource(dsId, EDIT)` | `ColumnService` |
+| | 列值查询（`getValues`） | `VIEW` | `requireDataSource(dsId, VIEW)` | `ColumnValueService` |
+| | 列值抽取（`extractValues`）/ 列值保存（`saveValues`） | `EDIT` | `requireDataSource(dsId, EDIT)` | `ColumnValueService` |
+| **SUBJECT** | 主题详情 / 列表 / 主题关联表查询 | `VIEW` | `requireSubject(id, VIEW)` | `SubjectService` |
+| | 主题创建（校验关联数据源权限） | `VIEW (DS)` | `requireDataSource(dsId, VIEW)` | `SubjectService` |
+| | 主题更新 / 删除 / 主题关联表增删 | `EDIT` | `requireSubject(po, EDIT)` | `SubjectService` |
+| | 术语详情 / 列表查询 | `VIEW` | `requireSubject(subjectId, VIEW)` | `TermService` |
+| | 术语创建 / 更新 / 删除 / 关联表字段绑定 | `EDIT` | `requireSubject(subjectId, EDIT)` | `TermService` |
+| **MCP_SERVICE** | MCP 服务详情 / 列表 / 运行时协议调用（JSON-RPC Endpoint） | `VIEW` | `requireMcpService(id, VIEW)` / `can` | `McpServiceService`, `McpEndpointService` |
+| | MCP 服务创建 / 更新 | `EDIT` + 传播校验 | `requireCurrentUser` + `requireDataSource/requireSubject(VIEW)` | `McpServiceService` |
+| | 工具列表 / 提示词列表 / 发布快照查询 / 差异对比（getDiff） | `VIEW` | `requireMcpService(po, VIEW)` | `McpToolService`, `McpPromptService`, `McpServicePublishService` |
+| | 工具配置 / 动态工具增删改 / 提示词增删改 / 发布回滚 | `EDIT` | `requireMcpService(po, EDIT)` | `McpToolService`, `McpPromptService`, `McpServicePublishService` |
+| | 工具在线调试测试（`McpToolTestService.test`） | `EDIT` | `requireMcpService(serviceId, EDIT)` | `McpToolTestService` |
+| | 数据范围保存（`saveDataScope`） | `EDIT` + 传播校验 | `requireMcpService(serviceId, EDIT)` + 绑定资源 `VIEW` | `McpServiceDataScopeService` |
+
+### 2. 双通道数据源访问机制
+
+为解决"用户拥有 MCP Service 权限但无底层直属数据源权限时工具无法执行"以及"绕过服务管控直接执行 SQL"的冲突，平台建立了双通道访问架构：
+
+- **用户通道**（`DataSourceService.getDataSource`）：
+  - 面向管理端用户交互 API。
+  - 强制执行当前用户针对 `DATA_SOURCE` 资源的 `VIEW` 鉴权与密码脱敏。
+- **内部工具执行通道**（`DataSourceService.getDataSourceInternal`）：
+  - 面向 MCP 运行时执行引擎（如 `ExecuteSqlExecutor`、`ParameterizedSqlExecutor`）。
+  - 解耦对底层数据源的直接用户权限强依赖，由网关在 `MCP_SERVICE` 层做 `VIEW` 鉴权，并在执行期严格由 `DataScope` 限制其可访问的表与数据源，确保权限受控且安全。
+
+### 3. 跨资源一致性校验原则
+
+所有接收子资源 ID（如 `columnId`）与父资源 ID（如 `datasourceId`）的接口（如 `ColumnValueService.extractValues`），必须在查出子资源后强校验其父级所属关系（`tablePO.getDataSourceId().equals(datasourceId)`），防止利用跨数据源参数组合越权读取或污染索引。
 
 **传播校验（防间接泄露）**：创建 / 更新 / 发布 MCP 服务时，校验当前用户对每个绑定的数据源 / 主题至少 VIEW，防止把无权访问的数据打包进服务间接泄露。授权**不反向传播**：服务授权不授予底层数据源权限。
 

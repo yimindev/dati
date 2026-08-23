@@ -282,9 +282,9 @@ com.dati.semantic.domain.model/
 | `ToolExecutionContext` | record：`serviceId`、`toolType`、`config: ToolConfig`、`arguments: Object`（预置工具 = 绑定后的参数 record；动态工具 = 原始 Map）、`scopeItems: List<McpServiceDataScope>`。访问器：`args(Class<T>)` 取参数 record、`argumentsMap()` 取原始 Map |
 | `ToolResolver` | 解析 toolId：先尝试 `McpToolType.valueOf(toolId)` 匹配枚举 → 查 `McpPrebuiltToolConfigDAO`（有则取 DB 值，无则用默认）；解析失败则当 UUID 查 `McpCustomToolDAO`。disabled → throw `ToolExecuteException(TOOL_DISABLED)` |
 | `ScopeValidator` | 两层 scope 校验：① 数据源级 — 遍历 scopeItems 收集所有覆盖的 dsId（DATA_SOURCE 直接 + SUBJECT 展开）；② 表级 — 构建允许的 TableRef 集合，对比 SQL 分析结果。支持 `defaultSchema` 参数解析 schema-less 表引用。另提供 `validateDataSource()`（仅数据源级，供元数据写工具）与 `resolveSubjectInScope()`（按名称在 scope SUBJECT 中定位 subjectId，供 UPSERT_TERM） |
-| `McpToolTestService` | 测试编排（极简，无分支）：`resolve()` → 查 scope → `ToolParameterBinder.bind()` 绑定参数 → `execute()` → 计时 → 组装响应。`ToolExecuteException` 在此层 catch 并转为 `ToolTestResponse(success=false, error=...)` |
-| `ExecuteSqlExecutor` | EXECUTE_SQL 执行器。`ctx.args(ExecuteSqlArgs.class)` 取参，dsId + sql 从 record 取，`Statement.execute()` 执行，`SqlExecutorHelper.collect()` 收集多语句结果。每条语句独立 policy 校验和 try-catch |
-| `ParameterizedSqlExecutor` | PARAMETERIZED_SQL 执行器。dsId 从 config 取，合并客户端参数与系统内置参数（`SystemVariableResolver.resolve()`，含 `_user.id` / `_user.name` / `_user.display_name` / `_now` / `_date`，系统参数强制覆盖以防伪造）→ 模板渲染 → SQL，`PreparedStatement.execute()` 执行。支持 DateTime 类型参数转换（`DateTimeUtils.parseDateTime()`）。`bindings` 回传前端 |
+| `McpToolTestService` | 测试编排（极简，无分支）：前置强校验当前用户对服务的 `MCP_SERVICE (EDIT)` 权限（草稿态调试与测试需编辑权限） → `resolve()` → 查 scope → `ToolParameterBinder.bind()` 绑定参数 → `execute()` → 计时 → 组装响应。`ToolExecuteException` 在此层 catch 并转为 `ToolTestResponse(success=false, error=...)` |
+| `ExecuteSqlExecutor` | EXECUTE_SQL 执行器。`ctx.args(ExecuteSqlArgs.class)` 取参，dsId + sql 从 record 取，通过 `DataSourceService.getDataSourceInternal(dsId)` 内部通道加载数据源（解耦直属数据源用户权限），`Statement.execute()` 执行，`SqlExecutorHelper.collect()` 收集多语句结果。每条语句独立 policy 校验和 try-catch |
+| `ParameterizedSqlExecutor` | PARAMETERIZED_SQL 执行器。dsId 从 config 取，通过 `DataSourceService.getDataSourceInternal(dsId)` 内部通道加载数据源，合并客户端参数与系统内置参数（`SystemVariableResolver.resolve()`，含 `_user.id` / `_user.name` / `_user.display_name` / `_now` / `_date`，系统参数强制覆盖以防伪造）→ 模板渲染 → SQL，`PreparedStatement.execute()` 执行。支持 DateTime 类型参数转换（`DateTimeUtils.parseDateTime()`）。`bindings` 回传前端 |
 | `SystemVariableResolver` | 系统变量解析器。从 `RequestContext.getUser()` 和系统时钟解析 `_user.*` 与 `_now` / `_date`，提供 `isSystemVariable()` 供模板参数扫描与抽取时过滤 |
 | `GetTableInfoExecutor` | GET_TABLE_INFO 执行器。`ctx.args(GetTableInfoArgs.class)` 取参，逐条 `tables[]` 项做数据源级 scope 校验（每项自带 data_source_id），通过 `TableMetadataService` 查询平台元数据。不存在的表静默跳过 |
 | `ListTablesExecutor` | LIST_TABLES 执行器。无参数（`ListTablesArgs` 空 record），通过 `McpServiceDataScopeService.getResolvedDataSourceIds()` 解析 scope → 逐数据源 `TableInfoDAO.findByDataSourceId()` 查表 → 组装表级清单（schema/name/description/aliases，columns=null 不输出）。空 scope 返回空结果。纯 DB 读、不查 ES/列 |
@@ -634,7 +634,7 @@ StatementResult.writeFailure(errorMessage)           // WRITE 失败
 
 | 方法 | 路径 | 说明 |
 |---|---|---|
-| `POST` | `/{code}/mcp` | MCP JSON-RPC over HTTP 入口。支持 `initialize` / `ping` / `tools/list` / `tools/call` / `prompts/list` / `prompts/get`。仅读取激活快照。未知 code / DRAFT → 404；DISABLED → 503 + JSON-RPC error。请求需携带 `MCP-Protocol-Version: 2025-11-25`（initialize 豁免）；浏览器 Origin 需为 loopback 或 `dati.mcp.allowed-origins` 白名单。认证走全局 `AuthInterceptor`（APIKey 等） |
+| `POST` | `/{code}/mcp` | MCP JSON-RPC over HTTP 入口。支持 `initialize` / `ping` / `tools/list` / `tools/call` / `prompts/list` / `prompts/get`。仅读取激活快照。未知 code / DRAFT → 404；DISABLED → 503 + JSON-RPC error。请求需携带 `MCP-Protocol-Version: 2025-11-25`（initialize 豁免）；浏览器 Origin 需为 loopback 或 `dati.mcp.allowed-origins` 白名单。认证走全局 `AuthInterceptor`，并校验当前用户对目标 `MCP_SERVICE` 的 `VIEW` 权限（无权限 403 / JSON-RPC error） |
 
 ### 2.6 错误码（McpService 模块）
 

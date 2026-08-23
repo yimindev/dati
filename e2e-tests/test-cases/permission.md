@@ -169,3 +169,92 @@
 7. GET /v1/acls/DATA_SOURCE/{ds-pub} → 列表包含 `GROUP/ALL_USERS` 行，permission = VIEW，`principal_name` 为 null（无对应用户）
 8. A 调 DELETE /v1/acls/DATA_SOURCE/{ds-pub}/GROUP/ALL_USERS → 200
 9. 撤销后：B 列表恢复不可见
+
+---
+
+## TC-PM-012 数据源子资源级联权限拦截（自包含）
+**级别：** P0
+**前置：** 用户 A（创建者）、B（被授权 VIEW 用户）均已注册并登录；种子数据源配置可用
+
+1. A 创建数据源 ds-sub（postgres_local），批量添加表 table-1，并同步列（获取 tableId 和 columnId）
+2. A 授权 B 对 ds-sub 仅拥有 `VIEW` 权限（POST /v1/acls/DATA_SOURCE/{ds-sub}）
+3. B 登录后，验证可读性：
+   - B GET `/v1/data-sources/{ds-sub}/tables` → 预期 200
+   - B GET `/v1/data-sources/{ds-sub}/tables/{tableId}/columns` → 预期 200
+   - B GET `/v1/data-sources/{ds-sub}/tables/{tableId}/columns/{columnId}/values` → 预期 200
+4. B 尝试写操作（级联拦截）：
+   - B 批量添加表：POST `/v1/data-sources/{ds-sub}/tables/batch` → 预期 **403** (PM001)
+   - B 删除表：DELETE `/v1/data-sources/{ds-sub}/tables/{tableId}` → 预期 **403** (PM001)
+   - B 同步列：POST `/v1/data-sources/{ds-sub}/tables/{tableId}/columns/sync` → 预期 **403** (PM001)
+   - B 抽取列值：POST `/v1/data-sources/{ds-sub}/tables/{tableId}/columns/{columnId}/values/extract` → 预期 **403** (PM001)
+   - B 保存列值：PUT `/v1/data-sources/{ds-sub}/tables/{tableId}/columns/{columnId}/values` → 预期 **403** (PM001)
+5. A 清理删除数据源
+
+---
+
+## TC-PM-013 语义层子资源级联权限拦截（自包含）
+**级别：** P0
+**前置：** 用户 A、B 均已注册并登录
+
+1. A 创建数据源与主题 subject-sub（绑定数据源），添加表并创建一个术语 term-sub（获取 subjectId 与 termId）
+2. A 授权 B 对 subject-sub 仅拥有 `VIEW` 权限（POST /v1/acls/SUBJECT/{subject-sub}）
+3. B 登录后，验证可读性：
+   - B GET `/v1/subjects/{subjectId}` → 预期 200
+   - B GET `/v1/subjects/{subjectId}/tables` → 预期 200
+   - B GET `/v1/subjects/{subjectId}/terms` → 预期 200
+   - B GET `/v1/terms/{termId}` → 预期 200
+4. B 尝试写操作（级联拦截）：
+   - B 创建术语：POST `/v1/subjects/{subjectId}/terms` → 预期 **403** (PM001)
+   - B 更新术语：PUT `/v1/terms/{termId}` → 预期 **403** (PM001)
+   - B 绑定术语字段关联：POST `/v1/terms/{termId}/relations` → 预期 **403** (PM001)
+   - B 删除术语：DELETE `/v1/terms/{termId}` → 预期 **403** (PM001)
+   - B 主题关联表：POST `/v1/subjects/{subjectId}/tables` → 预期 **403** (PM001)
+5. A 清理主题与数据源
+
+---
+
+## TC-PM-014 MCP 服务子资源级联权限与草稿工具调试拦截（自包含）
+**级别：** P0
+**前置：** 用户 A、B 均已注册并登录
+
+1. A 创建数据源，创建 MCP 服务 svc-sub（绑定数据源），添加自定义工具 tool-1 与 Prompt prompt-1
+2. A 授权 B 对 svc-sub 仅拥有 `VIEW` 权限（POST /v1/acls/MCP_SERVICE/{svc-sub}）
+3. B 登录后，验证可读性：
+   - B GET `/v1/mcp-services/{svc-sub}/tools` → 预期 200
+   - B GET `/v1/mcp-services/{svc-sub}/prompts` → 预期 200
+   - B GET `/v1/mcp-services/{svc-sub}/diff` → 预期 200
+   - B GET `/v1/mcp-services/{svc-sub}/snapshots` → 预期 200
+4. B 尝试写与测试操作（级联拦截）：
+   - B 在线测试工具（草稿态调试）：POST `/v1/mcp-services/{svc-sub}/tools/{toolId}/test` → 预期 **403** (PM001，工具测试要求 EDIT 权限)
+   - B 创建工具：POST `/v1/mcp-services/{svc-sub}/tools` → 预期 **403** (PM001)
+   - B 更新工具：PUT `/v1/mcp-services/{svc-sub}/tools/{toolId}` → 预期 **403** (PM001)
+   - B 创建 Prompt：POST `/v1/mcp-services/{svc-sub}/prompts` → 预期 **403** (PM001)
+   - B 保存数据范围：PUT `/v1/mcp-services/{svc-sub}/data-scopes` → 预期 **403** (PM001)
+   - B 发布服务：POST `/v1/mcp-services/{svc-sub}/publish` → 预期 **403** (PM001)
+5. A 清理服务与数据源
+
+---
+
+## TC-PM-015 跨数据源列值抽取防越权（自包含）
+**级别：** P0
+**前置：** 用户 A、B 均已注册并登录
+
+1. A 创建数据源 ds-A（添加表 table-A，列 col-A）
+2. A 创建数据源 ds-B（添加表 table-B，列 col-B）
+3. A 授权 B 对 ds-A 拥有 `EDIT` 权限，对 ds-B 仅拥有 `VIEW` 权限
+4. B 尝试跨源抽取：调用 POST `/v1/data-sources/{ds-A}/tables/{table-B}/columns/{col-B}/values/extract`
+5. 预期返回 **400** (INVALID_PARAMETER，提示列不属于该数据源) 或 403，拒绝跨源数据读取与索引污染
+6. A 清理两数据源
+
+---
+
+## TC-PM-016 MCP Endpoint 协议入口权限拦截（自包含）
+**级别：** P0
+**前置：** 用户 A、B 均已注册并登录
+
+1. A 创建并发布 MCP 服务 svc-ep（code=svc_ep_test，携带数据范围绑定数据源）
+2. B（未获得 svc-ep 权限）向 `POST /svc_ep_test/mcp` 发送 initialize / ping / tools/list 请求
+3. 预期返回 **403** (PM001 / JSON-RPC error)，未授权用户无法调用已发布服务
+4. A 授权 B 对 svc-ep 拥有 `VIEW` 权限（POST /v1/acls/MCP_SERVICE/{svc-ep}）
+5. B 再次向 `POST /svc_ep_test/mcp` 发送请求 → 预期返回 **200**，正常消费服务
+6. A 清理服务与数据源

@@ -183,6 +183,29 @@ customToolDAO.delete(po);
 - **`StringUtils`**: `isEmpty()`, `isNotEmpty()` wrappers
 - **`JsonUtils`**: Jackson-based JSON serialization/deserialization helpers
 
+## Permission Control Standards
+
+### Cascading Permission Checks
+The platform manages access control via three root resources: `DATA_SOURCE`, `SUBJECT`, and `MCP_SERVICE`. Sub-resources must inherit and assert permissions of their corresponding root resource:
+- **Data Source Sub-resources** (Tables, Columns, Column Values) → check parent `DATA_SOURCE` (`VIEW` for read/query, `EDIT` for mutations/sync/extract/save).
+- **Semantic Sub-resources** (Terms, Term Relations, Subject Tables) → check parent `SUBJECT` (`VIEW` for queries, `EDIT` for mutations).
+- **MCP Service Sub-resources** (Tools, Prompts, Snapshots, Data Scope) → check parent `MCP_SERVICE` (`VIEW` for read/list, `EDIT` for mutations/testing/publishing).
+
+Use semantic assertion methods on `PermissionService`:
+```java
+// Root resource assertions (supports both String ID and PO entity overloads):
+permissionService.requireDataSource(datasourceId, Permission.EDIT);
+permissionService.requireSubject(subjectId, Permission.VIEW);
+permissionService.requireMcpService(servicePO, Permission.EDIT); // PO overload avoids redundant DB lookup
+```
+
+### Key Security & Consistency Rules
+1. **Cross-Resource Consistency**: Always verify that sub-resources actually belong to the parent resource specified in the request (e.g. In `ColumnValueService.extractValues`, verify that the column's table actually belongs to the given `datasourceId`).
+2. **Eliminate Redundant Lookups**: If the service has already loaded the root resource's PO, prefer passing the PO entity to `permissionService.requireXxx(po, permission)` or calling `requireCurrentUser(type, id, perm, po.getCreatedBy())`.
+3. **Dual-Channel Data Source Access**:
+   - **User Channel** (`DataSourceService.getDataSource(id)`): For console REST APIs. Strictly verifies current user's `DATA_SOURCE (VIEW)` permission.
+   - **Internal Channel** (`DataSourceService.getDataSourceInternal(id)`): For MCP tool execution engines (e.g., `ExecuteSqlExecutor`, `ParameterizedSqlExecutor`). Authorization is governed at the `MCP_SERVICE` layer with DataScope table-level constraints; direct data source permission checks on the invoking user are bypassed.
+
 ## Key Rules
 
 - **English only in code artifacts**: Log messages (`@Slf4j`), test `@DisplayName`, and code comments use English. Chinese is allowed only in user-facing text (i18n messages, PRD docs).
