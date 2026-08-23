@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, reactive, ref, watch } from "vue";
+import { computed, nextTick, reactive, ref, watch } from "vue";
 import { ElMessage, type FormInstance, type FormRules } from "element-plus";
 import { useI18n } from "vue-i18n";
 import { Delete, Plus, InfoFilled, MagicStick } from "@element-plus/icons-vue";
@@ -22,6 +22,7 @@ const emit = defineEmits<{
 
 const saving = ref(false);
 const formRef = ref<FormInstance>();
+const scrollBodyRef = ref<HTMLElement>();
 const dataSources = ref<{ id: string; name: string }[]>([]);
 const previewVisible = ref(false);
 
@@ -127,6 +128,11 @@ watch(
     if (v) {
       loadForm();
       loadDataSources();
+      nextTick(() => {
+        if (scrollBodyRef.value) {
+          scrollBodyRef.value.scrollTop = 0;
+        }
+      });
     }
   },
 );
@@ -250,10 +256,10 @@ const handleSave = async () => {
     :title="isEdit ? t('mcpService.tool.editCustom') : t('mcpService.tool.addCustom')"
     width="780px"
     :close-on-click-modal="false"
-    @close="loadForm"
+    destroy-on-close
     append-to-body
   >
-    <div class="dialog-body-scroll flex flex-col overflow-y-auto px-3 py-1">
+    <div ref="scrollBodyRef" class="dialog-body-scroll flex flex-col overflow-y-auto px-3 py-1">
     <el-form ref="formRef" :model="form" :rules="rules" label-position="top">
       <!-- Basic Info -->
       <section class="flex flex-col mb-6">
@@ -280,7 +286,7 @@ const handleSave = async () => {
           <el-input
             v-model="form.description"
             type="textarea"
-            :rows="2"
+            :autosize="{ minRows: 2, maxRows: 8 }"
             :placeholder="t('mcpService.tool.descPlaceholder')"
           />
         </el-form-item>
