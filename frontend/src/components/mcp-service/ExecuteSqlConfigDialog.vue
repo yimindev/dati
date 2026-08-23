@@ -91,6 +91,7 @@ const handleSave = async () => {
     :title="t('mcpService.tool.configExecuteSql')"
     width="600px"
     :close-on-click-modal="false"
+    destroy-on-close
   >
     <SqlSecurityConfig
       v-model:allow-select="form.allowSelect"

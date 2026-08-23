@@ -96,7 +96,10 @@ const annotations = computed(() => {
           :key="op.key"
           :content="op.tooltip"
           :disabled="!op.tooltip"
-          placement="top"
+          placement="bottom"
+          :show-after="300"
+          :hide-after="0"
+          :enterable="false"
         >
           <button
             type="button"
