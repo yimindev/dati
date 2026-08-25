@@ -4,6 +4,8 @@ import com.dati.TestFixtures;
 import com.dati.base.exception.DatiException;
 import com.dati.base.exception.ErrorCode;
 import com.dati.common.template.CompiledTemplate;
+import com.dati.common.template.SqlRenderer;
+import com.dati.common.template.SqlValidator;
 import com.dati.common.template.TemplateParseException;
 import com.dati.common.template.TemplateParser;
 import com.dati.mcp.domain.model.McpCustomTool;
@@ -14,6 +16,7 @@ import com.dati.mcp.repository.dao.McpCustomToolDAO;
 import com.dati.mcp.repository.dao.McpPrebuiltToolConfigDAO;
 import com.dati.mcp.repository.po.McpCustomToolPO;
 import com.dati.mcp.repository.po.McpPrebuiltToolConfigPO;
+import com.dati.permission.domain.service.PermissionService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -52,10 +55,13 @@ class McpToolServiceTest {
     private TemplateParser templateParser;
 
     @Mock
-    private com.dati.common.template.SqlRenderer sqlRenderer;
+    private SqlRenderer sqlRenderer;
 
     @Mock
-    private com.dati.permission.domain.service.PermissionService permissionService;
+    private SqlValidator sqlValidator;
+
+    @Mock
+    private PermissionService permissionService;
 
     @Captor
     ArgumentCaptor<List<McpCustomToolPO>> captor;

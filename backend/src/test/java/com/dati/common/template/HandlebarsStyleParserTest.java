@@ -202,7 +202,7 @@ class HandlebarsStyleParserTest {
     void testRawVariableFlagTrue() {
         CompiledTemplate t = parser.parse("{{{table}}}");
         ParsedTemplate pt = (ParsedTemplate) t;
-        VarNode node = (VarNode) pt.getNodes().getFirst();
+        VarNode node = (VarNode) pt.nodes().getFirst();
         assertTrue(node.raw());
     }
 
@@ -210,7 +210,7 @@ class HandlebarsStyleParserTest {
     void testNormalVariableFlagFalse() {
         CompiledTemplate t = parser.parse("{{table}}");
         ParsedTemplate pt = (ParsedTemplate) t;
-        VarNode node = (VarNode) pt.getNodes().getFirst();
+        VarNode node = (VarNode) pt.nodes().getFirst();
         assertFalse(node.raw());
     }
 
@@ -219,7 +219,7 @@ class HandlebarsStyleParserTest {
         CompiledTemplate t = parser.parse("ORDER BY {{{sort:id}}}");
         ParsedTemplate pt = (ParsedTemplate) t;
         VarNode node = null;
-        for (Node n : pt.getNodes()) { if (n instanceof VarNode v) { node = v; break; } }
+        for (Node n : pt.nodes()) { if (n instanceof VarNode v) { node = v; break; } }
         assertNotNull(node);
         assertEquals("sort", node.name());
         assertEquals("id", node.defaultValue());

@@ -11,11 +11,11 @@ import java.util.Map;
 public class SqlRenderer {
 
     public PreparedSql render(CompiledTemplate compiled, Map<String, Object> params) {
-        if (!(compiled instanceof ParsedTemplate pt))
+        if (!(compiled instanceof ParsedTemplate(List<Node> nodes)))
             throw new IllegalArgumentException("CompiledTemplate must be produced by HandlebarsStyleParser");
         StringBuilder sql = new StringBuilder();
         List<ParamBinding> bindings = new ArrayList<>();
-        renderNodes(pt.getNodes(), params, sql, bindings);
+        renderNodes(nodes, params, sql, bindings);
         return new PreparedSql(sql.toString(), List.copyOf(bindings));
     }
 

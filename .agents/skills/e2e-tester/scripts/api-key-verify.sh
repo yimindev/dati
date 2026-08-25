@@ -1,5 +1,22 @@
 #!/bin/bash
-BASE=http://localhost:8085
+# API Key 全生命周期 e2e（TC-AK-001~009）
+#
+# 配置优先级：环境变量 > test-env.yaml > 硬编码兜底
+#   E2E_BASE_URL   backend base URL（默认 test-env.yaml server.base_url）
+#   MCP_CODE       published service code（默认 test-env.yaml mcp.code）
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+SKILL_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+PROJECT_DIR="$(cd "$SKILL_DIR/../../.." && pwd)"
+ENV_FILE="$PROJECT_DIR/e2e-tests/test-env.yaml"
+
+if command -v yq &>/dev/null && [ -f "$ENV_FILE" ]; then
+    BASE="${E2E_BASE_URL:-$(yq -r '.server.base_url' "$ENV_FILE")}"
+    MCP_CODE="${MCP_CODE:-$(yq -r '.mcp.code' "$ENV_FILE")}"
+else
+    BASE="${E2E_BASE_URL:-http://localhost:8085}"
+    MCP_CODE="${MCP_CODE:-mcp-verify-demo}"
+fi
 PASS=0; FAIL=0; WARN=0
 report() { local r="$1"; local n="$2"; local msg="$3"; if [ "$r" = "PASS" ]; then PASS=$((PASS+1)); else FAIL=$((FAIL+1)); fi; echo "$r  $n  $msg"; }
 
@@ -114,7 +131,7 @@ fi
 # ── TC-AK-006 MCP endpoint 用 API key（依赖已发布服务）──
 # 使用固定 key（TC-AK-009 产物），避免 TC-AK-007 删除的 key 导致 401
 FIXED_KEY=$(cat /tmp/dati_apikey.txt 2>/dev/null || echo "$KEY")
-CODE_SVC=$(curl -s -o /dev/null -w "%{http_code}" -X POST http://localhost:8085/yimin-test/mcp \
+CODE_SVC=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BASE/$MCP_CODE/mcp" \
   -H "Authorization: Bearer $FIXED_KEY" -H "Content-Type: application/json" \
   -H "MCP-Protocol-Version: 2025-11-25" \
   -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"e2e","version":"1.0"}}}')

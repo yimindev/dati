@@ -6,6 +6,7 @@ import com.dati.common.JsonUtils;
 import com.dati.common.template.CompiledTemplate;
 import com.dati.common.template.PreparedSql;
 import com.dati.common.template.SqlRenderer;
+import com.dati.common.template.SqlValidator;
 import com.dati.common.template.TemplateParseException;
 import com.dati.common.template.TemplateParser;
 import com.dati.db.analysis.SqlAnalysisResult;
@@ -47,17 +48,20 @@ public class McpToolService {
     private final McpCustomToolDAO customToolDAO;
     private final TemplateParser templateParser;
     private final SqlRenderer sqlRenderer;
+    private final SqlValidator sqlValidator;
     private final PermissionService permissionService;
 
     public McpToolService(McpPrebuiltToolConfigDAO prebuiltDAO,
                           McpCustomToolDAO customToolDAO,
                           TemplateParser templateParser,
                           SqlRenderer sqlRenderer,
+                          SqlValidator sqlValidator,
                           PermissionService permissionService) {
         this.prebuiltDAO = prebuiltDAO;
         this.customToolDAO = customToolDAO;
         this.templateParser = templateParser;
         this.sqlRenderer = sqlRenderer;
+        this.sqlValidator = sqlValidator;
         this.permissionService = permissionService;
     }
 
@@ -242,6 +246,15 @@ public class McpToolService {
         if (!undefinedParams.isEmpty()) {
             throw new DatiException(ErrorCode.MS_TOOL_ARG_MISMATCH,
                 "Template references undefined parameter(s): " + String.join(", ", undefinedParams));
+        }
+
+        // 3. Quoted-placeholder validation: {{var}} inside a string literal/comment
+        //    would render to a '?' that pgjdbc does not count as a parameter, so
+        //    execution would always fail with a binding-count mismatch.
+        List<String> quotedVars = sqlValidator.findQuotedVariables(compiled);
+        if (!quotedVars.isEmpty()) {
+            throw new DatiException(ErrorCode.MS_TEMPLATE_QUOTED_VAR,
+                String.join(", ", quotedVars));
         }
     }
 

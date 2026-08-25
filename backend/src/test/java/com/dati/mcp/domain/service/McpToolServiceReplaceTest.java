@@ -3,6 +3,7 @@ package com.dati.mcp.domain.service;
 import com.dati.TestFixtures;
 import com.dati.common.template.HandlebarsStyleParser;
 import com.dati.common.template.SqlRenderer;
+import com.dati.common.template.SqlValidator;
 import com.dati.mcp.domain.model.McpCustomTool;
 import com.dati.mcp.domain.model.McpServiceStatus;
 import com.dati.mcp.repository.dao.McpCustomToolDAO;
@@ -47,7 +48,7 @@ class McpToolServiceReplaceTest {
     private final PermissionService permissionService = Mockito.mock(PermissionService.class);
 
     private McpToolService service() {
-        return new McpToolService(prebuiltDAO, customToolDAO, new HandlebarsStyleParser(), new SqlRenderer(), permissionService);
+        return new McpToolService(prebuiltDAO, customToolDAO, new HandlebarsStyleParser(), new SqlRenderer(), new SqlValidator(), permissionService);
     }
 
     private McpServicePO saveService() {

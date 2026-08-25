@@ -8,10 +8,10 @@ import java.util.Map;
 public class TextRenderer {
 
     public String render(CompiledTemplate compiled, Map<String, Object> params) {
-        if (!(compiled instanceof ParsedTemplate pt))
+        if (!(compiled instanceof ParsedTemplate(List<Node> nodes)))
             throw new IllegalArgumentException("CompiledTemplate must be produced by HandlebarsStyleParser");
         StringBuilder sb = new StringBuilder();
-        renderNodes(pt.getNodes(), params, sb);
+        renderNodes(nodes, params, sb);
         return sb.toString();
     }
 

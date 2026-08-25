@@ -328,3 +328,18 @@ bugs:
     description: |
       TC-DS-004 方式一要求 POST /schemas 传连接信息直接浏览 schema，返回 405 Method not allowed。后端与 openapi.json 均无此端点，仅存在 GET /{id}/schemas（需先创建数据源）。可能是未实现功能或用例已过时，需人工确认取舍。
         - id: BUG-20260821-001
+  - id: BUG-20260824-004
+    title: 模板参数加引号时运行时报错且无校验提示
+    module: MCP 服务管理
+    severity: low
+    fixed_at: 2026-08-25
+    description: |
+      TC-MCP-024 首次执行发现：PARAMETERIZED_SQL 模板中给参数/系统变量加单引号（如 WHERE name = '{{genre_name}}'、'{{_user.name}}'）时，创建/校验阶段不报错，模板预览渲染为 ''值''（不报错），但实际执行 SQL_ERROR：The column index is out of range: 1, number of columns: 0。根因：{{var}} 绑定为 ? 占位符，'?' 在单引号内不被 pgjdbc 计为占位符，bind 数(1) > 占位符数(0)。docs/user-guide/template-syntax.md 明确字符串自动加引号、不应手动加引号（TC-TPL-004 同 commit 用例即未加引号），故按文档写法功能正常（已验证系统变量注入与防篡改均工作）。但产品对错误用法零校验、错误信息晦涩，建议创建时校验或在 SQL_ERROR 时给出可读提示。
+        - id: BUG-20260824-005
+  - id: BUG-20260824-005
+    title: PARAMETERIZED_SQL 模板中带引号的变量渲染为 ? 字面量，JDBC 绑定数不匹配导致 tools/call 执行失败
+    module: MCP Endpoint
+    severity: medium
+    fixed_at: 2026-08-25
+    description: |
+      TC-END-014 复现。模板 SELECT genreid, name FROM genre WHERE genreid = {{genre_id}} {{#if _user.name}}AND '{{_user.name}}' = '{{_user.name}}'{{/if}} 中系统变量被 SqlRenderer 统一渲染为 ? 占位符，但 PostgreSQL JDBC 不把引号内的 ? 计为参数：实际 SQL 只有 1 个占位符而 bindings 有 3 个，setObject(2) 抛 The column index is out of range: 2, number of columns: 1，工具返回 isError=true。带引号的业务参数（如 WHERE country = '{{country}}'）同样受影响；未加引号用法（WHERE owner_id = {{_user.id}}）正常。根因：SqlRenderer.renderVar 对引号内变量也生成 ? 占位符，模板引擎上下文无关不感知 SQL 引号。修复方向：系统变量应内联渲染为字面值（带 SQL 转义），或渲染器感知引号上下文。

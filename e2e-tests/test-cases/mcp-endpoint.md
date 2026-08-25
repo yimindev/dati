@@ -208,8 +208,9 @@
 1. **准备服务与工具**：
    - 创建 MCP 服务（绑定种子数据源）
    - 创建自定义工具（`tool_type`=PARAMETERIZED_SQL，`name`="query_genre_by_user"）：
-     - `sql_template`: `SELECT genreid, name FROM genre WHERE genreid = {{genre_id}} {{#if _user.name}}AND '{{_user.name}}' = '{{_user.name}}'{{/if}}`
+     - `sql_template`: `SELECT genreid, name FROM genre WHERE genreid = {{genre_id}} {{#if _user.name}}AND {{_user.name}} = {{_user.name}}{{/if}}`
      - `parameters`: `[{"name": "genre_id", "type": "Number", "required": true}]`
+     - （注：模板变量无需且禁止手动加单引号包裹，否则创建阶段将返回 400 MS020 校验拦截）
    - 发布服务（`POST /publish`）
 2. **协议 Schema 隔离验证 (`tools/list`)**：
    - 向 `POST /{code}/mcp` 发送 `tools/list`

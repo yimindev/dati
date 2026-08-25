@@ -4,17 +4,11 @@ import java.util.*;
 
 /**
  * Internal implementation of CompiledTemplate. Package-private;
- * renderers access it via package-private {@link #getNodes()}.
+ * renderers access it via package-private {@link #nodes ()}.
  */
-class ParsedTemplate implements CompiledTemplate {
-    final List<Node> nodes;
-
+record ParsedTemplate(List<Node> nodes) implements CompiledTemplate {
     ParsedTemplate(List<Node> nodes) {
         this.nodes = List.copyOf(nodes);
-    }
-
-    List<Node> getNodes() {
-        return nodes;
     }
 
     @Override
@@ -33,7 +27,8 @@ class ParsedTemplate implements CompiledTemplate {
                     collectVariables(i.body(), vars);
                 }
                 case WhereNode w -> collectVariables(w.body(), vars);
-                default -> {}
+                default -> {
+                }
             }
         }
     }

@@ -56,6 +56,7 @@ public enum ErrorCode {
     MS_SERVICE_VERSION_NOT_FOUND("MS017", 404, "MCP service version not found: {0}"),
     MS_SERVICE_DATA_SCOPE_REQUIRED("MS018", 400, "Data scope is required when creating MCP service"),
     MS_SERVICE_DATA_SCOPE_EMPTY("MS019", 400, "Data scope is empty, cannot publish MCP service: {0}"),
+    MS_TEMPLATE_QUOTED_VAR("MS020", 400, "Template variable(s) {0} are inside string literals; strings are auto-quoted, remove the surrounding quotes"),
 
     // ── Authentication module (AUTH) ──────────────────────
 

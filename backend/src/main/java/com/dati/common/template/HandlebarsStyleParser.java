@@ -123,7 +123,7 @@ public class HandlebarsStyleParser implements TemplateParser {
         while (e > s && body.charAt(e - 1) == '\n') e--;
         body = body.substring(s, e);
         ParsedTemplate sub = (ParsedTemplate) this.parse(body);
-        nodes.add(factory.create(condition, sub.nodes));
+        nodes.add(factory.create(condition, sub.nodes()));
         return endIdx + endTag.length();
     }
 
