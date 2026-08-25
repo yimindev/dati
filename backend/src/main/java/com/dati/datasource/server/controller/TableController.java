@@ -38,7 +38,8 @@ public class TableController {
     }
 
     @PostMapping("/tables/batch")
-    public IdResponse batchAddTables(@PathVariable String datasourceId, @RequestBody List<AddTableRequest> tables) {
+    public IdResponse batchAddTables(@PathVariable String datasourceId,
+                                     @Valid @RequestBody List<@Valid AddTableRequest> tables) {
         List<String> ids = tableService.batchAddTables(datasourceId, tables);
         return new IdResponse(String.valueOf(ids.size()));
     }

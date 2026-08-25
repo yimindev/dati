@@ -32,6 +32,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -82,25 +83,34 @@ public class TableService {
         List<String> tableIds = new ArrayList<>();
         List<SemanticSearchDocument> docsToSave = new ArrayList<>();
 
-        Map<String, String> tableCommentMap;
-        Set<String> validTableNames;
+        // 每个表按自己的 (schema, name) 精确校验存在性，避免跨 schema 重名表误判/崩溃
+        Map<String, Map<String, String>> tableCommentsBySchema = new HashMap<>();
+        Map<String, Set<String>> validNamesBySchema = new HashMap<>();
         try {
-            List<Table> dbTables = jdbcMetaService.getTables(datasourceId, null, tables.getFirst().getSchema());
-            tableCommentMap = dbTables.stream()
-                    .collect(Collectors.toMap(Table::name, t -> t.comment() != null ? t.comment() : ""));
-            validTableNames = dbTables.stream().map(Table::name).collect(Collectors.toSet());
+            for (AddTableRequest request : tables) {
+                String schema = request.getSchema();
+                if (!validNamesBySchema.containsKey(schema)) {
+                    List<Table> dbTables = jdbcMetaService.getTables(datasourceId, null, schema);
+                    tableCommentsBySchema.put(schema, dbTables.stream()
+                            .collect(Collectors.toMap(Table::name, t -> t.comment() != null ? t.comment() : "")));
+                    validNamesBySchema.put(schema, dbTables.stream().map(Table::name).collect(Collectors.toSet()));
+                }
+            }
         } catch (SQLException e) {
             throw new DatiException(ErrorCode.DS_SYNC_FAILED, e.getMessage());
         }
 
         for (AddTableRequest request : tables) {
+            String schema = request.getSchema();
+            Map<String, String> tableCommentMap = tableCommentsBySchema.get(schema);
+            Set<String> validTableNames = validNamesBySchema.get(schema);
             if (!validTableNames.contains(request.getName())) {
                 throw new DatiException(ErrorCode.DS_TABLE_NOT_FOUND, request.getName());
             }
             TableInfo tableInfo = new TableInfo();
             tableInfo.setDatasourceId(datasourceId);
             tableInfo.setName(request.getName());
-            tableInfo.setSchema(request.getSchema());
+            tableInfo.setSchema(schema);
             tableInfo.setDescription(tableCommentMap.getOrDefault(request.getName(), null));
             tableInfo.setAliases(new ArrayList<>());
             tableInfo.setCreatedBy(RequestContext.getUser().getId());
@@ -129,7 +139,7 @@ public class TableService {
                     .build());
 
             try {
-                List<Column> columns = jdbcMetaService.getColumns(datasourceId, null, request.getSchema(), request.getName());
+                List<Column> columns = jdbcMetaService.getColumns(datasourceId, null, schema, request.getName());
                 for (Column column : columns) {
                     ColumnInfo columnInfo = new ColumnInfo();
                     columnInfo.setTableId(tableId);

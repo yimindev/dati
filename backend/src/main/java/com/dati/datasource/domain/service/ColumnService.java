@@ -137,26 +137,30 @@ public class ColumnService {
         List<Column> dbColumns = jdbcMetaService.getColumns(datasourceId, null, tableInfo.getSchema(), tableInfo.getName());
 
         Set<String> newColumnNames = dbColumns.stream().map(Column::name).collect(Collectors.toSet());
-        List<String> removedColumns = existingColumns.keySet().stream()
-                .filter(name -> !newColumnNames.contains(name))
+        List<ColumnInfoPO> removedColumns = existingColumns.values().stream()
+                .filter(po -> !newColumnNames.contains(po.getName()))
                 .toList();
-        
-        columnInfoDAO.deleteByTableId(tableId);
+
+        // 只删除消失的列，保留既有列的 ID 与审计信息（列身份稳定，外部引用不失效）
+        if (!removedColumns.isEmpty()) {
+            columnInfoDAO.deleteAll(removedColumns);
+        }
         
         User user = RequestContext.getUser();
         String userId = user != null ? user.getId() : null;
         
         List<ColumnInfoPO> columnInfoPOList = dbColumns.stream().map(column -> {
-            ColumnInfoPO columnInfoPO = new ColumnInfoPO();
-            columnInfoPO.setTableId(tableId);
+            // 仍存在的列复用既有 PO（保留 id/createdBy/createdAt/aliases/extractValueEnabled），新列才新建
+            ColumnInfoPO existing = existingColumns.get(column.name());
+            ColumnInfoPO columnInfoPO = existing != null ? existing : new ColumnInfoPO();
+            if (existing == null) {
+                columnInfoPO.setTableId(tableId);
+                columnInfoPO.setCreatedBy(userId);
+            }
             columnInfoPO.setName(column.name());
             columnInfoPO.setColumnType(column.type());
             
-            ColumnInfoPO existing = existingColumns.get(column.name());
-            
             if (existing != null) {
-                columnInfoPO.setAliases(existing.getAliases());
-                columnInfoPO.setExtractValueEnabled(existing.isExtractValueEnabled());
                 String dbComment = column.comment();
                 if (overwriteExisting && StringUtils.isNotEmpty(dbComment)) {
                     columnInfoPO.setDescription(dbComment);
@@ -170,7 +174,6 @@ public class ColumnService {
                 }
             }
             
-            columnInfoPO.setCreatedBy(userId);
             columnInfoPO.setUpdatedBy(userId);
             return columnInfoPO;
         }).toList();
@@ -179,8 +182,8 @@ public class ColumnService {
         
         // FIELD 结构索引整表重建；FIELD_VALUE 仅清理消失列，保留仍存在列的值（配置与数据均为用户资产，不随结构同步销毁）
         semanticIndexService.deleteByTableIdAndType(tableId, SemanticEntityType.FIELD);
-        for (String removed : removedColumns) {
-            semanticIndexService.deleteByTableFieldAndType(tableId, removed, SemanticEntityType.FIELD_VALUE);
+        for (ColumnInfoPO removed : removedColumns) {
+            semanticIndexService.deleteByTableFieldAndType(tableId, removed.getName(), SemanticEntityType.FIELD_VALUE);
         }
         
         List<SemanticSearchDocument> docs = savedList.stream().map(po -> {

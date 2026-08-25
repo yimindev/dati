@@ -220,6 +220,45 @@ class TableServiceTest {
     }
 
     @Test
+    @DisplayName("Batch add tables - validates each request against its own schema")
+    void batchAddTables_shouldValidatePerRequestSchema() throws SQLException {
+        // given
+        AddTableRequest publicTable = new AddTableRequest();
+        publicTable.setName("artist");
+        publicTable.setSchema("public");
+
+        AddTableRequest auditTable = new AddTableRequest();
+        auditTable.setName("logs");
+        auditTable.setSchema("audit");
+
+        when(jdbcMetaService.getTables(TestFixtures.TEST_DATASOURCE_ID, null, "public"))
+                .thenReturn(List.of(new Table("artist", "")));
+        when(jdbcMetaService.getTables(TestFixtures.TEST_DATASOURCE_ID, null, "audit"))
+                .thenReturn(List.of(new Table("logs", "")));
+        when(jdbcMetaService.getColumns(TestFixtures.TEST_DATASOURCE_ID, null, "public", "artist"))
+                .thenReturn(List.of());
+        when(jdbcMetaService.getColumns(TestFixtures.TEST_DATASOURCE_ID, null, "audit", "logs"))
+                .thenReturn(List.of());
+        when(tableInfoDAO.save(any(TableInfoPO.class))).thenReturn(testTableInfoPO);
+
+        User mockUser = mock(User.class);
+        when(mockUser.getId()).thenReturn(TestFixtures.TEST_USER_ID);
+
+        try (MockedStatic<RequestContext> mocked = mockStatic(RequestContext.class)) {
+            mocked.when(RequestContext::getUser).thenReturn(mockUser);
+
+            // when
+            List<String> result = tableService.batchAddTables(
+                    TestFixtures.TEST_DATASOURCE_ID, List.of(publicTable, auditTable));
+
+            // then
+            assertThat(result).hasSize(2);
+            verify(jdbcMetaService).getTables(TestFixtures.TEST_DATASOURCE_ID, null, "public");
+            verify(jdbcMetaService).getTables(TestFixtures.TEST_DATASOURCE_ID, null, "audit");
+        }
+    }
+
+    @Test
     @DisplayName("Delete table - table not found throws DS_TABLE_NOT_FOUND")
     void deleteTable_tableNotFound_throwsTableNotFound() {
         when(tableInfoDAO.findById("ghost-id")).thenReturn(Optional.empty());

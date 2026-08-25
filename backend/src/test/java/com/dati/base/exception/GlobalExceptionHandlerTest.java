@@ -1,17 +1,29 @@
 package com.dati.base.exception;
 
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import lombok.Getter;
+import lombok.Setter;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.http.MediaType;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
+
+import static org.hamcrest.Matchers.containsString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -75,6 +87,25 @@ class GlobalExceptionHandlerTest {
             .andExpect(jsonPath("$.code").value("CM002"));
     }
 
+    @Test
+    @DisplayName("Should return 400 for missing required request parameter")
+    void missingRequiredParam_shouldReturn400() throws Exception {
+        mockMvc.perform(get("/test/required-param"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.code").value(ErrorCode.INVALID_PARAMETER.getCode()))
+            .andExpect(jsonPath("$.message").value(containsString("Required request parameter 'schema'")));
+    }
+
+    @Test
+    @DisplayName("Should return 400 for request body element validation failure")
+    void bodyElementValidationFailure_shouldReturn400() throws Exception {
+        mockMvc.perform(post("/test/validate-elements")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("[{\"name\":\"artist\"}]"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.code").value(ErrorCode.INVALID_PARAMETER.getCode()));
+    }
+
     @RestController
     @RequestMapping("/test")
     static class TestController {
@@ -82,6 +113,25 @@ class GlobalExceptionHandlerTest {
         @GetMapping("/not-found")
         public String notFound() {
             throw new DatiException(ErrorCode.NOT_FOUND);
+        }
+
+        @GetMapping("/required-param")
+        public String requiredParam(@RequestParam String schema) {
+            return "ok";
+        }
+
+        @PostMapping("/validate-elements")
+        public String validateElements(@Valid @RequestBody List<@Valid ValidateItem> items) {
+            return "ok";
+        }
+
+        @Setter
+        @Getter
+        static class ValidateItem {
+
+            @NotBlank
+            private String schema;
+
         }
 
         @GetMapping("/bad-request")

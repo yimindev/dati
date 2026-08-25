@@ -1,25 +1,4 @@
 # 待修复问题清单
 # Agent 跑完 E2E 测试后自动维护此文件
 
-bugs:
-  - id: BUG-20260824-001
-    title: GET /v1/subjects/{id}/available-tables 缺 schema 参数返回 500 而非 400
-    module: 语义层-主题管理
-    severity: low
-    found_at: 2026-08-24
-    description: |
-      TC-SEM-002 探索：openapi 中 schema 为 required query 参数，但缺参调用返回 500 CM003 Internal server error（服务层 schema 为 null 时 NPE）。空字符串 schema= 则返回 200 空列表。应像其他缺失参数一样返回 400 CM001。与 BUG-20260724-001(page=0→500) 同类问题。
-  - id: BUG-20260824-002
-    title: 列同步(syncColumns)整表删除重建，列 ID 每次同步全部变更
-    module: 数据源管理-列管理
-    severity: medium
-    found_at: 2026-08-24
-    description: |
-      TC-DS-011 step19 回归锚点通过（extract_value_enabled/aliases/description/FIELD_VALUE 均保留），但发现：syncColumns 先 columnInfoDAO.deleteByTableId(tableId) 再以全新 PO saveAll，导致所有列 UUID 每次同步全部更换（如 name 列 f0c0707d -> ec3aa404）。用户或前端持有的旧 columnId 立即失效（GET values 返回 404 Column not found）。ES FIELD 文档随新 ID 重建（无残留），FIELD_VALUE 按 tableId+field 关联不受影响。属身份不稳定问题：元数据不丢但引用断裂，建议同步时保留既有列 ID（按 name 匹配复用 ID）。
-  - id: BUG-20260824-003
-    title: 批量添加表不传 schema 返回 500 CM003（schema 可选字段缺失导致内部错误，应回退 default_schema 或返回 400）
-    module: 数据源管理-表管理
-    severity: medium
-    found_at: 2026-08-24
-    description: |
-      TC-PM-012/013/015 前置步骤复现：POST /v1/data-sources/{id}/tables/batch 传 [{"name":"artist"}]（不传 schema）→ 500 CM003 Internal server error，表未添加。openapi AddTableRequest.schema 非 required；TableService.batchAddTables 直接传 tables.getFirst().getSchema()（null）给 jdbcMetaService.getTables → dbClient.getTables 无法处理 null schema 抛异常。传 schema:public 则 200 正常。建议：schema 缺省时回退数据源 default_schema（BUG-013 已自动探测），或至少返回 400 友好错误。
+bugs: []
