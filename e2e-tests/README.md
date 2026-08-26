@@ -115,7 +115,7 @@ Agent 加载 e2e-tester skill → 选择目标模块 → Agent 自主执行并�
   ```bash
   mvn -f backend/pom.xml spring-boot:run -Dspring-boot.run.workingDirectory=/Users/zhangyimin/IdeaProjects/dati
   ```
-- 以 H2 file 模式运行，数据库文件在 `./db/dataconnai`
+- 以 H2 file 模式运行，数据库文件在 `./db/dati`
 
 ### 测试用 PostgreSQL
 - `public` schema 下有 11 张 Chinook 示例表：album、artist、customer、employee、genre、invoice、invoiceline、mediatype、playlist、playlisttrack、track

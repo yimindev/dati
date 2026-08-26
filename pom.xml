@@ -11,7 +11,7 @@
     <groupId>com.dati</groupId>
     <artifactId>dati-parent</artifactId>
     <version>0.3.1</version>
-    <name>data-conn-ai</name>
+    <name>dati</name>
     <packaging>pom</packaging>
 
     <modules>

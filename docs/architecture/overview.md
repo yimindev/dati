@@ -8,7 +8,7 @@
 
 - **前端**（`frontend/`）：Vue 3 + Vite + TypeScript，组件库 Element Plus，样式 TailwindCSS 4，单元测试 Vitest。
 - **后端**（`backend/`）：Spring Boot 3.5.x（Java 21），按 DDD 分层（`domain` / `repository` / `server`），暴露 REST API，JPA 访问元数据库。
-- **数据库**：开发环境 H2 文件库（`./db/dataconnai`），可切换 MySQL/PostgreSQL 等（新增 profile）。
+- **数据库**：开发环境 H2 文件库（`./db/dati`），可切换 MySQL/PostgreSQL 等（新增 profile）。
 - **搜索引擎**：Elasticsearch 承载语义检索（`SemanticSearchDocument`）。
 
 ## 模块与文档索引

@@ -1,18 +1,13 @@
 spring:
   datasource:
     url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;MODE=MySQL;LOCK_TIMEOUT=10000
-    driver-class-name: org.h2.Driver
     username: sa
     password:
   jpa:
     hibernate:
       ddl-auto: create-drop
-    show-sql: false
-    database-platform: org.hibernate.dialect.H2Dialect
     properties:
       hibernate:
-        cache:
-          use_second_level_cache: false
         format_sql: true
   autoconfigure:
     exclude:

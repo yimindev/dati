@@ -1,18 +1,15 @@
 spring:
   datasource:
-    driver-class-name: org.h2.Driver
-#    url: jdbc:h2:mem:dataconnai;DATABASE_TO_UPPER=false;QUERY_TIMEOUT=30
-    url: jdbc:h2:file:${user.dir}/db/dataconnai;QUERY_TIMEOUT=30;mode=mysql
+#    url: jdbc:h2:mem:dati;DATABASE_TO_UPPER=false;QUERY_TIMEOUT=30
+    url: jdbc:h2:file:${user.dir}/db/dati;QUERY_TIMEOUT=30;mode=mysql
     username: root
     password: dca
   jpa:
     hibernate:
       ddl-auto: update
-    show-sql: false
-    database-platform: org.hibernate.dialect.H2Dialect
   h2:
     console:
-      path: /h2-console/dataconnai
+      path: /h2-console/dati
       enabled: true
   elasticsearch:
     uris: http://localhost:9200
@@ -20,10 +17,6 @@ spring:
     password: yimin123
     connection-timeout: 5s
     socket-timeout: 30s
-  data:
-    elasticsearch:
-      repositories:
-        enabled: true
 
 dati:
   mcp:

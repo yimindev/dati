@@ -15,13 +15,14 @@ services:
       - "18085:8085"
     environment:
       - SPRING_PROFILES_ACTIVE=prod
-      # 默认使用内置 H2,数据文件持久化在 /app/db(dati_data 卷)。
-      # 外接数据库(如 PostgreSQL)时,自行配置:
-      #   SPRING_DATASOURCE_URL / SPRING_DATASOURCE_USERNAME / SPRING_DATASOURCE_PASSWORD
-      #   SPRING_DATASOURCE_DRIVER_CLASS_NAME / SPRING_JPA_DATABASE_PLATFORM
+      # 默认使用内置 H2, 数据文件持久化在 /app/db (dati_data 卷); 外接外部数据库时在 .env 中指定 SPRING_DATASOURCE_*
+      - SPRING_DATASOURCE_URL=${SPRING_DATASOURCE_URL:-jdbc:h2:file:/app/db/dati;QUERY_TIMEOUT=30;mode=mysql}
+      - SPRING_DATASOURCE_USERNAME=${SPRING_DATASOURCE_USERNAME:-root}
+      - SPRING_DATASOURCE_PASSWORD=${SPRING_DATASOURCE_PASSWORD:-dca}
       - SPRING_ELASTICSEARCH_URIS=http://elasticsearch:9200
       - SPRING_ELASTICSEARCH_USERNAME=elastic
       - SPRING_ELASTICSEARCH_PASSWORD=${ES_PASSWORD:?ES_PASSWORD must be set in .env}
+      - ADMIN_USERS=${ADMIN_USERS:-admin}
       - JWT_SECRET=${JWT_SECRET:?JWT_SECRET must be set in .env}
     volumes:
       - dati_data:/app/db

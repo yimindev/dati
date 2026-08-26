@@ -18,8 +18,8 @@ mvn spring-boot:run
 # 或：java -jar target/backend-*.jar（默认激活 dev 配置）
 ```
 
-- Dev 数据库：H2 文件库，路径 `./db/dataconnai`（相对项目根目录）
-- H2 Console：运行后可访问 `/h2-console/semantic`
+- Dev 数据库：H2 文件库，路径 `./db/dati`（相对项目根目录）
+- H2 Console：运行后可访问 `/h2-console/dati`
 
 ## 启动前端
 
@@ -60,7 +60,7 @@ pnpm docs:dev     # 本地运行帮助中心（VitePress，端口 5174）
 
 ## 数据库与表结构
 
-- 开发环境使用 H2 文件库，数据文件为仓库根目录下 `./db/dataconnai.*`；清空本地数据只需删除这些文件后重启后端。
+- 开发环境使用 H2 文件库，数据文件为仓库根目录下 `./db/dati.*`；清空本地数据只需删除这些文件后重启后端。
 - 表结构默认由 JPA / Hibernate（`ddl-auto: update`）自动维护。
 
 ## 切换其他数据库
@@ -76,5 +76,5 @@ java -jar target/backend-*.jar --spring.profiles.active=mysql
 ## 故障排查
 
 - 数据库连接失败：检查驱动与 JDBC URL，可用 `POST /v1/data-sources/test-connection` 自检
-- H2 Console 无法访问：确认应用运行，访问 `/h2-console/semantic`
+- H2 Console 无法访问：确认应用运行，访问 `/h2-console/dati`
 - 表结构不一致：dev 下 `ddl-auto=update` 会尝试自动演进；如遇到遗留历史数据冲突，可重置本地 H2 数据库文件

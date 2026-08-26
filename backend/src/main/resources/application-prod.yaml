@@ -1,31 +1,23 @@
 spring:
   datasource:
-    # 默认内置 H2,数据文件持久化在 ${user.dir}/db(容器内为 /app/db)。
-    # 外接数据库时覆盖 SPRING_DATASOURCE_* 与 SPRING_JPA_DATABASE_PLATFORM 即可(PostgreSQL 驱动已在 classpath)。
-    driver-class-name: ${SPRING_DATASOURCE_DRIVER_CLASS_NAME:org.h2.Driver}
-    url: ${SPRING_DATASOURCE_URL:jdbc:h2:file:${user.dir}/db/dataconnai;QUERY_TIMEOUT=30;mode=mysql}
-    username: ${SPRING_DATASOURCE_USERNAME:root}
-    password: ${SPRING_DATASOURCE_PASSWORD:dca}
+    # 生产外部数据库 (MySQL/PostgreSQL 等), 启动时必须由环境变量显式注入
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
   jpa:
     hibernate:
       ddl-auto: ${SPRING_JPA_HIBERNATE_DDL_AUTO:update}
-    show-sql: false
-    database-platform: ${SPRING_JPA_DATABASE_PLATFORM:org.hibernate.dialect.H2Dialect}
   h2:
     console:
       enabled: false
   elasticsearch:
-    uris: ${SPRING_ELASTICSEARCH_URIS:http://elasticsearch:9200}
+    uris: ${SPRING_ELASTICSEARCH_URIS}
     username: ${SPRING_ELASTICSEARCH_USERNAME:elastic}
-    password: ${SPRING_ELASTICSEARCH_PASSWORD:yimin123}
+    password: ${SPRING_ELASTICSEARCH_PASSWORD}
     connection-timeout: 5s
     socket-timeout: 30s
-  data:
-    elasticsearch:
-      repositories:
-        enabled: true
 
-dati:
-  mcp:
-    endpoint-base-url: ${MCP_ENDPOINT_BASE_URL:}
-    allowed-origins: ${MCP_ALLOWED_ORIGINS:}
+auth:
+  admin-users: ${ADMIN_USERS}
+  jwt:
+    secret: ${JWT_SECRET}
