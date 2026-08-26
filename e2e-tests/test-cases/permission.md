@@ -25,20 +25,19 @@
 **级别：** P0
 **前置：** 用户 A 已注册并登录
 
-1. A 创建数据源（postgres_local）→ 记录 id
-2. A GET /v1/data-sources 列表 → 预期列表中**包含**刚创建的数据源（owner 分支：`created_by = :userId`）
+1. A 创建数据源 ds-1（postgres_local）→ 记录 id（供主线后续用例 TC-PM-001~004 复用）
+2. A GET /v1/data-sources 列表 → 预期列表中**包含**刚创建的数据源 ds-1（owner 分支：`created_by = :userId`）
 
 ---
 
 ## TC-PM-001 未授权用户不可见资源（列表过滤 + 详情 403）
 **级别：** P0
-**前置：** 用户 A、B 均已注册并登录
+**前置：** TC-PM-010 完成（A 拥有数据源 ds-1）；用户 B 已注册并登录
 
-1. A 创建数据源 ds-1（postgres_local）→ 记录 id
-2. B 登录，GET /v1/data-sources 列表
-3. 预期：列表中**不包含** A 创建的数据源
-4. B GET /v1/data-sources/{ds-1} 详情
-5. 预期：返回 403（PM001），响应体 code 为 `PM001`
+1. B 登录，GET /v1/data-sources 列表
+2. 预期：列表中**不包含** A 创建的数据源 ds-1
+3. B GET /v1/data-sources/{ds-1} 详情
+4. 预期：返回 403（PM001），响应体 code 为 `PM001`
 
 ---
 
@@ -75,6 +74,7 @@
 2. 预期返回 200（资源 id）
 3. B 刷新列表 → 数据源 ds-1 不可见
 4. B GET /v1/data-sources/{ds-1} → 预期 403
+5. A 清理删除数据源 ds-1
 
 ---
 
@@ -87,6 +87,7 @@
 3. B 调 POST /v1/acls/DATA_SOURCE/{ds-2} 授权给用户 C（VIEW）
 4. 预期返回 403（PM001，B 无 EDIT 权限不能授权他人）
 5. 顺带校验：GET /v1/acls/DATA_SOURCE/{ds-2} → 仅 1 条记录（B 的 VIEW），C 未被写入
+6. A 清理删除数据源 ds-2
 
 ---
 
@@ -99,6 +100,7 @@
 3. GET /v1/data-sources → 列表中**包含** ds-admin（以及其他用户全部数据源）
 4. GET /v1/data-sources/{ds-admin} → 200（即使未被授权）
 5. admin 调 POST /v1/acls/DATA_SOURCE/{ds-admin} 授权他人 → 200（admin 可执行所有授权操作）
+6. A 清理删除数据源 ds-admin
 
 ---
 
@@ -111,7 +113,8 @@
    - POST /v1/mcp-services，body 含 `{"data_scopes":[{"scope_type":"DATA_SOURCE","reference_id":"<ds-3>"}]}`
 3. 预期返回 403（PM001，传播校验拦截）
 4. B 创建数据源 ds-B（postgres_local）→ 记录 id
-5. B 创建 MCP 服务绑定 ds-B → 预期 200（绑定自己有权限的数据源）
+5. B 创建 MCP 服务 svc-B 绑定 ds-B → 预期 200（绑定自己有权限的数据源）
+6. 清理：B 删除 MCP 服务 svc-B 及数据源 ds-B；A 删除数据源 ds-3
 
 ---
 
@@ -125,6 +128,7 @@
 4. C 访问 svc-1 详情 GET /v1/mcp-services/{svc-1} → 200
 5. C 查看数据源列表 → ds-4 **不可见**（数据源权限不随服务授权传播）
 6. C GET /v1/data-sources/{ds-4} → 预期 403
+7. A 清理删除 MCP 服务 svc-1 及数据源 ds-4
 
 ---
 
@@ -139,6 +143,7 @@
 5. A 授权 B 对 SUBJECT 的 VIEW（POST /v1/acls/SUBJECT/{subject-1}，principal_id = B_UID）→ 200
 6. B GET /v1/subjects 列表 → 包含 subject-1
 7. B GET /v1/subjects/{subject-1} → 200
+8. A 清理删除主题 subject-1 及数据源 ds-5
 
 ---
 
@@ -153,6 +158,7 @@
 5. 非法资源类型：POST /v1/acls/TEAM/{ds-6}，合法 body → 预期 400
 6. 合法调用不受影响：POST /v1/acls/DATA_SOURCE/{ds-6}（大写 USER + VIEW）→ 200
 7. 校验 ACL 表未被污染：GET /v1/acls/DATA_SOURCE/{ds-6} → 仅 1 条记录（步骤 6 写入的）
+8. A 清理删除数据源 ds-6
 
 ---
 
@@ -169,6 +175,7 @@
 7. GET /v1/acls/DATA_SOURCE/{ds-pub} → 列表包含 `GROUP/ALL_USERS` 行，permission = VIEW，`principal_name` 为 null（无对应用户）
 8. A 调 DELETE /v1/acls/DATA_SOURCE/{ds-pub}/GROUP/ALL_USERS → 200
 9. 撤销后：B 列表恢复不可见
+10. A 清理删除数据源 ds-pub
 
 ---
 
