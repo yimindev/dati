@@ -27,7 +27,7 @@ public class TableInfoPO extends BaseResourcePO {
     @Column(length = 36)
     private String dataSourceId;
 
-    @Column(length = 64)
+    @Column(name = "table_schema", length = 64)
     private String schema;
 
     @JdbcTypeCode(SqlTypes.JSON)
