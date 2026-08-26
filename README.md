@@ -24,6 +24,8 @@ DatI（Data Intelligence）是一个为 AI 大模型提供**统一数据接入�
 ## 文档导航
 
 - [本地开发指南](docs/development.md)：环境准备、启动、常用命令与开发约定
+- **实战案例**：
+  - [家庭共享记账助手](examples/family-finance/README.md)：多用户协作记账、参数化防越权、全员透明 SQL 查账与开箱自愈示例
 - **架构与设计**（长期维护，与代码同步）：
   - [架构总览](docs/architecture/overview.md)
   - [认证架构](docs/architecture/authentication.md)
