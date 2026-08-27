@@ -4,14 +4,16 @@ DatI 仓库技能的唯一事实来源。技能以 [Agent Skills 开放标准](h
 
 ## 接入方式
 
-仓库通过 symlink 将技能接入 `.agents/skills/`(pi / Codex / Gemini 的项目级技能位置),克隆即用,保持单一事实来源:
+仓库通过**薄壳技能**将交付技能接入 `.agents/skills/`(pi / Codex / Gemini 的项目级技能位置):
 
 ```
-skills/dati-ops/          # 技能源码(唯一事实来源)
-.agents/skills/dati-ops   # symlink → ../../skills/dati-ops
+skills/dati-ops/            # 技能源码(单一事实来源,可独立交付/打包)
+.agents/skills/dati-ops/    # 薄壳:SKILL.md 简介 + REQUIRED 指向外层,供仓库内 agent 发现
 ```
 
-> 注:symlink 在 macOS / Linux 下开箱即用;Windows 下 git 会将其 checkout 成普通文本文件(静默失效),如何处理待定。
+> 薄壳 SKILL.md 的 `description` 与真技能保持一致(保证触发);内容必须引导 agent 读取外层完整文档,禁止自行承载可执行内容。
+
+> 不用 symlink 的原因:Windows 下 git checkout 符号链接依赖开发者模式/`core.symlinks`,环境不一致;薄壳是普通文件,跨平台无差异。
 
 ## 约定
 
