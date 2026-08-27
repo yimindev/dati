@@ -24,6 +24,7 @@ mvn test                                  # Run all tests
 mvn -Dtest=ClassName#MethodName test      # Run specific test
 mvn -B -DskipTests package                # Build without tests
 mvn spring-boot:run                       # Run (port 8085)
+scripts/fetch-openapi.sh                  # Regenerate docs/api/openapi.json + skill snapshot (backend must be running)
 ```
 
 ### Frontend (Vue 3 + TypeScript)
