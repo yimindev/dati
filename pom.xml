@@ -10,7 +10,7 @@
     </parent>
     <groupId>com.dati</groupId>
     <artifactId>dati-parent</artifactId>
-    <version>0.3.1</version>
+    <version>0.3.2</version>
     <name>dati</name>
     <packaging>pom</packaging>
 
