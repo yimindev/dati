@@ -38,3 +38,6 @@ DatI（Data Intelligence）是一个为 AI 大模型提供**统一数据接入�
 - **用户帮助中心**：[docs/user-guide](docs/user-guide/index.md)（VitePress 站点，中英双语）
 - **API 契约**：[docs/api/openapi.json](docs/api/openapi.json)（E2E 测试工具链使用）
 - **AI 编码助手规范**：[AGENTS.md](AGENTS.md) 与 [.agents/rules/](.agents/rules/)（后端/前端/设计系统规范）
+- **Agent 技能**（[Agent Skills 开放标准](https://agentskills.io)，仓库内 agent 自动发现）：
+  - [dati-ops](skills/dati-ops/SKILL.md)：**用户技能**——通过 HTTP API 完成平台配置与操作（数据源/主题术语/MCP 服务），技能自包含（内置 openapi.json 与查询工具），可独立分发；仓库内通过 `.agents/skills/dati-ops/` 薄壳接入
+  - [e2e-tester](.agents/skills/e2e-tester/SKILL.md)：**开发技能**——E2E HTTP 集成测试与 API 行为验证（测试用例见 [e2e-tests/test-cases/](e2e-tests/test-cases/)）

@@ -4,7 +4,7 @@ DatI 仓库技能的唯一事实来源。技能以 [Agent Skills 开放标准](h
 
 ## 接入方式
 
-仓库通过**薄壳技能**将交付技能接入 `.agents/skills/`(pi / Codex / Gemini 的项目级技能位置):
+仓库通过**薄壳技能**将用户技能接入 `.agents/skills/`(pi / Codex / Gemini 的项目级技能位置):
 
 ```
 skills/dati-ops/            # 技能源码(单一事实来源,可独立交付/打包)
