@@ -3,6 +3,7 @@ import { ElMessage } from "element-plus";
 import { DocumentCopy } from "@element-plus/icons-vue";
 import type { McpServiceVO } from "~/api/mcp-service";
 import { formatDateTime } from "~/composables";
+import { copyToClipboard } from "~/utils/clipboard";
 import { useI18n } from "vue-i18n";
 
 const { t } = useI18n();
@@ -46,10 +47,10 @@ const statusLabel = (status: string) => {
 };
 
 const handleCopy = async (endpointPath: string) => {
-  try {
-    await navigator.clipboard.writeText(endpointPath);
+  const success = await copyToClipboard(endpointPath);
+  if (success) {
     ElMessage.success(t("common.copySuccess"));
-  } catch {
+  } else {
     ElMessage.error(t("common.copyFailed"));
   }
 };

@@ -8,6 +8,7 @@ import {
   InfoFilled,
   Right,
 } from "@element-plus/icons-vue";
+import { copyToClipboard } from "~/utils/clipboard";
 import type { McpServiceVO } from "~/api/mcp-service";
 
 const props = defineProps<{
@@ -52,10 +53,10 @@ const jsonConfigSnippet = computed(() => {
 
 const handleCopy = async (text: string, successMessage?: string) => {
   if (!text) return;
-  try {
-    await navigator.clipboard.writeText(text);
+  const success = await copyToClipboard(text);
+  if (success) {
     ElMessage.success(successMessage || t("common.copySuccess"));
-  } catch {
+  } else {
     ElMessage.error(t("common.copyFailed"));
   }
 };

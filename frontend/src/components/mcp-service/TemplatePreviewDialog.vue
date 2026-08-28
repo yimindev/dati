@@ -3,6 +3,7 @@ import { nextTick, reactive, ref, watch } from "vue";
 import { ElMessage } from "element-plus";
 import { useI18n } from "vue-i18n";
 import { CopyDocument } from "@element-plus/icons-vue";
+import { copyToClipboard } from "~/utils/clipboard";
 import { previewTemplate } from "~/api/template-preview";
 import ParameterInput from "./ParameterInput.vue";
 
@@ -65,9 +66,13 @@ const doPreview = async () => {
 };
 
 const resultRef = ref<HTMLElement>();
-const copyResult = () => {
-  navigator.clipboard.writeText(result.value);
-  ElMessage.success(t("common.copySuccess"));
+const copyResult = async () => {
+  const success = await copyToClipboard(result.value);
+  if (success) {
+    ElMessage.success(t("common.copySuccess"));
+  } else {
+    ElMessage.error(t("common.copyFailed"));
+  }
 };
 </script>
 

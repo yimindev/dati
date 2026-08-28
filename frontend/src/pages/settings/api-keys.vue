@@ -4,6 +4,7 @@ import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from "elem
 import { Plus, DocumentCopy, WarningFilled } from "@element-plus/icons-vue";
 import { useI18n } from "vue-i18n";
 import { formatDateTime } from "~/composables";
+import { copyToClipboard } from "~/utils/clipboard";
 import { createApiKey, deleteApiKey, listApiKeys } from "~/api/auth";
 import type { ApiKey, ApiKeyCreated } from "~/api/types";
 import DataTableShell from "~/components/common/DataTableShell.vue";
@@ -100,10 +101,10 @@ async function removeKey(key: ApiKey) {
 }
 
 async function copyText(text: string) {
-  try {
-    await navigator.clipboard.writeText(text);
+  const success = await copyToClipboard(text);
+  if (success) {
     ElMessage.success(t("common.copySuccess"));
-  } catch {
+  } else {
     ElMessage.error(t("common.copyFailed"));
   }
 }
