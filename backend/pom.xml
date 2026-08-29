@@ -5,7 +5,7 @@
     <parent>
         <groupId>com.dati</groupId>
         <artifactId>dati-parent</artifactId>
-        <version>0.3.2</version>
+        <version>0.3.3</version>
     </parent>
     <groupId>com</groupId>
     <artifactId>backend</artifactId>
