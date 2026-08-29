@@ -46,12 +46,16 @@ POST .../tables/{tableId}/columns/sync                 → 从库同步列;overw
 
 ## 列元数据与字典值
 
-- `GET .../columns` → 列列表(含 id、名称、类型、描述等)
-- `PUT .../columns/{id}` → 保存列的业务元数据(中文描述、业务含义)
+列相关的路径都挂在数据源+表之下(**需要 datasourceId 与 tableId 两级前缀**):
+
+- `GET /v1/data-sources/{datasourceId}/tables/{tableId}/columns` → 列列表(分页,含 id、名称、类型、描述等)
+- `PUT /v1/data-sources/{datasourceId}/tables/{tableId}/columns/{id}` → 保存单列的业务元数据(中文描述、别名 `aliases`,即列元数据增强)
 - 字典值链路:
-  - `POST .../values/extract` → 从库中提取该列的实际取值(如枚举值),query 参数 `overwrite`(默认 false,true 覆盖已有值)
-  - `GET .../values` → 查已保存的字典值(分页,`keyword` 可搜索)
-  - `PUT .../values` → 保存/覆盖字典值列表(`ColumnValueListRequest`)
+  - `POST /v1/data-sources/{datasourceId}/tables/{tableId}/columns/{columnId}/values/extract` → 从库中提取该列的实际取值(如枚举值),query 参数 `overwrite`(默认 false,true 覆盖已有值)
+  - `GET /v1/data-sources/{datasourceId}/tables/{tableId}/columns/{columnId}/values` → 查已保存的字典值(分页,`keyword` 可搜索)
+  - `PUT /v1/data-sources/{datasourceId}/tables/{tableId}/columns/{columnId}/values` → 保存/覆盖字典值列表(`ColumnValueListRequest`)
+
+> 列元数据增强是语义层建设的关键步骤:同步列只是拿到原始结构,描述/别名/字典值才让 LLM 理解业务语义(见 [scenario-design.md](scenario-design.md) 第 2 节)。
 
 ## 列表查询
 

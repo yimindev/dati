@@ -23,12 +23,17 @@ description: Use when performing configuration or operations on the DatI platfor
 
 ## 接口事实来源
 
-本技能自包含: 接口定义以**技能目录下的 `openapi.json`** 为准(随技能分发,仓库内由项目脚本 `scripts/fetch-openapi.sh` 同步)。**不要整文件读取**(48KB ≈ 15K token),用查询工具按需取(脚本位于技能目录 `scripts/` 下,仓库内从根目录调用):
+本技能自包含: 接口定义以**技能目录下的 `openapi.json`** 为准(随技能分发,仓库内由项目脚本 `scripts/fetch-openapi.sh` 同步)。**不要整文件读取**(48KB ≈ 15K token),用查询工具按需取(统一加 `python3` 前缀调用,不依赖执行权限):
 
 ```bash
-skills/dati-ops/scripts/openapi.py /v1/data-sources POST   # 端点定义,$ref 已展开
-skills/dati-ops/scripts/openapi.py --list                  # 全部接口
-skills/dati-ops/scripts/openapi.py --search password       # 按字段/路径/操作名搜索(英文)
+# 首选: 从仓库根调用
+python3 skills/dati-ops/scripts/openapi.py /v1/data-sources POST
+python3 skills/dati-ops/scripts/openapi.py --list
+python3 skills/dati-ops/scripts/openapi.py --search password
+
+# 若上述路径不可用(Git Bash / 目录变动): 先定位再调用
+PY=$(find . -path "*dati-ops/scripts/openapi.py" | head -1)
+python3 "$PY" /v1/data-sources POST
 ```
 
 openapi.json 是自动生成物,可能滞后于代码;与后端实际行为不一致时,以实际请求结果为准。
@@ -50,7 +55,7 @@ openapi.json 是自动生成物,可能滞后于代码;与后端实际行为不�
 | 数据源 CRUD | `POST /v1/data-sources` · `GET/PUT/DELETE /v1/data-sources/{id}` · `GET /v1/data-sources` |
 | 浏览结构 | `GET .../schemas` · `GET .../schemas/{schema}/tables` · `GET .../tables` · `GET .../tables/{tableId}/columns` |
 | 建表 | `GET .../tables/added-names` → `POST .../tables/batch` → `POST .../tables/{tableId}/columns/sync` |
-| 列元数据/字典值 | `PUT .../columns/{id}` · `GET/PUT .../columns/{columnId}/values` · `POST .../values/extract` |
+| 列元数据/字典值 | `PUT .../tables/{tableId}/columns/{id}` · `GET/PUT .../columns/{columnId}/values` · `POST .../values/extract`(完整路径见 datasource.md) |
 
 → 业务要点见 [references/datasource.md](references/datasource.md)
 
@@ -97,11 +102,16 @@ openapi.json 是自动生成物,可能滞后于代码;与后端实际行为不�
 5. GET  .../tables/added-names            确认待添加表
 6. POST .../tables/batch                  批量建表(AddTableRequest 数组)
 7. POST .../tables/{tableId}/columns/sync 同步列
-8. POST /v1/subjects                      创建主题(datasource_id + name)
-9. GET  /v1/subjects/{id}/available-tables?schema=xxx
-10. POST /v1/subjects/{id}/tables         添加表
-11. POST /v1/subjects/{subjectId}/terms   创建术语
+8. PUT  .../columns/{id}                  列元数据增强:维护描述、别名(对业务关键列)
+9. POST .../columns/{columnId}/values/extract  开启字典值抽取(枚举/维度列)
+10. PUT .../columns/{columnId}/values    保存/覆盖字典值与同义词
+11. POST /v1/subjects                     创建主题(datasource_id + name)
+12. GET  /v1/subjects/{id}/available-tables?schema=xxx
+13. POST /v1/subjects/{id}/tables         添加表
+14. POST /v1/subjects/{subjectId}/terms   创建术语
 ```
+
+> 步骤 8-10 是**语义层建设的关键**——同步列只是拿到原始结构,描述/别名/字典值才让 LLM 理解业务语义。只接数不标注,后续 NL2SQL 命中率会差(见 references/scenario-design.md)。
 
 ### 工作流 2:创建并发布 MCP 服务
 

@@ -31,7 +31,7 @@ MCP 服务共 **8 种工具类型**:7 种预置(平台内置,随发布生效)+ 1
 
 ## 自定义工具配置
 
-创建(`POST /v1/mcp-services/{serviceId}/tools`)/更新(`PUT .../tools/{toolId}`)时,`config` 为 **JSON 字符串**(注意:camelCase):
+创建(`POST /v1/mcp-services/{serviceId}/tools`)/更新(`PUT .../tools/{toolId}`)时,`config` 为 **JSON 字符串**(注意:**整体与内嵌均用 snake_case**,后端 JsonUtils 全局 SNAKE_CASE 解析,实测 camelCase 会 500):
 
 ```json
 {
@@ -39,24 +39,24 @@ MCP 服务共 **8 种工具类型**:7 种预置(平台内置,随发布生效)+ 1
   "name": "add_transaction",
   "title": "记账",
   "description": "记一笔家庭账...",
-  "config": "{\"dataSourceId\":\"<数据源id>\",\"sqlTemplate\":\"INSERT INTO ... {{type}} ...\",\"parameters\":[{\"name\":\"type\",\"type\":\"String\",\"required\":true,\"description\":\"收支类型\"}],\"timeout\":30,\"maxRows\":1000,\"readOnly\":false,\"idempotent\":true,\"destructive\":false}"
+  "config": "{\"data_source_id\":\"<数据源id>\",\"sql_template\":\"INSERT INTO ... {{type}} ...\",\"parameters\":[{\"name\":\"type\",\"type\":\"String\",\"required\":true,\"description\":\"收支类型\"}],\"timeout\":30,\"max_rows\":1000,\"read_only\":false,\"idempotent\":true,\"destructive\":false}"
 }
 ```
 
-**config(ParamSqlConfig)字段**:
+**config(ParamSqlConfig)字段** (snake_case):
 
 | 字段 | 类型 | 默认 | 说明 |
 |---|---|---|---|
-| `dataSourceId` | string | — | 数据源 ID(模板 SQL 执行的目标) |
-| `sqlTemplate` | string | — | SQL 模板(语法见 [templates.md](templates.md)) |
+| `data_source_id` | string | — | 数据源 ID(模板 SQL 执行的目标) |
+| `sql_template` | string | — | SQL 模板(语法见 [templates.md](templates.md)) |
 | `parameters` | ToolParameter[] | — | 参数声明(决定 LLM 调用时的入参 schema) |
 | `timeout` | int | 30 | 超时秒数 |
-| `maxRows` | int | 1000 | 最大返回行数 |
-| `readOnly` | bool | — | 声明只读(影响 LLM 决策与安全检查) |
+| `max_rows` | int | 1000 | 最大返回行数 |
+| `read_only` | bool | — | 声明只读(影响 LLM 决策与安全检查) |
 | `idempotent` | bool | — | 声明幂等(可安全重试) |
 | `destructive` | bool | — | 声明破坏性(高影响操作) |
 
-**ToolParameter**:`name`、`type`(`String`/`Number`/`Boolean`/`DateTime`/`Array`)、`required`、`defaultValue`、`description`。参数类型决定 LLM 传参格式,`description` 要写清格式约束(如 `日期格式 YYYY-MM-DD`)。
+**ToolParameter**(snake_case):`name`、`type`(`String`/`Number`/`Boolean`/`DateTime`/`Array`)、`required`、`default_value`、`description`。参数类型决定 LLM 传参格式,`description` 要写清格式约束(如 `日期格式 YYYY-MM-DD`)。
 
 ## 工具使用策略
 
