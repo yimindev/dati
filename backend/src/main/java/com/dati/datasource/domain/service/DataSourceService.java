@@ -19,11 +19,10 @@ import com.dati.db.HikariPoolManager;
 import com.dati.db.JdbcConnector;
 import com.dati.db.JdbcUtils;
 import com.dati.db.Table;
-import com.dati.permission.domain.service.PermissionService;
 import com.dati.permission.domain.model.Permission;
 import com.dati.permission.domain.model.ResourceType;
+import com.dati.permission.domain.service.PermissionService;
 import com.dati.semantic.domain.service.SemanticIndexService;
-import jakarta.annotation.Nullable;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -223,14 +222,14 @@ public class DataSourceService {
         return dataSourceDAO.findById(id).map(DSMapper::toDataSource);
     }
 
-    public List<String> getSchemas(String id, @Nullable String catalog) throws SQLException {
+    public List<String> getSchemas(String id) throws SQLException {
         permissionService.requireDataSource(id, Permission.VIEW);
-        return jdbcMetaService.getSchemas(id, catalog);
+        return jdbcMetaService.getSchemas(id);
     }
 
-    public List<Table> getTables(String id, @Nullable String catalog, String schema) throws SQLException {
+    public List<Table> getTables(String id, String schema) throws SQLException {
         permissionService.requireDataSource(id, Permission.VIEW);
-        return jdbcMetaService.getTables(id, catalog, schema);
+        return jdbcMetaService.getTables(id, schema);
     }
 
     public record DsBrief(String name, DbType dbType, String defaultSchema, String description) {}

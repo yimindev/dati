@@ -298,7 +298,7 @@ class ColumnServiceTest {
         when(mockColumn.type()).thenReturn("VARCHAR");
         when(mockColumn.comment()).thenReturn("New comment");
         
-        when(jdbcMetaService.getColumns(TestFixtures.TEST_DATASOURCE_ID, null, "public", "test_table"))
+        when(jdbcMetaService.getColumns(TestFixtures.TEST_DATASOURCE_ID, "public", "test_table"))
             .thenReturn(List.of(mockColumn));
         
         User mockUser = mock(User.class);
@@ -341,7 +341,7 @@ class ColumnServiceTest {
         when(mockColumn.type()).thenReturn("VARCHAR");
         when(mockColumn.comment()).thenReturn("DB comment");
 
-        when(jdbcMetaService.getColumns(TestFixtures.TEST_DATASOURCE_ID, null, "public", "test_table"))
+        when(jdbcMetaService.getColumns(TestFixtures.TEST_DATASOURCE_ID, "public", "test_table"))
             .thenReturn(List.of(mockColumn));
         when(columnInfoDAO.saveAll(anyList())).thenReturn(List.of(existingGenre));
 
@@ -388,7 +388,7 @@ class ColumnServiceTest {
         when(mockColumn.type()).thenReturn("VARCHAR");
         when(mockColumn.comment()).thenReturn("DB comment");
 
-        when(jdbcMetaService.getColumns(TestFixtures.TEST_DATASOURCE_ID, null, "public", "test_table"))
+        when(jdbcMetaService.getColumns(TestFixtures.TEST_DATASOURCE_ID, "public", "test_table"))
             .thenReturn(List.of(mockColumn));
         when(columnInfoDAO.saveAll(anyList())).thenReturn(List.of(existingGenre));
 
@@ -419,7 +419,7 @@ class ColumnServiceTest {
         when(mockColumn.type()).thenReturn("VARCHAR");
         when(mockColumn.comment()).thenReturn("New comment");
 
-        when(jdbcMetaService.getColumns(TestFixtures.TEST_DATASOURCE_ID, null, "public", "test_table"))
+        when(jdbcMetaService.getColumns(TestFixtures.TEST_DATASOURCE_ID, "public", "test_table"))
             .thenReturn(List.of(mockColumn));
         when(columnInfoDAO.saveAll(anyList())).thenReturn(List.of(new ColumnInfoPO()));
 
@@ -467,7 +467,7 @@ class ColumnServiceTest {
         when(mockColumn.type()).thenReturn("VARCHAR");
         when(mockColumn.comment()).thenReturn("DB comment");
 
-        when(jdbcMetaService.getColumns(TestFixtures.TEST_DATASOURCE_ID, null, "public", "test_table"))
+        when(jdbcMetaService.getColumns(TestFixtures.TEST_DATASOURCE_ID, "public", "test_table"))
             .thenReturn(List.of(mockColumn));
 
         ColumnInfoPO savedPO = TestFixtures.createTestColumnInfoPO();
@@ -521,7 +521,7 @@ class ColumnServiceTest {
     void syncColumns_shouldThrowWhenDataSourceFails() throws SQLException {
         // given
         when(tableInfoDAO.findById(TestFixtures.TEST_TABLE_ID)).thenReturn(Optional.of(testTableInfoPO));
-        when(jdbcMetaService.getColumns(TestFixtures.TEST_DATASOURCE_ID, null, "public", "test_table"))
+        when(jdbcMetaService.getColumns(TestFixtures.TEST_DATASOURCE_ID, "public", "test_table"))
             .thenThrow(new SQLException("Connection failed"));
 
         // when & then
@@ -541,7 +541,7 @@ class ColumnServiceTest {
         when(mockColumn.type()).thenReturn("INT");
         when(mockColumn.comment()).thenReturn(null);
         
-        when(jdbcMetaService.getColumns(TestFixtures.TEST_DATASOURCE_ID, null, "public", "test_table"))
+        when(jdbcMetaService.getColumns(TestFixtures.TEST_DATASOURCE_ID, "public", "test_table"))
             .thenReturn(List.of(mockColumn));
         
         try (MockedStatic<RequestContext> mocked = mockStatic(RequestContext.class)) {
@@ -579,7 +579,7 @@ class ColumnServiceTest {
         when(mockColumn.type()).thenReturn("VARCHAR");
         when(mockColumn.comment()).thenReturn(null);
         
-        when(jdbcMetaService.getColumns(TestFixtures.TEST_DATASOURCE_ID, null, "public", "test_table"))
+        when(jdbcMetaService.getColumns(TestFixtures.TEST_DATASOURCE_ID, "public", "test_table"))
             .thenReturn(List.of(mockColumn));
         
         try (MockedStatic<RequestContext> mocked = mockStatic(RequestContext.class)) {
@@ -619,7 +619,7 @@ class ColumnServiceTest {
         when(mockColumn.type()).thenReturn("VARCHAR");
         when(mockColumn.comment()).thenReturn("New DB Comment");
         
-        when(jdbcMetaService.getColumns(TestFixtures.TEST_DATASOURCE_ID, null, "public", "test_table"))
+        when(jdbcMetaService.getColumns(TestFixtures.TEST_DATASOURCE_ID, "public", "test_table"))
             .thenReturn(List.of(mockColumn));
         
         try (MockedStatic<RequestContext> mocked = mockStatic(RequestContext.class)) {
@@ -659,7 +659,7 @@ class ColumnServiceTest {
         when(mockColumn.type()).thenReturn("VARCHAR");
         when(mockColumn.comment()).thenReturn("New DB Comment");
         
-        when(jdbcMetaService.getColumns(TestFixtures.TEST_DATASOURCE_ID, null, "public", "test_table"))
+        when(jdbcMetaService.getColumns(TestFixtures.TEST_DATASOURCE_ID, "public", "test_table"))
             .thenReturn(List.of(mockColumn));
         
         try (MockedStatic<RequestContext> mocked = mockStatic(RequestContext.class)) {
@@ -691,7 +691,7 @@ class ColumnServiceTest {
         when(mockColumn.type()).thenReturn("VARCHAR");
         when(mockColumn.comment()).thenReturn("New column comment");
         
-        when(jdbcMetaService.getColumns(TestFixtures.TEST_DATASOURCE_ID, null, "public", "test_table"))
+        when(jdbcMetaService.getColumns(TestFixtures.TEST_DATASOURCE_ID, "public", "test_table"))
             .thenReturn(List.of(mockColumn));
         
         try (MockedStatic<RequestContext> mocked = mockStatic(RequestContext.class)) {

@@ -134,7 +134,7 @@ public class ColumnService {
                 .stream()
                 .collect(Collectors.toMap(ColumnInfoPO::getName, Function.identity()));
         
-        List<Column> dbColumns = jdbcMetaService.getColumns(datasourceId, null, tableInfo.getSchema(), tableInfo.getName());
+        List<Column> dbColumns = jdbcMetaService.getColumns(datasourceId, tableInfo.getSchema(), tableInfo.getName());
 
         Set<String> newColumnNames = dbColumns.stream().map(Column::name).collect(Collectors.toSet());
         List<ColumnInfoPO> removedColumns = existingColumns.values().stream()

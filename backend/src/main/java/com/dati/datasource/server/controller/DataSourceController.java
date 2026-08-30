@@ -88,9 +88,9 @@ public class DataSourceController {
     }
 
     @GetMapping("/{id}/schemas")
-    public List<String> getSchemas(@PathVariable String id, @RequestParam(name = "catalog", required = false) String catalog) {
+    public List<String> getSchemas(@PathVariable String id) {
         try {
-            return dataSourceService.getSchemas(id, catalog);
+            return dataSourceService.getSchemas(id);
         } catch (SQLException e) {
             log.error("Failed to get schemas for datasource {}", id, e);
             throw new DatiException(ErrorCode.DS_SQL_ERROR, e.getMessage());
@@ -98,9 +98,9 @@ public class DataSourceController {
     }
 
     @GetMapping("/{id}/schemas/{schema}/tables")
-    public List<Table> getTables(@PathVariable String id, @PathVariable String schema, @RequestParam(name = "catalog", required = false) String catalog) {
+    public List<Table> getTables(@PathVariable String id, @PathVariable String schema) {
         try {
-            return dataSourceService.getTables(id, catalog, schema);
+            return dataSourceService.getTables(id, schema);
         } catch (SQLException e) {
             log.error("Failed to get tables for datasource {}", id, e);
             throw new DatiException(ErrorCode.DS_SQL_ERROR, e.getMessage());

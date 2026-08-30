@@ -21,21 +21,21 @@ import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-@DisplayName("MariaDbClient unit tests")
-class MariaDbClientTest {
+@DisplayName("MysqlDbClient unit tests")
+class MysqlDbClientTest {
 
-    private final MariaDbClient mariaDbClient = new MariaDbClient();
+    private final MysqlDbClient mysqlDbClient = new MysqlDbClient();
 
     @Test
-    @DisplayName("getDbType should return MARIADB")
-    void getDbType_shouldReturnMariaDb() {
-        assertThat(mariaDbClient.getDbType()).isEqualTo(DbType.MARIADB);
+    @DisplayName("getDbType should return MYSQL")
+    void getDbType_shouldReturnMysql() {
+        assertThat(mysqlDbClient.getDbType()).isEqualTo(DbType.MYSQL);
     }
 
     @Test
     @DisplayName("getSchemas should query catalogs from database metadata")
     void getSchemas_shouldReturnCatalogs() throws SQLException {
-        JdbcConnector connector = new JdbcConnector("jdbc:mariadb://localhost:3306/test", "root", "pass");
+        JdbcConnector connector = new JdbcConnector("jdbc:mysql://localhost:3306/test", "root", "pass");
 
         Connection connection = mock(Connection.class);
         DatabaseMetaData metaData = mock(DatabaseMetaData.class);
@@ -44,21 +44,21 @@ class MariaDbClientTest {
         when(connection.getMetaData()).thenReturn(metaData);
         when(metaData.getCatalogs()).thenReturn(resultSet);
         when(resultSet.next()).thenReturn(true, true, false);
-        when(resultSet.getString("TABLE_CAT")).thenReturn("test_db", "other_db");
+        when(resultSet.getString("TABLE_CAT")).thenReturn("db1", "db2");
 
         try (MockedStatic<HikariPoolManager> mockedHikari = mockStatic(HikariPoolManager.class)) {
             mockedHikari.when(() -> HikariPoolManager.getConnection(eq(connector))).thenReturn(connection);
 
-            List<String> schemas = mariaDbClient.getSchemas(connector);
+            List<String> schemas = mysqlDbClient.getSchemas(connector);
 
-            assertThat(schemas).containsExactly("test_db", "other_db");
+            assertThat(schemas).containsExactly("db1", "db2");
         }
     }
 
     @Test
     @DisplayName("getTables should map schema to catalog in database metadata")
     void getTables_shouldMapSchemaToCatalog() throws SQLException {
-        JdbcConnector connector = new JdbcConnector("jdbc:mariadb://localhost:3306/test", "root", "pass");
+        JdbcConnector connector = new JdbcConnector("jdbc:mysql://localhost:3306/test", "root", "pass");
 
         Connection connection = mock(Connection.class);
         DatabaseMetaData metaData = mock(DatabaseMetaData.class);
@@ -74,7 +74,7 @@ class MariaDbClientTest {
         try (MockedStatic<HikariPoolManager> mockedHikari = mockStatic(HikariPoolManager.class)) {
             mockedHikari.when(() -> HikariPoolManager.getConnection(eq(connector))).thenReturn(connection);
 
-            var tables = mariaDbClient.getTables(connector, "test_db");
+            var tables = mysqlDbClient.getTables(connector, "test_db");
 
             assertThat(tables).hasSize(1);
             assertThat(tables.getFirst().name()).isEqualTo("users");
@@ -83,9 +83,38 @@ class MariaDbClientTest {
     }
 
     @Test
+    @DisplayName("getColumns should map schema to catalog in database metadata")
+    void getColumns_shouldMapSchemaToCatalog() throws SQLException {
+        JdbcConnector connector = new JdbcConnector("jdbc:mysql://localhost:3306/test", "root", "pass");
+
+        Connection connection = mock(Connection.class);
+        DatabaseMetaData metaData = mock(DatabaseMetaData.class);
+        ResultSet resultSet = mock(ResultSet.class);
+
+        when(connection.getMetaData()).thenReturn(metaData);
+        when(metaData.getColumns(eq("test_db"), eq(null), eq("users"), eq(null)))
+                .thenReturn(resultSet);
+        when(resultSet.next()).thenReturn(true, false);
+        when(resultSet.getString("COLUMN_NAME")).thenReturn("id");
+        when(resultSet.getString("TYPE_NAME")).thenReturn("INT");
+        when(resultSet.getString("REMARKS")).thenReturn("Primary key");
+
+        try (MockedStatic<HikariPoolManager> mockedHikari = mockStatic(HikariPoolManager.class)) {
+            mockedHikari.when(() -> HikariPoolManager.getConnection(eq(connector))).thenReturn(connection);
+
+            var columns = mysqlDbClient.getColumns(connector, "test_db", "users");
+
+            assertThat(columns).hasSize(1);
+            assertThat(columns.getFirst().name()).isEqualTo("id");
+            assertThat(columns.getFirst().type()).isEqualTo("INT");
+            assertThat(columns.getFirst().comment()).isEqualTo("Primary key");
+        }
+    }
+
+    @Test
     @DisplayName("getCurrentSchema should execute SELECT DATABASE()")
     void getCurrentSchema_shouldReturnCurrentDatabase() throws SQLException {
-        JdbcConnector connector = new JdbcConnector("jdbc:mariadb://localhost:3306/test", "root", "pass");
+        JdbcConnector connector = new JdbcConnector("jdbc:mysql://localhost:3306/test", "root", "pass");
 
         Connection connection = mock(Connection.class);
         Statement statement = mock(Statement.class);
@@ -99,7 +128,7 @@ class MariaDbClientTest {
         try (MockedStatic<HikariPoolManager> mockedHikari = mockStatic(HikariPoolManager.class)) {
             mockedHikari.when(() -> HikariPoolManager.getConnection(eq(connector))).thenReturn(connection);
 
-            String schema = mariaDbClient.getCurrentSchema(connector);
+            String schema = mysqlDbClient.getCurrentSchema(connector);
 
             assertThat(schema).isEqualTo("test_db");
             verify(statement).executeQuery("SELECT DATABASE()");

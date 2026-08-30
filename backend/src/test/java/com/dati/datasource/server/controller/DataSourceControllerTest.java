@@ -173,7 +173,7 @@ class DataSourceControllerTest {
     @DisplayName("Get schemas - success")
     void getSchemas_shouldReturnSchemaList() throws Exception {
         // given
-        when(dataSourceService.getSchemas(TestFixtures.TEST_DATASOURCE_ID, null))
+        when(dataSourceService.getSchemas(TestFixtures.TEST_DATASOURCE_ID))
             .thenReturn(List.of("public", "information_schema"));
 
         // when & then
@@ -188,7 +188,7 @@ class DataSourceControllerTest {
     @DisplayName("Get tables - success")
     void getTables_shouldReturnTableList() throws Exception {
         // given
-        when(dataSourceService.getTables(TestFixtures.TEST_DATASOURCE_ID, null, "public"))
+        when(dataSourceService.getTables(TestFixtures.TEST_DATASOURCE_ID, "public"))
             .thenReturn(List.of(new Table("users", "用户表"), new Table("orders", "订单表"), new Table("products", "产品表")));
 
         // when & then

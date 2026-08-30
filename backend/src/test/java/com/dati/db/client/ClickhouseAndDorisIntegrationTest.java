@@ -64,15 +64,15 @@ class ClickhouseAndDorisIntegrationTest {
         assertThat(currentSchema).isEqualTo("default");
 
         // 4. Schema list
-        List<String> schemas = dbClient.getSchemas(ckConnector, null);
+        List<String> schemas = dbClient.getSchemas(ckConnector);
         assertThat(schemas).contains("default", "system");
 
         // 5. Table list in default schema
-        List<Table> tables = dbClient.getTables(ckConnector, null, "default");
+        List<Table> tables = dbClient.getTables(ckConnector, "default");
         assertThat(tables.stream().map(Table::name)).contains("test_events");
 
         // 6. Column list for test_events
-        List<Column> columns = dbClient.getColumns(ckConnector, null, "default", "test_events");
+        List<Column> columns = dbClient.getColumns(ckConnector, "default", "test_events");
         assertThat(columns.stream().map(Column::name)).contains("id", "title", "event_type", "created_at");
 
         // 7. Execute query via Hikari pool & JdbcTemplate
@@ -111,15 +111,15 @@ class ClickhouseAndDorisIntegrationTest {
         assertThat(currentSchema).isEqualTo("test_db");
 
         // 4. Schema list
-        List<String> schemas = dbClient.getSchemas(dorisConnector, null);
+        List<String> schemas = dbClient.getSchemas(dorisConnector);
         assertThat(schemas).contains("test_db", "information_schema");
 
         // 5. Table list in test_db
-        List<Table> tables = dbClient.getTables(dorisConnector, null, "test_db");
+        List<Table> tables = dbClient.getTables(dorisConnector, "test_db");
         assertThat(tables.stream().map(Table::name)).contains("users");
 
         // 6. Column list for users table
-        List<Column> columns = dbClient.getColumns(dorisConnector, null, "test_db", "users");
+        List<Column> columns = dbClient.getColumns(dorisConnector, "test_db", "users");
         assertThat(columns.stream().map(Column::name)).contains("id", "name", "age", "user_role");
 
         // 7. Execute query via Hikari pool & JdbcTemplate

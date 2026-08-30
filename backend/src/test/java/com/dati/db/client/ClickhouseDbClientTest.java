@@ -49,7 +49,7 @@ class ClickhouseDbClientTest {
         try (MockedStatic<HikariPoolManager> mockedHikari = mockStatic(HikariPoolManager.class)) {
             mockedHikari.when(() -> HikariPoolManager.getConnection(eq(connector))).thenReturn(connection);
 
-            List<String> schemas = clickhouseDbClient.getSchemas(connector, null);
+            List<String> schemas = clickhouseDbClient.getSchemas(connector);
 
             assertThat(schemas).containsExactly("default", "system");
         }

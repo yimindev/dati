@@ -49,9 +49,36 @@ class DorisDbClientTest {
         try (MockedStatic<HikariPoolManager> mockedHikari = mockStatic(HikariPoolManager.class)) {
             mockedHikari.when(() -> HikariPoolManager.getConnection(eq(connector))).thenReturn(connection);
 
-            List<String> schemas = dorisDbClient.getSchemas(connector, null);
+            List<String> schemas = dorisDbClient.getSchemas(connector);
 
             assertThat(schemas).containsExactly("doris_db1", "doris_db2");
+        }
+    }
+
+    @Test
+    @DisplayName("getTables should map schema to catalog in database metadata")
+    void getTables_shouldMapSchemaToCatalog() throws SQLException {
+        JdbcConnector connector = new JdbcConnector("jdbc:mysql://localhost:9030/test", "root", "pass");
+
+        Connection connection = mock(Connection.class);
+        DatabaseMetaData metaData = mock(DatabaseMetaData.class);
+        ResultSet resultSet = mock(ResultSet.class);
+
+        when(connection.getMetaData()).thenReturn(metaData);
+        when(metaData.getTables(eq("test_db"), eq(null), eq(null), eq(new String[]{"TABLE", "VIEW"})))
+                .thenReturn(resultSet);
+        when(resultSet.next()).thenReturn(true, false);
+        when(resultSet.getString("TABLE_NAME")).thenReturn("users");
+        when(resultSet.getString("REMARKS")).thenReturn("Doris users table");
+
+        try (MockedStatic<HikariPoolManager> mockedHikari = mockStatic(HikariPoolManager.class)) {
+            mockedHikari.when(() -> HikariPoolManager.getConnection(eq(connector))).thenReturn(connection);
+
+            var tables = dorisDbClient.getTables(connector, "test_db");
+
+            assertThat(tables).hasSize(1);
+            assertThat(tables.getFirst().name()).isEqualTo("users");
+            assertThat(tables.getFirst().comment()).isEqualTo("Doris users table");
         }
     }
 

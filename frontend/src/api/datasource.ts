@@ -26,11 +26,6 @@ export interface TableVO {
   comment?: string;
 }
 
-// 查询 catalog 的可选参数
-export interface CatalogParam {
-  catalog?: string;
-}
-
 // 数据源：测试连接（POST /v1/data-sources/test-connection）
 // 注意：请求体字段用蛇形（如 jdbc_url、username、password、type）
 export function testConnection(body: DataSourcePayload, signal?: AbortSignal): Promise<boolean> {
@@ -66,21 +61,20 @@ export function getDataSource(id: string, signal?: AbortSignal): Promise<Datasou
   return get<DatasourceVO>(`/v1/data-sources/${encodeURIComponent(id)}`, undefined, signal)
 }
 
-// Schema 列表（GET /v1/data-sources/{id}/schemas?catalog=...）
-export function getSchemas(id: string, params?: CatalogParam, signal?: AbortSignal): Promise<string[]> {
-  return get<string[]>(`/v1/data-sources/${encodeURIComponent(id)}/schemas`, params, signal)
+// Schema 列表（GET /v1/data-sources/{id}/schemas）
+export function getSchemas(id: string, signal?: AbortSignal): Promise<string[]> {
+  return get<string[]>(`/v1/data-sources/${encodeURIComponent(id)}/schemas`, undefined, signal)
 }
 
-// 表列表（GET /v1/data-sources/{id}/schemas/{schema}/tables?catalog=...）
+// 表列表（GET /v1/data-sources/{id}/schemas/{schema}/tables）
 export function getTables(
   id: string,
   schema: string,
-  params?: CatalogParam,
   signal?: AbortSignal
 ): Promise<TableVO[]> {
   return get<TableVO[]>(
     `/v1/data-sources/${encodeURIComponent(id)}/schemas/${encodeURIComponent(schema)}/tables`,
-    params,
+    undefined,
     signal
   )
 }

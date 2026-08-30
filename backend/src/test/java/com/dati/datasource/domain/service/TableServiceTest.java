@@ -131,7 +131,7 @@ class TableServiceTest {
     @DisplayName("Batch add tables - success")
     void batchAddTables_shouldAddTablesWithColumns() throws SQLException {
         // given
-        when(jdbcMetaService.getTables(TestFixtures.TEST_DATASOURCE_ID, null, "public"))
+        when(jdbcMetaService.getTables(TestFixtures.TEST_DATASOURCE_ID, "public"))
             .thenReturn(List.of(new Table("new_table", "")));
         // given
         AddTableRequest request = new AddTableRequest();
@@ -143,7 +143,7 @@ class TableServiceTest {
         when(mockColumn.type()).thenReturn("VARCHAR");
         when(mockColumn.comment()).thenReturn("Column comment");
         
-        when(jdbcMetaService.getColumns(TestFixtures.TEST_DATASOURCE_ID, null, "public", "new_table"))
+        when(jdbcMetaService.getColumns(TestFixtures.TEST_DATASOURCE_ID, "public", "new_table"))
             .thenReturn(List.of(mockColumn));
         when(tableInfoDAO.save(any(TableInfoPO.class))).thenReturn(testTableInfoPO);
         when(columnInfoDAO.save(any(ColumnInfoPO.class))).thenReturn(TestFixtures.createTestColumnInfoPO());
@@ -173,9 +173,9 @@ class TableServiceTest {
         request.setName("new_table");
         request.setSchema("public");
 
-        when(jdbcMetaService.getTables(TestFixtures.TEST_DATASOURCE_ID, null, "public"))
+        when(jdbcMetaService.getTables(TestFixtures.TEST_DATASOURCE_ID, "public"))
             .thenReturn(List.of(new Table("new_table", "")));
-        when(jdbcMetaService.getColumns(TestFixtures.TEST_DATASOURCE_ID, null, "public", "new_table"))
+        when(jdbcMetaService.getColumns(TestFixtures.TEST_DATASOURCE_ID, "public", "new_table"))
             .thenThrow(new SQLException("Connection failed"));
         when(tableInfoDAO.save(any(TableInfoPO.class))).thenReturn(testTableInfoPO);
 
@@ -211,7 +211,7 @@ class TableServiceTest {
         request.setName("ghost_table");
         request.setSchema("public");
 
-        when(jdbcMetaService.getTables(TestFixtures.TEST_DATASOURCE_ID, null, "public"))
+        when(jdbcMetaService.getTables(TestFixtures.TEST_DATASOURCE_ID, "public"))
                 .thenReturn(List.of(new Table("other_table", "")));
 
         assertThatThrownBy(() -> tableService.batchAddTables(TestFixtures.TEST_DATASOURCE_ID, List.of(request)))
@@ -231,13 +231,13 @@ class TableServiceTest {
         auditTable.setName("logs");
         auditTable.setSchema("audit");
 
-        when(jdbcMetaService.getTables(TestFixtures.TEST_DATASOURCE_ID, null, "public"))
+        when(jdbcMetaService.getTables(TestFixtures.TEST_DATASOURCE_ID, "public"))
                 .thenReturn(List.of(new Table("artist", "")));
-        when(jdbcMetaService.getTables(TestFixtures.TEST_DATASOURCE_ID, null, "audit"))
+        when(jdbcMetaService.getTables(TestFixtures.TEST_DATASOURCE_ID, "audit"))
                 .thenReturn(List.of(new Table("logs", "")));
-        when(jdbcMetaService.getColumns(TestFixtures.TEST_DATASOURCE_ID, null, "public", "artist"))
+        when(jdbcMetaService.getColumns(TestFixtures.TEST_DATASOURCE_ID, "public", "artist"))
                 .thenReturn(List.of());
-        when(jdbcMetaService.getColumns(TestFixtures.TEST_DATASOURCE_ID, null, "audit", "logs"))
+        when(jdbcMetaService.getColumns(TestFixtures.TEST_DATASOURCE_ID, "audit", "logs"))
                 .thenReturn(List.of());
         when(tableInfoDAO.save(any(TableInfoPO.class))).thenReturn(testTableInfoPO);
 
@@ -253,8 +253,8 @@ class TableServiceTest {
 
             // then
             assertThat(result).hasSize(2);
-            verify(jdbcMetaService).getTables(TestFixtures.TEST_DATASOURCE_ID, null, "public");
-            verify(jdbcMetaService).getTables(TestFixtures.TEST_DATASOURCE_ID, null, "audit");
+            verify(jdbcMetaService).getTables(TestFixtures.TEST_DATASOURCE_ID, "public");
+            verify(jdbcMetaService).getTables(TestFixtures.TEST_DATASOURCE_ID, "audit");
         }
     }
 

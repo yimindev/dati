@@ -90,9 +90,12 @@ public class TableService {
             for (AddTableRequest request : tables) {
                 String schema = request.getSchema();
                 if (!validNamesBySchema.containsKey(schema)) {
-                    List<Table> dbTables = jdbcMetaService.getTables(datasourceId, null, schema);
+                    List<Table> dbTables = jdbcMetaService.getTables(datasourceId, schema);
                     tableCommentsBySchema.put(schema, dbTables.stream()
-                            .collect(Collectors.toMap(Table::name, t -> t.comment() != null ? t.comment() : "")));
+                            .collect(Collectors.toMap(
+                                    Table::name,
+                                    t -> t.comment() != null ? t.comment() : "",
+                                    (existing, replacing) -> existing)));
                     validNamesBySchema.put(schema, dbTables.stream().map(Table::name).collect(Collectors.toSet()));
                 }
             }
@@ -139,7 +142,7 @@ public class TableService {
                     .build());
 
             try {
-                List<Column> columns = jdbcMetaService.getColumns(datasourceId, null, schema, request.getName());
+                List<Column> columns = jdbcMetaService.getColumns(datasourceId, schema, request.getName());
                 for (Column column : columns) {
                     ColumnInfo columnInfo = new ColumnInfo();
                     columnInfo.setTableId(tableId);

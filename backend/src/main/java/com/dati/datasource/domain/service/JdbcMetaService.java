@@ -30,32 +30,25 @@ public class JdbcMetaService {
         this.dataSourceDAO = dataSourceDAO;
     }
 
-    public List<String> getCatalogs(String dataSourceId) throws SQLException {
+    public List<String> getSchemas(String dataSourceId) throws SQLException {
         DataSourcePO dataSourcePO = dataSourceDAO.findById(dataSourceId).orElseThrow();
         DbClient dbClient = DbClientFactory.getDbClient(dataSourcePO.getType());
         DataSource dataSource = DSMapper.toDataSource(dataSourcePO);
-        return dbClient.getCatalogs(new JdbcConnector(dataSource));
+        return dbClient.getSchemas(new JdbcConnector(dataSource));
     }
 
-    public List<String> getSchemas(String dataSourceId, @Nullable String catalog) throws SQLException {
+    public List<Table> getTables(String dataSourceId, String schema) throws SQLException {
         DataSourcePO dataSourcePO = dataSourceDAO.findById(dataSourceId).orElseThrow();
         DbClient dbClient = DbClientFactory.getDbClient(dataSourcePO.getType());
         DataSource dataSource = DSMapper.toDataSource(dataSourcePO);
-        return dbClient.getSchemas(new JdbcConnector(dataSource), catalog);
+        return dbClient.getTables(new JdbcConnector(dataSource), schema);
     }
 
-    public List<Table> getTables(String dataSourceId, @Nullable String catalog, String schema) throws SQLException {
+    public List<Column> getColumns(String dataSourceId, String schema, String table) throws SQLException {
         DataSourcePO dataSourcePO = dataSourceDAO.findById(dataSourceId).orElseThrow();
         DbClient dbClient = DbClientFactory.getDbClient(dataSourcePO.getType());
         DataSource dataSource = DSMapper.toDataSource(dataSourcePO);
-        return dbClient.getTables(new JdbcConnector(dataSource), catalog, schema);
-    }
-
-    public List<Column> getColumns(String dataSourceId, @Nullable String catalog, String schema, String table) throws SQLException {
-        DataSourcePO dataSourcePO = dataSourceDAO.findById(dataSourceId).orElseThrow();
-        DbClient dbClient = DbClientFactory.getDbClient(dataSourcePO.getType());
-        DataSource dataSource = DSMapper.toDataSource(dataSourcePO);
-        return dbClient.getColumns(new JdbcConnector(dataSource), catalog, schema, table);
+        return dbClient.getColumns(new JdbcConnector(dataSource), schema, table);
     }
 
     public List<Map<String, Object>> executeSql(String dataSourceId, String sql) throws SQLException {
