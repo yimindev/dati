@@ -326,7 +326,6 @@ export default {
     confirmPublic: "开启后所有已登录用户均可只读访问该资源，确定要开启吗？",
     publicTag: "公开",
     publicOn: "已设为公开（所有人只读可见）",
-    publicConfirmButton: "开启公开",
   },
 
   mcpService: {

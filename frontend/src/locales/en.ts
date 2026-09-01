@@ -326,7 +326,6 @@ export default {
     confirmPublic: "All logged-in users will be able to read this resource. Enable public access?",
     publicTag: "Public",
     publicOn: "Resource is now public (read-only for everyone)",
-    publicConfirmButton: "Enable Public",
   },
 
   mcpService: {

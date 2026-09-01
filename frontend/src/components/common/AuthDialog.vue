@@ -76,7 +76,11 @@ async function handlePublicToggle(val: boolean | string | number) {
       await ElMessageBox.confirm(
         t('permission.confirmPublic'),
         t('common.confirm'),
-        { type: 'warning', confirmButtonText: t('permission.publicConfirmButton') }
+        {
+          confirmButtonText: t('common.confirm'),
+          cancelButtonText: t('common.cancel'),
+          type: 'warning',
+        }
       )
     } catch {
       isPublic.value = false
