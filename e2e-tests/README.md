@@ -111,11 +111,11 @@ Agent 加载 e2e-tester skill → 选择目标模块 → Agent 自主执行并�
 - `test-connection` 接口**也需要认证**
 
 ### 服务启动
-- 启动命令必须指定 workingDirectory：
+- 启动命令必须指定 workingDirectory；多模块结构下需先 install 全部模块（core/扩展模块），再直接从 app pom 启动：
   ```bash
-  mvn -f backend/pom.xml spring-boot:run -Dspring-boot.run.workingDirectory=/Users/zhangyimin/IdeaProjects/dati
+  mvn -f backend/pom.xml -q -DskipTests install && mvn -f backend/app/pom.xml spring-boot:run -Dspring-boot.run.workingDirectory=/Users/zhangyimin/IdeaProjects/dati
   ```
-- 以 H2 file 模式运行，数据库文件在 `./db/dati`
+- 以 H2 file 模式运行，数据库文件在 `./db/dati`（H2 file 模式单进程独占，启动前需确保无其他实例占用）
 
 ### 测试用 PostgreSQL
 - `public` schema 下有 11 张 Chinook 示例表：album、artist、customer、employee、genre、invoice、invoiceline、mediatype、playlist、playlisttrack、track

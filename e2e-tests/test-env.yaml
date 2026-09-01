@@ -4,7 +4,8 @@
 server:
   base_url: "http://localhost:8085"
   working_directory: "/Users/zhangyimin/IdeaProjects/dati"
-  start_command: "mvn -f backend/pom.xml spring-boot:run -Dspring-boot.run.workingDirectory=/Users/zhangyimin/IdeaProjects/dati"
+  # 先 install 全部模块（core/扩展模块），再从 app pom 启动，避免 -pl 模式下依赖模块使用本地仓库旧版本
+  start_command: "mvn -f backend/pom.xml -q -DskipTests install && mvn -f backend/app/pom.xml spring-boot:run -Dspring-boot.run.workingDirectory=/Users/zhangyimin/IdeaProjects/dati"
   ready_signal: "Started DatIApplication"
 
 runner:

@@ -6,7 +6,7 @@
 #   2. 从 /v3/api-docs 拉取最新文档 -> docs/api/openapi.json(仓库文档,人/e2e-tester 使用)
 #   3. 分发副本 -> skills/dati-ops/openapi.json(技能自包含快照,保证两份一致)
 #
-# 前置: 后端服务运行中(mvn -f backend/pom.xml spring-boot:run)
+# 前置: 后端服务运行中(mvn -f backend/pom.xml -pl app spring-boot:run)
 # 覆盖: DATI_API_DOCS_URL 环境变量可指定其他环境的 api-docs 地址
 set -euo pipefail
 
@@ -16,7 +16,7 @@ DST_REPO="$ROOT/docs/api/openapi.json"
 DST_SKILL="$ROOT/skills/dati-ops/openapi.json"
 
 if ! curl -sf -m 3 "$API_DOCS_URL" -o /dev/null; then
-  echo "后端未运行在 $API_DOCS_URL,请先启动: mvn -f backend/pom.xml spring-boot:run" >&2
+  echo "后端未运行在 $API_DOCS_URL,请先启动: mvn -f backend/pom.xml -pl app spring-boot:run" >&2
   exit 1
 fi
 

@@ -20,10 +20,10 @@ This file guides agentic coding assistants working on the DatI repository.
 ### Backend (Java/Spring Boot)
 ```bash
 cd backend
-mvn test                                  # Run all tests
-mvn -Dtest=ClassName#MethodName test      # Run specific test
-mvn -B -DskipTests package                # Build without tests
-mvn spring-boot:run                       # Run (port 8085)
+mvn test                                  # Run all tests across modules
+mvn -pl core -Dtest=ClassName#MethodName test # Run specific test in module
+mvn -B -DskipTests package                # Build all modules without tests
+mvn -pl app spring-boot:run               # Run app (port 8085)
 scripts/fetch-openapi.sh                  # Regenerate docs/api/openapi.json + skill snapshot (backend must be running)
 ```
 

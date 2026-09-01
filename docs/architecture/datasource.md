@@ -48,7 +48,6 @@ backend/src/main/java/com/dati/datasource/
     │   ├── AddTableRequest.java
     │   ├── SqlExecuteRequest.java
     │   ├── ColumnValueListRequest.java
-    │   ├── ColumnValueListResponse.java
     │   └── ColumnValueVO.java
     └── assembler/       # Model ↔ VO 转换
         ├── DSAssembler.java
@@ -371,7 +370,7 @@ DataSourceService.deleteDataSource()
 
 ### 7.1 后端步骤（TDD）
 
-1. **添加 JDBC 驱动依赖**：`backend/pom.xml` 添加 `runtime` 依赖；若版本不在 Spring Boot BOM 中，在根 `pom.xml` 增加版本属性 + `dependencyManagement` 条目（参考 `clickhouse-jdbc.version`）。
+1. **添加 JDBC 驱动依赖**：`backend/core/pom.xml` 添加 `runtime` 依赖；若版本不在 Spring Boot BOM 中，在根 `pom.xml` 增加版本属性 + `dependencyManagement` 条目（参考 `clickhouse-jdbc.version`）。
 2. **扩展 `DbType` 枚举**：新增类型值。
 3. **先写测试**（`backend/src/test/java/com/dati/db/client/`）：
    - `XxxDbClientTest`：mock `DatabaseMetaData` / `Statement` / `ResultSet`，并用 `mockStatic(HikariPoolManager.class)` 拦截连接获取（参考 `ClickhouseDbClientTest`）。

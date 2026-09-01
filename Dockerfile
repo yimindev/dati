@@ -50,7 +50,7 @@ COPY backend/pom.xml ./backend/
 COPY backend ./backend
 
 # Copy built frontend & docs dist into backend static resources
-COPY --from=frontend-builder /build/frontend/dist /build/backend/src/main/resources/static
+COPY --from=frontend-builder /build/frontend/dist /build/backend/app/src/main/resources/static
 
 # Build Spring Boot Fat JAR
 RUN mvn clean package -DskipTests -f backend/pom.xml
@@ -75,7 +75,7 @@ WORKDIR /app
 RUN mkdir -p /app/db
 
 # Copy compiled JAR from builder stage (wildcard: decoupled from pom <version>)
-COPY --from=backend-builder /build/backend/target/*.jar app.jar
+COPY --from=backend-builder /build/backend/app/target/dati-app-*.jar app.jar
 
 # Environment defaults
 ENV SPRING_PROFILES_ACTIVE=prod \
