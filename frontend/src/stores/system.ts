@@ -1,6 +1,6 @@
 import { defineStore } from "pinia";
 import { ref, computed } from "vue";
-import { getSystemConfig, type SystemConfig } from "~/api/system";
+import { getSystemConfig, type SystemConfig, type DatabaseTypeVO } from "~/api/system";
 
 export const useSystemStore = defineStore("system", () => {
   // State
@@ -14,6 +14,9 @@ export const useSystemStore = defineStore("system", () => {
   );
   const columnValueLengthLimit = computed(() => 
     config.value?.column_value_length_limit ?? 256
+  );
+  const supportedDatabaseTypes = computed<DatabaseTypeVO[]>(() =>
+    config.value?.supported_database_types ?? []
   );
   const isLoaded = computed(() => config.value !== null);
 
@@ -47,9 +50,11 @@ export const useSystemStore = defineStore("system", () => {
     // Getters
     columnValueSampleLimit,
     columnValueLengthLimit,
+    supportedDatabaseTypes,
     isLoaded,
     // Actions
     loadConfig,
     refreshConfig,
   };
 });
+

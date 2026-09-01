@@ -1,11 +1,15 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { ref, computed, onMounted } from "vue";
 import { useI18n } from "vue-i18n";
 import type { FormInstance, FormRules } from "element-plus";
 import type { DataSourcePayload } from "~/api/datasource";
+import { useSystemStore } from "~/stores/system";
 
 // i18n
 const { t } = useI18n();
+
+// Store
+const systemStore = useSystemStore();
 
 // Props & Emits
 interface Props {
@@ -17,11 +21,27 @@ interface Emits {
   (e: "test-connection"): void;
 }
 
-defineProps<Props>();
+const props = defineProps<Props>();
 defineEmits<Emits>();
 
 // 表单引用
 const formRef = ref<FormInstance>();
+
+// 支持的数据库类型列表
+const supportedTypes = computed(() => systemStore.supportedDatabaseTypes);
+
+// 当前选中的数据库类型元数据及动态 placeholder
+const currentTypeMeta = computed(() =>
+  supportedTypes.value.find((item) => item.type === props.modelValue.type)
+);
+
+const jdbcUrlPlaceholder = computed(() =>
+  currentTypeMeta.value?.jdbc_url_template || t("datasource.jdbcUrl")
+);
+
+onMounted(() => {
+  systemStore.loadConfig();
+});
 
 // 表单验证规则
 const rules: FormRules = {
@@ -81,21 +101,19 @@ defineExpose({
         :placeholder="t('common.placeholder.type')"
         style="width: 100%"
       >
-        <el-option label="MySQL" value="MYSQL" />
-        <el-option label="PostgreSQL" value="POSTGRESQL" />
-        <el-option label="MariaDB" value="MARIADB" />
-        <el-option label="ClickHouse" value="CLICKHOUSE" />
-        <el-option label="Apache Doris" value="DORIS" />
-        <el-option label="Oracle" value="ORACLE" />
-        <el-option label="SQLServer" value="SQLSERVER" />
-        <el-option label="Trino" value="TRINO" />
+        <el-option
+          v-for="item in supportedTypes"
+          :key="item.type"
+          :label="item.label"
+          :value="item.type"
+        />
       </el-select>
     </el-form-item>
 
     <el-form-item :label="t('datasource.jdbcUrl')" prop="jdbc_url">
       <el-input
         v-model="modelValue.jdbc_url"
-        :placeholder="t('datasource.jdbcUrl')"
+        :placeholder="jdbcUrlPlaceholder"
         :rows="2"
         type="textarea"
       />
@@ -128,3 +146,4 @@ defineExpose({
     </el-form-item>
   </el-form>
 </template>
+

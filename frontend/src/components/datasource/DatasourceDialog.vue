@@ -35,7 +35,7 @@ const formData = ref<DataSourcePayload>({
   jdbc_url: '',
   username: '',
   password: '',
-  type: 'MySQL',
+  type: 'MYSQL',
 })
 
 // 计算属性
@@ -71,7 +71,7 @@ function resetForm() {
     jdbc_url: '',
     username: '',
     password: '',
-    type: 'MySQL',
+    type: 'MYSQL',
   }
   formRef.value?.resetValidation()
   testPassed.value = false

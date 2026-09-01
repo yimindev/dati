@@ -6,32 +6,17 @@ import {
   Coin,
 } from "@element-plus/icons-vue";
 import type { SearchHit } from "~/api/mcp-tool-test";
+import { useSystemStore } from "~/stores/system";
 
 defineProps<{ data: SearchHit }>();
 
 const { t } = useI18n();
+const systemStore = useSystemStore();
 
-const dbTypeLabel = (t: string) =>
-  ({
-    POSTGRESQL: "PostgreSQL",
-    MYSQL: "MySQL",
-    MARIADB: "MariaDB",
-    CLICKHOUSE: "ClickHouse",
-    DORIS: "Doris",
-    ORACLE: "Oracle",
-    SQLSERVER: "SQL Server",
-    TRINO: "Trino",
-  })[t] || t;
-
-const dbTypeColor = (t: string) =>
-  ({
-    POSTGRESQL: "var(--ep-color-primary)",
-    MYSQL: "var(--ep-color-warning)",
-    MARIADB: "var(--ep-color-warning)",
-    CLICKHOUSE: "var(--ep-color-success)",
-    DORIS: "var(--ep-color-primary)",
-    ORACLE: "var(--ep-color-danger)",
-  })[t] || "var(--ep-color-info)";
+const getDbTypeLabel = (type?: string) => {
+  if (!type) return "";
+  return systemStore.supportedDatabaseTypes.find((item) => item.type === type)?.label || type;
+};
 </script>
 
 <template>
@@ -82,10 +67,9 @@ const dbTypeColor = (t: string) =>
             <el-tag
               v-if="ds.db_type"
               size="small"
-              :color="dbTypeColor(ds.db_type)"
-              effect="dark"
+              type="primary"
             >
-              {{ dbTypeLabel(ds.db_type) }}
+              {{ getDbTypeLabel(ds.db_type) }}
             </el-tag>
           </div>
           <el-tag size="small" round

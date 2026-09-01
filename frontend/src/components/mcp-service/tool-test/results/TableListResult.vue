@@ -3,36 +3,21 @@ import { computed } from "vue";
 import { useI18n } from "vue-i18n";
 import { Coin } from "@element-plus/icons-vue";
 import type { TableListData } from "~/api/mcp-tool-test";
+import { useSystemStore } from "~/stores/system";
 
 const props = defineProps<{ data: TableListData }>();
 
 const { t } = useI18n();
+const systemStore = useSystemStore();
 
 const totalTables = computed(() =>
   props.data.data_sources.reduce((sum, ds) => sum + (ds.tables?.length ?? 0), 0),
 );
 
-const dbTypeLabel = (type: string) =>
-  ({
-    POSTGRESQL: "PostgreSQL",
-    MYSQL: "MySQL",
-    MARIADB: "MariaDB",
-    CLICKHOUSE: "ClickHouse",
-    DORIS: "Doris",
-    ORACLE: "Oracle",
-    SQLSERVER: "SQL Server",
-    TRINO: "Trino",
-  })[type] || type;
-
-const dbTypeColor = (type: string) =>
-  ({
-    POSTGRESQL: "var(--ep-color-primary)",
-    MYSQL: "var(--ep-color-warning)",
-    MARIADB: "var(--ep-color-warning)",
-    CLICKHOUSE: "var(--ep-color-success)",
-    DORIS: "var(--ep-color-primary)",
-    ORACLE: "var(--ep-color-danger)",
-  })[type] || "var(--ep-color-info)";
+const getDbTypeLabel = (type?: string) => {
+  if (!type) return "";
+  return systemStore.supportedDatabaseTypes.find((item) => item.type === type)?.label || type;
+};
 </script>
 
 <template>
@@ -51,10 +36,9 @@ const dbTypeColor = (type: string) =>
             <el-tag
               v-if="ds.db_type"
               size="small"
-              :color="dbTypeColor(ds.db_type)"
-              effect="dark"
+              type="primary"
             >
-              {{ dbTypeLabel(ds.db_type) }}
+              {{ getDbTypeLabel(ds.db_type) }}
             </el-tag>
           </div>
           <el-tag size="small" round>{{ ds.tables.length }} {{ t("mcpService.toolTest.tables") }}</el-tag>

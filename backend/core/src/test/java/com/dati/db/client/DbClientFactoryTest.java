@@ -20,11 +20,9 @@ class DbClientFactoryTest {
     }
 
     @Test
-    @DisplayName("Should return null for unsupported or UNKNOWN DbTypes")
-    void getDbClient_shouldReturnNullForUnknownOrUnsupported() {
+    @DisplayName("Should return null for UNKNOWN DbType")
+    void getDbClient_shouldReturnNullForUnknown() {
         assertThat(DbClientFactory.getDbClient(DbType.UNKNOWN)).isNull();
-        assertThat(DbClientFactory.getDbClient(DbType.ORACLE)).isNull();
-        assertThat(DbClientFactory.getDbClient(DbType.SQLSERVER)).isNull();
-        assertThat(DbClientFactory.getDbClient(DbType.TRINO)).isNull();
     }
 }
+

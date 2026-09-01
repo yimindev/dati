@@ -94,7 +94,7 @@ backend/src/main/java/com/dati/datasource/
 
 **DataSource**
 - `id`, `name`, `description`: 基础信息（继承 BaseResource）
-- `type`: 数据库类型 (DbType enum：MYSQL / MARIADB / POSTGRESQL / ORACLE / SQLSERVER / CLICKHOUSE / DORIS / TRINO / UNKNOWN)
+- `type`: 数据库类型 (DbType enum：MYSQL / MARIADB / POSTGRESQL / CLICKHOUSE / DORIS / UNKNOWN)
 - `jdbcUrl`, `username`, `password`: 连接信息（Model 中为明文，PO 中 password 加密存储）
 - `defaultSchema`: 默认 Schema，由服务端在创建/连接信息变更时实际探测写入，**忽略客户端传入的值**（`DSMapper` 创建映射时不复制该字段）
 
