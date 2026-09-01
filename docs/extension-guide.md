@@ -55,7 +55,7 @@ DatI 采用 **微核心 + 插件化（Microkernel & Plugins）** 架构：
    <parent>
        <groupId>com.dati</groupId>
        <artifactId>dati-parent</artifactId>
-       <version>0.3.5</version>
+       <version> x.y.z </version>
        <relativePath>../../../pom.xml</relativePath>
    </parent>
    <artifactId>dati-auth-oidc</artifactId>

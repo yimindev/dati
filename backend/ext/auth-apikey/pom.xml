@@ -5,7 +5,7 @@
     <parent>
         <groupId>com.dati</groupId>
         <artifactId>dati-parent</artifactId>
-        <version>0.3.5</version>
+        <version>0.4.0</version>
         <relativePath>../../../pom.xml</relativePath>
     </parent>
     <artifactId>dati-auth-apikey</artifactId>
