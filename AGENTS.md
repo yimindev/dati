@@ -25,6 +25,7 @@ mvn -pl core -Dtest=ClassName#MethodName test # Run specific test in module
 mvn -B -DskipTests package                # Build all modules without tests
 mvn -pl app spring-boot:run               # Run app (port 8085)
 scripts/fetch-openapi.sh                  # Regenerate docs/api/openapi.json + skill snapshot (backend must be running)
+scripts/set-version.sh <version>          # Bump version across all modules (backend POMs, frontend, SpringDoc, OpenAPI)
 ```
 
 ### Frontend (Vue 3 + TypeScript)
