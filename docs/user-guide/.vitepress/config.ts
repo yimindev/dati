@@ -2,6 +2,11 @@
 // @ts-ignore
 import { defineConfig } from 'vitepress'
 
+const SKILL_URL =
+  process.env.VITE_SKILL_URL ||
+  process.env.SKILL_URL ||
+  'https://github.com/dati-platform/dati/tree/main/skills/dati-ops'
+
 export default defineConfig({
   base: '/docs/',
   outDir: '../../frontend/public/docs',
@@ -16,6 +21,14 @@ export default defineConfig({
     search: {
       provider: 'local',
     },
+    skillUrl: SKILL_URL,
+  },
+
+  transformPageData(pageData) {
+    pageData.frontmatter = {
+      ...pageData.frontmatter,
+      skillUrl: SKILL_URL,
+    }
   },
 
   locales: {
@@ -25,8 +38,10 @@ export default defineConfig({
       title: 'DatI 帮助中心',
       description: 'DatI 数据智能平台使用文档',
       themeConfig: {
+        skillUrl: SKILL_URL,
         nav: [
-          { text: '快速入门', link: '/' },
+          { text: '平台介绍', link: '/' },
+          { text: '快速上手', link: '/quickstart' },
           { text: '模板语法', link: '/template-syntax' },
           { text: '常见问题', link: '/faq' },
         ],
@@ -34,7 +49,8 @@ export default defineConfig({
           {
             text: '使用指南',
             items: [
-              { text: '快速入门', link: '/' },
+              { text: '平台介绍', link: '/' },
+              { text: '快速上手', link: '/quickstart' },
               { text: '模板语法详解', link: '/template-syntax' },
               { text: '常见问题', link: '/faq' },
             ],
@@ -54,8 +70,10 @@ export default defineConfig({
       title: 'DatI Help Center',
       description: 'DatI Data Intelligence Platform User Guide',
       themeConfig: {
+        skillUrl: SKILL_URL,
         nav: [
-          { text: 'Quick Start', link: '/en/' },
+          { text: 'Introduction', link: '/en/' },
+          { text: 'Quick Start', link: '/en/quickstart' },
           { text: 'Template Syntax', link: '/en/template-syntax' },
           { text: 'FAQ', link: '/en/faq' },
         ],
@@ -63,7 +81,8 @@ export default defineConfig({
           {
             text: 'Guide',
             items: [
-              { text: 'Quick Start', link: '/en/' },
+              { text: 'Introduction', link: '/en/' },
+              { text: 'Quick Start', link: '/en/quickstart' },
               { text: 'Template Syntax', link: '/en/template-syntax' },
               { text: 'FAQ', link: '/en/faq' },
             ],

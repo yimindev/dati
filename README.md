@@ -1,43 +1,61 @@
-# DatI - AI 数据接入平台
+# DatI - Enterprise-Grade Database Semantic Gateway for AI Agents
 
-DatI（Data Intelligence）是一个为 AI 大模型提供**统一数据接入能力**的基础设施平台。主要功能：
+[English](README.md) | [简体中文](README_zh.md)
 
-- **数据源接入**：支持主流数据库（MySQL、PostgreSQL、ClickHouse、Doris 等）
-- **语义建模**：对表、列、列值、业务术语进行统一管理与检索
-- **构建 MCP 服务**：预置元数据检索、SQL 执行等标准工具，支持参数化 SQL 查询，可自动生成符合 [MCP](https://modelcontextprotocol.io/) 标准的服务接口
-<p>
-  <img src="docs/images/dati-visual-positioning.svg" alt="DatI Architecture" width="100%"/>
-</p>
+DatI is a semantic gateway connecting **AI Agents with enterprise databases** — combining semantic modeling, fine-grained access control, and standard MCP interfaces to enable LLMs to query and manipulate business data accurately and securely. Key features:
 
-## 适用场景
+- **Data Source Connectivity**: Native support for mainstream databases (MySQL, PostgreSQL, ClickHouse, Doris, etc.)
+- **Semantic Modeling**: Unified management and retrieval across tables, columns, sample values, and business terminology
+- **MCP Service Generation**: Prebuilt standard tools for metadata inspection and SQL execution, support for parameterized SQL queries, and automated generation of service endpoints conforming to the [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) standard
 
-- **智能问数**：接入业务数据库，通过业务元数据配置以及通用预置工具即可支持 NL2SQL 分析工作流
-- **轻应用搭建**：将数据库封装为 MCP 服务，Agent 通过对话即可直接对业务数据增删改查，快速构建轻量级应用
+```text
+┌────────────────────┐   ┌────────────────────┐   ┌────────────────────┐
+│  User A: OpenCode  │   │  User B: WorkBuddy │   │  User N: DataAgent │
+└─────────┬──────────┘   └─────────┬──────────┘   └─────────┬──────────┘
+          └────────────────────────┼────────────────────────┘
+                                   │ MCP (Streamable HTTP)
+                                   ▼
+┌─────────────────────────────── DatI ───────────────────────────────┐
+│     ┌──────────────┐     ┌──────────────┐     ┌──────────────┐     │
+│     │   Semantic   │     │   Security   │     │    Tools     │     │
+│     └──────────────┘     └──────────────┘     └──────────────┘     │
+└──────────────────────────────────┬─────────────────────────────────┘
+                                   │
+                                   ▼
+┌────────────────────────────────────────────────────────────────────┐
+│    MySQL     │   PostgreSQL    │    ClickHouse    │      Doris     │
+└────────────────────────────────────────────────────────────────────┘
+```
 
-## 技术栈
+## Use Cases
 
-- **后端**：Spring Boot 3.5.x + Java 21 + JPA
-- **前端**：Vue 3 + TypeScript + Vite + Element Plus + TailwindCSS 4
-- **数据库**：H2（开发）/ MySQL / PostgreSQL（生产）
-- **搜索引擎**：Elasticsearch（语义检索）
+- **Conversational BI & NL2SQL**: Connect to business databases and enable natural-language-to-SQL analytics workflows through business metadata configuration and prebuilt inspection/query tools.
+- **Lightweight App Development**: Encapsulate databases as MCP services so agents can perform controlled CRUD operations via conversation, rapidly building lightweight data applications.
 
-## 文档导航
+## Tech Stack
 
-- [本地开发指南](docs/development.md)：环境准备、启动、常用命令与开发约定
-- **实战案例**：
-  - [家庭共享记账助手](examples/family-finance/README.md)：多用户协作记账、参数化防越权、全员透明 SQL 查账与开箱自愈示例
-- **架构与设计**（长期维护，与代码同步）：
-  - [架构总览](docs/architecture/overview.md)
-  - [认证架构](docs/architecture/authentication.md)
-  - [授权架构](docs/architecture/permission.md)
-  - [数据源模块](docs/architecture/datasource.md)
-  - [语义管理模块](docs/architecture/semantic.md)
-  - [MCP 服务管理](docs/architecture/mcp-service-management.md)
-  - [模板引擎](docs/architecture/template-engine.md)
-  - [编辑器架构](docs/architecture/editor.md)
-- **用户帮助中心**：[docs/user-guide](docs/user-guide/index.md)（VitePress 站点，中英双语）
-- **API 契约**：[docs/api/openapi.json](docs/api/openapi.json)（E2E 测试工具链使用）
-- **AI 编码助手规范**：[AGENTS.md](AGENTS.md) 与 [.agents/rules/](.agents/rules/)（后端/前端/设计系统规范）
-- **Agent 技能**（[Agent Skills 开放标准](https://agentskills.io)，仓库内 agent 自动发现）：
-  - [dati-ops](skills/dati-ops/SKILL.md)：**用户技能**——通过 HTTP API 完成平台配置与操作（数据源/主题术语/MCP 服务），技能自包含（内置 openapi.json 与查询工具），可独立分发；仓库内通过 `.agents/skills/dati-ops/` 薄壳接入
-  - [e2e-tester](.agents/skills/e2e-tester/SKILL.md)：**开发技能**——E2E HTTP 集成测试与 API 行为验证（测试用例见 [e2e-tests/test-cases/](e2e-tests/test-cases/)）
+- **Backend**: Spring Boot 3.5.x + Java 21 + JPA
+- **Frontend**: Vue 3 + TypeScript + Vite + Element Plus + TailwindCSS 4
+- **Database**: H2 (Development) / MySQL / PostgreSQL (Production)
+- **Search Engine**: Elasticsearch (Semantic Retrieval)
+
+## Documentation
+
+- [Local Development Guide](docs/development.md): Environment setup, launch instructions, common commands, and development conventions
+- **Showcase & Examples**:
+  - [Family Finance Assistant](examples/family-finance/README.md): Multi-user collaborative bookkeeping, parameterized permission isolation, transparent SQL auditing, and self-healing agent workflows
+- **Architecture & Design** (Maintained continuously alongside code):
+  - [Overview](docs/architecture/overview.md)
+  - [Authentication](docs/architecture/authentication.md)
+  - [Authorization & Permission](docs/architecture/permission.md)
+  - [Data Source Module](docs/architecture/datasource.md)
+  - [Semantic Management Module](docs/architecture/semantic.md)
+  - [MCP Service Management](docs/architecture/mcp-service-management.md)
+  - [Template Engine](docs/architecture/template-engine.md)
+  - [Editor Architecture](docs/architecture/editor.md)
+- **User Guide**: [docs/user-guide](docs/user-guide/index.md) (VitePress site, Bilingual)
+- **API Specification**: [docs/api/openapi.json](docs/api/openapi.json) (Used by E2E test toolchains)
+- **AI Coding Assistant Guidelines**: [AGENTS.md](AGENTS.md) and [.agents/rules/](.agents/rules/) (Backend / Frontend / Design System rules)
+- **Agent Skills** ([Agent Skills Open Standard](https://agentskills.io), auto-discovered by repository agents):
+  - [dati-ops](skills/dati-ops/SKILL.md): **User Skill** — Configure and operate the platform via HTTP APIs (data sources / subjects & terms / MCP services); self-contained with built-in openapi.json and query tools, independently distributable; integrated via thin shell `.agents/skills/dati-ops/`.
+  - [e2e-tester](.agents/skills/e2e-tester/SKILL.md): **Developer Skill** — E2E HTTP integration testing and API behavior validation (see test cases in [e2e-tests/test-cases/](e2e-tests/test-cases/)).
