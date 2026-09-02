@@ -2,10 +2,15 @@
 // @ts-ignore
 import { defineConfig } from 'vitepress'
 
+const SKILLS_URL =
+  process.env.VITE_SKILLS_URL ||
+  process.env.SKILLS_URL ||
+  'https://github.com/yimindev/dati/tree/main/skills'
+
 const SKILL_URL =
   process.env.VITE_SKILL_URL ||
   process.env.SKILL_URL ||
-  'https://github.com/dati-platform/dati/tree/main/skills/dati-ops'
+  `${SKILLS_URL.replace(/\/+$/, '')}/dati-ops`
 
 export default defineConfig({
   base: '/docs/',
@@ -21,12 +26,14 @@ export default defineConfig({
     search: {
       provider: 'local',
     },
+    skillsUrl: SKILLS_URL,
     skillUrl: SKILL_URL,
   },
 
   transformPageData(pageData) {
     pageData.frontmatter = {
       ...pageData.frontmatter,
+      skillsUrl: SKILLS_URL,
       skillUrl: SKILL_URL,
     }
   },
@@ -38,6 +45,7 @@ export default defineConfig({
       title: 'DatI 帮助中心',
       description: 'DatI 数据智能平台使用文档',
       themeConfig: {
+        skillsUrl: SKILLS_URL,
         skillUrl: SKILL_URL,
         nav: [
           { text: '平台介绍', link: '/' },
@@ -70,6 +78,7 @@ export default defineConfig({
       title: 'DatI Help Center',
       description: 'DatI Data Intelligence Platform User Guide',
       themeConfig: {
+        skillsUrl: SKILLS_URL,
         skillUrl: SKILL_URL,
         nav: [
           { text: 'Introduction', link: '/en/' },

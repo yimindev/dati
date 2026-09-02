@@ -22,7 +22,7 @@ DatI 原生提供了遵循 [Agent Skills 开放标准](https://agentskills.io) �
 ### 2. 技能获取与挂载方式
 
 * **本地开发环境**：直接引用代码仓库中的 `skills/dati-ops/SKILL.md`；
-* **远程/托管环境**：可通过 <a :href="$frontmatter.skillUrl" target="_blank" rel="noopener noreferrer">dati-ops 技能仓库地址</a> 获取完整的技能定义与工具脚本。
+* **远程/托管环境**：可通过 <a :href="$frontmatter.skillUrl" target="_blank" rel="noopener noreferrer">dati-ops 技能仓库地址</a>（或访问 <a :href="$frontmatter.skillsUrl" target="_blank" rel="noopener noreferrer">Skills 目录</a>）获取完整的技能定义与工具脚本。
 
 ### 3. 一句话自动化操作
 

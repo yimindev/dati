@@ -22,7 +22,7 @@ Before using `dati-ops`, provide two basic parameters to the Agent:
 ### 2. Skill Retrieval & Installation
 
 * **Local Development**: Directly reference `skills/dati-ops/SKILL.md` in the repository;
-* **Remote / Managed Environment**: Access the <a :href="$frontmatter.skillUrl" target="_blank" rel="noopener noreferrer">dati-ops Skill Repository</a> for the complete skill definition and utility scripts.
+* **Remote / Managed Environment**: Access the <a :href="$frontmatter.skillUrl" target="_blank" rel="noopener noreferrer">dati-ops Skill Repository</a> (or browse the <a :href="$frontmatter.skillsUrl" target="_blank" rel="noopener noreferrer">Skills Directory</a>) for the complete skill definition and utility scripts.
 
 ### 3. One-Prompt Automated Operations
 
