@@ -21,6 +21,12 @@ spring:
 dati:
   mcp:
     endpoint-base-url: http://localhost:${server.port}
+
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true
 #logging:
 #  level:
 #    # 核心：打印es 交互信息

@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Map;
 
 @Configuration
+@ConditionalOnProperty(name = "springdoc.api-docs.enabled", havingValue = "true", matchIfMissing = true)
 public class SpringDocConfig {
 
     @Bean

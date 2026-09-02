@@ -20,6 +20,12 @@ spring:
   jackson:
     property-naming-strategy: SNAKE_CASE
 
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
+
 auth:
   admin-users: ${ADMIN_USERS:admin}
   jwt:
