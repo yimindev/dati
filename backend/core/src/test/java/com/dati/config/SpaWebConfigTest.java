@@ -148,9 +148,12 @@ class SpaWebConfigTest {
     }
 
     @Test
-    @DisplayName("Return 404 for actuator path instead of 500")
+    @DisplayName("Return 404 for actuator paths instead of SPA fallback")
     void shouldReturn404ForActuatorPath() throws Exception {
         mockMvc.perform(get("/actuator"))
+                .andExpect(status().isNotFound())
+                .andExpect(content().string(not(containsString("DatI SPA Root"))));
+        mockMvc.perform(get("/actuator/health"))
                 .andExpect(status().isNotFound())
                 .andExpect(content().string(not(containsString("DatI SPA Root"))));
     }

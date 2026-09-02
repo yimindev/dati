@@ -64,11 +64,6 @@ FROM eclipse-temurin:21-jre-alpine
 ARG APP_VERSION=unknown
 LABEL org.opencontainers.image.version="${APP_VERSION}"
 
-# Set timezone and install curl for health check
-RUN apk add --no-cache tzdata curl \
-    && cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime \
-    && echo "Asia/Shanghai" > /etc/timezone
-
 WORKDIR /app
 
 # Ensure directory for H2 embedded database file persistence
@@ -79,14 +74,14 @@ COPY --from=backend-builder /build/backend/app/target/dati-app-*.jar app.jar
 
 # Environment defaults
 ENV SPRING_PROFILES_ACTIVE=prod \
-    JAVA_OPTS="-Duser.timezone=Asia/Shanghai -XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -Dfile.encoding=UTF-8" \
+    JAVA_OPTS="-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -Dfile.encoding=UTF-8" \
     SERVER_PORT=8085
 
 EXPOSE 8085
 
 VOLUME ["/app/db"]
 
-HEALTHCHECK --interval=10s --timeout=3s --start-period=10s --retries=3 \
-  CMD curl -f http://localhost:8085/ || exit 1
+HEALTHCHECK --interval=10s --timeout=3s --start-period=15s --retries=3 \
+  CMD wget -q --spider http://localhost:8085/actuator/health || exit 1
 
 ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]

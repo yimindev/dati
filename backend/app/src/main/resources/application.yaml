@@ -26,6 +26,18 @@ springdoc:
   swagger-ui:
     enabled: false
 
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: never
+      probes:
+        enabled: true
+
 auth:
   admin-users: ${ADMIN_USERS:admin}
   jwt:
