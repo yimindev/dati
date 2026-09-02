@@ -4,6 +4,7 @@ import { ElMessage, ElMessageBox } from "element-plus";
 import { useI18n } from "vue-i18n";
 import { useRouter } from "vue-router";
 import type { McpServiceVO } from "~/api/mcp-service";
+import { notifyError } from "~/api/http";
 import { deleteMcpService, listMcpServices } from "~/api/mcp-service";
 import { Plus, Refresh, Search } from "@element-plus/icons-vue";
 import AuthDialog from "~/components/common/AuthDialog.vue";
@@ -115,10 +116,8 @@ const handleDelete = async (service: McpServiceVO) => {
     }
     loadServices();
   } catch (error: any) {
-    if (error !== "cancel" && error !== "close") {
-      console.error("Failed to delete service:", error);
-      ElMessage.error(error?.message || t("common.operationFailed"));
-    }
+    console.error("Failed to delete service:", error);
+    notifyError(error, t("common.operationFailed"));
   }
 };
 

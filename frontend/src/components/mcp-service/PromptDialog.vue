@@ -5,6 +5,7 @@ import { useI18n } from "vue-i18n";
 import { Delete, Plus } from "@element-plus/icons-vue";
 import type { McpPromptVO, PromptParameter } from "~/api/mcp-prompt";
 import { createPrompt, updatePrompt } from "~/api/mcp-prompt";
+import { notifyError } from "~/api/http";
 import { extractTemplateVariables } from "~/api/template-preview";
 
 const { t } = useI18n();
@@ -65,7 +66,7 @@ const scanParams = async () => {
     if (addedCount > 0) ElMessage.success(t("mcpService.tool.scanParamsSuccess", { count: addedCount }));
     else ElMessage.info(t("mcpService.tool.scanParamsNoNew"));
   } catch (err: any) {
-    ElMessage.error(err?.message || t("common.operationFailed"));
+    notifyError(err, t("common.operationFailed"));
   } finally {
     scanning.value = false;
   }
@@ -95,8 +96,9 @@ const handleSave = async () => {
       });
     }
     ElMessage.success(t("common.saveSuccess")); emit("saved");
-  } catch (e: any) { ElMessage.error(e?.message || t("common.operationFailed")); }
-  finally { saving.value = false; }
+  } catch (e: any) {
+    notifyError(e, t("common.operationFailed"));
+  } finally { saving.value = false; }
 };
 </script>
 

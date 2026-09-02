@@ -5,6 +5,7 @@ import { useI18n } from "vue-i18n";
 import { Edit, Delete, Plus, Search, Coin, CaretRight } from "@element-plus/icons-vue";
 import type { McpToolVO } from "~/api/mcp-tool";
 import { updateTool, deleteCustomTool } from "~/api/mcp-tool";
+import { notifyError } from "~/api/http";
 import { getDataScope } from "~/api/mcp-service";
 import CustomToolDialog from "./CustomToolDialog.vue";
 import ToolTestDialog from "./ToolTestDialog.vue";
@@ -53,7 +54,7 @@ const handleToggle = async (tool: McpToolVO) => {
     ElMessage.success(t("common.saveSuccess"));
     emit("refresh");
   } catch (e: any) {
-    ElMessage.error(e?.message || t("common.operationFailed"));
+    notifyError(e, t("common.operationFailed"));
   }
 };
 
@@ -78,7 +79,7 @@ const handleDelete = async (tool: McpToolVO) => {
     ElMessage.success(t("common.deleteSuccess"));
     emit("refresh");
   } catch (e: any) {
-    if (e !== "cancel") ElMessage.error(e?.message || t("common.operationFailed"));
+    notifyError(e, t("common.operationFailed"));
   }
 };
 

@@ -22,6 +22,7 @@ import {
   publishMcpService,
   updateMcpService,
 } from "~/api/mcp-service";
+import { notifyError } from "~/api/http";
 import { listPrompts } from "~/api/mcp-prompt";
 import DataScopeTab from "~/components/mcp-service/DataScopeTab.vue";
 import DebugPublishTab from "~/components/mcp-service/DebugPublishTab.vue";
@@ -173,7 +174,7 @@ const confirmPublish = async () => {
     await refreshAll();
   } catch (error: any) {
     console.error("Failed to publish:", error);
-    ElMessage.error(error?.message || t("common.operationFailed"));
+    notifyError(error, t("common.operationFailed"));
   } finally {
     publishing.value = false;
   }
@@ -195,10 +196,8 @@ const handleDisable = async () => {
     ElMessage.success(t("mcpService.disableSuccess"));
     await refreshAll();
   } catch (error: any) {
-    if (error !== "cancel") {
-      console.error("Failed to disable:", error);
-      ElMessage.error(error?.message || t("common.operationFailed"));
-    }
+    console.error("Failed to disable:", error);
+    notifyError(error, t("common.operationFailed"));
   } finally {
     statusChanging.value = false;
   }
@@ -212,7 +211,7 @@ const handleEnable = async () => {
     await refreshAll();
   } catch (error: any) {
     console.error("Failed to enable:", error);
-    ElMessage.error(error?.message || t("common.operationFailed"));
+    notifyError(error, t("common.operationFailed"));
   } finally {
     statusChanging.value = false;
   }
@@ -235,9 +234,9 @@ const handleSave = async () => {
     });
     ElMessage.success(t("common.saveSuccess"));
     await refreshAll();
-  } catch (error) {
+  } catch (error: any) {
     console.error("Failed to save:", error);
-    ElMessage.error(t("common.operationFailed"));
+    notifyError(error, t("common.operationFailed"));
   } finally {
     saving.value = false;
   }

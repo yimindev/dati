@@ -3,6 +3,7 @@ import { ref, onMounted, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { ElMessage, ElMessageBox } from "element-plus";
 import { RefreshRight } from "@element-plus/icons-vue";
+import { notifyError } from "~/api/http";
 import type { McpServiceSnapshotVO, McpServiceVO } from "~/api/mcp-service";
 import {
   getMcpServiceSnapshots,
@@ -57,10 +58,8 @@ const handleRollback = async (snapshot: McpServiceSnapshotVO) => {
     emit("refresh");
     await loadSnapshots();
   } catch (error: any) {
-    if (error !== "cancel") {
-      console.error("Failed to rollback:", error);
-      ElMessage.error(error?.message || t("common.operationFailed"));
-    }
+    console.error("Failed to rollback:", error);
+    notifyError(error, t("common.operationFailed"));
   } finally {
     rollingBack.value = false;
   }

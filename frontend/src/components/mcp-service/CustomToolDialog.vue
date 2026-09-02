@@ -5,6 +5,7 @@ import { useI18n } from "vue-i18n";
 import { Delete, Plus, InfoFilled, MagicStick } from "@element-plus/icons-vue";
 import type { McpToolVO, ToolParameter } from "~/api/mcp-tool";
 import { createCustomTool, updateTool, detectToolAnnotations } from "~/api/mcp-tool";
+import { notifyError } from "~/api/http";
 import { getDataScope } from "~/api/mcp-service";
 import { extractTemplateVariables } from "~/api/template-preview";
 
@@ -160,7 +161,7 @@ const scanParams = async () => {
       ElMessage.info(t("mcpService.tool.scanParamsNoNew"));
     }
   } catch (err: any) {
-    ElMessage.error(err?.message || t("common.operationFailed"));
+    notifyError(err, t("common.operationFailed"));
   } finally {
     scanning.value = false;
   }
@@ -193,7 +194,7 @@ const handleDetectAnnotations = async () => {
       t("mcpService.tool.detectSuccess", { op: resp.detected_operation || "SQL" }),
     );
   } catch (err: any) {
-    ElMessage.error(err?.message || t("common.operationFailed"));
+    notifyError(err, t("common.operationFailed"));
   } finally {
     detecting.value = false;
   }
@@ -242,7 +243,7 @@ const handleSave = async () => {
     ElMessage.success(t("common.saveSuccess"));
     emit("saved");
   } catch (e: any) {
-    ElMessage.error(e?.message || t("common.operationFailed"));
+    notifyError(e, t("common.operationFailed"));
   } finally {
     saving.value = false;
   }

@@ -4,6 +4,7 @@ import { ElMessage } from "element-plus";
 import { useI18n } from "vue-i18n";
 import SqlSecurityConfig from "./SqlSecurityConfig.vue";
 import type { McpToolVO, SqlPolicy } from "~/api/mcp-tool";
+import { notifyError } from "~/api/http";
 import { updateTool } from "~/api/mcp-tool";
 
 const { t } = useI18n();
@@ -76,7 +77,7 @@ const handleSave = async () => {
     ElMessage.success(t("common.saveSuccess"));
     emit("saved");
   } catch (e: any) {
-    ElMessage.error(e?.message || t("common.operationFailed"));
+    notifyError(e, t("common.operationFailed"));
   } finally {
     saving.value = false;
   }

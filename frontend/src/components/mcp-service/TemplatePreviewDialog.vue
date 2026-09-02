@@ -4,6 +4,7 @@ import { ElMessage } from "element-plus";
 import { useI18n } from "vue-i18n";
 import { CopyDocument } from "@element-plus/icons-vue";
 import { copyToClipboard } from "~/utils/clipboard";
+import { notifyError } from "~/api/http";
 import { previewTemplate } from "~/api/template-preview";
 import ParameterInput from "./ParameterInput.vue";
 
@@ -59,7 +60,7 @@ const doPreview = async () => {
     await nextTick();
     resultRef.value?.scrollIntoView({ behavior: "smooth", block: "start" });
   } catch (e: any) {
-    ElMessage.error(e?.message || t("common.operationFailed"));
+    notifyError(e, t("common.operationFailed"));
   } finally {
     loading.value = false;
   }

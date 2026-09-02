@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { ref, watch } from "vue";
-import { ElMessage } from "element-plus";
 import { useI18n } from "vue-i18n";
 import type { McpToolVO } from "~/api/mcp-tool";
 import type { ToolTestResponse } from "~/api/mcp-tool-test";
 import { testTool } from "~/api/mcp-tool-test";
+import { notifyError } from "~/api/http";
 import { getDataScope } from "~/api/mcp-service";
 import { resetTablePickerCache } from "~/composables/useTablePicker";
 
@@ -66,7 +66,7 @@ const doExecute = async () => {
       arguments: args,
     });
   } catch (e: any) {
-    ElMessage.error(e?.message || t("common.operationFailed"));
+    notifyError(e, t("common.operationFailed"));
   } finally {
     loading.value = false;
   }

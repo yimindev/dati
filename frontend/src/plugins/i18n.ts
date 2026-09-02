@@ -13,12 +13,16 @@ declare module "vue-i18n" {
 
 function getDefaultLang(): AppLang {
   // 1. 优先使用用户手动设置的语言
-  const savedLang = localStorage.getItem("locale") as AppLang
-  if (savedLang) return savedLang
+  if (typeof localStorage !== 'undefined') {
+    const savedLang = localStorage.getItem("locale") as AppLang
+    if (savedLang) return savedLang
+  }
 
   // 2. 检测浏览器语言
-  const browserLang = navigator.language.toLowerCase()
-  if (browserLang.startsWith('zh')) return 'zh'
+  if (typeof navigator !== 'undefined') {
+    const browserLang = navigator.language.toLowerCase()
+    if (browserLang.startsWith('zh')) return 'zh'
+  }
 
   // 3. 默认英文
   return 'en'
@@ -43,8 +47,12 @@ export async function setI18nLanguage(lang: AppLang) {
     i18n.global.setLocaleMessage(lang, mod.default || mod)
   }
   i18n.global.locale.value = lang
-  document.querySelector("html")?.setAttribute("lang", lang)
-  localStorage.setItem("locale", lang)
+  if (typeof document !== 'undefined') {
+    document.querySelector("html")?.setAttribute("lang", lang)
+  }
+  if (typeof localStorage !== 'undefined') {
+    localStorage.setItem("locale", lang)
+  }
 }
 
 export async function setupI18n() {

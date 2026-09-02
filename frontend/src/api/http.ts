@@ -11,6 +11,7 @@ export interface ApiError {
   message: string
   details?: unknown
   raw?: unknown
+  handled?: boolean
 }
 
 function normalizeError(err: unknown): ApiError {
@@ -70,6 +71,7 @@ http.interceptors.response.use(
     if (err.status === 403) {
       // 权限不足：提示但不登出、不清 token（后端是唯一权威，列表已静默过滤）
       ElMessage.error(i18n.global.t("common.noPermission"));
+      err.handled = true;
       return Promise.reject(err);
     }
     return Promise.reject(err);
@@ -91,6 +93,21 @@ export async function put<T, B = any>(url: string, body?: B, signal?: AbortSigna
 
 export async function del<T>(url: string, params?: Record<string, any>, signal?: AbortSignal): Promise<T> {
   return http.delete(url, { params, signal })
+}
+
+export function isHandledError(err: unknown): boolean {
+  return Boolean((err as ApiError)?.handled)
+}
+
+/**
+ * Show an operation error toast unless the error was already notified
+ * globally (e.g. 403 handled by the response interceptor) or it is an
+ * ElMessageBox cancel/close signal. Call this in every API catch block.
+ */
+export function notifyError(err: unknown, fallback: string): void {
+  if (err === "cancel" || err === "close") return
+  if (isHandledError(err)) return
+  ElMessage.error((err as ApiError)?.message || fallback)
 }
 
 export { normalizeError }

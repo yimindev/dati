@@ -4,6 +4,7 @@ import { ElMessage } from "element-plus";
 import { Setting, CaretRight } from "@element-plus/icons-vue";
 import { useI18n } from "vue-i18n";
 import type { McpToolVO } from "~/api/mcp-tool";
+import { notifyError } from "~/api/http";
 import { updateTool } from "~/api/mcp-tool";
 import ExecuteSqlConfigDialog from "./ExecuteSqlConfigDialog.vue";
 import ToolTestDialog from "./ToolTestDialog.vue";
@@ -28,7 +29,7 @@ const handleToggle = async (tool: McpToolVO) => {
     ElMessage.success(t("common.saveSuccess"));
     emit("refresh");
   } catch (e: any) {
-    ElMessage.error(e?.message || t("common.operationFailed"));
+    notifyError(e, t("common.operationFailed"));
   }
 };
 

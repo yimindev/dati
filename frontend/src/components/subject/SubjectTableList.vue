@@ -5,6 +5,7 @@ import { Plus, Search } from "@element-plus/icons-vue";
 import { useI18n } from "vue-i18n";
 import type { TableInfoVO, SubjectAvailableTableVO } from "~/api/subject";
 import { getSubjectTables, getAvailableTables, addTableToSubject, removeTableFromSubject } from "~/api/subject";
+import { notifyError } from "~/api/http";
 import { getSchemas } from "~/api/datasource";
 
 const { t } = useI18n();
@@ -143,9 +144,9 @@ const handleBatchAdd = async () => {
     addTableDialogVisible.value = false;
     await loadTables();
     emit("refresh");
-  } catch (error) {
+  } catch (error: any) {
     console.error("Failed to add tables:", error);
-    ElMessage.error(t("common.operationFailed"));
+    notifyError(error, t("common.operationFailed"));
   } finally {
     addTableLoading.value = false;
   }
@@ -166,11 +167,9 @@ const handleRemoveTable = async (table: TableInfoVO) => {
     ElMessage.success(t("subject.removeTableSuccess"));
     await loadTables();
     emit("refresh");
-  } catch (error) {
-    if (error !== "cancel") {
-      console.error("Failed to remove table:", error);
-      ElMessage.error(t("common.operationFailed"));
-    }
+  } catch (error: any) {
+    console.error("Failed to remove table:", error);
+    notifyError(error, t("common.operationFailed"));
   }
 };
 

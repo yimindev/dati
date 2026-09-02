@@ -4,6 +4,7 @@ import { ElMessage, ElMessageBox } from "element-plus";
 import { useI18n } from "vue-i18n";
 import { Plus, Search, Edit, Delete } from "@element-plus/icons-vue";
 import type { McpPromptVO } from "~/api/mcp-prompt";
+import { notifyError } from "~/api/http";
 import { updatePrompt, deletePrompt } from "~/api/mcp-prompt";
 import PromptDialog from "./PromptDialog.vue";
 
@@ -30,7 +31,9 @@ const handleToggle = async (prompt: McpPromptVO) => {
     prompt.enabled = !prompt.enabled;
     ElMessage.success(t("common.saveSuccess"));
     emit("refresh");
-  } catch (e: any) { ElMessage.error(e?.message || t("common.operationFailed")); }
+  } catch (e: any) {
+    notifyError(e, t("common.operationFailed"));
+  }
 };
 
 const handleCreate = () => { editingPrompt.value = null; dialogVisible.value = true; };
@@ -43,7 +46,9 @@ const handleDelete = async (prompt: McpPromptVO) => {
     await deletePrompt(props.serviceId, prompt.id);
     ElMessage.success(t("common.deleteSuccess"));
     emit("refresh");
-  } catch (e: any) { if (e !== "cancel") ElMessage.error(e?.message || t("common.operationFailed")); }
+  } catch (e: any) {
+    notifyError(e, t("common.operationFailed"));
+  }
 };
 
 const handleDialogSaved = () => { dialogVisible.value = false; emit("refresh"); };

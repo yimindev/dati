@@ -5,6 +5,7 @@ import { Plus, DocumentCopy, WarningFilled } from "@element-plus/icons-vue";
 import { useI18n } from "vue-i18n";
 import { formatDateTime } from "~/composables";
 import { copyToClipboard } from "~/utils/clipboard";
+import { notifyError } from "~/api/http";
 import { createApiKey, deleteApiKey, listApiKeys } from "~/api/auth";
 import type { ApiKey, ApiKeyCreated } from "~/api/types";
 import DataTableShell from "~/components/common/DataTableShell.vue";
@@ -71,7 +72,7 @@ async function submitCreate() {
       await loadKeys();
     } catch (error: any) {
       console.error("Failed to create API key:", error);
-      ElMessage.error(error?.message || t("common.operationFailed"));
+      notifyError(error, t("common.operationFailed"));
     } finally {
       creating.value = false;
     }
@@ -93,10 +94,8 @@ async function removeKey(key: ApiKey) {
     ElMessage.success(t("apiKeys.deleted"));
     await loadKeys();
   } catch (error: any) {
-    if (error !== "cancel" && error !== "close") {
-      console.error("Failed to delete API key:", error);
-      ElMessage.error(error?.message || t("common.operationFailed"));
-    }
+    console.error("Failed to delete API key:", error);
+    notifyError(error, t("common.operationFailed"));
   }
 }
 

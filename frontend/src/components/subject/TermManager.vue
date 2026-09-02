@@ -6,6 +6,7 @@ import { useI18n } from 'vue-i18n'
 import type { FormInstance, FormRules } from 'element-plus'
 import type { TermVO, TermRelationVO, CreateTermRequest, UpdateTermRequest, LinkTermRelationRequest, TableInfoVO } from '~/api/subject'
 import { getTermsBySubject, createTerm, updateTerm, deleteTerm, linkTermRelation, unlinkTermRelation, getSubjectTables } from '~/api/subject'
+import { notifyError } from '~/api/http'
 import { listTableColumns } from '~/api/column'
 
 const { t } = useI18n()
@@ -345,9 +346,9 @@ const handleSubmitTerm = async () => {
 
     handleCloseTermDialog()
     await loadTerms()
-  } catch (error) {
+  } catch (error: any) {
     console.error('Submit term failed:', error)
-    ElMessage.error(t('common.operationFailed'))
+    notifyError(error, t('common.operationFailed'))
   } finally {
     termDialogLoading.value = false
   }
@@ -367,11 +368,9 @@ const handleDeleteTerm = async (term: TermVO) => {
     await deleteTerm(term.id)
     ElMessage.success(t('subject.deleteTermSuccess'))
     await loadTerms()
-  } catch (error) {
-    if (error !== 'cancel') {
-      console.error('Failed to delete term:', error)
-      ElMessage.error(t('common.operationFailed'))
-    }
+  } catch (error: any) {
+    console.error('Failed to delete term:', error)
+    notifyError(error, t('common.operationFailed'))
   }
 }
 
@@ -515,9 +514,9 @@ const handleSubmitRelation = async () => {
     await loadTerms()
     resetRelationEditorState()
     relationDialogVisible.value = false
-  } catch (error) {
+  } catch (error: any) {
     console.error('Failed to add relations:', error)
-    ElMessage.error(t('common.operationFailed'))
+    notifyError(error, t('common.operationFailed'))
   } finally {
     relationDialogLoading.value = false
   }
@@ -537,11 +536,9 @@ const handleRemoveRelation = async (termId: string, relation: TermRelationVO) =>
     await unlinkTermRelation(termId, relation.table_id, relation.field_name || null)
     ElMessage.success(t('subject.removeRelationSuccess'))
     await loadTerms()
-  } catch (error) {
-    if (error !== 'cancel') {
-      console.error('Failed to remove relation:', error)
-      ElMessage.error(t('common.operationFailed'))
-    }
+  } catch (error: any) {
+    console.error('Failed to remove relation:', error)
+    notifyError(error, t('common.operationFailed'))
   }
 }
 
