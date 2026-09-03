@@ -10,14 +10,19 @@ You can get started with DatI in two ways:
 
 DatI natively provides the official **`dati-ops`** operational skill compliant with the [Agent Skills Open Standard](https://agentskills.io). You can mount this skill into AI coding assistants (such as OpenCode, Claude Code, Antigravity, etc.) to let agents manage data sources, semantic modeling, and MCP service publishing automatically via natural language instructions.
 
-### 1. Prerequisites & API Key Generation
+### 1. Prerequisites & API Key Configuration
 
-Before using `dati-ops`, provide two basic parameters to the Agent:
+Before using `dati-ops`, obtain an API Key and ideally export it as an environment variable:
 
-| Parameter | Description | How to Obtain |
-|---|---|---|
-| `baseUrl` | DatI backend URL | Default for local development is `http://localhost:8085`, or your deployment domain |
-| `apiKey` | Authentication token (`sk_...`) | After logging into DatI, click **User Avatar -> API Key Management** in the top right, then click "New API Key" to generate and copy |
+1. **Generate API Key**: Log in to DatI, click **User Avatar -> API Key Management** in the top right, and click "New API Key";
+2. **Configure Connection (Recommended)**: Export the environment variables in your terminal or shell profile (`~/.zshrc`, `~/.bashrc`, or workspace `.env`):
+   ```bash
+   export DATI_BASE_URL="http://localhost:8085"  # DatI backend URL (default: http://localhost:8085)
+   export DATI_API_KEY="sk_your_api_key_here"    # Your generated API Key
+   ```
+   When environment variables are set, the Agent will automatically read them without needing you to pass credentials in every conversation.
+
+> **Tip**: If environment variables are not set, you can also provide `baseUrl` and `apiKey` directly in your prompt to the Agent.
 
 ### 2. Skill Retrieval & Installation
 
@@ -26,7 +31,7 @@ Before using `dati-ops`, provide two basic parameters to the Agent:
 
 ### 3. One-Prompt Automated Operations
 
-Pass the `baseUrl`, `apiKey`, and your requirements to the Agent loaded with `dati-ops`:
+Send your requirement directly to the Agent loaded with `dati-ops`:
 
 > *"Connect my local MySQL order database (root/123456@localhost:3306/shop), sync the orders and order_items tables, create an 'E-Commerce Analytics' subject, and publish an MCP service."*
 
@@ -82,20 +87,11 @@ Go to the **MCP Services** page and click **New Service**:
 
 ### 4. Connect from Agent Clients
 
-DatI exposes endpoints using the standard **Model Context Protocol (Streamable HTTP)**.
-
-#### Endpoint & Authentication
-
-* **Endpoint URL**: `POST http://<dati-host>/<service_code>/mcp`
-* **Authentication**: Include your API Key in request headers:
-  ```http
-  Authorization: Bearer sk_your_api_key_here
-  MCP-Protocol-Version: 2025-11-25
-  ```
+DatI exposes endpoints using the standard **Model Context Protocol (Streamable HTTP)**. Once published, you can copy the client JSON config directly from the **Access Configuration Card** on the service detail page.
 
 #### Client Configuration Example
 
-For **OpenCode** or **Claude Code**, add the service to your MCP config:
+For **OpenCode**, **Claude Code**, or **Cursor**, add the service to your MCP config:
 
 ```json
 {
@@ -103,11 +99,15 @@ For **OpenCode** or **Claude Code**, add the service to your MCP config:
     "dati-order-service": {
       "url": "http://localhost:8085/order-analysis/mcp",
       "headers": {
-        "Authorization": "Bearer sk_xxxxxxxxxxxxxxxx"
+        "Authorization": "Bearer <YOUR_API_KEY>"
       }
     }
   }
 }
 ```
+
+::: tip API Key Credential
+Replace `<YOUR_API_KEY>` with your actual token. You can generate one via **Manage API Keys** at the bottom of the access card, or by clicking **User Avatar -> API Key Management** in the top right.
+:::
 
 Once configured, the agent will automatically discover tools for schema retrieval and data querying during conversations.

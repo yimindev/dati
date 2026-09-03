@@ -12,14 +12,17 @@ description: Use when performing configuration or operations on the DatI platfor
 - 站在用户视角审视每一步:返回是否合理、字段是否自洽、操作顺序是否符合业务
 - 本技能是**操作指南**,不是测试工具;验证 API 行为正确性用 `e2e-tester` 技能
 
-## 前置要求(用户提供)
+## 前置要求与认证配置
 
-| 项 | 说明 |
-|---|---|
-| `baseUrl` | 后端地址(openapi.json `servers` 默认 `http://localhost:8085`) |
-| `apiKey` | 格式 `sk_...`,所有请求带 `Authorization: Bearer <apiKey>` |
+优先从环境变量中读取连接信息，未配置时由用户在对话中提供：
 
-认证失败表现为 401;未知环境信息先询问用户,不要猜。
+| 项 | 对应环境变量 | 默认值 / 格式 | 说明 |
+|---|---|---|---|
+| `baseUrl` | `DATI_BASE_URL` | `http://localhost:8085` | 后端服务地址 |
+| `apiKey` | `DATI_API_KEY` | `sk_...` | 访问凭据，所有 HTTP 请求带 `Authorization: Bearer <apiKey>` |
+
+- **推荐方式**：在环境变量中设置 `export DATI_BASE_URL=...` 与 `export DATI_API_KEY=...`，Agent 执行时直接引用环境变量（如 `curl -H "Authorization: Bearer $DATI_API_KEY" $DATI_BASE_URL/v1/...`）。
+- **兜底交互**：若环境变量未设置且当前对话上下文未提供，**必须先主动询问用户**获取，禁止自行臆测。认证失败表现为 401。
 
 ## 接口事实来源
 

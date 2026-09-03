@@ -12,12 +12,17 @@ DatI 原生提供了遵循 [Agent Skills 开放标准](https://agentskills.io) �
 
 ### 1. 前置条件与 API Key 获取
 
-使用 `dati-ops` 技能前，需向 Agent 提供两个基础连接项：
+使用 `dati-ops` 技能前，需获取访问凭据并建议配置为环境变量：
 
-| 参数 | 说明 | 获取方式 |
-|---|---|---|
-| `baseUrl` | DatI 后端服务地址 | 本地开发默认为 `http://localhost:8085`，或线上部署域名 |
-| `apiKey` | 访问鉴权凭据（格式为 `sk_...`） | 登录 DatI 平台后，点击右上角 **用户头像 ->「API Key 管理」**，点击「新建 API Key」即可生成并复制 |
+1. **获取 API Key**：登录 DatI 平台后，点击右上角 **用户头像 ->「API Key 管理」**，点击「新建 API Key」即可生成；
+2. **配置连接参数（推荐方式）**：在终端或环境配置文件（如 `~/.zshrc`、`~/.bashrc` 或工作区 `.env`）中导出环境变量：
+   ```bash
+   export DATI_BASE_URL="http://localhost:8085"  # DatI 服务地址（默认为 http://localhost:8085）
+   export DATI_API_KEY="sk_your_api_key_here"    # 生成的 API Key
+   ```
+   配置环境变量后，Agent 在执行技能时会自动读取，安全且无需在每次对话中重复传递。
+
+> **提示**：若未配置环境变量，也可在向 Agent 发送对话指令时直接提供 `baseUrl` 与 `apiKey`（例如：“*在 `http://localhost:8085` 环境下，使用 apiKey: `sk_...` 帮我接入...*”）。
 
 ### 2. 技能获取与挂载方式
 
@@ -26,7 +31,7 @@ DatI 原生提供了遵循 [Agent Skills 开放标准](https://agentskills.io) �
 
 ### 3. 一句话自动化操作
 
-将 `baseUrl`、`apiKey` 和你的业务需求直接发送给已加载 `dati-ops` 技能的 Agent：
+直接向已加载 `dati-ops` 技能的 Agent 发送业务指令：
 
 > *“帮我接入本地 MySQL 订单数据库（root/123456@localhost:3306/shop），将 orders 和 order_items 表同步进系统，创建「电商订单分析」主题并发布一个 MCP 服务。”*
 
@@ -82,20 +87,11 @@ Agent 将自动查询 OpenAPI 接口契约，自动校验连接、批量同步�
 
 ### 4. 在 Agent 客户端中接入
 
-DatI 采用标准 **Model Context Protocol (Streamable HTTP)** 协议暴露服务端点。
+DatI 采用标准 **Model Context Protocol (Streamable HTTP)** 协议暴露服务端点。服务发布后，在服务详情页右侧的 **「接入配置」卡片** 中可一键复制客户端 JSON 配置。
 
-#### 端点地址与认证
+#### 客户端配置示例
 
-* **端点地址**：`POST http://<dati-host>/<service_code>/mcp`
-* **认证方式**：在请求头中携带 API Key：
-  ```http
-  Authorization: Bearer sk_your_api_key_here
-  MCP-Protocol-Version: 2025-11-25
-  ```
-
-#### 客户端接入示例
-
-以 **OpenCode** 或 **Claude Code** 为例，在 MCP 配置文件中添加：
+以 **OpenCode**、**Claude Code** 或 **Cursor** 为例，在 MCP 配置文件中添加：
 
 ```json
 {
@@ -103,11 +99,15 @@ DatI 采用标准 **Model Context Protocol (Streamable HTTP)** 协议暴露服�
     "dati-order-service": {
       "url": "http://localhost:8085/order-analysis/mcp",
       "headers": {
-        "Authorization": "Bearer sk_xxxxxxxxxxxxxxxx"
+        "Authorization": "Bearer <YOUR_API_KEY>"
       }
     }
   }
 }
 ```
+
+::: tip API Key 凭据获取
+将配置中的 `<YOUR_API_KEY>` 替换为实际凭据。可直接点击详情页接入卡片底部的 **「前往管理 API Key」** 快捷创建，或通过页面右上角 **用户头像 ->「API Key 管理」** 进入。
+:::
 
 配置完成后，Agent 即可在对话中自动发现并调用该 MCP 服务下的元数据检索与数据查询工具。
