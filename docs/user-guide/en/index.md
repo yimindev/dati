@@ -1,6 +1,6 @@
 # Introduction
 
-DatI is a lightweight enterprise semantic gateway connecting **AI Agents with enterprise databases** — by integrating databases, configuring semantic metadata, defining tools and prompts, and publishing standard MCP services to enable LLMs to query and manipulate business data accurately and securely.
+DatI(Data Intelligence) is a lightweight enterprise semantic gateway connecting **AI Agents with enterprise databases** — by integrating databases, configuring semantic metadata, defining tools and prompts, and publishing standard MCP services to enable LLMs to query and manipulate business data accurately and securely.
 
 ![DatI Architecture](/images/dati-visual-positioning.svg)
 

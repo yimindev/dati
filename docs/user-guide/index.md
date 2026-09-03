@@ -1,6 +1,6 @@
 # 平台介绍
 
-DatI 是连接 **AI Agent 与企业数据库** 的轻量级企业语义网关 —— 通过接入数据库、配置语义数据、定义工具与 Prompt，发布为标准 MCP 服务，让大模型精准、安全地读写业务数据。
+DatI(Data Intelligence) 是连接 **AI Agent 与企业数据库** 的轻量级企业语义网关 —— 通过接入数据库、配置语义数据、定义工具与 Prompt，发布为标准 MCP 服务，让大模型精准、安全地读写业务数据。
 
 ![DatI 架构示意图](/images/dati-visual-positioning.svg)
 

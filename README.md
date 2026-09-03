@@ -2,9 +2,9 @@
 
 [English](README.md) | [简体中文](README_zh.md)
 
-DatI is a semantic gateway connecting **AI Agents with enterprise databases** — combining semantic modeling, fine-grained access control, and standard MCP interfaces to enable LLMs to query and manipulate business data accurately and securely. Key features:
+DatI(Data Intelligence) is a semantic gateway connecting **AI Agents with enterprise databases** — combining semantic modeling, fine-grained access control, and standard MCP interfaces to enable LLMs to query and manipulate business data accurately and securely. Key features:
 
-- **Data Source Connectivity**: Native support for mainstream databases (MySQL, PostgreSQL, ClickHouse, Doris, etc.)
+- **Data Source Connectivity**: Native support for mainstream databases (MySQL, PostgreSQL, etc.)
 - **Semantic Modeling**: Unified management and retrieval across tables, columns, sample values, and business terminology
 - **MCP Service Generation**: Prebuilt standard tools for metadata inspection and SQL execution, support for parameterized SQL queries, and automated generation of service endpoints conforming to the [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) standard
 
@@ -26,6 +26,14 @@ DatI is a semantic gateway connecting **AI Agents with enterprise databases** �
 │    MySQL     │   PostgreSQL    │    ClickHouse    │      Doris     │
 └────────────────────────────────────────────────────────────────────┘
 ```
+
+## Why DatI?
+
+1. **Broad Database Support**: Native support for relational and analytical databases including MySQL, PostgreSQL, ClickHouse, Doris, and more.
+2. **Business Semantic Enhancement**: Unified business terms, column aliases, and automated enum dictionary value extraction combined with semantic search, solving the challenge of LLMs failing to understand business jargon or finding the wrong tables.
+3. **Flexible Agent Integration**: Built on standard [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) (Streamable HTTP) for seamless integration with various Agents or any MCP Host.
+4. **High-Efficiency Building & Multi-User Reuse**: Out-of-the-box prebuilt tools (metadata inspection, SQL execution) and flexible parameterized templates allow publishing functional services within minutes, supporting multi-user and multi-agent high-concurrency reuse.
+5. **Enterprise Security Control**: Centrally encrypted and managed database credentials, combined with user context to support fine-grained permission isolation.
 
 ## Use Cases
 
