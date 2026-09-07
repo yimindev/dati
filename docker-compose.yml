@@ -1,27 +1,35 @@
+# DatI single-host deployment (default resource budgets fit a 2C4G box):
+#   dati-app       mem_limit 1.5g (JVM heap self-adapts to ~75% of it)
+#   elasticsearch  heap 512m + mem_limit 1g (8.18.x: native pairing with the app client)
+# Peak ≈ 2.5GB. Bigger boxes can raise DATI_MEM_LIMIT / ES_HEAP / ES_MEM_LIMIT in .env.
+#
+# Quick start:
+#   cp .env.example .env            # fill JWT_SECRET + SPRING_ELASTICSEARCH_PASSWORD
+#   docker compose up -d --build
 services:
   dati-app:
     build:
       context: .
       dockerfile: Dockerfile
-      args:
-        # Pass through to the image LABEL (defaults to "unknown" for daily builds)
-        APP_VERSION: ${DATI_VERSION:-unknown}
-    # Tag follows DATI_VERSION (release) or defaults to latest (daily builds)
-    image: dati/dati:${DATI_VERSION:-latest}
+    image: dati/dati:latest
     container_name: dati-app
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: ${DATI_MEM_LIMIT:-1536m}
     ports:
-      # 宿主端口 18085,避免与本地开发后端(8085)冲突;容器内部仍为 8085
-      - "18085:8085"
+      - "${DATI_PORT:-8085}:8085"
     environment:
       - SPRING_PROFILES_ACTIVE=prod
-      # 默认使用内置 H2, 数据文件持久化在 /app/db (dati_data 卷); 外接外部数据库时在 .env 中指定 SPRING_DATASOURCE_*
+      # Default: embedded H2 persisted under /app/db (dati_data volume).
+      # External DB (RDS/MySQL...) via SPRING_DATASOURCE_* in .env.
       - SPRING_DATASOURCE_URL=${SPRING_DATASOURCE_URL:-jdbc:h2:file:/app/db/dati;QUERY_TIMEOUT=30;mode=mysql}
       - SPRING_DATASOURCE_USERNAME=${SPRING_DATASOURCE_USERNAME:-root}
       - SPRING_DATASOURCE_PASSWORD=${SPRING_DATASOURCE_PASSWORD:-dca}
       - SPRING_ELASTICSEARCH_URIS=http://elasticsearch:9200
       - SPRING_ELASTICSEARCH_USERNAME=elastic
-      - SPRING_ELASTICSEARCH_PASSWORD=${ES_PASSWORD:?ES_PASSWORD must be set in .env}
+      - SPRING_ELASTICSEARCH_PASSWORD=${SPRING_ELASTICSEARCH_PASSWORD:?SPRING_ELASTICSEARCH_PASSWORD must be set in .env}
       - ADMIN_USERS=${ADMIN_USERS:-admin}
       - JWT_SECRET=${JWT_SECRET:?JWT_SECRET must be set in .env}
     volumes:
@@ -29,23 +37,26 @@ services:
     depends_on:
       - elasticsearch
 
-  # Elasticsearch 需要 IK 分词插件
   elasticsearch:
-    image: davyinsa/elasticsearch-ik:7.17.18
-    container_name: es7
+    # IK-analyzer build; 8.18.x matches the app's bundled 8.x Java client
+    image: davyinsa/elasticsearch-ik:8.18.7
+    # Same name as the service: container is reachable as http://elasticsearch:9200 internally
+    container_name: elasticsearch
     restart: unless-stopped
-    ports:
-      - "9200:9200"
-    environment:
-      - discovery.type=single-node
-      - xpack.security.enabled=true
-      - ELASTIC_PASSWORD=${ES_PASSWORD:?ES_PASSWORD must be set in .env}
-      - "ES_JAVA_OPTS=-Xms1g -Xmx1g" # 限制 JVM 堆为 1GB
-    mem_limit: 2g # 限制容器总内存为 2GB
     deploy:
       resources:
         limits:
-          memory: 2g
+          memory: ${ES_MEM_LIMIT:-1g}
+    ports:
+      - "${ES_PORT:-9200}:9200"
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=true
+      # ELASTIC_PASSWORD is the ES image's own bootstrap contract; the single
+      # secret key is SPRING_ELASTICSEARCH_PASSWORD in .env (mapped to both).
+      - ELASTIC_PASSWORD=${SPRING_ELASTICSEARCH_PASSWORD:?SPRING_ELASTICSEARCH_PASSWORD must be set in .env}
+      # 512m heap is enough for trial-scale semantic indexes; ES_HEAP=1g on bigger boxes
+      - ES_JAVA_OPTS=-Xms${ES_HEAP:-512m} -Xmx${ES_HEAP:-512m}
     volumes:
       - es_data:/usr/share/elasticsearch/data
 

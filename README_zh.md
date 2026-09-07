@@ -50,6 +50,7 @@ DatI(Data Intelligence) 是连接 **AI Agent 与企业数据库** 的语义网�
 ## 文档导航
 
 - [本地开发指南](docs/development.md)：环境准备、启动、常用命令与开发约定
+- [服务器部署手册](docs/deployment.md)：Docker Compose 单机部署（无需镜像仓库）
 - **实战案例**：
   - [家庭共享记账助手](examples/family-finance/README.md)：多用户协作记账、参数化防越权、全员透明 SQL 查账与开箱自愈示例
 - **架构与设计**（长期维护，与代码同步）：
@@ -63,7 +64,7 @@ DatI(Data Intelligence) 是连接 **AI Agent 与企业数据库** 的语义网�
   - [编辑器架构](docs/architecture/editor.md)
 - **用户帮助中心**：[docs/user-guide](docs/user-guide/index.md)（VitePress 站点，中英双语）
 - **API 契约**：[docs/api/openapi.json](docs/api/openapi.json)（E2E 测试工具链使用）
-- **AI 编码助手规范**：[AGENTS.md](AGENTS.md) 与 [.agents/rules/](.agents/rules/)（后端/前端/设计系统规范）
+- **AI 编码助手规范**：[AGENTS.md](AGENTS.md) 与 [.agents/rules/](.agents/rules)（后端/前端/设计系统规范）
 - **Agent Skill**（[Agent Skills 开放标准](https://agentskills.io)，仓库内 agent 自动发现）：
   - [dati-ops](skills/dati-ops/SKILL.md)：**用户技能**——通过 HTTP API 完成平台配置与操作（数据源/主题术语/MCP 服务），技能自包含（内置 openapi.json 与查询工具），可独立分发；仓库内通过 `.agents/skills/dati-ops/` 薄壳接入
-  - [e2e-tester](.agents/skills/e2e-tester/SKILL.md)：**开发技能**——E2E HTTP 集成测试与 API 行为验证（测试用例见 [e2e-tests/test-cases/](e2e-tests/test-cases/)）
+  - [e2e-tester](.agents/skills/e2e-tester/SKILL.md)：**开发技能**——E2E HTTP 集成测试与 API 行为验证（测试用例见 [e2e-tests/test-cases/](e2e-tests/test-cases)）

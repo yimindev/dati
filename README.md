@@ -50,6 +50,7 @@ DatI(Data Intelligence) is a semantic gateway connecting **AI Agents with enterp
 ## Documentation
 
 - [Local Development Guide](docs/development.md): Environment setup, launch instructions, common commands, and development conventions
+- [Server Deployment Guide](docs/deployment.md): Single-host Docker Compose deployment (no registry needed)
 - **Showcase & Examples**:
   - [Family Finance Assistant](examples/family-finance/README.md): Multi-user collaborative bookkeeping, parameterized permission isolation, transparent SQL auditing, and self-healing agent workflows
 - **Architecture & Design** (Maintained continuously alongside code):
@@ -63,7 +64,7 @@ DatI(Data Intelligence) is a semantic gateway connecting **AI Agents with enterp
   - [Editor Architecture](docs/architecture/editor.md)
 - **User Guide**: [docs/user-guide](docs/user-guide/index.md) (VitePress site, Bilingual)
 - **API Specification**: [docs/api/openapi.json](docs/api/openapi.json) (Used by E2E test toolchains)
-- **AI Coding Assistant Guidelines**: [AGENTS.md](AGENTS.md) and [.agents/rules/](.agents/rules/) (Backend / Frontend / Design System rules)
+- **AI Coding Assistant Guidelines**: [AGENTS.md](AGENTS.md) and [.agents/rules/](.agents/rules) (Backend / Frontend / Design System rules)
 - **Agent Skills** ([Agent Skills Open Standard](https://agentskills.io), auto-discovered by repository agents):
   - [dati-ops](skills/dati-ops/SKILL.md): **User Skill** — Configure and operate the platform via HTTP APIs (data sources / subjects & terms / MCP services); self-contained with built-in openapi.json and query tools, independently distributable; integrated via thin shell `.agents/skills/dati-ops/`.
-  - [e2e-tester](.agents/skills/e2e-tester/SKILL.md): **Developer Skill** — E2E HTTP integration testing and API behavior validation (see test cases in [e2e-tests/test-cases/](e2e-tests/test-cases/)).
+  - [e2e-tester](.agents/skills/e2e-tester/SKILL.md): **Developer Skill** — E2E HTTP integration testing and API behavior validation (see test cases in [e2e-tests/test-cases/](e2e-tests/test-cases)).
