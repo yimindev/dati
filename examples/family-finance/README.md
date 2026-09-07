@@ -34,11 +34,16 @@
 
 ### 2. 初始化数据库
 
-可以直接执行本目录下的 [`schema.sql`](schema.sql) 脚本完成 PostgreSQL 建表与基础分类初始化：
+可以直接执行本目录下的 SQL 脚本完成建表与基础分类初始化：
 
-```bash
-psql -h localhost -p 5432 -U postgres -d family_finance -f schema.sql
-```
+* **MySQL**:
+  ```bash
+  mysql -h <host> -P 3306 -u <user> -p < schema-mysql.sql
+  ```
+* **PostgreSQL**:
+  ```bash
+  psql -h <host> -p 5432 -U postgres -d family_finance -f schema-postgres.sql
+  ```
 
 ---
 
