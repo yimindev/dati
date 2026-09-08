@@ -8,8 +8,9 @@ import { nextTick, onMounted, ref, computed } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { ElMessage, ElMessageBox } from "element-plus";
 import type { InputInstance } from "element-plus";
-import { Plus, Search, Refresh, MoreFilled } from "@element-plus/icons-vue";
+import { Plus, Search, Refresh, MoreFilled, CopyDocument } from "@element-plus/icons-vue";
 import { useI18n } from "vue-i18n";
+import { copyToClipboard } from "~/utils/clipboard";
 import { listTableInfos, getAddedTableNames, batchAddTables, syncColumns, deleteTable, updateTable, type TableInfoVO } from "~/api/tableinfo.ts";
 import { getSchemas, getTables, getDataSource, type TableVO } from "~/api/datasource.ts";
 import { formatDateTime } from "~/composables";
@@ -253,6 +254,15 @@ const handleColumnManage = (table: TableInfoVO) => {
   });
 };
 
+const handleCopyTableName = async (name: string) => {
+  const success = await copyToClipboard(name);
+  if (success) {
+    ElMessage.success(t("common.copySuccess"));
+  } else {
+    ElMessage.error(t("common.copyFailed"));
+  }
+};
+
 // 保存元数据配置
 const handleSaveMetadata = async () => {
   try {
@@ -347,14 +357,25 @@ onMounted(async () => {
           show-overflow-tooltip
         >
           <template #default="{ row }">
-            <el-button
-              link
-              type="primary"
-              class="!p-0 font-medium truncate max-w-full"
-              @click="handleColumnManage(row)"
-            >
-              {{ row.name }}
-            </el-button>
+            <div class="group inline-flex items-center gap-1.5 max-w-full">
+              <el-button
+                link
+                type="primary"
+                class="!p-0 font-medium truncate"
+                @click="handleColumnManage(row)"
+              >
+                {{ row.name }}
+              </el-button>
+              <el-tooltip :content="t('common.copy')" placement="top" :show-after="300">
+                <el-button
+                  link
+                  :icon="CopyDocument"
+                  class="opacity-0 group-hover:opacity-100 transition-opacity !p-0.5 text-[var(--ep-text-color-placeholder)] hover:!text-[var(--ep-color-primary)] cursor-pointer shrink-0"
+                  :aria-label="t('common.copy')"
+                  @click.stop="handleCopyTableName(row.name)"
+                />
+              </el-tooltip>
+            </div>
           </template>
         </el-table-column>
         <el-table-column

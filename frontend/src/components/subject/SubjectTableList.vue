@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { onMounted, ref, computed } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
-import { Plus, Search } from "@element-plus/icons-vue";
+import { Plus, Search, CopyDocument } from "@element-plus/icons-vue";
 import { useI18n } from "vue-i18n";
+import { copyToClipboard } from "~/utils/clipboard";
 import type { TableInfoVO, SubjectAvailableTableVO } from "~/api/subject";
 import { getSubjectTables, getAvailableTables, addTableToSubject, removeTableFromSubject } from "~/api/subject";
 import { notifyError } from "~/api/http";
@@ -163,6 +164,15 @@ const handleBatchAdd = async () => {
   }
 };
 
+const handleCopyTableName = async (name: string) => {
+  const success = await copyToClipboard(name);
+  if (success) {
+    ElMessage.success(t("common.copySuccess"));
+  } else {
+    ElMessage.error(t("common.copyFailed"));
+  }
+};
+
 const handleRemoveTable = async (table: TableInfoVO) => {
   try {
     await ElMessageBox.confirm(
@@ -227,7 +237,23 @@ onMounted(() => {
           prop="name"
           :label="t('common.tableName')"
           min-width="150"
-        />
+          show-overflow-tooltip
+        >
+          <template #default="{ row }">
+            <div class="group inline-flex items-center gap-1.5 max-w-full">
+              <span class="font-medium truncate">{{ row.name }}</span>
+              <el-tooltip :content="t('common.copy')" placement="top" :show-after="300">
+                <el-button
+                  link
+                  :icon="CopyDocument"
+                  class="opacity-0 group-hover:opacity-100 transition-opacity !p-0.5 text-[var(--ep-text-color-placeholder)] hover:!text-[var(--ep-color-primary)] cursor-pointer shrink-0"
+                  :aria-label="t('common.copy')"
+                  @click.stop="handleCopyTableName(row.name)"
+                />
+              </el-tooltip>
+            </div>
+          </template>
+        </el-table-column>
         <el-table-column
           prop="schema"
           :label="t('common.schema')"
