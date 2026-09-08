@@ -27,6 +27,14 @@ DatI(Data Intelligence) is a semantic gateway connecting **AI Agents with enterp
 └────────────────────────────────────────────────────────────────────┘
 ```
 
+## Try It Online
+
+Demo URL: http://47.99.122.223:18085/
+
+Account / Password: `demo` / `demo123`
+
+The demo instance is preloaded with sample data and reset periodically.
+
 ## Why DatI?
 
 1. **Broad Database Support**: Native support for relational and analytical databases including MySQL, PostgreSQL, ClickHouse, Doris, and more.
