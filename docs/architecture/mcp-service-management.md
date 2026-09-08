@@ -1,7 +1,7 @@
 # MCP Service 管理 — 架构文档
 
-> 版本：v2.4（US-01–05, US-5.5, US-07, US-08, US-10 完整实现；MCP Endpoint 已上线；结构化参数校验 + 元数据更新预置工具）
-> 最后更新：2026-08-14
+> 版本：v2.5（US-01–05, US-5.5, US-07, US-08, US-09, US-10 完整实现；MCP Endpoint 已上线；用量统计与调用日志微批架构落地）
+> 最后更新：2026-09-08
 
 ---
 
@@ -24,8 +24,9 @@ MCP Service 管理模块提供 **MCP（Model Context Protocol）服务的生命�
 - **发布与版本管理（US-08）**：草稿-快照隔离、发布/发布变更、停用/启用、版本历史与回滚、草稿 vs 线上 diff
 - **删除服务（US-10）**：事务级联删除（快照/数据范围/工具/Prompt），前端与全站删除操作一致（简单确认弹窗）
 - **MCP Endpoint（JSON-RPC over HTTP）**：`POST /{code}/mcp` 协议入口，支持 `initialize` / `ping` / `tools/list` / `tools/call` / `prompts/list` / `prompts/get`；仅读取激活快照（草稿永不暴露）；服务状态语义（未知 code / DRAFT → 404，DISABLED → 503）；Origin DNS-rebinding 防护 + `MCP-Protocol-Version` 校验
+- **用量统计与调用日志（US-09）**：无锁内存微批收集器（`McpUsageCollector`）纳秒级 CAS 累加与缓冲，双阈值（100 条 / 10s）异步批刷入库；提供最近 15 天用量总览、每日调用趋势、工具调用分布及调用日志明细查询；每日凌晨 03:00 自动清理 15 天过期数据
 
-> **遗留**：调用审计日志（US-09）未实现；元数据写入审计（`mcp_metadata_audit_log`）已落地（见 2.2 元数据更新工具）。
+> **遗留**：Streamable HTTP 的 GET/SSE 流式传输与 session 管理；Token 权限管理（US-06 暂缓，统一在应用层认证）。元数据写入审计（`mcp_metadata_audit_log`）已落地（见 2.2 元数据更新工具）。
 
 **设计原则**：
 - **简单优先 / 灵活优先**：提供通用原子能力（元数据检索、SQL 执行、参数化 SQL、Prompt），不做业务假设，由用户按场景组合
@@ -89,6 +90,8 @@ com.dati.mcp/
 │       ├── UpdateTableInfoExecutor.java     # UPDATE_TABLE_INFO 执行器（写表描述/别名 + 审计）
 │       ├── UpdateColumnInfoExecutor.java    # UPDATE_COLUMN_INFO 执行器（写列描述/别名 + 审计）
 │       ├── UpsertTermExecutor.java          # UPSERT_TERM 执行器（术语 upsert + 审计）
+│       ├── McpUsageCollector.java          # 高性能无锁内存微批用量收集器（LongAdder 累加 + 双阈值批刷 + 补偿重试 + 跨天清理）
+│       ├── McpUsageService.java            # 用量统计聚合计算、日志分页查询、15 天 TTL 定时清理（每日 03:00）
 │       ├── SqlExecutorHelper.java           # JDBC getMoreResults() 循环（package-private）
 │       ├── ToolExecuteException.java        # 工具执行异常（extends RuntimeException）
 │       └── ToolsResult.java                 # { prebuilt, custom } record
@@ -100,7 +103,9 @@ com.dati.mcp/
 │   │   ├── McpPrebuiltToolConfigDAO.java
 │   │   ├── McpCustomToolDAO.java
 │   │   ├── McpPromptDAO.java
-│   │   └── McpMetadataAuditLogDAO.java
+│   │   ├── McpMetadataAuditLogDAO.java
+│   │   ├── McpInvocationLogDAO.java        # 调用日志明细 DAO（分页查询、过期数据批量删除）
+│   │   └── McpUsageDailyStatDAO.java       # 按日聚合统计 DAO（原生原子增量 incrementStat、唯一键冲突兜底、过期清理）
 │   ├── po/                  # 持久化对象（继承 BasePO / BaseResourcePO）
 │   │   ├── McpServicePO.java
 │   │   ├── McpServiceSnapshotPO.java
@@ -108,7 +113,9 @@ com.dati.mcp/
 │   │   ├── McpPrebuiltToolConfigPO.java
 │   │   ├── McpCustomToolPO.java
 │   │   ├── McpPromptPO.java
-│   │   └── McpMetadataAuditLogPO.java       # mcp_metadata_audit_log（old/new 值 JSON）
+│   │   ├── McpMetadataAuditLogPO.java       # mcp_metadata_audit_log（old/new 值 JSON）
+│   │   ├── McpInvocationLogPO.java         # mcp_invocation_log（调用日志明细，idx: service_id+created_at, created_at）
+│   │   └── McpUsageDailyStatPO.java        # mcp_usage_daily_stat（日度聚合统计，uk: service_id+tool_name+stat_date）
 │   └── mapper/              # 静态方法 PO ↔ Model（含 JSON 序列化/反序列化）
 │       ├── McpServiceMapper.java
 │       ├── McpServiceSnapshotMapper.java   # 快照 content 反序列化（按 tool_type 路由 ToolConfig）
@@ -118,14 +125,18 @@ com.dati.mcp/
 │       └── McpPromptMapper.java
 └── server/
     ├── controller/
-    │   ├── McpServiceController.java      # 服务 CRUD + 数据范围 + 发布/停用/启用/diff/快照/回滚端点
+    │   ├── McpServiceController.java      # 服务 CRUD + 数据范围 + 发布/停用/启用/diff/快照/回滚 + 用量统计与日志明细端点
     │   ├── McpToolController.java         # 工具 CRUD + 测试端点
     │   ├── McpPromptController.java       # Prompt CRUD 端点
     │   └── TemplatePreviewController.java # 模板预览/提取端点
     ├── endpoint/                # MCP 协议入口（/{code}/mcp）
     │   ├── McpEndpointController.java     # HTTP 适配层：路由 / 响应状态码
-    │   ├── McpEndpointService.java        # 编排：状态语义 / Origin 校验 / 激活快照加载
+    │   ├── McpEndpointService.java        # 编排：状态语义 / Origin 校验 / 激活快照加载 / 调用用量拦截收集
     │   └── McpProtocolHandler.java        # JSON-RPC 方法分发
+    ├── assembler/               # Model / PO ↔ VO 组装器
+    │   ├── McpServiceAssembler.java
+    │   ├── McpToolAssembler.java
+    │   └── McpUsageAssembler.java         # 调用日志 PO → VO 转换
     ├── converter/               # 快照 draft → MCP 协议类型
     │   ├── ToolDefinitionConverter.java   # Tool 定义 + inputSchema 生成
     │   ├── PromptDefinitionConverter.java # Prompt 定义 + prompts/get 渲染
@@ -137,6 +148,7 @@ com.dati.mcp/
     │   ├── McpServiceDiffVO.java, McpServiceSnapshotVO.java, PublishRequest.java, RollbackRequest.java
     │   ├── McpToolVO.java, ToolsResponse.java, CustomToolRequest.java
     │   ├── McpPromptVO.java, McpPromptRequest.java
+    │   ├── McpUsageStatsVO.java, McpInvocationLogVO.java   # 用量统计总览（含趋势、分布）与调用明细 VO
     │   ├── ToolTestRequest.java, ToolTestResponse.java, ToolTestError.java, ToolTestData.java
     │   ├── SqlExecution.java, StatementResult.java
     │   ├── TableMetadata.java, SearchHit.java, TableListData.java   # TABLE_LIST 表级清单（复用 DataSourceDef/TableDef）
@@ -354,6 +366,24 @@ Controller → HTTP 200 + ToolTestResponse JSON
 - **JSON 序列化**：MCP 消息使用 SDK camelCase mapper（`McpProtocolMessageConverter` 注册于 message converters 首位），与 Dev profile 的 SNAKE_CASE API 响应互不影响
 - **认证集成**：`/*/mcp` 路径纳入全局 `AuthInterceptor`，与应用层认证体系（APIKey 等）统一鉴权
 
+#### 用量统计与调用日志（Usage Statistics & Collector）
+
+| 类 | 职责 |
+|---|---|
+| `McpUsageCollector` | `@Component` 高性能无锁内存微批收集器。在 MCP Endpoint 请求路径上执行纳秒级无锁原子累加（`StatAccumulator` 内基于 `LongAdder` 与 `AtomicLong`）与日志入队（有界 `ConcurrentLinkedQueue`，容量上限 10,000，超限丢弃明细保留聚合统计），耗时 <0.1ms。支持双阈值批刷入库（队列达 `batchSize=100` 触发虚拟线程即时 flush，或每 10s 定时任务兜底）；跨天日切自动淘汰历史累加器（`accumulators.remove(key, val)`）；DB 写入失败通过 `mergeBack` 补偿重试；`@PreDestroy` 优雅停机前同步批刷。 |
+| `McpUsageService` | `@Service` 用量统计业务服务。`getUsageStats(serviceId, days)` 聚合计算指定天数（默认 15 天）内的总调用量、今日调用量、整体成功率、平均耗时、每日调用趋势（`DailyStatItem`）以及工具调用分布占比与成功率（`ToolStatItem`）；`listLogs()` 多条件分页查询调用明细；`cleanupExpiredData()`（`@Scheduled(cron = "0 0 3 * * ?")`）每日凌晨 03:00 自动清理 15 天前的过期日志与聚合数据。 |
+| `McpInvocationLogPO` | 原始调用日志实体，表名 `mcp_invocation_log`。字段：`serviceId`、`method`、`toolName`、`callerId`、`callerName`、`clientIp`、`success`、`durationMs`、`errorMessage`（截断至 500 字符）、`statDate`。复合索引：`(service_id, created_at)`、单列索引：`(created_at)`。 |
+| `McpUsageDailyStatPO` | 按日聚合统计实体，表名 `mcp_usage_daily_stat`。字段：`serviceId`、`toolName`、`statDate`、`totalCalls`、`successCalls`、`failedCalls`、`totalDurationMs`、`maxDurationMs`。复合唯一索引：`uk_mcp_stat_svc_tool_date(service_id, tool_name, stat_date)`、普通索引：`idx_mcp_stat_svc_date(service_id, stat_date)`。 |
+| `McpInvocationLogDAO` | JPA Repository。定义分页过滤查询 `findLogs(serviceId, toolName, success, pageable)` 及批量删除 `deleteByCreatedAtBefore(Instant cutoff)`。 |
+| `McpUsageDailyStatDAO` | JPA Repository。提供 Native SQL 原生原子增量更新 `incrementStat(...)`、范围查询 `findByServiceIdAndStatDateGreaterThanEqualOrderByStatDateAsc(...)` 及批量清理 `deleteByStatDateBefore(String cutoffDate)`。 |
+| `McpUsageAssembler` | PO → VO 转换组件。将 `McpInvocationLogPO` 转换为 `McpInvocationLogVO` 并格式化审计字段。 |
+| `McpUsageStatsVO` | 用量统计聚合响应体。包含 `total_calls`、`today_calls`、`success_rate`、`avg_duration_ms`、`daily_trend`（日期、总调用、成功数、失败数、成功率、平均耗时）及 `tool_distribution`（工具名、调用数、占比、成功率）。 |
+| `McpInvocationLogVO` | 调用明细 VO。包含 `id`、`service_id`、`method`、`tool_name`、`caller_id`、`caller_name`、`client_ip`、`success`、`duration_ms`、`error_message`、`stat_date`、`created_at`。 |
+
+**MCP Endpoint 拦截接入：**
+- `McpEndpointService` 在处理完所有 JSON-RPC 请求后（无论是正常返回或是协议/执行异常），统一调用 `usageCollector.record(...)`，完全非阻塞，不影响主调用响应性能。
+- 提取字段：`method`（如 `tools/call`, `tools/list`）、`toolName`（当 method 为 `tools/call` 时提取 `params.name`）、`callerId` / `callerName`（从 `RequestContext` 提取当前认证身份）、`clientIp`（提取客户端 IP）、`success`（以是否有错误判定）、`durationMs`（请求处理耗时）、`errorMessage`（错误描述）。
+
 ### 2.3 ToolError 枚举
 
 | 枚举值 | category | 含义 | 来源 |
@@ -530,6 +560,17 @@ McpMetadataAuditLog (per metadata write, 多个)
   ├─ serviceId, toolType (枚举名), entityType (TABLE|COLUMN|TERM), entityId, entityName
   ├─ changeType (CREATE|UPDATE), oldValue / newValue (JSON: {description, aliases})
   └─ 与元数据更新同事务写入；v1 无管理端 UI
+
+McpInvocationLog (per invocation, 多个)
+  ├─ serviceId, method, toolName, callerId, callerName, clientIp
+  ├─ success, durationMs, errorMessage (截断至 500 字符), statDate (YYYY-MM-DD)
+  └─ 索引: idx_mcp_log_svc_created (service_id, created_at), idx_mcp_log_created (created_at)；保留 15 天
+
+McpUsageDailyStat (per service + tool + date, 唯一约束)
+  ├─ serviceId, toolName, statDate (YYYY-MM-DD)
+  ├─ totalCalls, successCalls, failedCalls, totalDurationMs, maxDurationMs
+  ├─ 约束: UK(service_id, tool_name, stat_date), 索引: idx_mcp_stat_svc_date (service_id, stat_date)
+  └─ 保留 15 天；微批原子增量写入 (Native SQL incrementStat)
 ```
 
 ### 2.5 API 端点
@@ -636,6 +677,13 @@ StatementResult.writeFailure(errorMessage)           // WRITE 失败
 |---|---|---|
 | `POST` | `/{code}/mcp` | MCP JSON-RPC over HTTP 入口。支持 `initialize` / `ping` / `tools/list` / `tools/call` / `prompts/list` / `prompts/get`。仅读取激活快照。未知 code / DRAFT → 404；DISABLED → 503 + JSON-RPC error。请求需携带 `MCP-Protocol-Version: 2025-11-25`（initialize 豁免）；浏览器 Origin 需为 loopback 或 `dati.mcp.allowed-origins` 白名单。认证走全局 `AuthInterceptor`，并校验当前用户对目标 `MCP_SERVICE` 的 `VIEW` 权限（无权限 403 / JSON-RPC error） |
 
+#### 用量统计与调用日志（US-09）
+
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| `GET` | `/v1/mcp-services/{id}/stats` | 获取服务用量统计。Query 参数：`days`（默认 15）。聚合返回总调用量、今日调用量、成功率、平均耗时、每日趋势列表（`daily_trend`）及工具调用分布（`tool_distribution`） |
+| `GET` | `/v1/mcp-services/{id}/invocation-logs` | 分页查询服务调用日志明细。Query 参数：`toolName`（可选）、`success`（可选，true/false）、`page`（默认 1）、`size`（默认 10）。按 `created_at` 倒序排序 |
+
 ### 2.6 错误码（McpService 模块）
 
 | Code | 含义 |
@@ -728,7 +776,7 @@ StatementResult.writeFailure(errorMessage)           // WRITE 失败
 
 - 定位为「LLM 把学到的知识写回平台」：直接写共享元数据，不经过草稿/快照，写后 GET_TABLE_INFO / SEARCH_METADATA 立即可见
 - scope 语义降级：写操作仅校验数据源级（`ScopeValidator.validateDataSource`），不做表级 —— 元数据写入不是数据访问；UPSERT_TERM 经 `resolveSubjectInScope` 按名称在 scope 内定位主题（找不到 → SCOPE_VIOLATION）
-- 审计：每次变更（含旧值）同事务写入 `mcp_metadata_audit_log`，v1 无管理端 UI（US-09 调用日志仍未实现，但元数据写入有独立审计）
+- 审计：每次变更（含旧值）同事务写入 `mcp_metadata_audit_log`，v1 无独立元数据审计 UI；与 US-09 的工具调用日志与用量统计（`mcp_invocation_log`）分属不同职责
 - 批量语义：1–20 条/次，调用内去重，单条失败记入 `results[i].error`（部分失败）；参数级失败（超长/类型错）为整体 PARAM_INVALID（无 data）
 - aliases 全量替换（先查后写）+ 幂等语义通过 MCP annotations（idempotentHint/openWorldHint）声明给 LLM
 
@@ -789,6 +837,14 @@ StatementResult.writeFailure(errorMessage)           // WRITE 失败
 - **协议错误与工具错误分离**：JSON-RPC 层错误（未知方法/未知工具/参数缺失）走 `JSONRPCError`；工具执行失败（`ToolExecuteException`）转为 `CallToolResult(isError=true)`，LLM 可读取错误信息自纠正
 - **tools/list 确定性输出**：预置固定顺序（SEARCH_METADATA → GET_TABLE_INFO → LIST_TABLES → EXECUTE_SQL → UPDATE_TABLE_INFO → UPDATE_COLUMN_INFO → UPSERT_TERM → PARAMETERIZED_SQL）+ 自定义按名称排序，便于 Client 端 diff；与预置/先前自定义重名的自定义工具静默跳过（防输入误导）
 
+#### 高性能无锁微批用量收集器（McpUsageCollector）
+
+- **主链路极速无阻塞**：MCP Endpoint 处于协议核心数据链路，统计上报绝不能阻塞请求或产生可观测的延迟。采用内存无锁原子累加器（`ConcurrentHashMap<StatKey, StatAccumulator>`，内部基于 `LongAdder` 和 `AtomicLong`）+ 有界队列（`ConcurrentLinkedQueue`，容量上限 10,000），单次 record 调用耗时 <0.1ms。当队列满时降级丢弃明细日志但保留内存计数，彻底杜绝 OOM。
+- **双阈值微批持久化（Dual-Threshold Flush）**：批量阈值（队列达到 `batchSize=100` 条）触发虚拟线程即时执行批量持久化；时间阈值（默认 10s 定时任务）兜底低频流量。使用 `AtomicBoolean flushing` 保证同一时刻至多一个任务在执行持久化，避免并发写冲突。
+- **跨天自动淘汰（Day Rollover Eviction）**：统计 Key 携带 `statDate`（YYYY-MM-DD）。每次 flush 检查非当天的 key，在将其剩余 delta 清空入库后通过 `accumulators.remove(key, val)` 原子安全移除，防止内存随时间无界膨胀。
+- **DB 故障补偿重试（mergeBack）**：当底层数据库写入异常时，已从 accumulator 中 sumThenReset 抽取的 `DeltaSnapshot` 通过 `mergeBack()` 原子加回累加器，下一次 flush 自动重试，确保计数不丢失。
+- **15 天双表 TTL 自动清理**：原始调用日志明细表（`mcp_invocation_log`）与日度聚合统计表（`mcp_usage_daily_stat`）均通过 `@Scheduled(cron = "0 0 3 * * ?")` 每日凌晨 03:00 自动清理 15 天以前的历史数据，存储空间恒定可控。
+
 ---
 
 ## 3. 前端架构
@@ -802,6 +858,7 @@ src/
 │   ├── mcp-tool.ts                 # 工具类型（SqlPolicy, ToolParameter, McpToolVO）+ API
 │   ├── mcp-tool-test.ts            # 工具测试类型（ToolTestResponse, SqlExecution, StatementResult 等）+ testTool()
 │   ├── mcp-prompt.ts               # Prompt 类型（McpPromptVO, McpPromptPayload）+ API
+│   ├── mcp-usage.ts                # 用量统计与调用明细类型（McpUsageStatsVO, McpInvocationLogVO 等）+ API
 │   └── template-preview.ts         # 模板预览/提取 API
 ├── components/mcp-service/
 │   ├── ScopePicker.vue             # 共享数据范围选择器（创建弹窗 + 数据范围 Tab 共用）
@@ -814,6 +871,7 @@ src/
 │   ├── PromptsTab.vue              # Prompt 管理 Tab 容器
 │   ├── PromptList.vue              # Prompt 列表（搜索、开关、编辑、删除）
 │   ├── PromptDialog.vue            # Prompt 创建/编辑弹窗（含模板编辑器、参数提取）
+│   ├── UsageStatsTab.vue           # 用量统计 Tab（KPI 卡片 + 15 天趋势 + 工具分布 + 调用明细表格）
 │   ├── TemplatePreviewDialog.vue   # 模板预览弹窗（TEXT/SQL 双模式）
 │   ├── ToolTestDialog.vue          # 工具测试弹窗薄壳（左右分栏：参数 / 结果，按类型动态加载子组件）
 │   ├── tool-test/
@@ -847,7 +905,7 @@ src/
 ├── utils/
 │   └── stripEmpty.ts               # 去除空值字段（null/undefined/""/[]），写工具提交前使用
 └── pages/mcp-services/
-    └── [id]/index.vue              # 详情页（左侧菜单：Basic / Data Scope / Tools / Prompts / ...）
+    └── [id]/index.vue              # 详情页（左侧菜单：Basic / Data Scope / Tools / Prompts / Usage Stats / Versions）
 ```
 
 ### 3.2 组件职责
@@ -863,6 +921,7 @@ src/
 | `PromptsTab` | Prompt 管理 Tab 容器。加载 Prompt 列表，集成 `PromptList`。 |
 | `PromptList` | 搜索栏 + 列表。每个条目显示 name、description、参数计数、开关、编辑/删除图标。 |
 | `PromptDialog` | 创建/编辑弹窗。**基本信息**（name/description）。**模板内容**：使用 `PromptTemplateEditor`（CodeMirror）。**参数列表**：el-table 编辑（name/required/description）+ 「提取参数」按钮调用 `/v1/template/extract` 自动填充。底部「测试渲染」按钮打开预览。 |
+| `UsageStatsTab` | **用量统计 Tab**（US-09）。顶部 4 张 KPI 指标卡片（总调用量、今日调用、成功率、平均耗时）；中栏展示「近 15 天每日调用趋势」卡片（表格展示日期、总调用、成功数、失败数、成功率与平均耗时）及「工具调用分布」卡片（展示各工具调用次数、占比百分比及调用成功率）；底部调用日志明细表格（支持工具类型下拉筛选、成功/失败状态筛选、分页切换与手动刷新按钮）。采用紧凑表格布局，独立滚动，适配暗色模式。 |
 | `TemplatePreviewDialog` | 通用模板预览弹窗。显示原始模板 → 参数输入 → 渲染结果。支持 TEXT 和 SQL 双模式。Copy 按钮复制结果。 |
 | `ToolTestDialog` | **工具测试弹窗薄壳**（左右分栏布局）：左侧参数表单、右侧结果区，按工具类型/结果类型动态加载 `tool-test/params/*` 与 `tool-test/results/*` 子组件。打开时 `resetTablePickerCache()` 清空表/列缓存；提交前 `stripEmpty()` 剔除空字段（写工具未填字段保持原值）。 |
 | `ParameterInput` | **共享参数输入组件**。按 `ToolParameter.type` 渲染：String → el-input，Number → el-input type="number"，Boolean → el-switch，DateTime → el-date-picker type="datetime"，Array → el-input-tag，default → el-input。被 ToolTestDialog 和 TemplatePreviewDialog 共用。 |
@@ -941,6 +1000,11 @@ ToolTestDialog
     ├─ ALL:              POST /tools/{toolId}/test { arguments } → ToolTestResponse
     └─ 结果分发:        data.type → SELECT table / WRITE card / TABLE_METADATA list / TABLE_LIST groups / SEARCH_HIT groups / METADATA_UPDATE per-item list
 
+UsageStatsTab（用量统计与调用明细）
+    ├─ GET /stats?days=15 → McpUsageStatsVO（KPI 指标 + 每日趋势 + 工具调用分布）
+    ├─ GET /invocation-logs?page=N&size=M&tool_name=...&success=... → PageResponse<McpInvocationLogVO>
+    └─ 过滤与分页切换 / 手动刷新按钮 → 重新拉取日志明细
+
 详情页（发布与版本管理）
     ├─ 右上角按钮区（页面级）:
     │    ├─ 发布 → POST /publish { release_note }（弹窗内嵌变更摘要）
@@ -957,6 +1021,7 @@ ToolTestDialog
     index.vue 持有 service + diff（真相源）
     ├─ 右上角操作 → refreshAll() = loadService() + loadDiff()
     ├─ ToolsTab / PromptsTab / DataScopeTab 保存后 emit refresh → refreshAll
+    ├─ UsageStatsTab（props: service）挂载即并发加载 stats + invocation-logs，支持条件过滤与手动刷新
     └─ DebugPublishTab（props: service）内部加载 snapshots，回滚后 emit refresh
 ```
 
@@ -964,7 +1029,7 @@ ToolTestDialog
 
 ## 4. 测试
 
-后端总计 **830 测试**（2026-08-14 全量回归），核心覆盖：
+后端全量回归套件覆盖：
 
 - `McpServiceServiceTest` / `McpServiceControllerTest`：服务 CRUD、code 校验、级联删除
 - `McpServicePublishServiceTest`：发布 / 停用 / 启用 / diff / 回滚 / 状态机（21 用例）
@@ -973,8 +1038,10 @@ ToolTestDialog
 - `ToolParameterBinderTest` / `McpParameterSchemaGeneratorTest`：结构化参数校验与 inputSchema 生成
 - 各 Executor 测试：`ExecuteSqlExecutorTest` / `GetTableInfoExecutorTest` / `ListTablesExecutorTest` / `SearchMetadataExecutorTest` / `UpdateTableInfoExecutorTest` / `UpdateColumnInfoExecutorTest` / `UpsertTermExecutorTest`
 - `McpPromptServiceTest` / `TemplatePreviewControllerTest`：Prompt 校验与模板渲染
+- `McpUsageCollectorTest`：无锁原子累加、微批双阈值 flush、跨天清理、mergeBack 补偿重试
+- `McpUsageServiceTest`：用量统计聚合计算、调用日志多维分页过滤、15 天过期数据定时清理
 
-完整测试类清单见源码 `backend/src/test/java/com/dati/mcp/`。
+完整测试类清单见源码 `backend/core/src/test/java/com/dati/mcp/`。
 ## 5. 已实现 vs 未实现
 
 | User Story | 标题 | 状态 | 说明 |
@@ -988,10 +1055,10 @@ ToolTestDialog
 | US-06 | 管理服务 Token | ❌ V1 暂缓 | 统一在应用层认证，MCP 模块不单独设计 |
 | US-07 | 调试 Tool 调用 | ✅ 已实现 | 工具测试弹窗、8 种 Executor、scope 校验、异常处理、前端结果渲染（参数表单/结果组件拆分为 tool-test 子组件） |
 | US-08 | 发布与版本管理 | ✅ 已实现 | 草稿-快照隔离、发布/发布变更、停用/启用、版本历史与回滚、草稿 vs 线上 diff。**MCP Endpoint 已实现**（JSON-RPC over HTTP，见 2.2 协议层），US-08 遗留任务 #2/#3/#4 已落地；遗留：Streamable HTTP 的 GET/SSE 流式传输与 session 管理 |
-| US-09 | 查看服务调用日志 | ❌ 未实现 | 无 `mcp_audit_log` 表和对应接口。**注**：元数据写入审计（`mcp_metadata_audit_log`）已实现，仅覆盖 UPDATE_TABLE_INFO / UPDATE_COLUMN_INFO / UPSERT_TERM 的写入变更（含旧值），不覆盖工具调用日志 |
+| US-09 | 查看服务用量与调用日志 | ✅ 已实现 | 提供无锁内存微批收集器、15 天日度统计与调用日志明细，详情页提供「用量统计」Tab 集中展示 KPI 指标、趋势分析、工具分布与日志明细分页表格，支持多维过滤与凌晨自动清理过期数据 |
 | US-10 | 删除 MCP 服务 | ✅ 已实现 | 事务级联删除（快照/数据范围/预置工具/自定义工具/Prompt），已发布服务可直接删除；前端与全站删除操作一致（`ElMessageBox.confirm` 简单确认）。**遗留**：「仅管理员可删除」待角色体系统一实现 |
 
-> **说明**：详情页侧边导航已实现 Tab：基础信息 / 数据范围 / Tools / Prompts / 版本管理。`security`（US-06 暂缓）、`logs`（US-09 未实现）Tab 已从侧边导航移除（占位入口不下发，等实现后再加回）。发布/停用/启用操作位于详情页右上角，删除仅在列表页行尾。
+> **说明**：详情页侧边导航已实现 Tab：基础信息 / 数据范围 / Tools / Prompts / 用量统计 / 版本管理。`security`（US-06 暂缓，统一在应用层认证）未在侧边栏暴露。发布/停用/启用操作位于详情页右上角，删除仅在列表页行尾。
 
 ---
 

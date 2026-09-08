@@ -19,7 +19,7 @@
 | 授权（permission） | [permission.md](permission.md) | 三层权限判定（管理员 → 创建者 → ACL）、列表静默过滤 |
 | 数据源（datasource） | [datasource.md](datasource.md) | 数据源连接、元数据探查、表/列管理、列值抽取与检索 |
 | 语义管理（semantic） | [semantic.md](semantic.md) | 主题（Subject）、术语（Term）与关联、ES 语义检索 |
-| MCP 服务（mcp） | [mcp-service-management.md](mcp-service-management.md) | MCP 服务生命周期、数据范围、工具/Prompt、发布与版本管理、JSON-RPC Endpoint |
+| MCP 服务（mcp） | [mcp-service-management.md](mcp-service-management.md) | MCP 服务生命周期、数据范围、工具/Prompt、发布与版本管理、JSON-RPC Endpoint、用量统计与调用日志 |
 | 模板引擎（common.template） | [template-engine.md](template-engine.md) | 零依赖模板引擎，TEXT / 参数化 SQL 双渲染模式 |
 | 编辑器（前端） | [editor.md](editor.md) | CodeMirror 6 模板/SQL 编辑器架构与设计决策 |
 
