@@ -66,9 +66,12 @@ defineEmits<Emits>()
         {{ formatDateTime(row.updated_at) }}
       </template>
     </el-table-column>
-    <el-table-column :label="t('common.actions')" width="200" fixed="right" align="right">
+    <el-table-column :label="t('common.actions')" width="240" fixed="right" align="right">
       <template #default="{ row }">
         <div class="flex items-center justify-end gap-2">
+          <el-button type="primary" link @click.stop="$emit('detail', row)">
+            {{ t('common.detail') }}
+          </el-button>
           <el-button type="primary" link @click.stop="$emit('authorize', row)">
             {{ t('permission.button') }}
           </el-button>
