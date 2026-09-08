@@ -11,6 +11,7 @@ import { useRouter } from "vue-router";
 import type { SubjectVO } from "~/api/subject";
 import { deleteSubject, listSubjects } from "~/api/subject";
 import { Plus, Search, Refresh } from "@element-plus/icons-vue";
+import AuthDialog from "~/components/common/AuthDialog.vue";
 
 const { t } = useI18n();
 const router = useRouter();
@@ -24,6 +25,15 @@ const searchKeyword = ref("");
 const page = ref(1);
 const pageSize = ref(10);
 const total = ref(0);
+
+// 授权弹窗状态
+const authDialogVisible = ref(false);
+const authResourceId = ref("");
+
+const handleAuthorize = (subject: SubjectVO) => {
+  authResourceId.value = subject.id;
+  authDialogVisible.value = true;
+};
 
 const loadSubjects = async () => {
   try {
@@ -169,6 +179,7 @@ onMounted(() => {
         @detail="handleDetail"
         @edit="handleEdit"
         @delete="handleDelete"
+        @authorize="handleAuthorize"
       />
     </DataTableShell>
 
@@ -176,6 +187,12 @@ onMounted(() => {
       v-model="dialogVisible"
       :subject="currentSubject"
       @success="handleDialogSuccess"
+    />
+
+    <AuthDialog
+      v-model:visible="authDialogVisible"
+      resource-type="SUBJECT"
+      :resource-id="authResourceId"
     />
   </div>
 </template>

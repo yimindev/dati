@@ -11,6 +11,7 @@ import { useI18n } from "vue-i18n";
 import type { SubjectVO, UpdateSubjectRequest } from "~/api/subject";
 import { getSubject, updateSubject } from "~/api/subject";
 import { formatDateTime } from "~/composables";
+import AuthDialog from "~/components/common/AuthDialog.vue";
 
 const { t } = useI18n();
 const route = useRoute("/subjects/[id]");
@@ -19,6 +20,7 @@ const subjectId = computed(() => route.params.id as string);
 
 const loading = ref(false);
 const saving = ref(false);
+const authDialogVisible = ref(false);
 const subject = ref<SubjectVO | null>(null);
 
 const formData = ref<UpdateSubjectRequest>({});
@@ -115,6 +117,12 @@ onMounted(() => {
           </el-breadcrumb-item>
           <el-breadcrumb-item>{{ subject?.name || subjectId }}</el-breadcrumb-item>
         </el-breadcrumb>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <el-button @click="authDialogVisible = true">
+          {{ t("permission.button") }}
+        </el-button>
       </div>
     </div>
 
@@ -232,6 +240,12 @@ onMounted(() => {
         <TermManager :subject-id="subjectId" />
       </div>
     </main>
+
+    <AuthDialog
+      v-model:visible="authDialogVisible"
+      resource-type="SUBJECT"
+      :resource-id="subjectId"
+    />
   </div>
 </template>
 

@@ -13,6 +13,7 @@ interface Emits {
   (e: 'detail', subject: SubjectVO): void
   (e: 'edit', subject: SubjectVO): void
   (e: 'delete', subject: SubjectVO): void
+  (e: 'authorize', subject: SubjectVO): void
 }
 
 defineProps<Props>()
@@ -65,9 +66,12 @@ defineEmits<Emits>()
         {{ formatDateTime(row.updated_at) }}
       </template>
     </el-table-column>
-    <el-table-column :label="t('common.actions')" width="150" fixed="right" align="right">
+    <el-table-column :label="t('common.actions')" width="200" fixed="right" align="right">
       <template #default="{ row }">
         <div class="flex items-center justify-end gap-2">
+          <el-button type="primary" link @click.stop="$emit('authorize', row)">
+            {{ t('permission.button') }}
+          </el-button>
           <el-button type="primary" link @click.stop="$emit('edit', row)">
             {{ t('common.edit') }}
           </el-button>
