@@ -52,3 +52,8 @@ dati:
     # 仅信任本地回环 Origin（localhost/127.0.0.1/::1），其余一律 403（DNS rebinding 防护）。
     # 远程部署且存在浏览器客户端时，在此配置信任来源。
     allowed-origins: ${MCP_ALLOWED_ORIGINS:}
+    stats:
+      enabled: ${MCP_STATS_ENABLED:true}
+      flush-interval-seconds: ${MCP_STATS_FLUSH_INTERVAL_SECONDS:10}
+      batch-size: ${MCP_STATS_BATCH_SIZE:100}
+      retention-days: ${MCP_STATS_RETENTION_DAYS:15}

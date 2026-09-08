@@ -11,18 +11,26 @@ import com.dati.mcp.domain.model.McpServiceStatus;
 import com.dati.mcp.domain.service.McpServiceDataScopeService;
 import com.dati.mcp.domain.service.McpServicePublishService;
 import com.dati.mcp.domain.service.McpServiceService;
+import com.dati.mcp.domain.service.McpUsageService;
+import com.dati.mcp.repository.po.McpInvocationLogPO;
 import com.dati.mcp.server.assembler.McpDataScopeAssembler;
 import com.dati.mcp.server.assembler.McpServiceAssembler;
+import com.dati.mcp.server.assembler.McpUsageAssembler;
 import com.dati.mcp.server.pojo.DataScopeRequest;
 import com.dati.mcp.server.pojo.DataScopeResponse;
+import com.dati.mcp.server.pojo.McpInvocationLogVO;
 import com.dati.mcp.server.pojo.McpServiceCreateRequest;
 import com.dati.mcp.server.pojo.McpServiceDiffVO;
 import com.dati.mcp.server.pojo.McpServiceSnapshotVO;
 import com.dati.mcp.server.pojo.McpServiceVO;
+import com.dati.mcp.server.pojo.McpUsageStatsVO;
 import com.dati.mcp.server.pojo.PublishRequest;
 import com.dati.mcp.server.pojo.RollbackRequest;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -47,17 +55,23 @@ public class McpServiceController {
     private final McpServiceDataScopeService dataScopeService;
     private final McpDataScopeAssembler dataScopeAssembler;
     private final McpServicePublishService publishService;
+    private final McpUsageService mcpUsageService;
+    private final McpUsageAssembler mcpUsageAssembler;
 
     public McpServiceController(McpServiceService mcpServiceService,
                                 McpServiceAssembler mcpServiceAssembler,
                                 McpServiceDataScopeService dataScopeService,
                                 McpDataScopeAssembler dataScopeAssembler,
-                                McpServicePublishService publishService) {
+                                McpServicePublishService publishService,
+                                McpUsageService mcpUsageService,
+                                McpUsageAssembler mcpUsageAssembler) {
         this.mcpServiceService = mcpServiceService;
         this.mcpServiceAssembler = mcpServiceAssembler;
         this.dataScopeService = dataScopeService;
         this.dataScopeAssembler = dataScopeAssembler;
         this.publishService = publishService;
+        this.mcpUsageService = mcpUsageService;
+        this.mcpUsageAssembler = mcpUsageAssembler;
     }
 
     @DeleteMapping("/{id}")
@@ -163,6 +177,22 @@ public class McpServiceController {
                                        @Valid @RequestBody RollbackRequest request) {
         McpServiceSnapshot snapshot = publishService.rollback(id, request.getTargetVersionNumber(), request.getReleaseNote());
         return new IdResponse(snapshot.getId());
+    }
+
+    @GetMapping("/{id}/stats")
+    public McpUsageStatsVO getUsageStats(@PathVariable String id,
+                                         @RequestParam(defaultValue = "15") int days) {
+        return mcpUsageService.getUsageStats(id, days);
+    }
+
+    @GetMapping("/{id}/invocation-logs")
+    public PageResponse<McpInvocationLogVO> listInvocationLogs(@PathVariable String id,
+                                                               @RequestParam(required = false) String toolName,
+                                                               @RequestParam(required = false) Boolean success,
+                                                               @Valid PageReq pageReq) {
+        Pageable pageable = PageRequest.of(Math.max(0, pageReq.getPage() - 1), pageReq.getSize(), Sort.by(Sort.Direction.DESC, "createdAt"));
+        Page<McpInvocationLogPO> page = mcpUsageService.listLogs(id, toolName, success, pageable);
+        return PageResponse.of(page.map(mcpUsageAssembler::toVO));
     }
 
 }

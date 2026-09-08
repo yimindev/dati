@@ -105,9 +105,9 @@ onMounted(() => {
 </script>
 
 <template>
-  <div v-loading="loading" class="subject-detail-page flex flex-col gap-5 p-6">
+  <div v-loading="loading" class="subject-detail-page flex flex-col flex-1 min-h-0 gap-5 p-6 overflow-hidden">
     <!-- Top Navigation Header -->
-    <div class="detail-header flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div class="detail-header flex flex-col sm:flex-row sm:items-center justify-between gap-4 shrink-0">
       <div class="flex items-center gap-3 flex-wrap">
         <el-breadcrumb separator="/">
           <el-breadcrumb-item :to="{ path: '/subjects' }">
@@ -119,7 +119,7 @@ onMounted(() => {
     </div>
 
     <!-- Top Horizontal Underline Tabs -->
-    <div class="tabs-bar flex items-center border-b border-[var(--ep-border-color-lighter)] gap-8">
+    <div class="tabs-bar flex items-center border-b border-[var(--ep-border-color-lighter)] gap-8 shrink-0">
       <button
         v-for="tab in tabs"
         :key="tab.key"
@@ -142,7 +142,7 @@ onMounted(() => {
     </div>
 
     <!-- Tab Content Container -->
-    <main class="main-content flex-1 min-w-0">
+    <main class="main-content flex-1 min-w-0 min-h-0 overflow-y-auto pr-1 pb-2">
       <!-- Tab 1: Basic Info (Single Panel Container) -->
       <div v-if="activeTab === 'basic'" class="panel p-6 shadow-sm flex flex-col gap-6 rounded-xl border border-[var(--ep-border-color-lighter)] bg-[var(--ep-bg-color)]">
         <!-- Form Fields -->

@@ -47,6 +47,7 @@ declare module 'vue' {
     ElOption: typeof import('element-plus/es')['ElOption']
     ElPagination: typeof import('element-plus/es')['ElPagination']
     ElPopover: typeof import('element-plus/es')['ElPopover']
+    ElProgress: typeof import('element-plus/es')['ElProgress']
     ElRadio: typeof import('element-plus/es')['ElRadio']
     ElRadioGroup: typeof import('element-plus/es')['ElRadioGroup']
     ElSelect: typeof import('element-plus/es')['ElSelect']
@@ -98,6 +99,7 @@ declare module 'vue' {
     UpdateColumnInfoParams: typeof import('./components/mcp-service/tool-test/params/UpdateColumnInfoParams.vue')['default']
     UpdateTableInfoParams: typeof import('./components/mcp-service/tool-test/params/UpdateTableInfoParams.vue')['default']
     UpsertTermParams: typeof import('./components/mcp-service/tool-test/params/UpsertTermParams.vue')['default']
+    UsageStatsTab: typeof import('./components/mcp-service/UsageStatsTab.vue')['default']
   }
   export interface GlobalDirectives {
     vLoading: typeof import('element-plus/es')['ElLoadingDirective']

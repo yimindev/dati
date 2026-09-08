@@ -30,6 +30,7 @@ import DiffSummaryList from "~/components/mcp-service/DiffSummaryList.vue";
 import McpAccessConfigCard from "~/components/mcp-service/McpAccessConfigCard.vue";
 import PromptsTab from "~/components/mcp-service/PromptsTab.vue";
 import ToolsTab from "~/components/mcp-service/ToolsTab.vue";
+import UsageStatsTab from "~/components/mcp-service/UsageStatsTab.vue";
 import { formatDateTime } from "~/composables";
 
 const { t } = useI18n();
@@ -60,6 +61,7 @@ const tabs = computed(() => [
   { key: "tools", label: t("mcpService.tab.tools"), badge: service.value?.tool_count ?? 0 },
   { key: "prompts", label: t("mcpService.tab.prompts"), badge: promptCount.value },
   { key: "version", label: t("mcpService.tab.version") },
+  { key: "stats", label: t("mcpService.tab.usageStats") },
 ]);
 
 const statusLabel = (status?: string) => {
@@ -244,9 +246,9 @@ const handleSave = async () => {
 </script>
 
 <template>
-  <div v-loading="loading" class="mcp-detail-page flex flex-col gap-5 p-6">
+  <div v-loading="loading" class="mcp-detail-page flex flex-col flex-1 min-h-0 gap-5 p-6 overflow-hidden">
     <!-- Top Navigation Breadcrumbs & Action Bar -->
-    <div class="detail-header flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div class="detail-header flex flex-col sm:flex-row sm:items-center justify-between gap-4 shrink-0">
       <div class="flex items-center gap-3 flex-wrap">
         <el-breadcrumb separator="/">
           <el-breadcrumb-item :to="{ path: '/mcp-services' }">
@@ -343,7 +345,7 @@ const handleSave = async () => {
     </div>
 
     <!-- Top Horizontal Underline Tabs -->
-    <div class="border-b border-[var(--ep-border-color-lighter)]">
+    <div class="border-b border-[var(--ep-border-color-lighter)] shrink-0">
       <nav class="flex items-center gap-6 -mb-px overflow-x-auto">
         <button
           v-for="tab in tabs"
@@ -370,7 +372,7 @@ const handleSave = async () => {
     </div>
 
     <!-- Tab Content Body -->
-    <main class="detail-main min-w-0 flex-1">
+    <main class="detail-main min-w-0 flex-1 min-h-0 overflow-y-auto pr-1 pb-2">
       <!-- Full-Width Responsive Dual-Card Grid Layout (1:1 Equal Split) -->
       <div v-if="activeTab === 'basic'" class="grid grid-cols-1 lg:grid-cols-2 gap-6 w-full">
         <!-- Left Card: Basic Settings Form -->
@@ -442,6 +444,9 @@ const handleSave = async () => {
           :service="service"
           @refresh="refreshAll"
         />
+      </div>
+      <div v-else-if="activeTab === 'stats'" class="scope-panel p-[20px] shadow-sm">
+        <UsageStatsTab :service-id="serviceId" />
       </div>
     </main>
 

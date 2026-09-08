@@ -446,3 +446,41 @@
 5. **防篡改验证**：再次测试执行，args 传入 `{"_user.name": "fake_hacker_name"}`
    - 验证 HTTP 200，`success`=true，底层执行依然以当前真实登录用户的用户名执行（系统变量优先覆盖客户端传参）
 6. 删除服务（清理）
+
+---
+
+## TC-MCP-025 MCP 服务用量统计与调用日志全链路验证
+**级别：** P1
+**前置：** 已登录，种子数据源已就绪（TC-SEM-000）
+**数据：** `chinook.e2e.seeded_datasource_name`
+
+> **背景**：MCP 服务提供用量统计概览（总调用数、今日调用数、成功率、日度趋势、工具分布）与调用明细日志的分页及多维度筛选。
+
+1. **初始无调用状态验证**：搜索种子数据源获取 datasourceId → 创建 MCP 服务（携带 `data_scopes` 绑定该数据源）
+   - 查询用量统计：`GET /v1/mcp-services/{id}/stats`
+   - 验证返回 200，初始状态：`total_calls`=0、`today_calls`=0、`success_rate`=100.0、`avg_duration_ms`=0.0、`daily_trend` 为空数组、`tool_distribution` 为空数组
+   - 查询调用明细：`GET /v1/mcp-services/{id}/invocation-logs?page=1&size=10`
+   - 验证返回 200，`data` 为空数组，`total`=0
+2. **发布服务并触发调用**：
+   - 发布服务：`POST /v1/mcp-services/{id}/publish`（Body: `{"release_note": "v1 for stats"}`）→ 返回 200
+   - 发送成功调用：向 `POST /{code}/mcp` 发送 `tools/call` 请求（Header: `MCP-Protocol-Version: 2025-11-25`，工具名 `execute_sql`，参数 `sql: "SELECT 1"`）
+   - 验证返回 200，`result.isError`=false
+   - 发送失败调用：向 `POST /{code}/mcp` 发送 `tools/call` 请求调用未配置的未知工具名 `non_existent_tool`
+   - 验证返回带有 JSON-RPC 错误（如 -32602）
+3. **等待微批聚合刷盘并验证统计数据**：
+   - 等待异步微批写入持久化（10秒定时 flush）
+   - 再次调用 `GET /v1/mcp-services/{id}/stats?days=15`
+   - 验证返回 200：
+     - `total_calls` >= 2，`today_calls` >= 2
+     - `daily_trend` 包含当天的日度趋势项（`stat_date` 格式符合 YYYY-MM-DD，`total_calls` >= 2）
+     - `tool_distribution` 包含工具分布项（含 `execute_sql`，`call_count` >= 1）
+4. **验证调用日志分页与过滤**：
+   - 分页查询全部日志：`GET /v1/mcp-services/{id}/invocation-logs?page=1&size=10`
+     - 验证 `total` >= 2，每条记录包含字段 `id`、`service_id`、`tool_name`、`client_ip`、`duration_ms`、`success`、`created_at`
+   - 按工具名过滤：`GET /v1/mcp-services/{id}/invocation-logs?page=1&size=10&tool_name=execute_sql`
+     - 验证返回的日志项中 `tool_name` 全为 `execute_sql`
+   - 按成功状态过滤：`GET /v1/mcp-services/{id}/invocation-logs?page=1&size=10&success=true`
+     - 验证返回的日志项中 `success` 全为 true
+   - 按失败状态过滤：`GET /v1/mcp-services/{id}/invocation-logs?page=1&size=10&success=false`
+     - 验证返回的日志项中 `success` 全为 false，且 `error_type` 或 `error_message` 包含错误信息
+5. **清理**：删除测试 MCP 服务，验证删除成功

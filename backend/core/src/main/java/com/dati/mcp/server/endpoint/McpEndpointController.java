@@ -26,8 +26,17 @@ public class McpEndpointController {
     @PostMapping("/{code}/mcp")
     public ResponseEntity<Object> handle(@PathVariable String code, HttpServletRequest request,
                                          @RequestBody String body) {
+        String clientIp = extractClientIp(request);
         McpEndpointService.McpEndpointResult result = endpointService.handle(
-            code, body, request.getHeader("Origin"), request.getHeader("MCP-Protocol-Version"));
+            code, body, request.getHeader("Origin"), request.getHeader("MCP-Protocol-Version"), clientIp);
         return ResponseEntity.status(result.status()).body(result.body());
+    }
+
+    private String extractClientIp(HttpServletRequest request) {
+        String xff = request.getHeader("X-Forwarded-For");
+        if (xff != null && !xff.isBlank()) {
+            return xff.split(",")[0].trim();
+        }
+        return request.getRemoteAddr();
     }
 }

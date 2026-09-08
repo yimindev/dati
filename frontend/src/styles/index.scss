@@ -75,6 +75,9 @@ code {
   flex-direction: column;
   gap: 16px;
   padding: 24px;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 /* ============ Page Heading ============ */

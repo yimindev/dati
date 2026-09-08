@@ -13,6 +13,7 @@ import com.dati.mcp.repository.po.McpServiceSnapshotPO;
 import com.dati.permission.domain.model.Permission;
 import com.dati.permission.domain.model.ResourceType;
 import com.dati.permission.domain.service.PermissionService;
+import com.dati.mcp.domain.service.McpUsageCollector;
 import io.modelcontextprotocol.json.McpJsonDefaults;
 import io.modelcontextprotocol.json.McpJsonMapper;
 import io.modelcontextprotocol.spec.McpSchema;
@@ -41,6 +42,7 @@ public class McpEndpointService {
     private final McpServiceSnapshotDAO snapshotDAO;
     private final McpProtocolHandler protocolHandler;
     private final PermissionService permissionService;
+    private final McpUsageCollector usageCollector;
     private final Set<String> allowedOrigins;
     private final McpJsonMapper jsonMapper = McpJsonDefaults.getMapper();
 
@@ -48,11 +50,13 @@ public class McpEndpointService {
                               McpServiceSnapshotDAO snapshotDAO,
                               McpProtocolHandler protocolHandler,
                               PermissionService permissionService,
+                              McpUsageCollector usageCollector,
                               @Value("${dati.mcp.allowed-origins:}") String allowedOrigins) {
         this.mcpServiceDAO = mcpServiceDAO;
         this.snapshotDAO = snapshotDAO;
         this.protocolHandler = protocolHandler;
         this.permissionService = permissionService;
+        this.usageCollector = usageCollector;
         this.allowedOrigins = Arrays.stream(allowedOrigins.split(","))
             .map(String::trim)
             .filter(s -> !s.isEmpty())
@@ -63,7 +67,7 @@ public class McpEndpointService {
     public record McpEndpointResult(HttpStatus status, Object body) {
     }
 
-    public McpEndpointResult handle(String code, String body, String origin, String protocolVersion) {
+    public McpEndpointResult handle(String code, String body, String origin, String protocolVersion, String clientIp) {
         // 1. Service status semantics: unknown code / DRAFT are indistinguishable (404),
         //    DISABLED is explicit (503 + JSON-RPC error)
         McpServicePO service = mcpServiceDAO.findByCode(code).orElse(null);
@@ -99,7 +103,11 @@ public class McpEndpointService {
         try {
             McpSchema.JSONRPCMessage message = McpSchema.deserializeJsonRpcMessage(jsonMapper, body);
             if (message instanceof McpSchema.JSONRPCRequest req) {
-                return new McpEndpointResult(HttpStatus.OK, protocolHandler.handle(service, content, req));
+                long startTime = System.currentTimeMillis();
+                McpSchema.JSONRPCResponse resp = protocolHandler.handle(service, content, req);
+                long duration = System.currentTimeMillis() - startTime;
+                recordUsage(service.getId(), req, resp, duration, user, clientIp);
+                return new McpEndpointResult(HttpStatus.OK, resp);
             }
             // notifications: accept without response (2025-11-25 allows; we have none to handle)
             return new McpEndpointResult(HttpStatus.ACCEPTED, null);
@@ -108,6 +116,60 @@ public class McpEndpointService {
             return new McpEndpointResult(HttpStatus.BAD_REQUEST,
                 errorEnvelope(body, McpSchema.ErrorCodes.PARSE_ERROR, "Parse error: " + e.getMessage()));
         }
+    }
+
+    private void recordUsage(String serviceId, McpSchema.JSONRPCRequest req, McpSchema.JSONRPCResponse resp,
+                             long durationMs, User user, String clientIp) {
+        if (usageCollector == null || serviceId == null || req == null) {
+            return;
+        }
+        String method = req.method();
+        // Only execution-type requests count as usage: protocol handshakes and metadata queries
+        // (initialize, tools/list, resources/list, ping, ...) would pollute the statistics.
+        if (!McpSchema.METHOD_TOOLS_CALL.equals(method) && !McpSchema.METHOD_PROMPT_GET.equals(method)) {
+            return;
+        }
+        String toolName = extractToolName(req);
+        boolean success = true;
+        String errorMessage = null;
+
+        if (resp != null && resp.error() != null) {
+            success = false;
+            errorMessage = resp.error().message();
+        } else if (resp != null && resp.result() instanceof McpSchema.CallToolResult callResult) {
+            if (Boolean.TRUE.equals(callResult.isError())) {
+                success = false;
+                if (callResult.content() != null && !callResult.content().isEmpty()) {
+                    Object first = callResult.content().getFirst();
+                    if (first instanceof McpSchema.TextContent textContent) {
+                        errorMessage = textContent.text();
+                    } else {
+                        errorMessage = String.valueOf(first);
+                    }
+                } else {
+                    errorMessage = "Tool error";
+                }
+            }
+        }
+
+        String callerId = user != null ? user.getId() : null;
+        String callerName = user != null ? user.getName() : null;
+
+        usageCollector.record(serviceId, method, toolName, callerId, callerName, clientIp, success, durationMs, errorMessage);
+    }
+
+    private String extractToolName(McpSchema.JSONRPCRequest req) {
+        try {
+            if (McpSchema.METHOD_TOOLS_CALL.equals(req.method())) {
+                var callReq = jsonMapper.convertValue(req.params(), McpSchema.CallToolRequest.class);
+                return callReq != null ? callReq.name() : null;
+            } else if (McpSchema.METHOD_PROMPT_GET.equals(req.method())) {
+                var promptReq = jsonMapper.convertValue(req.params(), McpSchema.GetPromptRequest.class);
+                return promptReq != null ? promptReq.name() : null;
+            }
+        } catch (Exception ignored) {
+        }
+        return null;
     }
 
     /**

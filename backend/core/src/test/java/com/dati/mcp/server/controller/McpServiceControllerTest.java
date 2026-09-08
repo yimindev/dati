@@ -9,12 +9,17 @@ import com.dati.mcp.domain.model.McpServiceSnapshot;
 import com.dati.mcp.domain.service.McpServiceDataScopeService;
 import com.dati.mcp.domain.service.McpServicePublishService;
 import com.dati.mcp.domain.service.McpServiceService;
+import com.dati.mcp.domain.service.McpUsageService;
+import com.dati.mcp.repository.po.McpInvocationLogPO;
 import com.dati.mcp.server.assembler.McpDataScopeAssembler;
 import com.dati.mcp.server.assembler.McpServiceAssembler;
+import com.dati.mcp.server.assembler.McpUsageAssembler;
 import com.dati.mcp.server.pojo.DataScopeItemVO;
 import com.dati.mcp.server.pojo.DataScopeResponse;
 import com.dati.mcp.server.pojo.DataSourceRefVO;
+import com.dati.mcp.server.pojo.McpInvocationLogVO;
 import com.dati.mcp.server.pojo.McpServiceVO;
+import com.dati.mcp.server.pojo.McpUsageStatsVO;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -71,6 +76,12 @@ class McpServiceControllerTest {
 
     @MockitoBean
     private McpServicePublishService publishService;
+
+    @MockitoBean
+    private McpUsageService mcpUsageService;
+
+    @MockitoBean
+    private McpUsageAssembler mcpUsageAssembler;
 
     private McpService testService;
 
@@ -362,5 +373,53 @@ class McpServiceControllerTest {
                                 """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(TestFixtures.TEST_MCP_SERVICE_ID));
+    }
+
+    @Test
+    @DisplayName("Get usage stats - success")
+    void getUsageStats_shouldReturnStats() throws Exception {
+        McpUsageStatsVO vo = new McpUsageStatsVO();
+        vo.setTotalCalls(100L);
+        vo.setTodayCalls(10L);
+        vo.setSuccessRate(98.5);
+        vo.setAvgDurationMs(42.3);
+
+        when(mcpUsageService.getUsageStats(eq(TestFixtures.TEST_MCP_SERVICE_ID), eq(15))).thenReturn(vo);
+
+        mockMvc.perform(get("/v1/mcp-services/{id}/stats", TestFixtures.TEST_MCP_SERVICE_ID)
+                .param("days", "15"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.total_calls").value(100))
+            .andExpect(jsonPath("$.today_calls").value(10))
+            .andExpect(jsonPath("$.success_rate").value(98.5))
+            .andExpect(jsonPath("$.avg_duration_ms").value(42.3));
+    }
+
+    @Test
+    @DisplayName("List invocation logs - success")
+    void listInvocationLogs_shouldReturnPageResponse() throws Exception {
+        McpInvocationLogPO po = new McpInvocationLogPO();
+        po.setId("log-001");
+        po.setServiceId(TestFixtures.TEST_MCP_SERVICE_ID);
+        po.setToolName("execute_sql");
+        po.setSuccess(true);
+
+        McpInvocationLogVO logVO = new McpInvocationLogVO();
+        logVO.setId("log-001");
+        logVO.setServiceId(TestFixtures.TEST_MCP_SERVICE_ID);
+        logVO.setToolName("execute_sql");
+        logVO.setSuccess(true);
+
+        when(mcpUsageService.listLogs(eq(TestFixtures.TEST_MCP_SERVICE_ID), any(), any(), any()))
+            .thenReturn(new PageImpl<>(List.of(po)));
+        when(mcpUsageAssembler.toVO(any())).thenReturn(logVO);
+
+        mockMvc.perform(get("/v1/mcp-services/{id}/invocation-logs", TestFixtures.TEST_MCP_SERVICE_ID)
+                .param("page", "1")
+                .param("size", "10"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data[0].id").value("log-001"))
+            .andExpect(jsonPath("$.data[0].tool_name").value("execute_sql"))
+            .andExpect(jsonPath("$.total").value(1));
     }
 }

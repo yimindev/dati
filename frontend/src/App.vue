@@ -41,11 +41,11 @@ watch(
         </div>
       </template>
       <template v-else>
-        <div class="main-container flex">
-          <BaseSide/>
-          <div class="flex-1 min-w-0 bg-[var(--ep-fill-color-light)] flex flex-col">
-            <div class="m-4 p-2 bg-[var(--ep-bg-color)] flex-1">
-              <RouterView id="main-content" tabindex="-1" />
+        <div class="main-container flex overflow-hidden">
+          <BaseSide class="shrink-0" />
+          <div class="flex-1 min-w-0 bg-[var(--ep-fill-color-light)] flex flex-col min-h-0 overflow-hidden">
+            <div class="m-4 p-2 bg-[var(--ep-bg-color)] flex-1 min-h-0 flex flex-col overflow-hidden">
+              <RouterView id="main-content" tabindex="-1" class="flex-1 min-h-0 flex flex-col" />
             </div>
           </div>
         </div>
@@ -57,6 +57,7 @@ watch(
 <style>
 .main-container {
   height: calc(100vh - var(--ep-menu-item-height) - 4px);
+  overflow: hidden;
 }
 
 .home-container {

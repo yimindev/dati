@@ -4,9 +4,11 @@ import com.dati.TestFixtures;
 import com.dati.auth.authentication.User;
 import com.dati.auth.domain.service.AuthenticationService;
 import com.dati.mcp.domain.model.McpServiceStatus;
+import com.dati.mcp.domain.service.McpUsageCollector;
 import com.dati.mcp.repository.dao.McpServiceDAO;
 import com.dati.mcp.repository.dao.McpServiceSnapshotDAO;
 import com.dati.mcp.repository.po.McpServicePO;
+import com.dati.permission.domain.service.PermissionService;
 import io.modelcontextprotocol.json.McpJsonDefaults;
 import io.modelcontextprotocol.spec.McpSchema;
 import org.junit.jupiter.api.BeforeEach;
@@ -25,6 +27,12 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.clearInvocations;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -56,7 +64,10 @@ class McpEndpointControllerTest {
     private McpProtocolHandler protocolHandler;
 
     @MockitoBean
-    private com.dati.permission.domain.service.PermissionService permissionService;
+    private PermissionService permissionService;
+
+    @MockitoBean
+    private McpUsageCollector usageCollector;
 
     private McpServicePO service;
 
@@ -236,5 +247,51 @@ class McpEndpointControllerTest {
     void getMethodNotAllowed() throws Exception {
         mockMvc.perform(get("/test-mcp-service/mcp"))
             .andExpect(status().isMethodNotAllowed());
+    }
+
+    @Test
+    @DisplayName("protocol requests (tools/list) are not recorded as usage")
+    void protocolRequestsNotRecorded() throws Exception {
+        when(protocolHandler.handle(any(), any(), any())).thenReturn(
+            McpSchema.JSONRPCResponse.result(1, java.util.Map.of("tools", java.util.List.of())));
+
+        clearInvocations(usageCollector);
+        mockMvc.perform(post("/test-mcp-service/mcp")
+                .header("Accept", "application/json, text/event-stream")
+                .header("MCP-Protocol-Version", "2025-11-25")
+                .header("Authorization", "Bearer abc")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\"}"))
+            .andExpect(status().isOk());
+
+        verifyNoInteractions(usageCollector);
+    }
+
+    @Test
+    @DisplayName("tools/call request should record usage with toolName and client IP")
+    void toolsCallRecordsUsage() throws Exception {
+        when(protocolHandler.handle(any(), any(), any())).thenReturn(
+            McpSchema.JSONRPCResponse.result(1, java.util.Map.of("content", java.util.List.of())));
+
+        mockMvc.perform(post("/test-mcp-service/mcp")
+                .header("Accept", "application/json, text/event-stream")
+                .header("MCP-Protocol-Version", "2025-11-25")
+                .header("Authorization", "Bearer abc")
+                .header("X-Forwarded-For", "192.168.1.100")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/call\",\"params\":{\"name\":\"execute_sql\",\"arguments\":{}}}"))
+            .andExpect(status().isOk());
+
+        verify(usageCollector).record(
+            eq(service.getId()),
+            eq("tools/call"),
+            eq("execute_sql"),
+            any(),
+            any(),
+            eq("192.168.1.100"),
+            eq(true),
+            anyLong(),
+            isNull()
+        );
     }
 }
