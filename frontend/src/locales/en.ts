@@ -242,7 +242,9 @@ export default {
     selectedTables: "Selected Tables",
     selectAtLeastOne: "Please select at least one table",
     addSelected: "Add Selected Tables",
-    emptyList: "No tables yet",
+    emptyList: "No tables",
+    emptySelected: "None selected",
+    searchPlaceholder: "Search name or comment",
 
     // Specific Messages
     addSuccess: "Added successfully",

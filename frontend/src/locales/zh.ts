@@ -243,6 +243,8 @@ export default {
     selectAtLeastOne: "请至少选择一个表",
     addSelected: "添加选中表",
     emptyList: "暂无表",
+    emptySelected: "未选择",
+    searchPlaceholder: "搜索表名或注释",
 
     // 特有消息
     addSuccess: "添加成功",

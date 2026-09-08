@@ -47,6 +47,7 @@ const addTableLoading = ref(false);
 interface TransferItem {
   key: string;
   label: string;
+  comment?: string;
   disabled: boolean;
 }
 
@@ -54,9 +55,19 @@ const transferData = computed<TransferItem[]>(() => {
   return availableTables.value.map(table => ({
     key: table.name,
     label: table.name,
+    comment: table.comment,
     disabled: addedTableNames.value.includes(table.name),
   }));
 });
+
+const filterTableMethod = (query: string, item: TransferItem) => {
+  if (!query) return true;
+  const q = query.toLowerCase();
+  return (
+    item.label.toLowerCase().includes(q) ||
+    Boolean(item.comment && item.comment.toLowerCase().includes(q))
+  );
+};
 
 // 加载表列表
 const loadTables = async () => {
@@ -332,13 +343,14 @@ onMounted(async () => {
         <el-table-column
           prop="name"
           :label="t('common.tableName')"
-          min-width="160"
+          min-width="180"
+          show-overflow-tooltip
         >
           <template #default="{ row }">
             <el-button
               link
               type="primary"
-              class="!p-0 font-medium"
+              class="!p-0 font-medium truncate max-w-full"
               @click="handleColumnManage(row)"
             >
               {{ row.name }}
@@ -500,10 +512,33 @@ onMounted(async () => {
             v-model="selectedTables"
             :data="transferData"
             filterable
-            :filter-placeholder="t('common.search')"
+            :filter-method="filterTableMethod"
+            :filter-placeholder="t('tableInfo.searchPlaceholder')"
             :titles="[t('tableInfo.availableTables'), t('tableInfo.selectedTables')]"
             :button-texts="['', '']"
-          />
+          >
+            <template #default="{ option }">
+              <el-tooltip
+                placement="top"
+                :show-after="200"
+                :enterable="false"
+              >
+                <template #content>
+                  <div class="font-mono text-xs">{{ option.label }}</div>
+                  <div v-if="option.comment" class="text-xs text-[var(--ep-text-color-secondary)] opacity-85 mt-0.5 max-w-xs break-words">
+                    {{ option.comment }}
+                  </div>
+                </template>
+                <span class="truncate block">{{ option.label }}</span>
+              </el-tooltip>
+            </template>
+            <template #left-empty>
+              <span>{{ t('tableInfo.emptyList') }}</span>
+            </template>
+            <template #right-empty>
+              <span>{{ t('tableInfo.emptySelected') }}</span>
+            </template>
+          </el-transfer>
         </el-form-item>
       </el-form>
 
