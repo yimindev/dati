@@ -46,6 +46,6 @@ target/
 docs/user-guide/.vitepress/cache/
 
 # Generated sample datasets & SQL dumps (reproducible via scripts)
-examples/adventureworks-dw/*.sql
-examples/adventureworks-dw/*.sql.gz
+examples/adventureworks-dw/aw_dw_*.sql
+examples/adventureworks-dw/aw_dw_*.sql.gz
 examples/adventureworks-dw/sql/

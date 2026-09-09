@@ -15,6 +15,7 @@ import calendar
 import gzip
 import tempfile
 import subprocess
+import argparse
 from datetime import date, timedelta
 
 UPSTREAM_REPO = "https://github.com/patgruber/mysql-adventure-works-dw.git"
@@ -376,6 +377,50 @@ def _run_conversion():
     sql_size_mb = os.path.getsize(combined_path) / (1024 * 1024)
     gz_size_mb = os.path.getsize(gz_path) / (1024 * 1024)
     print(f"Done! aw_dw_2026.sql: {sql_size_mb:.2f} MB, aw_dw_2026.sql.gz: {gz_size_mb:.2f} MB")
+    
+    return combined_path
+
+def import_to_db(sql_path, args):
+    print(f"Directly importing generated data into MySQL ({args.host}:{args.port}/{args.database})...")
+    try:
+        import pymysql
+        conn = pymysql.connect(
+            host=args.host,
+            port=args.port,
+            user=args.user,
+            password=args.password,
+            database=args.database,
+            charset='utf8mb4',
+            client_flag=pymysql.constants.CLIENT.MULTI_STATEMENTS
+        )
+        with open(sql_path, 'r', encoding='utf-8') as f:
+            sql_content = f.read()
+        with conn.cursor() as cur:
+            cur.execute(sql_content)
+        conn.commit()
+        conn.close()
+        print("Import completed successfully via pymysql!")
+    except ImportError:
+        cmd = ["mysql", "-h", args.host, "-P", str(args.port), "-u", args.user]
+        if args.password:
+            cmd.append(f"-p{args.password}")
+        cmd.append(args.database)
+        with open(sql_path, "rb") as f:
+            subprocess.run(cmd, stdin=f, check=True)
+        print("Import completed successfully via mysql CLI!")
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description="Convert AdventureWorks DW to 2026 and optionally import to MySQL")
+    parser.add_argument("--host", help="MySQL host to import to (optional)")
+    parser.add_argument("--port", type=int, default=3306, help="MySQL port (default: 3306)")
+    parser.add_argument("--user", help="MySQL username")
+    parser.add_argument("--password", help="MySQL password")
+    parser.add_argument("--database", help="MySQL database name")
+    args = parser.parse_args()
+
+    combined_file = main()
+    if args.host:
+        if not args.user or not args.database:
+            print("Error: --user and --database are required when --host is provided.")
+            sys.exit(1)
+        import_to_db(combined_file, args)
