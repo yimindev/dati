@@ -108,7 +108,7 @@ class McpProtocolHandlerTest {
             new com.dati.mcp.server.pojo.SqlExecution("SELECT 1",
                 List.of(com.dati.mcp.server.pojo.StatementResult.select(List.of("a"), List.of(List.of(1)), 1)), null));
         McpSchema.JSONRPCRequest req = new McpSchema.JSONRPCRequest("tools/call", 4,
-            Map.of("name", "search_metadata", "arguments", Map.of("keywords", List.of("orders"))));
+            Map.of("name", "search_tables_and_terms", "arguments", Map.of("keywords", List.of("orders"))));
         McpSchema.JSONRPCResponse resp = handler.handle(service, content, req);
         assertNull(resp.error());
         McpSchema.CallToolResult result = (McpSchema.CallToolResult) resp.result();
@@ -130,7 +130,7 @@ class McpProtocolHandlerTest {
     void toolsCallExecutionError() {
         when(executor.execute(any())).thenThrow(new ToolExecuteException(ToolError.SCOPE_VIOLATION, "not in scope"));
         McpSchema.JSONRPCRequest req = new McpSchema.JSONRPCRequest("tools/call", 6,
-            Map.of("name", "search_metadata", "arguments", Map.of("keywords", List.of("x"))));
+            Map.of("name", "search_tables_and_terms", "arguments", Map.of("keywords", List.of("x"))));
         McpSchema.JSONRPCResponse resp = handler.handle(service, content, req);
         assertNull(resp.error());
         McpSchema.CallToolResult result = (McpSchema.CallToolResult) resp.result();
@@ -141,7 +141,7 @@ class McpProtocolHandlerTest {
     @DisplayName("tools/call with type-error argument returns isError, not INTERNAL_ERROR")
     void toolsCallTypeErrorIsNotInternalError() {
         McpSchema.JSONRPCRequest req = new McpSchema.JSONRPCRequest("tools/call", 11,
-            Map.of("name", "search_metadata", "arguments", Map.of("keywords", 123)));
+            Map.of("name", "search_tables_and_terms", "arguments", Map.of("keywords", 123)));
         McpSchema.JSONRPCResponse resp = handler.handle(service, content, req);
         assertNull(resp.error());
         McpSchema.CallToolResult result = (McpSchema.CallToolResult) resp.result();
@@ -154,7 +154,7 @@ class McpProtocolHandlerTest {
     @DisplayName("tools/call with missing required argument returns isError with violation message")
     void toolsCallMissingRequiredIsError() {
         McpSchema.JSONRPCRequest req = new McpSchema.JSONRPCRequest("tools/call", 12,
-            Map.of("name", "search_metadata", "arguments", Map.of()));
+            Map.of("name", "search_tables_and_terms", "arguments", Map.of()));
         McpSchema.JSONRPCResponse resp = handler.handle(service, content, req);
         assertNull(resp.error());
         McpSchema.CallToolResult result = (McpSchema.CallToolResult) resp.result();
@@ -222,11 +222,11 @@ class McpProtocolHandlerTest {
 
         assertNull(resp.error());
         McpSchema.ListToolsResult result = (McpSchema.ListToolsResult) resp.result();
-        assertEquals(List.of("get_table_info", "update_table_info", "update_column_info", "upsert_term"),
+        assertEquals(List.of("get_table_schema", "update_table_metadata", "update_column_metadata", "upsert_business_term"),
             result.tools().stream().map(McpSchema.Tool::name).toList());
 
         McpSchema.Tool read = result.tools().getFirst();
-        assertEquals("Get Table Info", read.title());
+        assertEquals("Get Table Schema", read.title());
         assertTrue(read.annotations().readOnlyHint());
         // GET_TABLE_INFO schema: data_source_id inside each tables[] item (decision 12)
         @SuppressWarnings("unchecked")
@@ -250,7 +250,7 @@ class McpProtocolHandlerTest {
         assertEquals(List.of("data_source_id", "table"), updateProps.get("required"));
 
         McpSchema.Tool term = result.tools().get(3);
-        assertEquals("upsert_term", term.name());
+        assertEquals("upsert_business_term", term.name());
         assertEquals("Upsert Business Term", term.title());
     }
 }

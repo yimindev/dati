@@ -62,7 +62,7 @@ class McpToolControllerTest {
         McpToolVO prebuilt = new McpToolVO();
         prebuilt.setId("SEARCH_METADATA");
         prebuilt.setToolType(McpToolType.SEARCH_METADATA);
-        prebuilt.setName("search_metadata");
+        prebuilt.setName("search_tables_and_terms");
         prebuilt.setDescription("Search metadata");
         prebuilt.setEnabled(true);
 

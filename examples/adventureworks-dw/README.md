@@ -196,7 +196,7 @@ Any MCP-compatible client (Cursor, Claude Desktop, Antigravity, Dify, Coze, or c
 > **User**: "What were our top 5 best-selling product subcategories by total sales amount in 2026? Please list their names and revenue."
 >
 > **Agent Execution Logic**:
-> 1. Calls `search_metadata(keywords: ["sales", "subcategory", "2026"])`, locating `factinternetsales`, `dimproductsubcategory`, and `dimtime`;
+> 1. Calls `search_tables_and_terms(keywords: ["sales", "subcategory", "2026"])`, locating `factinternetsales`, `dimproductsubcategory`, and `dimtime`;
 > 2. Automatically infers the 4-table snowflake topology (`factinternetsales` $\rightarrow$ `dimproduct` $\rightarrow$ `dimproductsubcategory` $\rightarrow$ `dimtime`);
 > 3. Calls `execute_sql` with the 4-table join and filters `CalendarYear = '2026'`.
 >
@@ -215,7 +215,7 @@ Any MCP-compatible client (Cursor, Claude Desktop, Antigravity, Dify, Coze, or c
 > **User**: "Calculate our total sales, Profit Margin, and Average Order Value (AOV) by Sales Territory for calendar year 2025."
 >
 > **Agent Execution Logic**:
-> 1. Calls `search_metadata(keywords: ["profit margin", "aov", "territory"])`;
+> 1. Calls `search_tables_and_terms(keywords: ["profit margin", "aov", "territory"])`;
 > 2. Retrieves governed formulas from DatI's term repository:
 >    - `Profit Margin`: `SUM(salesamount - totalproductcost) / SUM(salesamount)`
 >    - `AOV`: `SUM(salesamount) / COUNT(DISTINCT salesordernumber)`

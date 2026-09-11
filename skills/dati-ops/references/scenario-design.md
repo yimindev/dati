@@ -61,7 +61,7 @@ ON CONFLICT (user_name, name) DO NOTHING        -- 初始化类:重复调用无�
 2. **读也走自定义工具**:查询模板恒带 `WHERE user_name = {{_user.name}}`,不存在"忘了加过滤"的可能
 3. **角色门禁(SQL 内嵌 RBAC)**:权限校验写进模板,如汇总工具恒带
    `WHERE EXISTS (SELECT 1 FROM team_member WHERE user_name = {{_user.name}} AND role = 'LEADER')` —— 普通成员拿到空结果,与越权 0 行同一语义
-4. **字典值提取作为信息通道**:关闭 execute_sql 后,LLM 认识"有哪些项目/枚举值"靠 `POST .../values/extract` 提取字典值 + `search_metadata` 检索,而不是直接查表
+4. **字典值提取作为信息通道**:关闭 execute_sql 后,LLM 认识"有哪些项目/枚举值"靠 `POST .../values/extract` 提取字典值 + `search_tables_and_terms` 检索,而不是直接查表
 
 ## 4. 发布与验证
 

@@ -36,10 +36,10 @@
 1. 发送 `tools/list`（无 params）
 2. 验证响应：
    - 状态码 200，`result.tools` 为数组
-   - 返回**全部 enabled 工具**：prebuilt **7 个**（`search_metadata`/`get_table_info`/`list_tables`/`execute_sql`/`update_table_info`/`update_column_info`/`upsert_term`）+ 自定义工具（name=业务 name）
+   - 返回**全部 enabled 工具**：prebuilt **7 个**（`search_tables_and_terms`/`get_table_schema`/`list_tables`/`execute_sql`/`update_table_metadata`/`update_column_metadata`/`upsert_business_term`）+ 自定义工具（name=业务 name）
    - **确定性排序**：prebuilt 固定顺序 SEARCH_METADATA → GET_TABLE_INFO → LIST_TABLES → EXECUTE_SQL → UPDATE_TABLE_INFO → UPDATE_COLUMN_INFO → UPSERT_TERM，custom 按 name 字母序
-   - 每个工具含 `name`/`description`/`inputSchema`；**所有 prebuilt 另含 `title`**（`Search Metadata`/`Get Table Info`/`List Tables`/`Execute SQL`/`Update Table Metadata`/`Update Column Metadata`/`Upsert Business Term`）；custom 含 `title`
-   - **annotations**：`search_metadata`/`get_table_info`/`list_tables` 含 `readOnlyHint`=true；`update_table_info`/`update_column_info`/`upsert_term` 含 `readOnlyHint`=false、`destructiveHint`=false、`idempotentHint`=true、`openWorldHint`=true；`execute_sql` **无** annotations（可执行写 SQL，不声明只读）
+   - 每个工具含 `name`/`description`/`inputSchema`；**所有 prebuilt 另含 `title`**（`Search Tables and Terms`/`Get Table Schema`/`List Tables`/`Execute SQL`/`Update Table Metadata`/`Update Column Metadata`/`Upsert Business Term`）；custom 含 `title`
+   - **annotations**：`search_tables_and_terms`/`get_table_schema`/`list_tables` 含 `readOnlyHint`=true；`update_table_metadata`/`update_column_metadata`/`upsert_business_term` 含 `readOnlyHint`=false、`destructiveHint`=false、`idempotentHint`=true、`openWorldHint`=true；`execute_sql` **无** annotations（可执行写 SQL，不声明只读）
    - `inputSchema` 为对象，PARAMETERIZED_SQL 工具的 schema `properties`/`required` 与其 `parameters` 一致
    - **GET_TABLE_INFO schema 形态（decision 12 回归锚点）**：`properties.tables.items.properties` 含 `data_source_id`，`items.required`=["data_source_id", "table"]（`data_source_id` 在每行内，非顶层）
 3. **空服务语义**：服务无 enabled 工具 → `result.tools` 为**空数组**（不报错）
@@ -167,14 +167,14 @@
 
 1. 发送 `tools/list`（无 params）
 2. 验证响应：
-   - 状态码 200，`result.tools` 前 7 个为 prebuilt，顺序确定：`search_metadata` → `get_table_info` → `list_tables` → `execute_sql` → `update_table_info` → `update_column_info` → `upsert_term`
-3. **update_table_info（写工具）**：
+   - 状态码 200，`result.tools` 前 7 个为 prebuilt，顺序确定：`search_tables_and_terms` → `get_table_schema` → `list_tables` → `execute_sql` → `update_table_metadata` → `update_column_metadata` → `upsert_business_term`
+3. **update_table_metadata（写工具）**：
    - `title` == `Update Table Metadata`
    - `annotations`：`readOnlyHint`=false、`destructiveHint`=false、`idempotentHint`=true、`openWorldHint`=true
    - `inputSchema.properties.tables.items`：`required` == ["data_source_id", "table"]；`properties` 含 `data_source_id`/`schema`/`table`/`description`/`aliases`；`description.maxLength`==500；`aliases.maxItems`==20（全量替换语义）；`aliases.items.maxLength`==100
-4. **update_column_info**：`title`==`Update Column Metadata`；`items.required` 与 `["data_source_id", "table", "column"]` 集合相等（victools 按字母序输出，如 `["column", "data_source_id", "table"]`，顺序非契约）
-5. **upsert_term**：`title`==`Upsert Business Term`；`items.required`==["name", "subject_name"]；`subject_name.maxLength`==200、`name.maxLength`==200
-6. **只读工具对照**：`search_metadata`/`get_table_info` 的 `annotations.readOnlyHint`==true；`execute_sql` **无** `annotations` 字段
+4. **update_column_metadata**：`title`==`Update Column Metadata`；`items.required` 与 `["data_source_id", "table", "column"]` 集合相等（victools 按字母序输出，如 `["column", "data_source_id", "table"]`，顺序非契约）
+5. **upsert_business_term**：`title`==`Upsert Business Term`；`items.required`==["name", "subject_name"]；`subject_name.maxLength`==200、`name.maxLength`==200
+6. **只读工具对照**：`search_tables_and_terms`/`get_table_schema` 的 `annotations.readOnlyHint`==true；`execute_sql` **无** `annotations` 字段
 7. **GET_TABLE_INFO schema 回归锚点**：`tables.items.properties` 含 `data_source_id`（decision 12：`data_source_id` 在每行内）
 
 ---
@@ -186,16 +186,16 @@
 
 > **注意**：UPSERT_TERM 通过 `subject_name` 在服务 scope 内定位主题——服务 B 必须绑定种子主题（DATA_SOURCE scope 的服务会对术语返回 SCOPE_ERROR）。
 
-1. **update_table_info 部分失败语义**：`tools/call`，params `{name: "update_table_info", arguments: {tables: [{data_source_id: <seedDsId>, table: "genre", description: "<write_tool.table_desc>"}, {data_source_id: <seedDsId>, table: "<write_tool.ghost_table>", description: "x"}]}}`
+1. **update_table_metadata 部分失败语义**：`tools/call`，params `{name: "update_table_metadata", arguments: {tables: [{data_source_id: <seedDsId>, table: "genre", description: "<write_tool.table_desc>"}, {data_source_id: <seedDsId>, table: "<write_tool.ghost_table>", description: "x"}]}}`
    - 状态码 200；`result.isError` == **false**（部分失败不置 error，供 LLM 自纠错）
    - `result.structuredContent.type` == `METADATA_UPDATE`；`results` 长度 2
    - `results[0].success`==true、`change_type`==UPDATE、`new.description`==写入值；`results[1].success`==false、`error.error_category`==PARAM_ERROR
-   - 回读验证：`tools/call` get_table_info → genre 表 description==写入值（写入经协议链路生效）
-   - **恢复**：`tools/call` update_table_info 写回 `description`=""、`aliases`=[] → success=true
-2. **upsert_term 幂等 upsert（CREATE→UPDATE）**：`tools/call`，params `{name: "upsert_term", arguments: {terms: [{subject_name: "<seeded_subject_name>", name: "<write_tool.term_name>", description: "<write_tool.term_desc>", aliases: ["<write_tool.term_aliases[0]>"]}]}}`
+   - 回读验证：`tools/call` get_table_schema → genre 表 description==写入值（写入经协议链路生效）
+   - **恢复**：`tools/call` update_table_metadata 写回 `description`=""、`aliases`=[] → success=true
+2. **upsert_business_term 幂等 upsert（CREATE→UPDATE）**：`tools/call`，params `{name: "upsert_business_term", arguments: {terms: [{subject_name: "<seeded_subject_name>", name: "<write_tool.term_name>", description: "<write_tool.term_desc>", aliases: ["<write_tool.term_aliases[0]>"]}]}}`
    - 状态码 200；`result.isError`==false；`structuredContent.results[0].change_type`==**CREATE**、`old`==null
    - **再次调用同参数** → `change_type`==**UPDATE**、`old.description`==`term_desc`（幂等 upsert，不重复创建）
-3. **参数错误 → isError 结果（既有 ToolExecuteException 语义）**：`tools/call` update_table_info，arguments.description 为 501 字符 → 状态码 200，`result.isError`==**true**，`result.content[0].text` 含 `size must be between 0 and 500`（binder 层 PARAM_INVALID 走 isError 供 LLM 自纠错，与 TC-END-003 的 SQL 策略违规一致；非 JSON-RPC error）
+3. **参数错误 → isError 结果（既有 ToolExecuteException 语义）**：`tools/call` update_table_metadata，arguments.description 为 501 字符 → 状态码 200，`result.isError`==**true**，`result.content[0].text` 含 `size must be between 0 and 500`（binder 层 PARAM_INVALID 走 isError 供 LLM 自纠错，与 TC-END-003 的 SQL 策略违规一致；非 JSON-RPC error）
 4. **清理**：平台 API DELETE `/v1/terms/{id}` 删除测试术语（按步骤 2 术语名查询 id）；删除两个测试服务
 
 ---

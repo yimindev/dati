@@ -12,17 +12,17 @@ import lombok.Getter;
 @Getter
 public enum McpToolType {
     SEARCH_METADATA(
-        "search_metadata",
-        "Search Metadata",
-        "Search tables, columns, sample values, and business terms by keywords across data sources.",
+        "search_tables_and_terms",
+        "Search Tables and Terms",
+        "Search relevant database tables, column names, sample values, and business terms by keywords. Always use this tool first to discover the right tables and terms instead of guessing tables or running exploratory SQL.",
         SearchMetadataArgs.class,
         "{\"readOnlyHint\":true}",
         true
     ),
     GET_TABLE_INFO(
-        "get_table_info",
-        "Get Table Info",
-        "Get full column schemas (names, types, comments, sample values) for up to 20 tables.",
+        "get_table_schema",
+        "Get Table Schema",
+        "Get detailed column schemas (names, types, comments, and sample values) for specified tables (up to 20 tables).",
         GetTableInfoArgs.class,
         "{\"readOnlyHint\":true}",
         true
@@ -30,7 +30,7 @@ public enum McpToolType {
     LIST_TABLES(
         "list_tables",
         "List Tables",
-        "List all available tables with schema, name, and description (table-level only, no columns).",
+        "List all available tables with their schema, name, and description (overview only, no columns). Use this tool when exploring the catalog or when keyword search returns no matches.",
         ListTablesArgs.class,
         "{\"readOnlyHint\":true}",
         true
@@ -38,31 +38,31 @@ public enum McpToolType {
     EXECUTE_SQL(
         "execute_sql",
         "Execute SQL",
-        "Execute an SQL query or statement against a data source.",
+        "Execute an SQL query or statement against a data source and return result rows. Use this tool only when no specialized or custom analysis tool is available for your task.",
         ExecuteSqlArgs.class,
         null,
         true
     ),
     UPDATE_TABLE_INFO(
-        "update_table_info",
+        "update_table_metadata",
         "Update Table Metadata",
-        "Enrich table description or aliases after analysis to improve future queries.",
+        "Enrich table description or aliases after analysis to improve future queries and search accuracy.",
         UpdateTableInfoArgs.class,
         "{\"readOnlyHint\":false,\"destructiveHint\":false,\"idempotentHint\":true,\"openWorldHint\":true}",
         false
     ),
     UPDATE_COLUMN_INFO(
-        "update_column_info",
+        "update_column_metadata",
         "Update Column Metadata",
-        "Enrich column description (e.g. enum meanings, value formats) or aliases after analysis to improve future queries.",
+        "Enrich column descriptions (e.g. business meanings, enum mappings) or aliases after analysis to improve future queries.",
         UpdateColumnInfoArgs.class,
         "{\"readOnlyHint\":false,\"destructiveHint\":false,\"idempotentHint\":true,\"openWorldHint\":true}",
         false
     ),
     UPSERT_TERM(
-        "upsert_term",
+        "upsert_business_term",
         "Upsert Business Term",
-        "Enrich business vocabulary by creating or updating terms under a subject after analysis.",
+        "Create or update a business glossary term (definition, calculation rules, or aliases) under a subject after analysis.",
         UpsertTermArgs.class,
         "{\"readOnlyHint\":false,\"destructiveHint\":false,\"idempotentHint\":true,\"openWorldHint\":true}",
         false

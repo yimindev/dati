@@ -26,7 +26,7 @@ class ToolDefinitionConverterTest {
         var content = TestFixtures.createTestSnapshotContent();
         List<McpSchema.Tool> tools = converter.convert(content);
         assertEquals(2, tools.size());
-        assertEquals("search_metadata", tools.get(0).name());
+        assertEquals("search_tables_and_terms", tools.get(0).name());
         assertEquals("list_tasks", tools.get(1).name());
         assertEquals("查询任务列表", tools.get(1).title());
         assertEquals("object", tools.get(1).inputSchema().get("type"));
@@ -54,7 +54,7 @@ class ToolDefinitionConverterTest {
             TestFixtures.createTestPrebuiltToolDraft(McpToolType.LIST_TABLES, true, new ToolConfig.ListTablesConfig()),
             TestFixtures.createTestPrebuiltToolDraft(McpToolType.SEARCH_METADATA, true, new ToolConfig.SearchMetadataConfig())));
         List<McpSchema.Tool> tools = converter.convert(content);
-        assertEquals(List.of("search_metadata", "get_table_info", "list_tables", "execute_sql"),
+        assertEquals(List.of("search_tables_and_terms", "get_table_schema", "list_tables", "execute_sql"),
             tools.stream().map(McpSchema.Tool::name).toList());
     }
 
@@ -67,7 +67,7 @@ class ToolDefinitionConverterTest {
             TestFixtures.createTestPrebuiltToolDraft(McpToolType.LIST_TABLES, true, new ToolConfig.ListTablesConfig())));
         List<McpSchema.Tool> tools = converter.convert(content);
 
-        assertEquals(List.of("get_table_info", "list_tables"), tools.stream().map(McpSchema.Tool::name).toList());
+        assertEquals(List.of("get_table_schema", "list_tables"), tools.stream().map(McpSchema.Tool::name).toList());
         McpSchema.Tool tool = tools.get(1);
         assertEquals("list_tables", tool.name());
         assertEquals("List Tables", tool.title());
@@ -84,11 +84,11 @@ class ToolDefinitionConverterTest {
         content.setPrebuiltTools(List.of(
             TestFixtures.createTestPrebuiltToolDraft(McpToolType.SEARCH_METADATA, true, new ToolConfig.SearchMetadataConfig())));
         content.setCustomTools(List.of(
-            TestFixtures.createTestCustomToolDraft("search_metadata", McpToolType.PARAMETERIZED_SQL, true, new ToolConfig.ParamSqlConfig()),
+            TestFixtures.createTestCustomToolDraft("search_tables_and_terms", McpToolType.PARAMETERIZED_SQL, true, new ToolConfig.ParamSqlConfig()),
             TestFixtures.createTestCustomToolDraft("dup", McpToolType.PARAMETERIZED_SQL, true, new ToolConfig.ParamSqlConfig()),
             TestFixtures.createTestCustomToolDraft("dup", McpToolType.PARAMETERIZED_SQL, true, new ToolConfig.ParamSqlConfig())));
         List<McpSchema.Tool> tools = converter.convert(content);
-        assertEquals(List.of("search_metadata", "dup"), tools.stream().map(McpSchema.Tool::name).toList());
+        assertEquals(List.of("search_tables_and_terms", "dup"), tools.stream().map(McpSchema.Tool::name).toList());
     }
 
     @Test
@@ -146,12 +146,12 @@ class ToolDefinitionConverterTest {
             TestFixtures.createTestPrebuiltToolDraft(McpToolType.EXECUTE_SQL, true,
                 new ToolConfig.ExecuteSqlConfig())));
         List<McpSchema.Tool> tools = converter.convert(content);
-        McpSchema.Tool read = tools.stream().filter(t -> t.name().equals("search_metadata")).findFirst().orElseThrow();
-        McpSchema.Tool write = tools.stream().filter(t -> t.name().equals("update_table_info")).findFirst().orElseThrow();
+        McpSchema.Tool read = tools.stream().filter(t -> t.name().equals("search_tables_and_terms")).findFirst().orElseThrow();
+        McpSchema.Tool write = tools.stream().filter(t -> t.name().equals("update_table_metadata")).findFirst().orElseThrow();
         McpSchema.Tool sql = tools.stream().filter(t -> t.name().equals("execute_sql")).findFirst().orElseThrow();
 
-        assertEquals("search_metadata", read.name());
-        assertEquals("Search Metadata", read.title());
+        assertEquals("search_tables_and_terms", read.name());
+        assertEquals("Search Tables and Terms", read.title());
         assertTrue(read.annotations().readOnlyHint());
 
         assertEquals("Update Table Metadata", write.title());
@@ -206,7 +206,7 @@ class ToolDefinitionConverterTest {
             TestFixtures.createTestPrebuiltToolDraft(McpToolType.EXECUTE_SQL, true, new ToolConfig.ExecuteSqlConfig())));
         List<McpSchema.Tool> tools = converter.convert(content);
         assertEquals(1, tools.size());
-        assertEquals("Execute an SQL query or statement against a data source. Allowed operations: SELECT. Max rows: 1000",
+        assertEquals("Execute an SQL query or statement against a data source and return result rows. Use this tool only when no specialized or custom analysis tool is available for your task. Allowed operations: SELECT. Max rows: 1000",
                 tools.getFirst().description());
     }
 
@@ -227,7 +227,7 @@ class ToolDefinitionConverterTest {
             TestFixtures.createTestPrebuiltToolDraft(McpToolType.EXECUTE_SQL, true, cfg)));
         List<McpSchema.Tool> tools = converter.convert(content);
         assertEquals(1, tools.size());
-        assertEquals("Execute an SQL query or statement against a data source. Allowed operations: SELECT, INSERT, UPDATE (multi-statement supported). Max rows: 500",
+        assertEquals("Execute an SQL query or statement against a data source and return result rows. Use this tool only when no specialized or custom analysis tool is available for your task. Allowed operations: SELECT, INSERT, UPDATE (multi-statement supported). Max rows: 500",
                 tools.getFirst().description());
     }
 
@@ -251,7 +251,7 @@ class ToolDefinitionConverterTest {
             TestFixtures.createTestPrebuiltToolDraft(McpToolType.EXECUTE_SQL, true, cfg)));
         List<McpSchema.Tool> tools = converter.convert(content);
         assertEquals(1, tools.size());
-        assertEquals("Execute an SQL query or statement against a data source. Allowed operations: ALL. Max rows: 1000",
+        assertEquals("Execute an SQL query or statement against a data source and return result rows. Use this tool only when no specialized or custom analysis tool is available for your task. Allowed operations: ALL. Max rows: 1000",
                 tools.getFirst().description());
     }
 
@@ -269,7 +269,7 @@ class ToolDefinitionConverterTest {
                 TestFixtures.createTestPrebuiltToolDraft(McpToolType.EXECUTE_SQL, true, new ToolConfig.ExecuteSqlConfig())));
             List<McpSchema.Tool> tools = converter.convert(content);
             assertEquals(1, tools.size());
-            assertEquals("Execute an SQL query or statement against a data source. Allowed operations: SELECT. Max rows: 1000. Context: current user name: alice, user id: u-123",
+            assertEquals("Execute an SQL query or statement against a data source and return result rows. Use this tool only when no specialized or custom analysis tool is available for your task. Allowed operations: SELECT. Max rows: 1000. Context: current user name: alice, user id: u-123",
                 tools.getFirst().description());
         } finally {
             com.dati.base.RequestContext.clear();

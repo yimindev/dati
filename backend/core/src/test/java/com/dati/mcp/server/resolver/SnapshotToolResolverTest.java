@@ -20,13 +20,13 @@ class SnapshotToolResolverTest {
     private final SnapshotToolResolver resolver = new SnapshotToolResolver();
 
     @Test
-    @DisplayName("resolves prebuilt tool by enum name")
+    @DisplayName("resolves prebuilt tool by tool name")
     void resolvesPrebuilt() {
         var content = TestFixtures.createTestSnapshotContent();
-        Optional<SnapshotToolResolver.ResolvedTool> tool = resolver.resolve(content, "search_metadata");
+        Optional<SnapshotToolResolver.ResolvedTool> tool = resolver.resolve(content, "search_tables_and_terms");
         assertTrue(tool.isPresent());
         assertEquals(McpToolType.SEARCH_METADATA, tool.get().toolType());
-        assertEquals("search_metadata", tool.get().name());
+        assertEquals("search_tables_and_terms", tool.get().name());
     }
 
     @Test
@@ -48,7 +48,7 @@ class SnapshotToolResolverTest {
             TestFixtures.createTestPrebuiltToolDraft(McpToolType.SEARCH_METADATA, false, new ToolConfig.SearchMetadataConfig())));
         content.setCustomTools(List.of(
             TestFixtures.createTestCustomToolDraft("off", McpToolType.PARAMETERIZED_SQL, false, new ToolConfig.ParamSqlConfig())));
-        assertTrue(resolver.resolve(content, "search_metadata").isEmpty());
+        assertTrue(resolver.resolve(content, "search_tables_and_terms").isEmpty());
         assertTrue(resolver.resolve(content, "off").isEmpty());
         assertTrue(resolver.resolve(content, "nope").isEmpty());
     }

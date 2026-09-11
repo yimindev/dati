@@ -10,6 +10,6 @@ import java.util.List;
 /** SEARCH_METADATA tool parameters (single source of truth for schema + validation). */
 public record SearchMetadataArgs(
     @NotNull @Size(min = 1)
-    @JsonPropertyDescription("Search keywords or business terms")
+    @JsonPropertyDescription("List of search keywords or business terms. Matched using OR logic (feel free to provide multiple relevant terms or synonyms).")
     List<@NotBlank String> keywords
 ) {}

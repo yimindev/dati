@@ -35,7 +35,7 @@ class McpParameterSchemaGeneratorTest {
         Map<String, Object> keywords = map(map(schema.get("properties")).get("keywords"));
         assertThat(keywords.get("type")).isEqualTo("array");
         assertThat(keywords.get("minItems")).isEqualTo(1);
-        assertThat(keywords.get("description")).isEqualTo("Search keywords or business terms");
+        assertThat(keywords.get("description")).isEqualTo("List of search keywords or business terms. Matched using OR logic (feel free to provide multiple relevant terms or synonyms).");
         Map<String, Object> items = map(keywords.get("items"));
         assertThat(items.get("type")).isEqualTo("string");
         assertThat(items.get("minLength")).isEqualTo(1);

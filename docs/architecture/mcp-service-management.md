@@ -283,7 +283,7 @@ com.dati.semantic.domain.model/
 - **写后即生效**：直接写共享元数据存储（非草稿/快照），GET_TABLE_INFO / SEARCH_METADATA 立即可见
 - **scope 只校验数据源级**（`ScopeValidator.validateDataSource`）：元数据写入不是数据访问，不做表级 scope；UPSERT_TERM 用 `resolveSubjectInScope` 按名称在 scope SUBJECT 内定位主题
 - **旧值捕获**：写入前经 `MetadataEntityResolver` 读当前 description/aliases 作为 `old` 值，`new` 反映合并后的最终状态（漏写字段保持原值）
-- **aliases 全量替换语义**：工具描述明确提示先 `get_table_info` 查当前值再写
+- **aliases 全量替换语义**：工具描述明确提示先 `get_table_schema` 查当前值再写
 - **幂等**：annotations 声明 `idempotentHint=true`；审计日志完整记录每次变更（恢复基线可追溯）
 
 #### Tool Test（工具测试）
@@ -1048,7 +1048,7 @@ UsageStatsTab（用量统计与调用明细）
 |---|---|---|---|
 | US-01 | 服务创建与基础管理 | ✅ 已实现 | 服务 CRUD、code 校验、分页列表 |
 | US-02 | 数据范围配置 | ✅ 已实现 | 数据源 + 主题引用，全量替换 |
-| US-03 | 工具管理 | ✅ 已实现 | 预置工具（7 种）+ 自定义工具 CRUD。**2026-08 追加元数据更新预置工具**（UPDATE_TABLE_INFO / UPDATE_COLUMN_INFO / UPSERT_TERM，见 2.2 元数据更新工具）；**追加 LIST_TABLES 表清单工具**（表级概览，供 LLM 全局视图后接 get_table_info） |
+| US-03 | 工具管理 | ✅ 已实现 | 预置工具（7 种）+ 自定义工具 CRUD。**2026-08 追加元数据更新预置工具**（UPDATE_TABLE_INFO / UPDATE_COLUMN_INFO / UPSERT_TERM，见 2.2 元数据更新工具）；**追加 LIST_TABLES 表清单工具**（表级概览，供 LLM 全局视图后接 get_table_schema） |
 | US-04 | 创建与配置 Resource | ❌ V1 暂缓 | 见 US-04 文档说明 |
 | US-05 | 创建与配置 Prompt | ✅ 已实现 | Prompt CRUD + 模板校验 + 参数一致性检查 |
 | US-5.5 | 模板引擎基础设施 | ✅ 已实现 | Handlebars 风格 Parser + Text/SQL Renderer |
