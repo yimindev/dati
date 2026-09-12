@@ -1,24 +1,45 @@
+# Build outputs & dependencies
 target/
 !**/src/main/**/target/
 !**/src/test/**/target/
+node_modules/
+**/node_modules/
+dist/
+**/dist/
 
-### STS ###
-.apt_generated
-.springBeans
-.sts4-cache
-
+# IDE & Editors
 ### IntelliJ IDEA ###
 .idea
 *.iws
 *.iml
 *.ipr
 
+### Eclipse & STS ###
+.apt_generated
+.springBeans
+.sts4-cache
+.project
+.classpath
+.factorypath
+.settings/
+
 ### VS Code ###
 .vscode/
 
+### AI & Dev Tools ###
+.junie/
+.superpowers/
+.playwright/
+.playwright-cli/
 
+# OS files
 .DS_Store
 **/.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
 
 # Git worktrees
 .worktrees/
@@ -29,21 +50,17 @@ target/
 
 # Local env secrets (template: .env.example)
 .env
-/.superpowers/
-/.playwright-cli/
-/design/
-/frontend/public/docs/
-/docs/user-guide/.vitepress/cache/
-/.project
-/.settings/org.eclipse.core.resources.prefs
-/.settings/org.eclipse.m2e.core.prefs
-/e2e-tests/reports/
+.env.local
 
-# MCP Conformance run artifacts (regenerable; baseline yml is versioned)
-/e2e-tests/conformance/results/
-
-# VitePress build cache
+# Documentation & design artifacts
+design/
+frontend/public/docs/
 docs/user-guide/.vitepress/cache/
+docs/user-guide/.vitepress/dist/
+
+# Test & conformance artifacts
+e2e-tests/reports/
+e2e-tests/conformance/results/
 
 # Generated sample datasets & SQL dumps (reproducible via scripts)
 examples/adventureworks-dw/aw_dw_*.sql

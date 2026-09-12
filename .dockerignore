@@ -2,6 +2,7 @@
 .git
 .gitignore
 .gitattributes
+.worktrees/
 
 # IDE & Editor
 .idea
@@ -23,11 +24,23 @@
 frontend/public/docs/
 
 # Secrets (must never enter the build context)
-.env
+.env*
+!.env.example
 
 # Database files & logs
 db/
+*.mv.db
+*.trace.db
 *.log
 *.tmp
 logs/
+
+# Tests & tooling artifacts
 .playwright/
+.playwright-cli/
+e2e-tests/reports/
+e2e-tests/conformance/results/
+
+# Large sample datasets & SQL dumps
+examples/adventureworks-dw/sql/
+examples/adventureworks-dw/aw_dw_*.sql*

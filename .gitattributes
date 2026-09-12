@@ -1,1 +1,9 @@
+# Auto-detect text files and normalize line endings
+* text=auto
+
+# Scripts: always LF (prevents \r issues on Linux/Docker when checked out on Windows)
+*.sh text eol=lf
+
+# Windows batch files
 *.cmd text eol=crlf
+*.bat text eol=crlf

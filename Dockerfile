@@ -31,9 +31,9 @@ RUN ln -s /build/frontend/node_modules /build/node_modules
 
 # Build documentation (VitePress) and frontend (Vue 3 SPA)
 WORKDIR /build/frontend
-RUN cd ../docs/user-guide && /build/frontend/node_modules/.bin/vitepress build . \
-    && cd /build/frontend && /build/frontend/node_modules/.bin/vue-tsc -b \
-    && /build/frontend/node_modules/.bin/vite build
+RUN cd ../docs/user-guide && vitepress build . \
+    && cd /build/frontend && vue-tsc -b \
+    && vite build
 
 # ==========================================
 # Stage 2: Build Backend Standalone Fat JAR
@@ -53,7 +53,7 @@ COPY backend ./backend
 COPY --from=frontend-builder /build/frontend/dist /build/backend/app/src/main/resources/static
 
 # Build Spring Boot Fat JAR
-RUN mvn clean package -DskipTests -f backend/pom.xml
+RUN --mount=type=cache,target=/root/.m2 mvn clean package -DskipTests -f backend/pom.xml
 
 # ==========================================
 # Stage 3: Production Runtime (JRE 21 Alpine)
@@ -84,4 +84,4 @@ VOLUME ["/app/db"]
 HEALTHCHECK --interval=10s --timeout=3s --start-period=15s --retries=3 \
   CMD wget -q --spider http://localhost:8085/actuator/health || exit 1
 
-ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]
+ENTRYPOINT ["sh", "-c", "exec java $JAVA_OPTS -jar app.jar"]
