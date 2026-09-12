@@ -330,4 +330,31 @@ class TermServiceTest {
         assertThat(result.get(1).name()).isEqualTo("高价值客户");
         assertThat(result.get(1).subjectName()).isEqualTo("客户价值");
     }
+
+    @Test
+    @DisplayName("getTermsBySubjectIds - empty subjectIds returns empty list")
+    void getTermsBySubjectIds_emptyInput() {
+        assertThat(termService.getTermsBySubjectIds(List.of())).isEmpty();
+        assertThat(termService.getTermsBySubjectIds(null)).isEmpty();
+    }
+
+    @Test
+    @DisplayName("getTermsBySubjectIds - resolves terms and subject names")
+    void getTermsBySubjectIds_resolvesTermsAndSubjectNames() {
+        TermPO t1 = new TermPO();
+        t1.setId("t1"); t1.setSubjectId("s1"); t1.setName("活跃用户");
+        t1.setDescription("30天内登录过的用户");
+        when(termDAO.findBySubjectIdIn(List.of("s1"))).thenReturn(List.of(t1));
+
+        com.dati.semantic.repository.po.SubjectPO s1 = new com.dati.semantic.repository.po.SubjectPO();
+        s1.setId("s1"); s1.setName("用户分析");
+        when(subjectDAO.findAllById(List.of("s1"))).thenReturn(List.of(s1));
+
+        List<TermService.TermInfo> result = termService.getTermsBySubjectIds(List.of("s1"));
+
+        assertThat(result).hasSize(1);
+        assertThat(result.getFirst().name()).isEqualTo("活跃用户");
+        assertThat(result.getFirst().description()).isEqualTo("30天内登录过的用户");
+        assertThat(result.getFirst().subjectName()).isEqualTo("用户分析");
+    }
 }

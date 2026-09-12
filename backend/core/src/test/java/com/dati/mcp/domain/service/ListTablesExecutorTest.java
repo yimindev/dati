@@ -12,6 +12,7 @@ import com.dati.mcp.domain.model.McpToolType;
 import com.dati.mcp.domain.model.ToolConfig;
 import com.dati.mcp.domain.model.param.ListTablesArgs;
 import com.dati.mcp.server.pojo.TableListData;
+import com.dati.semantic.domain.service.TermService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -40,11 +41,14 @@ class ListTablesExecutorTest {
     @Mock
     private DataSourceService dataSourceService;
 
+    @Mock
+    private TermService termService;
+
     private ListTablesExecutor executor;
 
     @BeforeEach
     void setUp() {
-        executor = new ListTablesExecutor(dataScopeService, tableInfoDAO, dataSourceService);
+        executor = new ListTablesExecutor(dataScopeService, tableInfoDAO, dataSourceService, termService);
     }
 
     private ToolExecutionContext ctx(List<McpServiceDataScope> scopes) {
@@ -58,7 +62,8 @@ class ListTablesExecutorTest {
         TableListData data = (TableListData) executor.execute(ctx(List.of()));
 
         assertThat(data.dataSources()).isEmpty();
-        verifyNoInteractions(tableInfoDAO, dataSourceService);
+        assertThat(data.terms()).isEmpty();
+        verifyNoInteractions(tableInfoDAO, dataSourceService, termService);
     }
 
     @Test
@@ -111,5 +116,27 @@ class ListTablesExecutorTest {
         assertThat(second.table()).isEqualTo("artist");
         assertThat(second.aliases()).isNull();
         assertThat(second.columns()).isNull();
+
+        assertThat(data.terms()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("lists business terms when subject scopes are present")
+    void listsTermsWhenSubjectScopesPresent() {
+        McpServiceDataScope subjectScope = new McpServiceDataScope();
+        subjectScope.setScopeType(McpDataScopeType.SUBJECT);
+        subjectScope.setReferenceId("sub-1");
+
+        when(termService.getTermsBySubjectIds(List.of("sub-1")))
+            .thenReturn(List.of(new com.dati.semantic.domain.service.TermService.TermInfo("GMV", "成交总额", "电商主题")));
+        when(dataScopeService.getResolvedDataSourceIds("svc-1")).thenReturn(Set.of());
+
+        TableListData data = (TableListData) executor.execute(ctx(List.of(subjectScope)));
+
+        assertThat(data.dataSources()).isEmpty();
+        assertThat(data.terms()).hasSize(1);
+        assertThat(data.terms().getFirst().name()).isEqualTo("GMV");
+        assertThat(data.terms().getFirst().description()).isEqualTo("成交总额");
+        assertThat(data.terms().getFirst().subjectName()).isEqualTo("电商主题");
     }
 }

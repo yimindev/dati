@@ -10,7 +10,7 @@ MCP 服务共 **8 种工具类型**:7 种预置(平台内置,随发布生效)+ 1
 |---|---|---|
 | `search_tables_and_terms` | 跨数据源按关键词搜索表、列、样例值、业务术语 | 只读,默认启用 |
 | `get_table_schema` | 获取最多 20 张表的完整列 schema(名称/类型/注释/样例值) | 只读,默认启用 |
-| `list_tables` | 列出可用表(schema/名称/描述,不含列) | 只读,默认启用 |
+| `list_tables_and_terms` | 列出服务数据范围内的全部表清单与全部业务术语（不含列） | 只读,默认启用 |
 | `execute_sql` | 执行 SQL 查询或语句,允许 `SELECT`/`INSERT`,最大 1000 行 | 读写,默认启用 |
 
 > **Context 注入**:`execute_sql` 暴露给 LLM 时,描述末尾**自动追加当前认证用户信息**(`Context: current user name: xxx, user id: yyy`)。LLM 据此判断何时加 `WHERE user_name = 'xxx'`(个人查询)或写全局聚合(家庭/团队查询)。

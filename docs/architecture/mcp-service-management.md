@@ -299,7 +299,7 @@ com.dati.semantic.domain.model/
 | `ParameterizedSqlExecutor` | PARAMETERIZED_SQL 执行器。dsId 从 config 取，通过 `DataSourceService.getDataSourceInternal(dsId)` 内部通道加载数据源，合并客户端参数与系统内置参数（`SystemVariableResolver.resolve()`，含 `_user.id` / `_user.name` / `_user.display_name` / `_now` / `_date`，系统参数强制覆盖以防伪造）→ 模板渲染 → SQL，`PreparedStatement.execute()` 执行。支持 DateTime 类型参数转换（`DateTimeUtils.parseDateTime()`）。`bindings` 回传前端 |
 | `SystemVariableResolver` | 系统变量解析器。从 `RequestContext.getUser()` 和系统时钟解析 `_user.*` 与 `_now` / `_date`，提供 `isSystemVariable()` 供模板参数扫描与抽取时过滤 |
 | `GetTableInfoExecutor` | GET_TABLE_INFO 执行器。`ctx.args(GetTableInfoArgs.class)` 取参，逐条 `tables[]` 项做数据源级 scope 校验（每项自带 data_source_id），通过 `TableMetadataService` 查询平台元数据。不存在的表静默跳过 |
-| `ListTablesExecutor` | LIST_TABLES 执行器。无参数（`ListTablesArgs` 空 record），通过 `McpServiceDataScopeService.getResolvedDataSourceIds()` 解析 scope → 逐数据源 `TableInfoDAO.findByDataSourceId()` 查表 → 组装表级清单（schema/name/description/aliases，columns=null 不输出）。空 scope 返回空结果。纯 DB 读、不查 ES/列 |
+| `ListTablesExecutor` | LIST_TABLES 执行器（`list_tables_and_terms`）。无参数（`ListTablesArgs` 空 record），通过 `McpServiceDataScopeService.getResolvedDataSourceIds()` 解析 scope 数据源 → 逐数据源 `TableInfoDAO.findByDataSourceId()` 查表组装表级清单；同时解析 scope 中的 SUBJECT 范围 → 查全部业务术语 `TermService.getTermsBySubjectIds()` 组装术语清单。空 scope 返回空结果。纯 DB 读、不查 ES/列 |
 | `SearchMetadataExecutor` | SEARCH_METADATA 执行器。`ctx.args(SearchMetadataArgs.class)` 取 keywords，通过 `McpServiceDataScopeService.getResolvedDataSourceIds()` 解析 scope → `SemanticSearchService.search()` → 组装分组结果。空 scope 返回空结果（不报错） |
 | `UpdateTableInfoExecutor` / `UpdateColumnInfoExecutor` / `UpsertTermExecutor` | 元数据写执行器（见「元数据更新工具」小节） |
 | `SqlExecutorHelper` | package-private 工具类：`collect(Statement)` — JDBC `getMoreResults() / getResultSet() / getUpdateCount()` 循环，每条独立 try-catch 返回 `StatementResult` |
@@ -638,7 +638,7 @@ McpUsageDailyStat (per service + tool + date, 唯一约束)
 |-----------|----------|----------|
 | `SQL_EXECUTION` | `SqlExecution{ executedSql, bindings?, results: StatementResult[] }` | EXECUTE_SQL / PARAMETERIZED_SQL |
 | `TABLE_METADATA` | `TableMetadata{ tables: TableDef[] }` | GET_TABLE_INFO |
-| `TABLE_LIST` | `TableListData{ dataSources: DataSourceDef[] }`（表级清单：schema/name/description/aliases，无列） | LIST_TABLES |
+| `TABLE_LIST` | `TableListData{ dataSources: DataSourceDef[], terms: TermDef[] }`（表级清单与业务术语清单） | LIST_TABLES |
 | `SEARCH_HIT` | `SearchHit{ keywords, dataSources: DataSourceDef[], terms: TermDef[] }` | SEARCH_METADATA |
 | `METADATA_UPDATE` | `MetadataUpdateData{ results: MetadataUpdateResult[] }` | UPDATE_TABLE_INFO / UPDATE_COLUMN_INFO / UPSERT_TERM |
 

@@ -35,13 +35,13 @@ class McpToolTypeTest {
     }
 
     @Test
-    @DisplayName("LIST_TABLES retains toolName and title with updated guidance description")
+    @DisplayName("LIST_TABLES has updated toolName, title, and guidance description")
     void listTablesDefinitions() {
         McpToolType type = McpToolType.LIST_TABLES;
-        assertThat(type.getToolName()).isEqualTo("list_tables");
-        assertThat(type.getTitle()).isEqualTo("List Tables");
+        assertThat(type.getToolName()).isEqualTo("list_tables_and_terms");
+        assertThat(type.getTitle()).isEqualTo("List Tables and Terms");
         assertThat(type.getDescription()).isEqualTo(
-            "List all available tables with their schema, name, and description (overview only, no columns). Use this tool when exploring the catalog or when keyword search returns no matches."
+            "List all available tables (with schema, name, and description; overview only, no columns) and business terms under the service scope. Use this tool when exploring the catalog or when keyword search returns no matches."
         );
         assertThat(type.isPrebuilt()).isTrue();
         assertThat(type.isDefaultEnabled()).isTrue();

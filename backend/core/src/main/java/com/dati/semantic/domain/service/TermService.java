@@ -3,6 +3,7 @@ package com.dati.semantic.domain.service;
 import com.dati.base.exception.DatiException;
 import com.dati.base.exception.ErrorCode;
 import com.dati.common.StringUtils;
+import com.dati.datasource.repository.dao.TableInfoDAO;
 import com.dati.datasource.repository.po.TableInfoPO;
 import com.dati.permission.domain.model.Permission;
 import com.dati.permission.domain.service.PermissionService;
@@ -10,9 +11,8 @@ import com.dati.semantic.domain.SemanticEntityType;
 import com.dati.semantic.domain.TermRelationType;
 import com.dati.semantic.domain.model.Term;
 import com.dati.semantic.domain.model.TermRelation;
-import com.dati.datasource.repository.dao.TableInfoDAO;
-import com.dati.semantic.repository.dao.SubjectTableDAO;
 import com.dati.semantic.repository.dao.SubjectDAO;
+import com.dati.semantic.repository.dao.SubjectTableDAO;
 import com.dati.semantic.repository.dao.TermDAO;
 import com.dati.semantic.repository.dao.TermRelationDAO;
 import com.dati.semantic.repository.mapper.TermMapper;
@@ -28,6 +28,7 @@ import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -253,6 +254,24 @@ public class TermService {
         List<TermPO> terms = termDAO.findAllById(termIds);
         Set<String> subjectIds = terms.stream()
                 .map(TermPO::getSubjectId).collect(Collectors.toSet());
+        Map<String, String> subjectNames = subjectDAO.findAllById(subjectIds).stream()
+                .collect(Collectors.toMap(
+                        com.dati.base.pojo.BaseResourcePO::getId,
+                        com.dati.base.pojo.BaseResourcePO::getName));
+
+        return terms.stream()
+                .map(t -> new TermInfo(t.getName(), t.getDescription(),
+                        subjectNames.getOrDefault(t.getSubjectId(), "")))
+                .toList();
+    }
+
+    /** Query all terms belonging to the specified subjects with resolved subject names. */
+    public List<TermInfo> getTermsBySubjectIds(Collection<String> subjectIds) {
+        if (subjectIds == null || subjectIds.isEmpty()) return List.of();
+
+        List<TermPO> terms = termDAO.findBySubjectIdIn(subjectIds);
+        if (terms.isEmpty()) return List.of();
+
         Map<String, String> subjectNames = subjectDAO.findAllById(subjectIds).stream()
                 .collect(Collectors.toMap(
                         com.dati.base.pojo.BaseResourcePO::getId,

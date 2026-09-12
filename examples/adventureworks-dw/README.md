@@ -254,7 +254,7 @@ Any MCP-compatible client (Cursor, Claude Desktop, Antigravity, Dify, Coze, or c
 > **User**: "Please note: our company officially defines 'VIP Customer' as customers with yearly income strictly above $100,000 (dimcustomer.yearlyincome > 100000). Record this into our business terms permanently."
 >
 > **Agent Execution Logic**:
-> 1. Calls `upsert_term` to register `VIP Customer` under subject `Retail Sales Analytics`;
+> 1. Calls `upsert_business_term` to register `VIP Customer` under subject `Retail Sales Analytics`;
 > 2. DatI logs an audit record, persists the definition, and hot-reloads the dictionary.
 >
 > **Agent Response**:

@@ -1,8 +1,8 @@
 package com.dati.mcp.server.converter;
 
 import com.dati.TestFixtures;
-import com.dati.mcp.domain.model.McpToolType;
 import com.dati.mcp.domain.model.McpServiceSnapshot;
+import com.dati.mcp.domain.model.McpToolType;
 import com.dati.mcp.domain.model.ToolConfig;
 import com.dati.mcp.domain.model.ToolParameter;
 import com.dati.mcp.domain.service.McpParameterSchemaGenerator;
@@ -12,7 +12,11 @@ import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @DisplayName("ToolDefinitionConverter tests")
 class ToolDefinitionConverterTest {
@@ -54,12 +58,12 @@ class ToolDefinitionConverterTest {
             TestFixtures.createTestPrebuiltToolDraft(McpToolType.LIST_TABLES, true, new ToolConfig.ListTablesConfig()),
             TestFixtures.createTestPrebuiltToolDraft(McpToolType.SEARCH_METADATA, true, new ToolConfig.SearchMetadataConfig())));
         List<McpSchema.Tool> tools = converter.convert(content);
-        assertEquals(List.of("search_tables_and_terms", "get_table_schema", "list_tables", "execute_sql"),
+        assertEquals(List.of("search_tables_and_terms", "get_table_schema", "list_tables_and_terms", "execute_sql"),
             tools.stream().map(McpSchema.Tool::name).toList());
     }
 
     @Test
-    @DisplayName("list_tables exposes empty inputSchema, readOnlyHint and fixed position after get_table_info")
+    @DisplayName("list_tables_and_terms exposes empty inputSchema, readOnlyHint and fixed position after get_table_info")
     void listTablesPrebuiltSchemaAndAnnotations() {
         var content = new McpServiceSnapshot.SnapshotContent();
         content.setPrebuiltTools(List.of(
@@ -67,10 +71,10 @@ class ToolDefinitionConverterTest {
             TestFixtures.createTestPrebuiltToolDraft(McpToolType.LIST_TABLES, true, new ToolConfig.ListTablesConfig())));
         List<McpSchema.Tool> tools = converter.convert(content);
 
-        assertEquals(List.of("get_table_schema", "list_tables"), tools.stream().map(McpSchema.Tool::name).toList());
+        assertEquals(List.of("get_table_schema", "list_tables_and_terms"), tools.stream().map(McpSchema.Tool::name).toList());
         McpSchema.Tool tool = tools.get(1);
-        assertEquals("list_tables", tool.name());
-        assertEquals("List Tables", tool.title());
+        assertEquals("list_tables_and_terms", tool.name());
+        assertEquals("List Tables and Terms", tool.title());
         assertEquals("object", tool.inputSchema().get("type"));
         assertFalse(tool.inputSchema().containsKey("required"));
         assertNotNull(tool.annotations());

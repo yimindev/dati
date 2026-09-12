@@ -5,9 +5,13 @@ import com.dati.datasource.domain.model.TableDef;
 import com.dati.datasource.domain.service.DataSourceService;
 import com.dati.datasource.repository.dao.TableInfoDAO;
 import com.dati.datasource.repository.po.TableInfoPO;
+import com.dati.mcp.domain.model.McpDataScopeType;
+import com.dati.mcp.domain.model.McpServiceDataScope;
 import com.dati.mcp.domain.model.McpToolType;
 import com.dati.mcp.server.pojo.TableListData;
 import com.dati.mcp.server.pojo.ToolTestData;
+import com.dati.semantic.domain.model.TermDef;
+import com.dati.semantic.domain.service.TermService;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -17,8 +21,9 @@ import java.util.Set;
 
 /**
  * LIST_TABLES executor: lists the full table inventory (schema/name/description/aliases)
- * of all data sources in the service's data scope. Table-level only — the LLM is expected
- * to follow up with GET_TABLE_INFO for column details.
+ * of all data sources in the service's data scope, plus all business terms under subjects
+ * in the data scope. Table-level only — the LLM is expected to follow up with
+ * GET_TABLE_INFO (get_table_schema) for column details.
  */
 @Component
 public class ListTablesExecutor implements ToolExecutor {
@@ -26,13 +31,16 @@ public class ListTablesExecutor implements ToolExecutor {
     private final McpServiceDataScopeService dataScopeService;
     private final TableInfoDAO tableInfoDAO;
     private final DataSourceService dataSourceService;
+    private final TermService termService;
 
     public ListTablesExecutor(McpServiceDataScopeService dataScopeService,
                               TableInfoDAO tableInfoDAO,
-                              DataSourceService dataSourceService) {
+                              DataSourceService dataSourceService,
+                              TermService termService) {
         this.dataScopeService = dataScopeService;
         this.tableInfoDAO = tableInfoDAO;
         this.dataSourceService = dataSourceService;
+        this.termService = termService;
     }
 
     @Override
@@ -43,12 +51,27 @@ public class ListTablesExecutor implements ToolExecutor {
     @Override
     public ToolTestData execute(ToolExecutionContext ctx) {
         if (ctx.scopeItems().isEmpty()) {
-            return new TableListData(List.of());
+            return new TableListData(List.of(), List.of());
         }
+
+        List<String> subjectIds = ctx.scopeItems().stream()
+                .filter(s -> s.getScopeType() == McpDataScopeType.SUBJECT)
+                .map(McpServiceDataScope::getReferenceId)
+                .distinct()
+                .toList();
+
+        List<TermDef> termDefs = List.of();
+        if (!subjectIds.isEmpty()) {
+            termDefs = termService.getTermsBySubjectIds(subjectIds).stream()
+                    .map(t -> new TermDef(t.name(), t.description(), t.subjectName()))
+                    .toList();
+        }
+
         Set<String> dsIds = dataScopeService.getResolvedDataSourceIds(ctx.serviceId());
         if (dsIds.isEmpty()) {
-            return new TableListData(List.of());
+            return new TableListData(List.of(), termDefs);
         }
+
         Map<String, DataSourceService.DsBrief> briefs = dataSourceService.getDataSourceBriefs(dsIds);
         List<DataSourceDef> groups = new ArrayList<>();
         for (String dsId : dsIds) {
@@ -67,6 +90,6 @@ public class ListTablesExecutor implements ToolExecutor {
                 brief != null ? brief.description() : null,
                 tableDefs));
         }
-        return new TableListData(groups);
+        return new TableListData(groups, termDefs);
     }
 }

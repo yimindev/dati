@@ -36,10 +36,10 @@
 1. 发送 `tools/list`（无 params）
 2. 验证响应：
    - 状态码 200，`result.tools` 为数组
-   - 返回**全部 enabled 工具**：prebuilt **7 个**（`search_tables_and_terms`/`get_table_schema`/`list_tables`/`execute_sql`/`update_table_metadata`/`update_column_metadata`/`upsert_business_term`）+ 自定义工具（name=业务 name）
+   - 返回**全部 enabled 工具**：prebuilt **7 个**（`search_tables_and_terms`/`get_table_schema`/`list_tables_and_terms`/`execute_sql`/`update_table_metadata`/`update_column_metadata`/`upsert_business_term`）+ 自定义工具（name=业务 name）
    - **确定性排序**：prebuilt 固定顺序 SEARCH_METADATA → GET_TABLE_INFO → LIST_TABLES → EXECUTE_SQL → UPDATE_TABLE_INFO → UPDATE_COLUMN_INFO → UPSERT_TERM，custom 按 name 字母序
-   - 每个工具含 `name`/`description`/`inputSchema`；**所有 prebuilt 另含 `title`**（`Search Tables and Terms`/`Get Table Schema`/`List Tables`/`Execute SQL`/`Update Table Metadata`/`Update Column Metadata`/`Upsert Business Term`）；custom 含 `title`
-   - **annotations**：`search_tables_and_terms`/`get_table_schema`/`list_tables` 含 `readOnlyHint`=true；`update_table_metadata`/`update_column_metadata`/`upsert_business_term` 含 `readOnlyHint`=false、`destructiveHint`=false、`idempotentHint`=true、`openWorldHint`=true；`execute_sql` **无** annotations（可执行写 SQL，不声明只读）
+   - 每个工具含 `name`/`description`/`inputSchema`；**所有 prebuilt 另含 `title`**（`Search Tables and Terms`/`Get Table Schema`/`List Tables and Terms`/`Execute SQL`/`Update Table Metadata`/`Update Column Metadata`/`Upsert Business Term`）；custom 含 `title`
+   - **annotations**：`search_tables_and_terms`/`get_table_schema`/`list_tables_and_terms` 含 `readOnlyHint`=true；`update_table_metadata`/`update_column_metadata`/`upsert_business_term` 含 `readOnlyHint`=false、`destructiveHint`=false、`idempotentHint`=true、`openWorldHint`=true；`execute_sql` **无** annotations（可执行写 SQL，不声明只读）
    - `inputSchema` 为对象，PARAMETERIZED_SQL 工具的 schema `properties`/`required` 与其 `parameters` 一致
    - **GET_TABLE_INFO schema 形态（decision 12 回归锚点）**：`properties.tables.items.properties` 含 `data_source_id`，`items.required`=["data_source_id", "table"]（`data_source_id` 在每行内，非顶层）
 3. **空服务语义**：服务无 enabled 工具 → `result.tools` 为**空数组**（不报错）
@@ -167,7 +167,7 @@
 
 1. 发送 `tools/list`（无 params）
 2. 验证响应：
-   - 状态码 200，`result.tools` 前 7 个为 prebuilt，顺序确定：`search_tables_and_terms` → `get_table_schema` → `list_tables` → `execute_sql` → `update_table_metadata` → `update_column_metadata` → `upsert_business_term`
+   - 状态码 200，`result.tools` 前 7 个为 prebuilt，顺序确定：`search_tables_and_terms` → `get_table_schema` → `list_tables_and_terms` → `execute_sql` → `update_table_metadata` → `update_column_metadata` → `upsert_business_term`
 3. **update_table_metadata（写工具）**：
    - `title` == `Update Table Metadata`
    - `annotations`：`readOnlyHint`=false、`destructiveHint`=false、`idempotentHint`=true、`openWorldHint`=true

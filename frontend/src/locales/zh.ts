@@ -533,7 +533,7 @@ export default {
       type: {
         SEARCH_METADATA: "元数据检索",
         GET_TABLE_INFO: "表结构查询",
-        LIST_TABLES: "表清单",
+        LIST_TABLES: "表与术语清单",
         EXECUTE_SQL: "SQL执行",
         UPDATE_TABLE_INFO: "更新表元数据",
         UPDATE_COLUMN_INFO: "更新列元数据",
@@ -588,8 +588,11 @@ export default {
       matchTerms: "匹配术语",
       matchSources: "匹配数据源",
       listTablesTitle: "服务数据范围表清单",
+      listTermsTitle: "服务数据范围业务术语",
       emptyTableList: "数据范围内暂无表",
+      emptyTableAndTermList: "数据范围内暂无表或术语",
       tables: "张表",
+      terms: "个术语",
       entityType: {
         TABLE: "表",
         COLUMN: "列",

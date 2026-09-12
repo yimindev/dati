@@ -533,7 +533,7 @@ export default {
       type: {
         SEARCH_METADATA: "Metadata Search",
         GET_TABLE_INFO: "Table Info",
-        LIST_TABLES: "Table List",
+        LIST_TABLES: "Table & Term List",
         EXECUTE_SQL: "Free SQL Execution",
         UPDATE_TABLE_INFO: "Update Table Metadata",
         UPDATE_COLUMN_INFO: "Update Column Metadata",
@@ -588,8 +588,11 @@ export default {
       matchTerms: "Matching Terms",
       matchSources: "Matching Sources",
       listTablesTitle: "Tables in Service Data Scope",
+      listTermsTitle: "Business Terms in Service Data Scope",
       emptyTableList: "No tables in data scope",
+      emptyTableAndTermList: "No tables or terms in data scope",
       tables: "tables",
+      terms: "terms",
       entityType: {
         TABLE: "Table",
         COLUMN: "Column",

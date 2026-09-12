@@ -28,9 +28,9 @@ public enum McpToolType {
         true
     ),
     LIST_TABLES(
-        "list_tables",
-        "List Tables",
-        "List all available tables with their schema, name, and description (overview only, no columns). Use this tool when exploring the catalog or when keyword search returns no matches.",
+        "list_tables_and_terms",
+        "List Tables and Terms",
+        "List all available tables (with schema, name, and description; overview only, no columns) and business terms under the service scope. Use this tool when exploring the catalog or when keyword search returns no matches.",
         ListTablesArgs.class,
         "{\"readOnlyHint\":true}",
         true

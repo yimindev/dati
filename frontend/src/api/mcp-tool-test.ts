@@ -12,11 +12,21 @@ export interface ToolTestResponse {
 }
 
 export interface ToolTestError {
-  error_category: "PARAM_ERROR" | "SCOPE_ERROR" | "PERMISSION_DENIED" | "SQL_ERROR" | "TIMEOUT";
+  error_category:
+    | "PARAM_ERROR"
+    | "SCOPE_ERROR"
+    | "PERMISSION_DENIED"
+    | "SQL_ERROR"
+    | "TIMEOUT";
   message: string;
 }
 
-export type ToolTestData = SqlExecution | TableMetadata | SearchHit | MetadataUpdateData | TableListData;
+export type ToolTestData =
+  | SqlExecution
+  | TableMetadata
+  | SearchHit
+  | MetadataUpdateData
+  | TableListData;
 
 // ── METADATA_UPDATE (UPDATE_TABLE_INFO / UPDATE_COLUMN_INFO / UPSERT_TERM) ──
 
@@ -57,6 +67,7 @@ export interface SearchHit {
 export interface TableListData {
   type: "TABLE_LIST";
   data_sources: DataSourceDef[];
+  terms?: TermDef[];
 }
 
 export interface DataSourceDef {
