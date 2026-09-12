@@ -1,18 +1,14 @@
-# DatI - 企业级 Agent 数据库语义网关
+# DatI - Agent 数据库语义网关
 
 [English](README.md) | [简体中文](README_zh.md)
 
-DatI(Data Intelligence) 是连接 **AI Agent 与企业数据库** 的语义网关 —— 集语义建模、细粒度权限控制与标准 MCP 接口于一体，让大模型精准、安全地读写业务数据。主要功能：
-
-- **数据源接入**：支持主流数据库（MySQL、PostgreSQL 等）
-- **语义建模**：对表、列、列值、业务术语进行统一管理与检索
-- **构建 MCP 服务**：预置元数据检索、SQL 执行等标准工具，支持参数化 SQL 查询，可自动生成符合 [MCP](https://modelcontextprotocol.io/) 标准的服务接口
+DatI(Data Intelligence) 是连接 **AI Agent 与企业数据库** 的轻量级语义网关 —— 仅需接入数据库、配置语义信息、按需启用预置工具与参数化 SQL 工具，即可发布 MCP 服务，灵活地接入用户的 Agent 或任意 MCP Host
 
 ```text
-┌────────────────────┐   ┌────────────────────┐   ┌────────────────────┐
-│  User A: OpenCode  │   │  User B: WorkBuddy │   │  User N: DataAgent │
-└─────────┬──────────┘   └─────────┬──────────┘   └─────────┬──────────┘
-          └────────────────────────┼────────────────────────┘
+┌────────────────────┐  ┌────────────────────┐  ┌────────────────────┐
+│  User A: OpenCode  │  │  User B: WorkBuddy │  │  User N: DataAgent │
+└──────────┬─────────┘  └──────────┬─────────┘  └──────────┬─────────┘
+           └───────────────────────┼───────────────────────┘
                                    │ MCP (Streamable HTTP)
                                    ▼
 ┌─────────────────────────────── DatI ───────────────────────────────┐
@@ -37,11 +33,11 @@ DatI(Data Intelligence) 是连接 **AI Agent 与企业数据库** 的语义网�
 
 ## 为什么选择 DatI？
 
-1. **多数据库支持**：支持 MySQL、PostgreSQL、ClickHouse、Doris 等多种关系型与分析型数据库
-2. **业务语义增强**：支持业务术语、字段别名与枚举字典值自动抽取，结合语义检索，解决大模型“不理解业务黑话、找不对表字段”的问题
-3. **灵活的 Agent 集成**：基于标准 [MCP](https://modelcontextprotocol.io/) 协议（Streamable HTTP），灵活接入各类 Agent 或任意MCP Host
-4. **高效构建与多用户复用**：提供开箱即用的预置工具（元数据探查、SQL 执行）与灵活的自定义参数化模板，几分钟即可发布可用服务，支持多用户与多 Agent 高并发复用
-5. **企业级安全管控**：数据库密码集中加密托管，结合用户上下文可支持细粒度权限隔离
+1. **多数据库**：支持 MySQL、PostgreSQL、ClickHouse、Doris 等多种关系型与分析型数据库
+2. **语义增强**：支持业务术语、字段别名与枚举字典值自动抽取，结合语义检索，让模型能够理解业务黑话、快速找对表
+3. **灵活集成**：基于标准 [MCP](https://modelcontextprotocol.io/) 协议（Streamable HTTP），灵活集成至用户现有 Agent 或工作流
+4. **高效构建**：提供开箱即用的预置工具（元数据探查、SQL 执行）与参数化 SQL 工具，免部署发布 MCP 服务
+5. **安全管控**：凭据集中托管，支持按用户权限隔离
 
 ## 适用场景
 
@@ -59,6 +55,9 @@ DatI(Data Intelligence) 是连接 **AI Agent 与企业数据库** 的语义网�
 
 - [本地开发指南](docs/development.md)：环境准备、启动、常用命令与开发约定
 - [服务器部署手册](docs/deployment.md)：Docker Compose 单机部署（无需镜像仓库）
+- **Agent Skill**（[Agent Skills 开放标准](https://agentskills.io)，仓库内 agent 自动发现）：
+    - [dati-ops](skills/dati-ops/SKILL.md)：**用户技能**——通过 HTTP API 完成平台配置与操作（数据源/主题术语/MCP 服务），技能自包含（内置 openapi.json 与查询工具），可独立分发；仓库内通过 `.agents/skills/dati-ops/` 薄壳接入
+    - [e2e-tester](.agents/skills/e2e-tester/SKILL.md)：**开发技能**——E2E HTTP 集成测试与 API 行为验证（测试用例见 [e2e-tests/test-cases/](e2e-tests/test-cases)）
 - **实战案例**：
   - [家庭共享记账助手](examples/family-finance/README.md)：多用户协作记账、参数化防越权、全员透明 SQL 查账与开箱自愈示例
 - **架构与设计**（长期维护，与代码同步）：
@@ -73,6 +72,3 @@ DatI(Data Intelligence) 是连接 **AI Agent 与企业数据库** 的语义网�
 - **用户帮助中心**：[docs/user-guide](docs/user-guide/index.md)（VitePress 站点，中英双语）
 - **API 契约**：[docs/api/openapi.json](docs/api/openapi.json)（E2E 测试工具链使用）
 - **AI 编码助手规范**：[AGENTS.md](AGENTS.md) 与 [.agents/rules/](.agents/rules)（后端/前端/设计系统规范）
-- **Agent Skill**（[Agent Skills 开放标准](https://agentskills.io)，仓库内 agent 自动发现）：
-  - [dati-ops](skills/dati-ops/SKILL.md)：**用户技能**——通过 HTTP API 完成平台配置与操作（数据源/主题术语/MCP 服务），技能自包含（内置 openapi.json 与查询工具），可独立分发；仓库内通过 `.agents/skills/dati-ops/` 薄壳接入
-  - [e2e-tester](.agents/skills/e2e-tester/SKILL.md)：**开发技能**——E2E HTTP 集成测试与 API 行为验证（测试用例见 [e2e-tests/test-cases/](e2e-tests/test-cases)）
