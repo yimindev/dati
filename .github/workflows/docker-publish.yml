@@ -34,7 +34,6 @@ jobs:
         with:
           images: ${{ vars.ACR_REGISTRY }}/${{ vars.ACR_NAMESPACE }}/${{ vars.ACR_REPOSITORY || github.event.repository.name }}
           tags: |
-            type=ref,event=tag
             type=semver,pattern={{version}}
             type=raw,value=latest,enable=${{ !contains(github.ref, 'alpha') && !contains(github.ref, 'beta') && !contains(github.ref, 'rc') }}
 
