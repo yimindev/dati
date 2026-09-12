@@ -58,6 +58,25 @@ pnpm docs:dev     # 本地运行帮助中心（VitePress，端口 5174）
 - 如需跨域，在后端按控制器或全局配置开启 CORS。
 - 测试要求：后端采用 TDD（先写失败测试再实现），前端使用 Vitest；详见 [AGENTS.md](../AGENTS.md)。
 
+## 环境变量与配置说明
+
+项目根目录下提供了环境配置模板 [`.env.example`](../.env.example)，复制为 `.env` 即可覆盖默认配置：
+
+```bash
+cp .env.example .env
+```
+
+核心配置变量一览：
+
+| 分类 | 变量名 | 默认值 | 说明 |
+| :--- | :--- | :--- | :--- |
+| **安全认证** | `JWT_SECRET` | *(无默认值)* | 用户登录 Token 签名密钥（生产环境必填强随机串） |
+| **安全认证** | `ADMIN_USERS` | `admin` | 超级管理员账号名（首个以此名称注册的用户自动成为管理员） |
+| **持久化存储** | `SPRING_DATASOURCE_URL` | H2 嵌入式文件库 | 数据库连接串（支持 MySQL / PostgreSQL） |
+| **语义索引** | `SPRING_ELASTICSEARCH_PASSWORD` | *(无默认值)* | Elasticsearch 密码（Compose 部署时必填） |
+| **文档与仓库** | `REPO_URL` | `https://github.com/yimindev/dati` | 项目代码远程仓库基准地址，文档中各类链接基于此自动推导 |
+| **文档与仓库** | `SKILL_URL` | `${REPO_URL}/tree/main/skills/dati-ops` | 文档中 dati-ops 技能目录跳转链接（默认由 REPO_URL 自动拼接） |
+
 ## 数据库与表结构
 
 - 开发环境使用 H2 文件库，数据文件为仓库根目录下 `./db/dati.*`；清空本地数据只需删除这些文件后重启后端。

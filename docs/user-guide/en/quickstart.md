@@ -27,7 +27,7 @@ Before using `dati-ops`, obtain an API Key and ideally export it as an environme
 ### 2. Skill Retrieval & Installation
 
 * **Local Development**: Directly reference `skills/dati-ops/SKILL.md` in the repository;
-* **Remote / Managed Environment**: Access the <a :href="$frontmatter.skillUrl" target="_blank" rel="noopener noreferrer">dati-ops Skill Repository</a> (or browse the <a :href="$frontmatter.skillsUrl" target="_blank" rel="noopener noreferrer">Skills Directory</a>) for the complete skill definition and utility scripts.
+* **Remote / Managed Environment**: Access the <a :href="$frontmatter.skillUrl" target="_blank" rel="noopener noreferrer">dati-ops Skill Directory</a> for the complete skill definition and utility scripts.
 
 ### 3. One-Prompt Automated Operations
 

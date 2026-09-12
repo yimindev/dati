@@ -2,15 +2,20 @@
 // @ts-ignore
 import { defineConfig } from 'vitepress'
 
-const SKILLS_URL =
-  process.env.VITE_SKILLS_URL ||
-  process.env.SKILLS_URL ||
-  'https://github.com/yimindev/dati/tree/main/skills'
+const REPO_URL =
+  process.env.VITE_REPO_URL ||
+  process.env.REPO_URL ||
+  'https://github.com/yimindev/dati'
 
 const SKILL_URL =
   process.env.VITE_SKILL_URL ||
   process.env.SKILL_URL ||
-  `${SKILLS_URL.replace(/\/+$/, '')}/dati-ops`
+  `${REPO_URL.replace(/\/+$/, '')}/tree/main/skills/dati-ops`
+
+const SKILLS_URL =
+  process.env.VITE_SKILLS_URL ||
+  process.env.SKILLS_URL ||
+  `${REPO_URL.replace(/\/+$/, '')}/tree/main/skills`
 
 export default defineConfig({
   base: '/docs/',
@@ -26,6 +31,7 @@ export default defineConfig({
     search: {
       provider: 'local',
     },
+    repoUrl: REPO_URL,
     skillsUrl: SKILLS_URL,
     skillUrl: SKILL_URL,
   },
@@ -33,6 +39,7 @@ export default defineConfig({
   transformPageData(pageData) {
     pageData.frontmatter = {
       ...pageData.frontmatter,
+      repoUrl: REPO_URL,
       skillsUrl: SKILLS_URL,
       skillUrl: SKILL_URL,
     }
