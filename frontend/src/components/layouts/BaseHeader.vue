@@ -13,6 +13,7 @@ const router = useRouter();
 
 const localeLabel = computed(() => (locale.value === "zh" ? "中文" : "EN"));
 const userDisplayName = computed(() => authStore.user?.display_name || authStore.user?.name || "");
+const appVersion = __APP_VERSION__;
 
 async function changeLocale(lang: AppLang) {
   await setI18nLanguage(lang);
@@ -38,6 +39,11 @@ function goToDocs() {
         <img src="/dati.svg" alt="dati" class="size-7 object-contain" />
         <span class="text-base font-semibold leading-none">
           {{ t("layout.header.brand") }}
+        </span>
+        <span
+          class="text-[11px] font-mono leading-none text-[var(--ep-text-color-secondary)] bg-[var(--ep-fill-color-light)] px-1.5 py-0.5 rounded border border-[var(--ep-border-color-lighter)] select-none"
+        >
+          v{{ appVersion }}
         </span>
       </div>
     </el-menu-item>

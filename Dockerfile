@@ -23,6 +23,10 @@ COPY docs ./docs
 # Set PATH so docs build finds vitepress binaries when changing directory
 ENV PATH="/build/frontend/node_modules/.bin:$PATH"
 
+# Pass build-time version into frontend build environment
+ARG APP_VERSION=unknown
+ENV VITE_APP_VERSION=$APP_VERSION
+
 # Ensure root is treated as ESM for VitePress config resolution
 RUN echo '{"type": "module"}' > /build/package.json
 

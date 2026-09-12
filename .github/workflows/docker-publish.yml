@@ -9,6 +9,8 @@ on:
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.meta.outputs.version }}
 
     steps:
       # 1. 检出代码
@@ -52,3 +54,47 @@ jobs:
           sbom: false
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+  # 6. 自动化部署到阿里云 ECS
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to Aliyun ECS via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.ECS_HOST }}
+          username: ${{ secrets.ECS_USER || 'root' }}
+          key: ${{ secrets.ECS_SSH_KEY }}
+          password: ${{ secrets.ECS_PASSWORD }}
+          port: ${{ vars.ECS_PORT || 22 }}
+          script: |
+            set -e
+            VERSION="${{ needs.build-and-push.outputs.version }}"
+            REGISTRY="${{ vars.ACR_VPC_REGISTRY || 'crpi-baupqnroh79r2fj9-vpc.cn-hangzhou.personal.cr.aliyuncs.com' }}"
+            IMAGE="${REGISTRY}/${{ vars.ACR_NAMESPACE }}/${{ vars.ACR_REPOSITORY || 'dati' }}:${VERSION}"
+
+            echo "🚀 正在部署 DatI 新版本: ${VERSION}..."
+            echo "📥 从 VPC 内网拉取镜像: ${IMAGE}..."
+            docker pull "${IMAGE}"
+
+            echo "🛑 停止并清理旧容器..."
+            docker stop dati-app 2>/dev/null || true
+            docker rm dati-app 2>/dev/null || true
+
+            echo "▶️ 启动新容器..."
+            docker run -d --name dati-app \
+              --network dati-net \
+              --restart unless-stopped \
+              --memory 1536m \
+              -p 18085:8085 \
+              --env-file /opt/dati/app.env \
+              --env-file /opt/dati/secrets.env \
+              "${IMAGE}"
+
+            echo "🧹 清理无用的历史镜像..."
+            docker image prune -f
+
+            echo "✅ 部署完成！容器运行状态："
+            docker ps --filter "name=dati-app"
+

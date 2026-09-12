@@ -1,4 +1,5 @@
 import path from "node:path";
+import fs from "node:fs";
 import { defineConfig } from "vite";
 import vue from "@vitejs/plugin-vue";
 import AutoImport from "unplugin-auto-import/vite";
@@ -7,8 +8,15 @@ import VueRouter from "vue-router/vite";
 import tailwindcss from "@tailwindcss/vite";
 import { ElementPlusResolver } from "unplugin-vue-components/resolvers";
 
+const pkg = JSON.parse(
+  fs.readFileSync(new URL("./package.json", import.meta.url), "utf-8")
+);
+
 // https://vite.dev/config/
 export default defineConfig({
+  define: {
+    __APP_VERSION__: JSON.stringify(process.env.VITE_APP_VERSION || pkg.version),
+  },
   server: {
     allowedHosts: [
       '.zhangyimin.me', '.trycloudflare.com'

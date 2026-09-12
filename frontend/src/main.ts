@@ -46,4 +46,10 @@ app.use(i18n)
 
 await setupI18n()
 
+console.log(
+  `%c DatI %c v${__APP_VERSION__} `,
+  "padding: 2px 4px; border-radius: 3px 0 0 3px; color: #fff; background: #3b82f6; font-weight: bold;",
+  "padding: 2px 4px; border-radius: 0 3px 3px 0; color: #fff; background: #10b981; font-weight: bold;"
+);
+
 app.mount("#app");
