@@ -57,7 +57,7 @@ com.dati.<module>/
 - **Injection**: Constructor injection only (`private final`).
 - **Lombok**: POs use `@Getter/@Setter`, optional `@FieldNameConstants` (PO-only), `@Slf4j` as needed.
 - **Response**: `IdResponse` for mutations, `PageResponse<T>` for paginated lists, raw `List<T>` for metadata queries.
-- **Exception**: Use `DatiException` with `ErrorCode` enum (prefixes: `CM` common, `DS` datasource, `SM` semantic).
+- **Exception**: Use `DatiException` with `ErrorCode` enum (prefixes: `CM` common, `DS` datasource, `SM` semantic, `MS` mcp, `AUTH` auth, `PM` permission).
 - **JSON**: Dev profile uses `SNAKE_CASE`.
 
 → Full details: [.agents/rules/backend.md](.agents/rules/backend.md)

@@ -169,9 +169,13 @@ customToolDAO.delete(po);
 - **`DatiException`**: Business exception with structured error codes. Supports parameterized messages via `MessageFormat` templates.
 
 **`ErrorCode`**: Enum defining all error codes with fixed prefixes:
-  - `CM` (Common): Generic errors — e.g. `CM001` (400), `CM004` (404), `CM005` (500)
-  - `DS` (DataSource): Data source module — e.g. `DS001` (connection failed)
-  - `SM` (Semantic): Semantic module — e.g. `SM001` (subject not found)
+  - `CM` (Common): Generic errors — e.g. `CM001` (400), `CM002` (404), `CM003` (500), `CM004` (405)
+  - `DS` (DataSource): Data source module — e.g. `DS001` (connection failed), `DS002` (not found)
+  - `SM` (Semantic): Semantic module — e.g. `SM001` (subject not found), `SM002` (term not found)
+  - `MS` (MCP Service): MCP service & tool errors — e.g. `MS001` (service not found), `MS002` (tool not found)
+  - `AUTH` (Authentication): Auth & API key errors — e.g. `AUTH001` (login failed), `AUTH002` (token invalid)
+  - `PM` (Permission): Access control errors — e.g. `PM001` (permission denied)
+  - `VAL` (Validation): Input validation — e.g. `VAL002` (field required)
   - Template messages use `{0}`, `{1}` placeholders (Java `MessageFormat`)
 
 **`ErrorResponse`**: Standard error response body `{ code, message, timestamp }`
@@ -182,6 +186,9 @@ customToolDAO.delete(po);
 
 - **`StringUtils`**: `isEmpty()`, `isNotEmpty()` wrappers
 - **`JsonUtils`**: Jackson-based JSON serialization/deserialization helpers
+- **`DateTimeUtils`**: Time formatting, parsing, and timestamp conversion helpers
+- **`HashUtils`**: Cryptographic hash utilities (e.g. SHA-256)
+- **`template` (`com.dati.common.template`)**: Pebble-based SQL template engine and validation rules
 
 ## Permission Control Standards
 

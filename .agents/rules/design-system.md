@@ -56,21 +56,19 @@ The project uses **Element Plus CSS variables** (`--ep-*`) exclusively for seman
 #### Primary Color
 | Token | Current Value | Usage |
 |-------|--------------|-------|
-| `--ep-color-primary` | `green` (light) / `#589ef8` (dark) | Primary buttons, links, active states |
+| `--ep-color-primary` | `#409eff` (Element Plus brand blue) | Primary buttons, links, active states |
 | `--ep-color-primary-light-*` | Calculated tints | Backgrounds, hover states |
 | `--ep-color-primary-dark-*` | Calculated shades | Pressed states |
-
-**Note:** The primary color is set in `element/index.scss` as `green` for light mode and overridden in `dark.scss` as `#589ef8` for dark mode. Consider aligning both modes to a consistent brand blue for a more professional enterprise feel.
 
 #### Semantic Colors
 | Token | Light Value | Usage |
 |-------|------------|-------|
-| `--ep-color-primary` | `green` | Primary actions, links |
-| `--ep-color-success` | `#21ba45` | Success states, published status |
-| `--ep-color-warning` | `#f2711c` | Warnings, caution states |
-| `--ep-color-danger` | `#db2828` | Destructive actions, errors |
-| `--ep-color-info` | `#42b8dd` | Informational, neutral status |
-| `--ep-color-error` | `#db2828` | Error messages, validation |
+| `--ep-color-primary` | `#409eff` | Primary actions, links |
+| `--ep-color-success` | `#67c23a` | Success states, published status |
+| `--ep-color-warning` | `#e6a23c` | Warnings, caution states |
+| `--ep-color-danger` | `#f56c6c` | Destructive actions, errors |
+| `--ep-color-info` | `#909399` | Informational, neutral status |
+| `--ep-color-error` | `#f56c6c` | Error messages, validation |
 
 #### Surface & Text Colors
 | Token | Light Value | Role |
@@ -101,22 +99,10 @@ Layer 3: --ep-fill-color (#f0f2f5)            → Tag backgrounds, input disable
 | Rule | Standard | Avoid |
 |------|----------|-------|
 | Semantic tokens | Use `var(--ep-color-*)` everywhere | Raw hex colors in component styles |
-| Brand primary | Single primary green across all pages | Different primary per page |
-| Danger actions | Always `--ep-color-danger` (`#db2828`) | Non-red colors for destructive actions |
+| Brand primary | Single primary brand blue across all pages | Different primary per page |
+| Danger actions | Always `--ep-color-danger` (`#f56c6c`) | Non-red colors for destructive actions |
 | Status badges | Use `el-tag` with appropriate `type` | Custom colored badges |
 | Text hierarchy | Use `--ep-text-color-*` tokens | Arbitrary gray values |
-
-### 2.4 Recommended Brand Refresh (Future)
-
-If moving to a consistent brand identity:
-
-| Token | Recommended | Current |
-|-------|-------------|---------|
-| Primary (light) | `#2563eb` (blue-600) | `green` |
-| Primary (dark) | `#589ef8` (already set) | `#589ef8` |
-| Accent | `#0891b2` (cyan-600) | — |
-| Success | `#16a34a` (green-600) | `#21ba45` |
-| Background | `#f8fafc` (slate-50) | `#f5f7fa` |
 
 ---
 
@@ -502,11 +488,11 @@ A progress bar at the top of the page for navigation:
 
 ### 8.1 Implementation
 
-Dark mode uses `@vueuse/core`'s `useDark()` composable with CSS variable switching via Element Plus dark SCSS.
+Dark mode uses `@vueuse/core`'s `useDark()` composable with CSS variable switching via Element Plus dark theme variables.
 
 **Configuration files:**
 - `composables/dark.ts` — `useDark()` + `useToggle(isDark)`
-- `styles/element/dark.scss` — Dark mode primary color override: `#589ef8`
+- `styles/index.scss` — Element Plus dark theme variables: `@use 'element-plus/theme-chalk/src/dark/css-vars.scss'`
 
 ### 8.2 Dark Mode Rules
 
@@ -514,12 +500,8 @@ Dark mode uses `@vueuse/core`'s `useDark()` composable with CSS variable switchi
 |------|----------|-------|
 | Surface contrast | Use `--ep-bg-color` / `--ep-fill-color-*` automatically | Hardcoding light colors |
 | Text contrast | `--ep-text-color-*` tokens auto-switch | Fixed color values |
-| Primary color | Dark: `#589ef8` (set in dark.scss) | Same as light mode |
+| Primary color | Standard `--ep-color-primary` (auto-adapted in dark mode) | Hardcoded hex values |
 | Status colors | Test both modes independently | Assuming one mode works |
-
-### 8.3 Current Gap
-
-The primary color differs between light mode (`green`) and dark mode (`#589ef8` — blue). This should be unified for consistent brand identity.
 
 ---
 

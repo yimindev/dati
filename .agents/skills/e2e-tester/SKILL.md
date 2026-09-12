@@ -140,4 +140,4 @@ MCP_TOKEN=<sk_...> MCP_DS_ID=<dsId> scripts/mcp-verify.sh
 
 ### ES
 - 写入后查询 ES 前必须先 `es_refresh`，否则异步索引延迟会导致误报查不到数据
-- 用法：测试会话开头 `source .agents/skills/e2e-tester/scripts/helpers.sh`，之后在任何 ES 查询前调用 `es_refresh`
+- 用法：测试会话开头 `source scripts/helpers.sh`，之后在任何 ES 查询前调用 `es_refresh`

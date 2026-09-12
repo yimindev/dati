@@ -15,10 +15,11 @@ src/
 ├── stores/                 # Pinia (setup syntax)
 ├── locales/                # i18n (zh.ts, en.ts)
 ├── styles/                 # TailwindCSS 4 + Element Plus SCSS overrides
+├── utils/                  # Pure utility functions (clipboard, codemirror, formatters)
 └── plugins/                # i18n setup
 ```
 
-**Path alias**: `~/` → `src/`. All imports use `~/api/...`, `~/components/...`, `~/stores/...`.
+**Path alias**: `~/` → `src/`. All imports use `~/api/...`, `~/components/...`, `~/stores/...`, `~/utils/...`.
 
 **Vite proxy**: `/api` → `http://localhost:8085` (strips `/api` prefix).
 

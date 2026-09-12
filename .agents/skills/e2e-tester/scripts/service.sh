@@ -24,7 +24,7 @@ if command -v yq &>/dev/null && [ -f "$ENV_FILE" ]; then
     START_CMD="${START_CMD:-$(yq -r '.server.start_command' "$ENV_FILE")}"
 else
     BASE_URL="${BASE_URL:-http://localhost:8085}"
-    WORK_DIR="${WORK_DIR:-/Users/zhangyimin/IdeaProjects/dati}"
+    WORK_DIR="${WORK_DIR:-$PROJECT_DIR}"
     START_CMD="${START_CMD:-mvn -f backend/pom.xml -q -DskipTests install && mvn -f backend/app/pom.xml spring-boot:run -Dspring-boot.run.workingDirectory=${WORK_DIR}}"
 fi
 LOG_FILE="${LOG_FILE:-/tmp/dati-e2e-service.log}"
