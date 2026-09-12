@@ -20,12 +20,12 @@ export default {
       mcpServices: "MCP Services",
     },
     features: {
-      standardProtocol: "Standard MCP Protocol",
-      standardProtocolDesc: "Follows MCP 2025-11-25 Streamable HTTP spec",
-      security: "Auth & Access Control",
-      securityDesc: "API Key authentication · data scope isolation · SQL operation policies",
-      ecosystem: "Self-Evolving Metadata",
-      ecosystemDesc: "Table, column & term maintenance is exposed as MCP tools — agents write business knowledge back during use, making metadata better over time (fully audited)",
+      security: "Security & Governance",
+      securityDesc: "User-level permission & data scope isolation · Granular SQL operation controls",
+      semanticPrecision: "Semantic Precision",
+      semanticPrecisionDesc: "Ground models in business semantics for accurate SQL · Parameterized SQL for complex logic",
+      flexibleIntegration: "Flexible Integration",
+      flexibleIntegrationDesc: "Streamable HTTP MCP services · seamless connection to any MCP host",
     },
   },
 

@@ -20,12 +20,12 @@ export default {
       mcpServices: "MCP 服务",
     },
     features: {
-      standardProtocol: "标准 MCP 协议",
-      standardProtocolDesc: "遵循 MCP 2025-11-25 Streamable HTTP 规范",
-      security: "认证与权限管控",
-      securityDesc: "API Key 认证 · 数据范围隔离 · SQL 操作策略",
-      ecosystem: "元数据自演化",
-      ecosystemDesc: "表、列、术语维护已封装为 MCP 工具，Agent 使用中可写回业务知识，元数据越用越准（写入可审计）",
+      security: "安全可控",
+      securityDesc: "用户级权限与数据范围隔离 · 精细管控 SQL 操作类型",
+      semanticPrecision: "语义精准",
+      semanticPrecisionDesc: "业务语义让模型读懂库表，精准生成 SQL · 复杂场景支持参数化 SQL",
+      flexibleIntegration: "灵活接入",
+      flexibleIntegrationDesc: "发布 Streamable HTTP MCP 服务 · 无缝接入任意 MCP Host",
     },
   },
 
