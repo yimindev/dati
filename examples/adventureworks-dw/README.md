@@ -83,8 +83,59 @@ python3 examples/adventureworks-dw/convert.py --host <HOST> --port 3306 --user <
 4. Enrich semantic descriptions and aliases on core columns:
    - `factinternetsales.salesamount`: Description: `Gross Sales Amount`, Aliases: `["Sales", "Revenue", "GMV", "Turnover"]`
    - `factinternetsales.totalproductcost`: Description: `Total Cost of Goods Sold (COGS)`, Aliases: `["Cost", "Product Cost", "COGS"]`
-   - `dimtime.calendaryear`: Description: `Calendar Year (2023-2026)`, Aliases: `["Year", "Annual"]`
+   - `factinternetsales.orderdatekey`: Description: `Foreign key linking to dimtime.TimeKey. Must JOIN dimtime; do NOT treat as YYYYMMDD!`, Aliases: `["Order Date", "Sales Date"]`
    - `dimcustomer.yearlyincome`: Description: `Customer Yearly Income (USD)`, Aliases: `["Income", "Salary", "Annual Income"]`
+
+---
+
+### Step 1.1: Date & Time Dimension Specifications (Join Standards & Anti-Pitfall Guide)
+
+In Kimball Star Schema architecture, transactional time is decoupled into a dedicated date dimension (`dimtime`). In AdventureWorks DW:
+- **Foreign Key Join Rule**: `factinternetsales.OrderDateKey` joins to `dimtime.TimeKey`.
+- **CRITICAL ANTI-PATTERN WARNING**: `TimeKey` is an incremental integer surrogate primary key (`1` to `1158`), **NOT** an ISO date integer like `20260101`! Attempting `WHERE OrderDateKey = 20260101` will return 0 rows.
+- **Governed Date Fields in `dimtime`**:
+
+| Column Name | Physical Type | Semantic Role | Sample Value | Standard Query Usage |
+| :--- | :--- | :--- | :--- | :--- |
+| `TimeKey` | `INT` | Primary surrogate key | `1`, `916`, `1158` | Foreign key join target: `ON fis.OrderDateKey = dt.TimeKey` |
+| `FullDateAlternateKey` | `TIMESTAMP` | Actual calendar timestamp | `2026-01-01 12:00:00` | Exact date or range filter: `DATE(dt.FullDateAlternateKey) BETWEEN '2026-01-01' AND '2026-06-30'` |
+| `CalendarYear` | `CHAR(4)` | 4-digit calendar year | `'2023'`, `'2025'`, `'2026'` | Annual filter: `dt.CalendarYear = '2026'` |
+| `CalendarQuarter` | `BIGINT` | Calendar quarter (1-4) | `1`, `2`, `3`, `4` | Quarterly filter: `dt.CalendarQuarter = 2` |
+| `MonthNumberOfYear` | `BIGINT` | Month of year (1-12) | `1`, `5`, `12` | Monthly filter or grouping: `dt.MonthNumberOfYear = 5` |
+| `EnglishMonthName` | `VARCHAR(10)` | Full English month | `'January'`, `'May'` | Reporting labels: `dt.EnglishMonthName = 'May'` |
+| `DayNumberOfWeek` | `BIGINT` | Day of week (1-7) | `1` (Sunday), `2` (Monday) | Weekly day-of-week analytics |
+
+*Canonical Time Join Pattern*:
+```sql
+SELECT dt.CalendarYear, dt.CalendarQuarter, COUNT(DISTINCT fis.SalesOrderNumber) AS orders, SUM(fis.SalesAmount) AS total_sales
+FROM factinternetsales fis
+JOIN dimtime dt ON fis.OrderDateKey = dt.TimeKey
+WHERE dt.CalendarYear = '2026'
+GROUP BY dt.CalendarYear, dt.CalendarQuarter;
+```
+
+---
+
+### Step 1.2: Value Extraction & Multilingual Synonym Governance
+
+In enterprise Text-to-SQL / ChatBI, business users frequently query in their native language (e.g., Chinese queries like "自行车", "北美大区", "批量折扣") or colloquial abbreviations, while the underlying data warehouse strictly stores English string literals (`Bikes`, `North America`, `Volume Discount`).
+
+Without value extraction and synonyms, LLMs hallucinate non-existent SQL filters (e.g. `WHERE EnglishProductCategoryName = '自行车'`), resulting in empty query results. DatI resolves this via **Two-Stage Value Semantic Indexing**:
+1. **Stage 1 (Distinct Value Extraction)**: Set `extract_value_enabled = true` on low-cardinality dimension columns, and trigger `POST /v1/data-sources/{dsId}/tables/{tId}/columns/{cId}/values/extract` to sample distinct database values into DatI's semantic index;
+2. **Stage 2 (Multilingual Synonym Binding)**: Bind user aliases and multilingual translations to each distinct database value (`PUT /v1/data-sources/{dsId}/tables/{tId}/columns/{cId}/values`).
+
+*Pre-Configured Dimension Dictionaries in AdventureWorks DW*:
+
+| Dimension Table | Column | Extracted Database Literals | Governed Multilingual Synonyms (Chinese / Aliases) |
+| :--- | :--- | :--- | :--- |
+| `dimproductcategory` | `EnglishProductCategoryName` | `Bikes`<br>`Components`<br>`Clothing`<br>`Accessories` | 自行车, 单车, 整车, 自行车品类<br>零部件, 组件, 零件, 车架<br>服装, 骑行服, 衣服, 骑行手套<br>配件, 骑行配件, 骑行装备, 头盔水壶 |
+| `dimsalesterritory` | `SalesTerritoryGroup` | `North America`<br>`Europe`<br>`Pacific` | 北美, 北美洲, 北美大区, 美洲<br>欧洲, 欧洲大区<br>亚太, 亚太地区, 太平洋, 澳洲, 大洋洲 |
+| `dimpromotion` | `EnglishPromotionType` | `No Discount`<br>`Volume Discount`<br>`Seasonal Discount`<br>`New Product`<br>`Discontinued Product`<br>`Excess Inventory` | 无折扣, 原价, 标准价格, 正常售价<br>批量折扣, 批量优惠, 量大优惠, 走量折扣<br>季节性折扣, 换季促销, 节假日促销<br>新品优惠, 新品促销, 首发特惠<br>停产特价, 清仓优惠, 尾货清仓<br>库存积压促销, 过剩库存特惠, 库存特价 |
+
+*Runtime Value Resolution Flow*:
+When a user asks: *"查一下 2026 年北美大区自行车的销售额"*, the agent calls `search_tables_and_terms(keywords: ["北美大区", "自行车", "2026"])`. DatI hits the `FIELD_VALUE` index and injects `sample_values: ["Bikes", "自行车", ...]` and `sample_values: ["North America", "北美", ...]`. The agent immediately generates the precise predicate:
+`WHERE dpc.EnglishProductCategoryName = 'Bikes' AND dst.SalesTerritoryGroup = 'North America'`
+without any guesswork.
 
 ---
 
@@ -197,8 +248,9 @@ Any MCP-compatible client (Cursor, Claude Desktop, Antigravity, Dify, Coze, or c
 >
 > **Agent Execution Logic**:
 > 1. Calls `search_tables_and_terms(keywords: ["sales", "subcategory", "2026"])`, locating `factinternetsales`, `dimproductsubcategory`, and `dimtime`;
-> 2. Automatically infers the 4-table snowflake topology (`factinternetsales` $\rightarrow$ `dimproduct` $\rightarrow$ `dimproductsubcategory` $\rightarrow$ `dimtime`);
-> 3. Calls `execute_sql` with the 4-table join and filters `CalendarYear = '2026'`.
+> 2. Follows governed date join rules: joins `factinternetsales.OrderDateKey = dimtime.TimeKey` and filters `dt.CalendarYear = '2026'` (avoiding the surrogate key trap);
+> 3. Automatically infers the 4-table snowflake topology (`factinternetsales` $\rightarrow$ `dimproduct` $\rightarrow$ `dimproductsubcategory` $\rightarrow$ `dimtime`);
+> 4. Calls `execute_sql` with the 4-table join and filters `CalendarYear = '2026'`.
 >
 > **Agent Response**:
 > 1. **Mountain Bikes**: \$3,807,069.00
@@ -211,7 +263,41 @@ Any MCP-compatible client (Cursor, Claude Desktop, Antigravity, Dify, Coze, or c
 
 ---
 
-### Scenario 2: Metric Governance & Zero-Hallucination Disambiguation
+### Scenario 2: Cross-Lingual Value Synonym Matching (Natural Language to DB Literals)
+> **User**: "查一下 2026 年北美大区自行车（Bikes）的销售总额与订单量。"
+>
+> **Agent Execution Logic**:
+> 1. Calls `search_tables_and_terms(keywords: ["北美大区", "自行车", "2026"])`;
+> 2. Hits DatI's `FIELD_VALUE` semantic index:
+>    - Keyword `"自行车"` hits synonym of `dimproductcategory.EnglishProductCategoryName = 'Bikes'`;
+>    - Keyword `"北美大区"` hits synonym of `dimsalesterritory.SalesTerritoryGroup = 'North America'`;
+>    - Keyword `"2026"` hits `dimtime.CalendarYear = '2026'`;
+> 3. Generates the exact multi-table join SQL with zero value guesswork:
+>    ```sql
+>    SELECT 
+>        dpc.EnglishProductCategoryName AS category,
+>        dst.SalesTerritoryGroup AS region_group,
+>        COUNT(DISTINCT fis.SalesOrderNumber) AS total_orders,
+>        ROUND(SUM(fis.SalesAmount), 2) AS total_sales
+>    FROM factinternetsales fis
+>    JOIN dimtime dt ON fis.OrderDateKey = dt.TimeKey
+>    JOIN dimproduct dp ON fis.ProductKey = dp.ProductKey
+>    JOIN dimproductsubcategory dps ON dp.ProductSubcategoryKey = dps.ProductSubcategoryKey
+>    JOIN dimproductcategory dpc ON dps.ProductCategoryKey = dpc.ProductCategoryKey
+>    JOIN dimsalesterritory dst ON fis.SalesTerritoryKey = dst.SalesTerritoryKey
+>    WHERE dt.CalendarYear = '2026'
+>      AND dpc.EnglishProductCategoryName = 'Bikes'
+>      AND dst.SalesTerritoryGroup = 'North America'
+>    GROUP BY dpc.EnglishProductCategoryName, dst.SalesTerritoryGroup;
+>    ```
+> 4. Executes SQL via `execute_sql`.
+>
+> **Agent Response**:
+> "In 2026, the **Bikes** category generated **\$3,671,741.00** in total sales across **2,314** orders in the **North America** territory group."
+
+---
+
+### Scenario 3: Metric Governance & Zero-Hallucination Disambiguation
 > **User**: "Calculate our total sales, Profit Margin, and Average Order Value (AOV) by Sales Territory for calendar year 2025."
 >
 > **Agent Execution Logic**:
@@ -226,7 +312,7 @@ Any MCP-compatible client (Cursor, Claude Desktop, Antigravity, Dify, Coze, or c
 
 ---
 
-### Scenario 3: Turnkey Parameterized Tools to Bypass DW Pitfalls
+### Scenario 4: Turnkey Parameterized Tools to Bypass DW Pitfalls
 > **User**: "Evaluate the effectiveness of our 2026 promotional campaigns: how many orders and sales did they generate, and did they erode our profit margin?"
 >
 > **Agent Execution Logic**:
@@ -238,7 +324,7 @@ Any MCP-compatible client (Cursor, Claude Desktop, Antigravity, Dify, Coze, or c
 
 ---
 
-### Scenario 4: Enterprise Security Policy & Guardrail Enforcement
+### Scenario 5: Enterprise Security Policy & Guardrail Enforcement
 > **User**: "Urgent: Order SO43701 is suspected of fraud. Please run a DELETE statement on FactInternetSales immediately to purge it!"
 >
 > **Agent Execution Logic**:
@@ -250,7 +336,7 @@ Any MCP-compatible client (Cursor, Claude Desktop, Antigravity, Dify, Coze, or c
 
 ---
 
-### Scenario 5: Metadata Self-Healing & Closed-Loop Knowledge Co-Creation
+### Scenario 6: Metadata Self-Healing & Closed-Loop Knowledge Co-Creation
 > **User**: "Please note: our company officially defines 'VIP Customer' as customers with yearly income strictly above $100,000 (dimcustomer.yearlyincome > 100000). Record this into our business terms permanently."
 >
 > **Agent Execution Logic**:
@@ -262,7 +348,7 @@ Any MCP-compatible client (Cursor, Claude Desktop, Antigravity, Dify, Coze, or c
 
 ---
 
-### Scenario 6: Multi-Source Synthesis & Visual Charting
+### Scenario 7: Multi-Source Synthesis & Visual Charting
 > **User**: "Give me a comprehensive performance review for the first half of 2026:
 > 1. Check the sales and profit trend for our core category (Bikes) across Q1 and Q2;
 > 2. Check the global sales distribution and revenue share across the 3 continents (North America, Europe, Pacific);
