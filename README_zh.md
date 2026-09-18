@@ -31,6 +31,56 @@ DatI(Data Intelligence) 是连接 **AI Agent 与企业数据库** 的轻量级�
 
 内置示例数据仅供体验，环境会定期重置。
 
+### Demo
+
+数据与配置参考 [AdventureWorks 样例](examples/adventureworks-dw)，可使用 [dati-ops skill](skills/dati-ops) 自动化配置。
+
+#### 1. 数据源元数据配置（表、列、列值可配置）
+
+<details>
+<summary><b>查看操作演示 (GIF)</b></summary>
+
+![数据源元数据配置](docs/images/datasource_config.gif)
+
+</details>
+
+#### 2. 主题配置（圈定表范围，配置业务术语）
+
+<details>
+<summary><b>查看操作演示 (GIF)</b></summary>
+
+![主题配置](docs/images/subject-config.gif)
+
+</details>
+
+#### 3. MCP 配置（选定主题，开启预置工具，增加参数化 SQL 工具）
+
+<details>
+<summary><b>查看操作演示 (GIF)</b></summary>
+
+![MCP 配置](docs/images/mcp-service-config.gif)
+
+</details>
+
+#### 4. 配置 Agent 的 MCP（以 Antigravity 为例）
+
+<details>
+<summary><b>查看配置截图</b></summary>
+
+![配置 Agent 的 MCP](docs/images/antigravity-mcp-config.jpg)
+
+</details>
+
+#### 5. Agent 中问数
+
+<details>
+<summary><b>查看效果演示 (GIF)</b></summary>
+
+![Agent 中问数](docs/images/agy-analysis.gif)
+
+</details>
+
+
 ## 为什么选择 DatI？
 
 1. **多数据库**：支持 MySQL、PostgreSQL、ClickHouse、Doris 等多种关系型与分析型数据库

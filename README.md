@@ -2,7 +2,7 @@
 
 [English](README.md) | [简体中文](README_zh.md)
 
-DatI (Data Intelligence) is a lightweight semantic gateway connecting **AI Agents with enterprise databases**. Simply connect a database, configure semantic metadata, and enable prebuilt or parameterized SQL tools to publish an MCP service that connects with your agents or any MCP host.
+DatI (Data Intelligence) is a lightweight semantic gateway connecting **AI Agents with enterprise databases**. Simply connect your database, enrich semantic metadata, and configure built-in or parameterized SQL tools to publish an MCP service — ready for your agents or any MCP host.
 
 ```text
 ┌────────────────────┐  ┌────────────────────┐  ┌────────────────────┐
@@ -31,17 +31,67 @@ Account / Password: `demo` / `demo123`
 
 The demo instance is preloaded with sample data and reset periodically.
 
+### Demo
+
+Data and configuration reference the [AdventureWorks sample](examples/adventureworks-dw) and can be automated via the [dati-ops skill](skills/dati-ops).
+
+#### 1. Data Source Metadata Configuration (configurable tables, columns, and values)
+
+<details>
+<summary><b>View Demo (GIF)</b></summary>
+
+![Data Source Metadata Configuration](docs/images/datasource_config.gif)
+
+</details>
+
+#### 2. Business Subject Configuration (select relevant tables, define business terms)
+
+<details>
+<summary><b>View Demo (GIF)</b></summary>
+
+![Subject Configuration](docs/images/subject-config.gif)
+
+</details>
+
+#### 3. MCP Service Configuration (choose business subjects, enable built-in tools, add parameterized SQL tools)
+
+<details>
+<summary><b>View Demo (GIF)</b></summary>
+
+![MCP Service Configuration](docs/images/mcp-service-config.gif)
+
+</details>
+
+#### 4. Configure MCP in Agent (e.g., Antigravity)
+
+<details>
+<summary><b>View Screenshot</b></summary>
+
+![Configure MCP in Agent](docs/images/antigravity-mcp-config.jpg)
+
+</details>
+
+#### 5. Query Data in Agent
+
+<details>
+<summary><b>View Demo (GIF)</b></summary>
+
+![Query Data in Agent](docs/images/agy-analysis.gif)
+
+</details>
+
+
 ## Why DatI?
 
-1. **Multiple Databases**: Supports MySQL, PostgreSQL, ClickHouse, Doris, and other relational and analytical databases
+1. **Multi-Database Support**: Supports MySQL, PostgreSQL, ClickHouse, Doris, and other relational and analytical databases
 2. **Semantic Enhancement**: Supports business terms, column aliases, and automatic enum dictionary extraction. Combined with semantic search, it helps models understand business jargon and find the right tables
 3. **Flexible Integration**: Based on standard [MCP](https://modelcontextprotocol.io/) (Streamable HTTP), easily integrates into your existing agents or workflows
-4. **Fast to Build**: Out-of-the-box prebuilt tools (metadata inspection, SQL execution) and parameterized SQL tools to publish MCP services without extra deployment
-5. **Access Control**: Centrally manages credentials with support for user-level permission isolation
+4. **Effortless MCP Publishing**: Ready-to-use built-in tools (schema inspection, SQL execution) and parameterized SQL tools to publish MCP services with zero extra deployment
+5. **Security & Governance**: Centrally managed database credentials with user-level permission and data scope isolation
 
 ## Use Cases
 
-- **Natural Language Data Analysis**: Connect business databases and support NL2SQL analysis workflows with metadata configuration and prebuilt tools
+- **Conversational Data Analysis (NL2SQL)**: Connect business databases and support NL2SQL analysis workflows with semantic metadata and built-in tools
 - **Lightweight App Development**: Wrap databases as MCP services so agents can query and update data through conversation to build lightweight applications
 
 ## Tech Stack
