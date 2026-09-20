@@ -122,3 +122,8 @@ Data and configuration reference the [AdventureWorks sample](examples/adventurew
 - **User Guide**: [docs/user-guide](docs/user-guide/index.md) (VitePress site, bilingual)
 - **API Specification**: [docs/api/openapi.json](docs/api/openapi.json) (Used by E2E test toolchains)
 - **AI Coding Assistant Guidelines**: [AGENTS.md](AGENTS.md) and [.agents/rules/](.agents/rules) (Backend, frontend, and design system rules)
+
+## Acknowledgments
+
+Thanks to the [LINUX DO](https://linux.do/) community for discussions and support.
+

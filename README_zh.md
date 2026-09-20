@@ -122,3 +122,8 @@ DatI(Data Intelligence) 是连接 **AI Agent 与企业数据库** 的轻量级�
 - **用户帮助中心**：[docs/user-guide](docs/user-guide/index.md)（VitePress 站点，中英双语）
 - **API 契约**：[docs/api/openapi.json](docs/api/openapi.json)（E2E 测试工具链使用）
 - **AI 编码助手规范**：[AGENTS.md](AGENTS.md) 与 [.agents/rules/](.agents/rules)（后端/前端/设计系统规范）
+
+## 致谢
+
+感谢来自 [LINUX DO](https://linux.do/) 社区的讨论与支持。
+
