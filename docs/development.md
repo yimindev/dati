@@ -1,99 +1,103 @@
-# 本地开发指南（Development）
+# Local Development Guide
 
-本文档覆盖本地环境的准备、启动、常用命令与开发约定，适用于后端（Java / Spring Boot）与前端（Vue 3 + TypeScript）。
+[English](development.md) | [简体中文](development_zh.md)
 
-## 先决条件
+This guide walks you through setting up and running DatI locally for development and debugging.
 
-- Java 21
-- Maven 3.9+
-- Node.js 20+
-- pnpm 10+
+---
 
-## 启动后端（端口 8085）
+## Prerequisites & Dependencies
 
-```bash
-cd backend
-mvn -B -DskipTests package
-mvn spring-boot:run
-# 或：java -jar target/backend-*.jar（默认激活 dev 配置）
-```
+### Base Environment
+- **Java 21**
+- **Maven 3.9+**
+- **Node.js 20+** & **pnpm 10+**
 
-- Dev 数据库：H2 文件库，路径 `./db/dati`（相对项目根目录）
-- H2 Console：运行后可访问 `/h2-console/dati`
+### External Dependency: Elasticsearch 8.x
+- **Version Requirement**: The semantic search module is natively built on the Elasticsearch 8.x Java Client.
+- **IK Analyzer Requirement**: Semantic indexing currently depends on the **IK Chinese Analyzer** (`ik_max_word` / `ik_smart`). Without this plugin, metadata synchronization and business term indexing will fail with a 500 error (`analyzer [ik_max_word] not found`).
+- **Quick Local Setup**: Run the pre-bundled container image with security disabled (`xpack.security.enabled=false`) for a zero-configuration local experience:
+  ```bash
+  docker run -d --name dati-es-dev -p 9200:9200 \
+    -e "discovery.type=single-node" \
+    -e "xpack.security.enabled=false" \
+    -e "ES_JAVA_OPTS=-Xms512m -Xmx512m" \
+    davyinsa/elasticsearch-ik:8.18.7
+  ```
 
-## 启动前端
+---
+
+## Backend Startup & Configuration
+
+### Out-of-the-Box Dev Profile Defaults
+The development environment activates `spring.profiles.active=dev` by default, offering zero-configuration local setup:
+- **Embedded H2 Database**: Uses a local file database at `${user.dir}/db/dati` with automatic schema updates (`ddl-auto: update`). **No MySQL installation required.**
+- **H2 Web Console**: Enabled by default at `http://localhost:8085/h2-console/dati` (JDBC URL: `jdbc:h2:file:./db/dati`, Username: `sa`, Password: leave blank; click "Connect" directly).
+- **API Documentation (Swagger)**: Available at `http://localhost:8085/swagger-ui.html`.
+- **Security & Admin**: Preconfigured local `JWT_SECRET`; default admin identifier is `admin` (`ADMIN_USERS=admin`).
+- **MCP Endpoint**: `dati.mcp.endpoint-base-url` automatically resolves to `http://localhost:8085`.
+
+### Key Configurations to Review (`application-dev.yaml`)
+Before starting the backend, verify `backend/app/src/main/resources/application-dev.yaml`:
+
+1. **Elasticsearch Connection & Credentials**
+   ```yaml
+   spring:
+     elasticsearch:
+       uris: ${SPRING_ELASTICSEARCH_URIS:http://localhost:9200}
+       username: ${SPRING_ELASTICSEARCH_USERNAME:elastic}
+       password: ${SPRING_ELASTICSEARCH_PASSWORD:}
+   ```
+   - **Default Behavior**: Password is empty by default, pairing with the no-auth Docker command above. **No configuration changes needed to start.**
+
+2. **Switching to External Database (Optional)**
+   - To use MySQL instead of H2, adjust `spring.datasource.*` in `application-dev.yaml`.
+
+3. **Elasticsearch Wire Logging (Optional)**
+   - To inspect raw Elasticsearch DSL queries and HTTP wire traffic, uncomment:
+     ```yaml
+     logging:
+       level:
+         org.apache.http.wire: DEBUG
+     ```
+
+### Starting the Backend
+- **Via IDE (Recommended)**: Run the `com.dati.DatIApplication` main class.
+- **Via CLI**:
+  ```bash
+  cd backend
+  mvn spring-boot:run
+  ```
+Check `http://localhost:8085/actuator/health`. When `status` reports `UP` (with both `elasticsearch` and `db` components UP), the backend is ready.
+
+---
+
+## Frontend & Help Center Startup
+
+The frontend is built with Vue 3 + TypeScript + Vite and embeds a VitePress-powered user help center:
 
 ```bash
 cd frontend
 pnpm install
+
+# Start the management console (port 5173)
 pnpm dev
+
+# (Optional) Start the Help Center documentation server (port 5174)
+pnpm docs:dev
 ```
 
-## 常用命令
+- Management console runs at `http://localhost:5173`.
+- **API Proxy**: Automatically forwards `/v1` and `/api` requests to the local backend at `http://localhost:8085`.
+- **Help Center Integration**: The "Help Docs" link in the top navigation points to `/docs` (reverse-proxied to port `5174`). Keep `pnpm docs:dev` running in the background to edit or preview documentation with hot reloading.
+- **Production Build**: Use `pnpm build:all` (compiles VitePress docs into `public/docs` first, then builds the frontend SPA).
 
-### 后端测试
+---
 
-```bash
-cd backend && mvn test
-mvn -Dtest=ClassName test                    # 只跑一个类
-mvn -Dtest=ClassName#MethodName test         # 只跑一个方法
-```
+## Key Development Notes
 
-### 前端构建与测试
-
-```bash
-cd frontend
-pnpm build        # 先 vue-tsc 类型检查再 vite build
-pnpm preview      # 预览生产构建
-pnpm test         # Vitest 单元测试
-pnpm test:watch   # 持续运行
-pnpm docs:dev     # 本地运行帮助中心（VitePress，端口 5174）
-```
-
-## 开发约定
-
-- Dev 环境默认 `spring.profiles.active=dev`，端口 `8085`。
-- Dev JSON 命名策略：`SNAKE_CASE`，请在 DTO 与前端接口中统一。
-- JPA 在 dev 使用 `ddl-auto=update`，修改表结构需谨慎。
-- 如需跨域，在后端按控制器或全局配置开启 CORS。
-- 测试要求：后端采用 TDD（先写失败测试再实现），前端使用 Vitest；详见 [AGENTS.md](../AGENTS.md)。
-
-## 环境变量与配置说明
-
-项目根目录下提供了环境配置模板 [`.env.example`](../.env.example)，复制为 `.env` 即可覆盖默认配置：
-
-```bash
-cp .env.example .env
-```
-
-核心配置变量一览：
-
-| 分类 | 变量名 | 默认值 | 说明 |
-| :--- | :--- | :--- | :--- |
-| **安全认证** | `JWT_SECRET` | *(无默认值)* | 用户登录 Token 签名密钥（生产环境必填强随机串） |
-| **安全认证** | `ADMIN_USERS` | `admin` | 超级管理员账号名（首个以此名称注册的用户自动成为管理员） |
-| **持久化存储** | `SPRING_DATASOURCE_URL` | H2 嵌入式文件库 | 数据库连接串（支持 MySQL / PostgreSQL） |
-| **语义索引** | `SPRING_ELASTICSEARCH_PASSWORD` | *(无默认值)* | Elasticsearch 密码（Compose 部署时必填） |
-| **文档与仓库** | `REPO_URL` | `https://github.com/yimindev/dati` | 项目代码远程仓库基准地址，文档中各类链接基于此自动推导 |
-| **文档与仓库** | `SKILL_URL` | `${REPO_URL}/tree/main/skills/dati-ops` | 文档中 dati-ops 技能目录跳转链接（默认由 REPO_URL 自动拼接） |
-
-## 数据库与表结构
-
-- 开发环境使用 H2 文件库，数据文件为仓库根目录下 `./db/dati.*`；清空本地数据只需删除这些文件后重启后端。
-- 表结构默认由 JPA / Hibernate（`ddl-auto: update`）自动维护。
-
-## 切换其他数据库
-
-新增 profile（如 `application-mysql.yaml`）并设置 `spring.datasource.*`：
-
-```bash
-mvn spring-boot:run -Dspring-boot.run.profiles=mysql
-# 或
-java -jar target/backend-*.jar --spring.profiles.active=mysql
-```
-
-## 故障排查
-
-- 数据库连接失败：检查驱动与 JDBC URL，可用 `POST /v1/data-sources/test-connection` 自检
-- H2 Console 无法访问：确认应用运行，访问 `/h2-console/dati`
-- 表结构不一致：dev 下 `ddl-auto=update` 会尝试自动演进；如遇到遗留历史数据冲突，可重置本地 H2 数据库文件
+1. **Initial Admin Registration**
+   - The platform has **no pre-seeded accounts**.
+   - On your first visit, register with the username `admin`. The system recognizes this username (matching `ADMIN_USERS=admin`) and automatically grants super administrator privileges.
+2. **JSON Naming Convention**
+   - The dev environment uses `SNAKE_CASE` JSON naming globally. Write `camelCase` in Java code and DTO fields; serialization automatically converts them to `snake_case`.

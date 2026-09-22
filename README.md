@@ -103,22 +103,15 @@ Data and configuration reference the [AdventureWorks sample](examples/adventurew
 
 ## Documentation
 
-- [Local Development Guide](docs/development.md): Environment setup, startup, common commands, and development conventions
-- [Server Deployment Guide](docs/deployment.md): Single-node Docker Compose deployment (no registry needed)
+- [Local Development Guide](docs/development.md): Environment setup, backend/frontend startup, and project conventions
+- [Server Deployment Guide](docs/deployment.md): Architecture overview, Docker Compose deployment, and operational maintenance
+- [Architecture Overview](docs/architecture/overview.md): High-level architecture, module index, and key design conventions
+- **Examples**:
+  - [Enterprise BI & Retail Analytics (AdventureWorks DW)](examples/adventureworks-dw/README.md): Star schema Text-to-SQL, metric governance, multi-table joins, and parameterized acceleration
+  - [Family Finance Assistant](examples/family-finance/README.md): Multi-user collaborative bookkeeping, parameterized permission control, transparent SQL queries, and self-healing agent workflows
 - **Agent Skills** ([Agent Skills Open Standard](https://agentskills.io), auto-discovered by repository agents):
   - [dati-ops](skills/dati-ops/SKILL.md): **User Skill** — Configure and operate the platform via HTTP APIs (data sources, subjects & terms, MCP services); self-contained with built-in openapi.json and query tools, independently distributable; connected in-repo via `.agents/skills/dati-ops/`
   - [e2e-tester](.agents/skills/e2e-tester/SKILL.md): **Developer Skill** — E2E HTTP integration tests and API behavior validation (see test cases in [e2e-tests/test-cases/](e2e-tests/test-cases))
-- **Examples**:
-  - [Family Finance Assistant](examples/family-finance/README.md): Multi-user collaborative bookkeeping, parameterized permission control, transparent SQL queries, and self-healing agent workflows
-- **Architecture & Design** (Maintained continuously alongside code):
-  - [Overview](docs/architecture/overview.md)
-  - [Authentication](docs/architecture/authentication.md)
-  - [Authorization](docs/architecture/permission.md)
-  - [Data Source Module](docs/architecture/datasource.md)
-  - [Semantic Module](docs/architecture/semantic.md)
-  - [MCP Service Management](docs/architecture/mcp-service-management.md)
-  - [Template Engine](docs/architecture/template-engine.md)
-  - [Editor Architecture](docs/architecture/editor.md)
 - **User Guide**: [docs/user-guide](docs/user-guide/index.md) (VitePress site, bilingual)
 - **API Specification**: [docs/api/openapi.json](docs/api/openapi.json) (Used by E2E test toolchains)
 - **AI Coding Assistant Guidelines**: [AGENTS.md](AGENTS.md) and [.agents/rules/](.agents/rules) (Backend, frontend, and design system rules)

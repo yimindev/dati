@@ -2,8 +2,8 @@ spring:
   datasource:
 #    url: jdbc:h2:mem:dati;DATABASE_TO_UPPER=false;QUERY_TIMEOUT=30
     url: jdbc:h2:file:${user.dir}/db/dati;QUERY_TIMEOUT=30;mode=mysql
-    username: root
-    password: dca
+    username: sa
+    password:
   jpa:
     hibernate:
       ddl-auto: update
@@ -12,9 +12,9 @@ spring:
       path: /h2-console/dati
       enabled: true
   elasticsearch:
-    uris: http://localhost:9200
-    username: elastic  # 如果有认证
-    password: yimin123
+    uris: ${SPRING_ELASTICSEARCH_URIS:http://localhost:9200}
+    username: ${SPRING_ELASTICSEARCH_USERNAME:elastic}
+    password: ${SPRING_ELASTICSEARCH_PASSWORD:}
     connection-timeout: 5s
     socket-timeout: 30s
 
