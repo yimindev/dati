@@ -3,11 +3,7 @@ import { computed } from "vue";
 import { useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
 import { ElMessage } from "element-plus";
-import {
-  DocumentCopy,
-  InfoFilled,
-  Right,
-} from "@element-plus/icons-vue";
+import { DocumentCopy, InfoFilled, Right } from "@element-plus/icons-vue";
 import { copyToClipboard } from "~/utils/clipboard";
 import type { McpServiceVO } from "~/api/mcp-service";
 
@@ -67,7 +63,9 @@ const goToApiKeys = () => {
 </script>
 
 <template>
-  <aside class="mcp-access-card panel p-6 flex flex-col justify-between shadow-sm border border-[var(--ep-border-color-lighter)] rounded-xl bg-[var(--ep-bg-color)]">
+  <aside
+    class="mcp-access-card panel p-6 flex flex-col justify-between shadow-sm border border-[var(--ep-border-color-lighter)] rounded-xl bg-[var(--ep-bg-color)]"
+  >
     <!-- Top Configuration Content Area -->
     <div class="flex flex-col gap-4">
       <!-- 1. 服务访问端点 (Endpoint Box) -->
@@ -77,10 +75,14 @@ const goToApiKeys = () => {
             {{ t("mcpService.accessConfig.endpointTitle") }}
           </label>
           <div class="flex items-center gap-2 flex-wrap">
-            <span class="text-[11px] font-mono px-2 py-0.5 rounded bg-[var(--ep-fill-color-light)] text-[var(--ep-text-color-secondary)] border border-[var(--ep-border-color-lighter)]">
+            <span
+              class="text-[11px] font-mono px-2 py-0.5 rounded bg-[var(--ep-fill-color-light)] text-[var(--ep-text-color-secondary)] border border-[var(--ep-border-color-lighter)]"
+            >
               Streamable HTTP
             </span>
-            <span class="text-[11px] font-mono px-2 py-0.5 rounded bg-[var(--ep-fill-color-light)] text-[var(--ep-text-color-secondary)] border border-[var(--ep-border-color-lighter)]">
+            <span
+              class="text-[11px] font-mono px-2 py-0.5 rounded bg-[var(--ep-fill-color-light)] text-[var(--ep-text-color-secondary)] border border-[var(--ep-border-color-lighter)]"
+            >
               Version 2025-11-25
             </span>
             <span
@@ -93,8 +95,13 @@ const goToApiKeys = () => {
           </div>
         </div>
 
-        <div class="flex items-center justify-between gap-2 p-2.5 rounded-lg bg-[var(--ep-fill-color-lighter)] border border-[var(--ep-border-color-lighter)] min-w-0">
-          <span class="font-mono text-xs text-[var(--ep-text-color-primary)] truncate select-all" :title="endpointUrl">
+        <div
+          class="flex items-center justify-between gap-2 p-2.5 rounded-lg bg-[var(--ep-fill-color-lighter)] border border-[var(--ep-border-color-lighter)] min-w-0"
+        >
+          <span
+            class="font-mono text-xs text-[var(--ep-text-color-primary)] truncate select-text"
+            :title="endpointUrl"
+          >
             {{ endpointUrl || t("mcpService.notPublished") }}
           </span>
           <el-tooltip :content="t('common.copy')" placement="top">
@@ -115,8 +122,13 @@ const goToApiKeys = () => {
           <span class="text-sm text-[var(--ep-text-color-regular)]">
             {{ t("mcpService.accessConfig.configTitle") }}
           </span>
-          <el-tooltip :content="t('mcpService.accessConfig.configGuide')" placement="top">
-            <el-icon class="text-[var(--ep-text-color-placeholder)] hover:text-[var(--ep-text-color-secondary)] cursor-help !text-sm transition-colors">
+          <el-tooltip
+            :content="t('mcpService.accessConfig.configGuide')"
+            placement="top"
+          >
+            <el-icon
+              class="text-[var(--ep-text-color-placeholder)] hover:text-[var(--ep-text-color-secondary)] cursor-help !text-sm transition-colors"
+            >
               <span class="icon-[codicon--question]" />
             </el-icon>
           </el-tooltip>
@@ -124,13 +136,21 @@ const goToApiKeys = () => {
 
         <!-- Code block container with embedded top-right copy button -->
         <div class="relative group">
-          <pre class="m-0 font-mono text-xs text-[var(--ep-text-color-primary)] whitespace-pre-wrap break-all leading-relaxed select-all rounded-lg bg-[var(--ep-fill-color-light)] border border-[var(--ep-border-color-lighter)] p-3.5 pr-10">{{ jsonConfigSnippet }}</pre>
+          <pre
+            class="m-0 font-mono text-xs text-[var(--ep-text-color-primary)] whitespace-pre-wrap break-all leading-relaxed select-text rounded-lg bg-[var(--ep-fill-color-light)] border border-[var(--ep-border-color-lighter)] p-3.5 pr-10"
+            >{{ jsonConfigSnippet }}</pre
+          >
           <el-tooltip :content="t('common.copy')" placement="top">
             <el-button
               link
               :icon="DocumentCopy"
               class="!absolute top-2 right-2 !p-1.5 !h-auto text-[var(--ep-text-color-placeholder)] hover:text-[var(--ep-color-primary)] hover:bg-[var(--ep-bg-color)] rounded transition-all"
-              @click="handleCopy(jsonConfigSnippet, t('mcpService.accessConfig.copySuccess'))"
+              @click="
+                handleCopy(
+                  jsonConfigSnippet,
+                  t('mcpService.accessConfig.copySuccess'),
+                )
+              "
             />
           </el-tooltip>
         </div>
@@ -138,7 +158,9 @@ const goToApiKeys = () => {
     </div>
 
     <!-- 3. 底部 API Key 获取入口（与左侧操作栏分割线平齐） -->
-    <div class="mt-4 pt-4 border-t border-[var(--ep-border-color-lighter)] flex items-center">
+    <div
+      class="mt-4 pt-4 border-t border-[var(--ep-border-color-lighter)] flex items-center"
+    >
       <el-button
         type="primary"
         link
