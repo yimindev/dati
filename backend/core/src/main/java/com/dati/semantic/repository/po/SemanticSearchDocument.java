@@ -1,11 +1,12 @@
 package com.dati.semantic.repository.po;
 
 import com.dati.semantic.domain.SemanticEntityType;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import com.dati.semantic.repository.SemanticIndexSettings;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
-import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.elasticsearch.annotations.DateFormat;
 import org.springframework.data.elasticsearch.annotations.Document;
@@ -13,17 +14,19 @@ import org.springframework.data.elasticsearch.annotations.Field;
 import org.springframework.data.elasticsearch.annotations.FieldType;
 import org.springframework.data.elasticsearch.annotations.InnerField;
 import org.springframework.data.elasticsearch.annotations.MultiField;
-import org.springframework.data.elasticsearch.annotations.Setting;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
+/**
+ * Index is created by {@link com.dati.semantic.repository.SemanticIndexInitializer}, which
+ * defines the analyzer aliases below according to {@code dati.elasticsearch.*} configuration.
+ */
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Document(indexName = "semantic_search")
-@Setting(shards = 3)
+@Document(indexName = "semantic_search", createIndex = false)
 public class SemanticSearchDocument {
     
     @Id
@@ -39,7 +42,9 @@ public class SemanticSearchDocument {
      * 同义词: 存储同义词列表
      */
     @MultiField(
-        mainField = @Field(type = FieldType.Text, analyzer = "ik_max_word", searchAnalyzer = "ik_smart"),
+        mainField = @Field(type = FieldType.Text,
+                analyzer = SemanticIndexSettings.INDEX_ANALYZER,
+                searchAnalyzer = SemanticIndexSettings.SEARCH_ANALYZER),
         otherFields = {
             @InnerField(suffix = "keyword", type = FieldType.Keyword)
         }
@@ -49,7 +54,9 @@ public class SemanticSearchDocument {
     /**
      * 详细描述文本
      */
-    @Field(type = FieldType.Text, analyzer = "ik_max_word", searchAnalyzer = "ik_smart")
+    @Field(type = FieldType.Text,
+            analyzer = SemanticIndexSettings.INDEX_ANALYZER,
+            searchAnalyzer = SemanticIndexSettings.SEARCH_ANALYZER)
     private String description;
     
     /**

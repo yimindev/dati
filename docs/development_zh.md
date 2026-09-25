@@ -15,15 +15,29 @@
 
 ### 外部依赖：Elasticsearch 8.x
 - **版本要求**：项目语义检索模块原生基于 ES 8.x Java Client
-- **分词器要求**：当前版本语义检索模型依赖 **IK 中文分词器**（`ik_max_word` / `ik_smart`），若 ES 实例未安装 IK 插件，数据源同步与术语建索引时会报 500（`analyzer [ik_max_word] not found`）。
-- **本地快速拉起**：使用已预置 IK 插件的容器镜像（与 `docker-compose.yml` 保持一致），开发环境可开启 `-e "xpack.security.enabled=false"` 免密运行：
-  ```bash
-  docker run -d --name dati-es-dev -p 9200:9200 \
-    -e "discovery.type=single-node" \
-    -e "xpack.security.enabled=false" \
-    -e "ES_JAVA_OPTS=-Xms512m -Xmx512m" \
-    davyinsa/elasticsearch-ik:8.18.7
-  ```
+- **分词器（可配置，IK 非必需）**：语义索引的分词器类型通过 `DATI_ELASTICSEARCH_INDEX_ANALYZER` / `DATI_ELASTICSEARCH_SEARCH_ANALYZER` 配置，默认 `standard`（ES 内置，任何 ES 实例开箱即用）。中文词级分词可设为 `ik_max_word` / `ik_smart`（需 ES 安装 IK 插件）。
+  - 分词器仅在 `semantic_search` 索引**首次创建**时生效；修改配置后需删除该索引并重启应用，数据会在下次同步时重建。
+- **本地快速拉起**：
+  - 默认（无需中文分词，官方镜像即可）：
+    ```bash
+    docker run -d --name dati-es-dev -p 9200:9200 \
+      -e "discovery.type=single-node" \
+      -e "xpack.security.enabled=false" \
+      -e "ES_JAVA_OPTS=-Xms512m -Xmx512m" \
+      elasticsearch:8.18.7
+    ```
+  - 需要中文词级分词：使用已预置 IK 插件的镜像（与 `docker-compose.yml` 默认保持一致），并在启动后端时注入分析器配置：
+    ```bash
+    docker run -d --name dati-es-dev -p 9200:9200 \
+      -e "discovery.type=single-node" \
+      -e "xpack.security.enabled=false" \
+      -e "ES_JAVA_OPTS=-Xms512m -Xmx512m" \
+      davyinsa/elasticsearch-ik:8.18.7
+    
+    DATI_ELASTICSEARCH_INDEX_ANALYZER=ik_max_word \
+      DATI_ELASTICSEARCH_SEARCH_ANALYZER=ik_smart \
+      mvn -pl app spring-boot:run
+    ```
 
 ---
 

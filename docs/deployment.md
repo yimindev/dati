@@ -16,7 +16,7 @@ DatI runs as two container services via Docker Compose, configured by default fo
    - **Resource Budget**: Memory limit capped at 1.5GB (JVM heap auto-allocates ~75%).
 
 2. **`elasticsearch` (Semantic Search Container)**
-   - **Image & Plugin**: Uses `davyinsa/elasticsearch-ik:8.18.7` (pre-installed IK Chinese analyzer), protocol-aligned with the application's ES 8 Java Client, listening on port `9200`.
+   - **Image & Plugin**: Uses `davyinsa/elasticsearch-ik:8.18.7` (pre-installed IK Chinese analyzer), protocol-aligned with the application's ES 8 Java Client, listening on port `9200`. The compose file accordingly injects `DATI_ELASTICSEARCH_INDEX_ANALYZER=ik_max_word` / `DATI_ELASTICSEARCH_SEARCH_ANALYZER=ik_smart`; if you switch to a vanilla Elasticsearch image (no IK plugin), set both to `standard`. Analyzers apply when the index is first created.
    - **Data Persistence**: Semantic search indices persisted in the `es_data` volume.
    - **Resource Budget**: Memory limit capped at 1GB, JVM heap pinned to `-Xms512m -Xmx512m`.
 

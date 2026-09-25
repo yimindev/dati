@@ -260,12 +260,15 @@ DataSource 模块通过 `SemanticIndexService` 与 Elasticsearch 集成，将表
 ### 5.3 ES 文档结构
 
 ```java
-@Document(indexName = "semantic_search")
+@Document(indexName = "semantic_search", createIndex = false)
 public class SemanticSearchDocument {
     @Id
     private String id;                    // 格式: "table:{id}"、"field:{id}" 或 UUID（FIELD_VALUE）
 
-    @Field(type = FieldType.Text, analyzer = "ik_max_word")
+    // 分词器别名，实际类型由配置注入（默认 standard，可配 ik_max_word/ik_smart）
+    @Field(type = FieldType.Text,
+           analyzer = SemanticIndexSettings.INDEX_ANALYZER,
+           searchAnalyzer = SemanticIndexSettings.SEARCH_ANALYZER)
     private List<String> keywords;       // [原始名称] + aliases（去重）
 
     @Field(type = FieldType.Text)

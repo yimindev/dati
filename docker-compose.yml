@@ -30,6 +30,10 @@ services:
       - SPRING_ELASTICSEARCH_URIS=http://elasticsearch:9200
       - SPRING_ELASTICSEARCH_USERNAME=elastic
       - SPRING_ELASTICSEARCH_PASSWORD=${SPRING_ELASTICSEARCH_PASSWORD:?SPRING_ELASTICSEARCH_PASSWORD must be set in .env}
+      # Semantic index analyzers (applied when the index is first created).
+      # Defaults assume the bundled IK image below; set both to standard for vanilla Elasticsearch.
+      - DATI_ELASTICSEARCH_INDEX_ANALYZER=${DATI_ELASTICSEARCH_INDEX_ANALYZER:-ik_max_word}
+      - DATI_ELASTICSEARCH_SEARCH_ANALYZER=${DATI_ELASTICSEARCH_SEARCH_ANALYZER:-ik_smart}
       - ADMIN_USERS=${ADMIN_USERS:-admin}
       - JWT_SECRET=${JWT_SECRET:?JWT_SECRET must be set in .env}
     volumes:

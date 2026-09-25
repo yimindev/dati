@@ -45,6 +45,12 @@ auth:
     expiration-seconds: 604800
 
 dati:
+  elasticsearch:
+    # 语义检索索引的分词器类型（仅在索引首次创建时生效）
+    # standard 为 ES 内置分词器，无需任何插件；ik_max_word 需要 IK 插件（中文词级分词）
+    index-analyzer: ${DATI_ELASTICSEARCH_INDEX_ANALYZER:standard}
+    # 查询时的分词器类型；留空则回退为 index-analyzer；ik_smart 需要 IK 插件
+    search-analyzer: ${DATI_ELASTICSEARCH_SEARCH_ANALYZER:}
   mcp:
     # MCP endpoint 基础 URL（完整 URL 前缀，如 https://mcp.example.com），空则返回相对路径 /{code}/mcp
     endpoint-base-url: ${MCP_ENDPOINT_BASE_URL:}

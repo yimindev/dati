@@ -15,15 +15,29 @@ This guide walks you through setting up and running DatI locally for development
 
 ### External Dependency: Elasticsearch 8.x
 - **Version Requirement**: The semantic search module is natively built on the Elasticsearch 8.x Java Client.
-- **IK Analyzer Requirement**: Semantic indexing currently depends on the **IK Chinese Analyzer** (`ik_max_word` / `ik_smart`). Without this plugin, metadata synchronization and business term indexing will fail with a 500 error (`analyzer [ik_max_word] not found`).
-- **Quick Local Setup**: Run the pre-bundled container image with security disabled (`xpack.security.enabled=false`) for a zero-configuration local experience:
-  ```bash
-  docker run -d --name dati-es-dev -p 9200:9200 \
-    -e "discovery.type=single-node" \
-    -e "xpack.security.enabled=false" \
-    -e "ES_JAVA_OPTS=-Xms512m -Xmx512m" \
-    davyinsa/elasticsearch-ik:8.18.7
-  ```
+- **Analyzers (configurable, IK optional)**: The semantic index analyzers are configured via `DATI_ELASTICSEARCH_INDEX_ANALYZER` / `DATI_ELASTICSEARCH_SEARCH_ANALYZER`, defaulting to `standard` (built into Elasticsearch, works on any instance). For Chinese word-level segmentation use `ik_max_word` / `ik_smart` (requires the IK plugin).
+  - Analyzers only apply when the `semantic_search` index is **first created**; after changing the configuration, delete that index and restart the application — data is rebuilt on the next sync.
+- **Quick Local Setup**:
+  - Default (no Chinese segmentation needed, vanilla image):
+    ```bash
+    docker run -d --name dati-es-dev -p 9200:9200 \
+      -e "discovery.type=single-node" \
+      -e "xpack.security.enabled=false" \
+      -e "ES_JAVA_OPTS=-Xms512m -Xmx512m" \
+      elasticsearch:8.18.7
+    ```
+  - Chinese word-level segmentation: use the pre-bundled image with the IK plugin (matches the `docker-compose.yml` default) and inject the analyzer configuration when starting the backend:
+    ```bash
+    docker run -d --name dati-es-dev -p 9200:9200 \
+      -e "discovery.type=single-node" \
+      -e "xpack.security.enabled=false" \
+      -e "ES_JAVA_OPTS=-Xms512m -Xmx512m" \
+      davyinsa/elasticsearch-ik:8.18.7
+    
+    DATI_ELASTICSEARCH_INDEX_ANALYZER=ik_max_word \
+      DATI_ELASTICSEARCH_SEARCH_ANALYZER=ik_smart \
+      mvn -pl app spring-boot:run
+    ```
 
 ---
 
