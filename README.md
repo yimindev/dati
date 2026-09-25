@@ -81,6 +81,17 @@ Data and configuration reference the [AdventureWorks sample](examples/adventurew
 </details>
 
 
+## Quick Start
+
+```bash
+git clone https://github.com/yimindev/dati.git && cd dati
+cp .env.example .env                # Configure JWT_SECRET and ES password
+docker compose up -d --build
+```
+
+Open `http://localhost:8085`. Register with username `admin` to get super admin role. For production tuning and external DB setup, see [Deployment Guide](docs/deployment.md).
+
+
 ## Why DatI?
 
 1. **Multi-Database Support**: Supports MySQL, PostgreSQL, ClickHouse, Doris, and other relational and analytical databases
@@ -118,5 +129,5 @@ Data and configuration reference the [AdventureWorks sample](examples/adventurew
 
 ## Acknowledgments
 
-Thanks to the [LINUX DO](https://linux.do/) community for discussions and support.
+Thanks to the [LINUX DO](https://linux.do/t/topic/2929301) community for discussions and support.
 

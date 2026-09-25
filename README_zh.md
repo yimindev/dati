@@ -81,6 +81,17 @@ DatI(Data Intelligence) 是连接 **AI Agent 与企业数据库** 的轻量级�
 </details>
 
 
+## 快速开始
+
+```bash
+git clone https://github.com/yimindev/dati.git && cd dati
+cp .env.example .env                # 需配置 JWT_SECRET 与 ES 密码
+docker compose up -d --build
+```
+
+访问 `http://localhost:8085`，首个注册用户填写 `admin` 即自动成为超级管理员。详细配置与生产部署见 [部署手册](docs/deployment_zh.md)。
+
+
 ## 为什么选择 DatI？
 
 1. **多数据库**：支持 MySQL、PostgreSQL、ClickHouse、Doris 等多种关系型与分析型数据库
@@ -118,5 +129,5 @@ DatI(Data Intelligence) 是连接 **AI Agent 与企业数据库** 的轻量级�
 
 ## 致谢
 
-感谢来自 [LINUX DO](https://linux.do/) 社区的讨论与支持。
+感谢来自 [LINUX DO](https://linux.do/t/topic/2929301) 社区的讨论与支持。
 
