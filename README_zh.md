@@ -25,7 +25,7 @@ DatI(Data Intelligence) 是连接 **AI Agent 与企业数据库** 的轻量级�
 
 ## 在线试用
 
-体验地址：http://47.99.122.223:18085/
+体验地址：https://dati-demo.zhangyimin.me
 
 账号 / 密码：`demo` / `demo123`
 
@@ -86,7 +86,7 @@ DatI(Data Intelligence) 是连接 **AI Agent 与企业数据库** 的轻量级�
 ```bash
 git clone https://github.com/yimindev/dati.git && cd dati
 cp .env.example .env                # 需配置 JWT_SECRET 与 ES 密码
-docker compose up -d --build
+docker compose up -d
 ```
 
 访问 `http://localhost:8085`，首个注册用户填写 `admin` 即自动成为超级管理员。详细配置与生产部署见 [部署手册](docs/deployment_zh.md)。

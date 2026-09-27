@@ -25,7 +25,7 @@ DatI (Data Intelligence) is a lightweight semantic gateway connecting **AI Agent
 
 ## Try It Online
 
-Demo URL: http://47.99.122.223:18085/
+Demo URL: https://dati-demo.zhangyimin.me
 
 Account / Password: `demo` / `demo123`
 
@@ -86,7 +86,7 @@ Data and configuration reference the [AdventureWorks sample](examples/adventurew
 ```bash
 git clone https://github.com/yimindev/dati.git && cd dati
 cp .env.example .env                # Configure JWT_SECRET and ES password
-docker compose up -d --build
+docker compose up -d
 ```
 
 Open `http://localhost:8085`. Register with username `admin` to get super admin role. For production tuning and external DB setup, see [Deployment Guide](docs/deployment.md).

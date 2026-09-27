@@ -11,7 +11,7 @@ This document describes the single-node containerized deployment and operational
 DatI runs as two container services via Docker Compose, configured by default for a 2-core 4GB RAM host (peak usage ~2.5GB):
 
 1. **`dati-app` (Application Container)**
-   - **All-in-One Image**: Built locally via multi-stage `Dockerfile`. Compiles the frontend (Vue 3 console) and Help Center (VitePress) static assets directly into the backend Spring Boot Fat JAR. Runs as a single container listening on port `8085`.
+   - **All-in-One Image**: Prebuilt lightweight image published to GHCR (`ghcr.io/yimindev/dati`), built from the official multi-stage `Dockerfile`. Packages the frontend (Vue 3 console) and Help Center (VitePress) static assets directly into the backend Spring Boot Fat JAR. Runs as a single container listening on port `8085`.
    - **Data Persistence**: Uses an embedded H2 database by default, persisted in the `dati_data` volume (can be pointed to external MySQL / PostgreSQL in `.env`).
    - **Resource Budget**: Memory limit capped at 1.5GB (JVM heap auto-allocates ~75%).
 
@@ -38,9 +38,9 @@ Edit `.env` and fill in the required secrets:
 - `JWT_SECRET`: Secret key for signing tokens (random string, minimum 32 characters).
 - `SPRING_ELASTICSEARCH_PASSWORD`: Password for Elasticsearch authentication.
 
-### 2. Build and Start Services
+### 2. Start Services
 ```bash
-docker compose up -d --build
+docker compose up -d
 ```
 
 ### 3. Verification & Initial Setup
@@ -80,7 +80,7 @@ docker compose up -d --build
 
 | Operation | Command | Description |
 |-----------|---------|-------------|
-| Upgrade | `git pull && docker compose up -d --build` | Rebuild image locally and restart containers; volumes preserved |
+| Upgrade | `git pull && docker compose pull && docker compose up -d` | Pull latest images and restart containers; volumes preserved |
 | View App Logs | `docker compose logs -f dati-app` | Tail application and API access logs |
 | View ES Logs | `docker compose logs -f elasticsearch` | Tail Elasticsearch runtime and indexing logs |
 | Restart Services | `docker compose restart` | Restart containers without modifying data |

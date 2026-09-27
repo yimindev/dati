@@ -11,7 +11,7 @@
 Docker Compose 由两个容器服务组成，默认硬件预算适配 2C4G 规格（峰值约 2.5GB 内存）：
 
 1. **`dati-app`（业务应用容器）**
-   - **前后端一体化镜像**：通过多阶段 `Dockerfile` 本地构建，将前端（Vue 3 控制台）与帮助中心（VitePress）编译后的静态资源直接打入后端 Spring Boot Fat JAR，单容器运行并监听 `8085` 端口。
+   - **前后端一体化镜像**：基于官方多阶段 `Dockerfile` 构建并发布至 GHCR（`ghcr.io/yimindev/dati`），将前端（Vue 3 控制台）与帮助中心（VitePress）编译后的静态资源直接打入后端 Spring Boot Fat JAR，单容器运行并监听 `8085` 端口。
    - **数据持久化**：默认使用嵌入式 H2 数据库，数据持久化于 `dati_data` 卷（亦可在 `.env` 中指定外接 MySQL/PostgreSQL）。
    - **资源预算**：内存上限默认 1.5GB（JVM 堆内存自适应约 75%）。
 
@@ -37,9 +37,9 @@ cp .env.example .env
 - `JWT_SECRET`：Token 签名密钥（不少于 32 字符的随机字符串）。
 - `SPRING_ELASTICSEARCH_PASSWORD`：Elasticsearch 访问密码。
 
-### 2. 构建并启动服务
+### 2. 启动服务
 ```bash
-docker compose up -d --build
+docker compose up -d
 ```
 
 ### 3. 验证与首次注册
@@ -79,7 +79,7 @@ docker compose up -d --build
 
 | 操作 | 命令 | 说明 |
 |------|------|------|
-| 更新升级 | `git pull && docker compose up -d --build` | 本地重新构建镜像并重启，已有数据卷保留 |
+| 更新升级 | `git pull && docker compose pull && docker compose up -d` | 拉取最新镜像并重启，已有数据卷保留 |
 | 查看应用日志 | `docker compose logs -f dati-app` | 查看业务与接口调用日志 |
 | 查看 ES 日志 | `docker compose logs -f elasticsearch` | 查看 ES 运行与索引日志 |
 | 重启服务 | `docker compose restart` | 容器重启，数据保持不变 |

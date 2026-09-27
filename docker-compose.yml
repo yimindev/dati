@@ -5,13 +5,14 @@
 #
 # Quick start:
 #   cp .env.example .env            # fill JWT_SECRET + SPRING_ELASTICSEARCH_PASSWORD
-#   docker compose up -d --build
+#   docker compose up -d
 services:
   dati-app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    image: dati/dati:latest
+    # Build from source locally (uncomment when modifying code):
+    # build:
+    #   context: .
+    #   dockerfile: Dockerfile
+    image: ghcr.io/yimindev/dati:latest
     container_name: dati-app
     restart: unless-stopped
     deploy:
