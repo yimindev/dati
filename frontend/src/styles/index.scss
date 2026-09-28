@@ -109,6 +109,18 @@ code {
   gap: 10px;
 }
 
+.table-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  white-space: nowrap;
+
+  .el-button {
+    flex-shrink: 0;
+  }
+}
+
 /* ============ Toolbar ============ */
 .toolbar {
   border: 1px solid var(--ep-border-color-lighter);

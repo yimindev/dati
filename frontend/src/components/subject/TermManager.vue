@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref, computed, nextTick } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, Search } from '@element-plus/icons-vue'
+import { Plus, Search, MoreFilled } from '@element-plus/icons-vue'
 import { useI18n } from 'vue-i18n'
 import type { FormInstance, FormRules } from 'element-plus'
 import type { TermVO, TermRelationVO, CreateTermRequest, UpdateTermRequest, LinkTermRelationRequest, TableInfoVO } from '~/api/subject'
@@ -635,17 +635,26 @@ onMounted(() => {
             <span v-else class="text-sm text-[var(--ep-text-color-placeholder)]">-</span>
           </template>
         </el-table-column>
-        <el-table-column :label="t('common.actions')" width="210" fixed="right" align="right">
+        <el-table-column :label="t('common.actions')" min-width="180" fixed="right" align="right">
           <template #default="{ row }">
-            <el-button link type="primary" @click="handleOpenAddRelationDialog(row)">
-              {{ t('subject.addRelation') }}
-            </el-button>
-            <el-button link type="primary" @click="handleOpenTermDialog(row)">
-              {{ t('common.edit') }}
-            </el-button>
-            <el-button link type="danger" @click="handleDeleteTerm(row)">
-              {{ t('common.delete') }}
-            </el-button>
+            <div class="table-actions">
+              <el-button link type="primary" @click="handleOpenAddRelationDialog(row)">
+                {{ t('subject.addRelation') }}
+              </el-button>
+              <el-button link type="primary" @click="handleOpenTermDialog(row)">
+                {{ t('common.edit') }}
+              </el-button>
+              <el-dropdown trigger="click">
+                <el-button link :icon="MoreFilled" :aria-label="t('common.actions')" />
+                <template #dropdown>
+                  <el-dropdown-menu>
+                    <el-dropdown-item @click="handleDeleteTerm(row)">
+                      <span class="text-[var(--ep-color-danger)]">{{ t('common.delete') }}</span>
+                    </el-dropdown-item>
+                  </el-dropdown-menu>
+                </template>
+              </el-dropdown>
+            </div>
           </template>
         </el-table-column>
         <template #empty>

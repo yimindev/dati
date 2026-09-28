@@ -654,9 +654,9 @@ onMounted(() => {
         <el-table-column
           prop="name"
           :label="t('column.columnName')"
-          min-width="180"
+          min-width="150"
         />
-        <el-table-column :label="t('common.aliases')" min-width="180">
+        <el-table-column :label="t('common.aliases')" min-width="140">
           <template #default="{ row }">
             <el-tag
               v-for="alias in row.aliases"
@@ -672,19 +672,19 @@ onMounted(() => {
         <el-table-column
           prop="description"
           :label="t('column.description')"
-          min-width="160"
+          min-width="140"
           show-overflow-tooltip
         />
         <el-table-column
           prop="column_type"
           :label="t('column.type')"
-          min-width="120"
+          min-width="100"
         />
 
         <!-- 值匹配开关 -->
         <el-table-column
           :label="t('column.valueMatching')"
-          width="100"
+          min-width="120"
           align="center"
         >
           <template #default="{ row }">
@@ -703,7 +703,7 @@ onMounted(() => {
         <el-table-column
           prop="updated_at"
           :label="t('common.updatedAt')"
-          min-width="140"
+          min-width="160"
         >
           <template #default="{ row }">
             {{ row.updated_at ? formatDateTime(row.updated_at) : "-" }}
@@ -712,12 +712,12 @@ onMounted(() => {
 
         <el-table-column
           :label="t('common.actions')"
-          width="180"
+          min-width="180"
           fixed="right"
           align="right"
         >
           <template #default="{ row }">
-            <div class="flex items-center justify-end gap-2">
+            <div class="table-actions">
               <el-button
                 link
                 type="primary"
@@ -925,37 +925,39 @@ onMounted(() => {
 
           <el-table-column
             :label="t('common.actions')"
-            width="130"
+            min-width="140"
             fixed="right"
             align="right"
           >
             <template #default="{ row }">
-              <template v-if="row._isDraft">
+              <div class="table-actions">
+                <template v-if="row._isDraft">
+                  <el-button
+                    link
+                    type="primary"
+                    size="small"
+                    @click="handleConfirmDraftValue(row)"
+                  >
+                    {{ t("common.confirm") }}
+                  </el-button>
+                  <el-button
+                    link
+                    size="small"
+                    @click="handleCancelDraftValue"
+                  >
+                    {{ t("common.cancel") }}
+                  </el-button>
+                </template>
                 <el-button
+                  v-else
                   link
-                  type="primary"
+                  type="danger"
                   size="small"
-                  @click="handleConfirmDraftValue(row)"
+                  @click="handleDeleteValue(row)"
                 >
-                  {{ t("common.confirm") }}
+                  {{ t("common.delete") }}
                 </el-button>
-                <el-button
-                  link
-                  size="small"
-                  @click="handleCancelDraftValue"
-                >
-                  {{ t("common.cancel") }}
-                </el-button>
-              </template>
-              <el-button
-                v-else
-                link
-                type="danger"
-                size="small"
-                @click="handleDeleteValue(row)"
-              >
-                {{ t("common.delete") }}
-              </el-button>
+              </div>
             </template>
           </el-table-column>
           <template #empty>

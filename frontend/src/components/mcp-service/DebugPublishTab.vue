@@ -120,18 +120,20 @@ watch(
         </template>
       </el-table-column>
 
-      <el-table-column :label="t('common.actions')" width="100" align="right">
+      <el-table-column :label="t('common.actions')" min-width="120" align="right">
         <template #default="{ row }">
-          <el-button
-            v-if="row.version_number !== service?.active_version_number"
-            type="primary"
-            link
-            :icon="RefreshRight"
-            :loading="rollingBack"
-            @click="handleRollback(row)"
-          >
-            {{ t("common.rollback") }}
-          </el-button>
+          <div class="table-actions">
+            <el-button
+              v-if="row.version_number !== service?.active_version_number"
+              type="primary"
+              link
+              :icon="RefreshRight"
+              :loading="rollingBack"
+              @click="handleRollback(row)"
+            >
+              {{ t("common.rollback") }}
+            </el-button>
+          </div>
         </template>
       </el-table-column>
     </el-table>

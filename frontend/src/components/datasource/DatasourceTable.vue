@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import type { DatasourceVO } from '~/api/datasource'
 import { formatDateTime } from "~/composables";
-import {useI18n} from "vue-i18n";
+import { useI18n } from "vue-i18n";
+import { MoreFilled } from "@element-plus/icons-vue";
 
 const { t } = useI18n();
 
@@ -52,13 +53,28 @@ defineEmits<Emits>()
           {{ formatDateTime(row.updated_at) }}
         </template>
       </el-table-column>
-      <el-table-column :label="t('common.actions')" width="280" fixed="right" align="right">
+      <el-table-column :label="t('common.actions')" min-width="200" fixed="right" align="right">
         <template #default="{ row }">
-          <div class="flex items-center justify-end gap-2">
-            <el-button type="primary" link @click="$emit('table-manage', row)">{{ t('datasource.tableManage') }}</el-button>
-            <el-button type="primary" link @click="$emit('authorize', row)">{{ t('permission.button') }}</el-button>
-            <el-button type="primary" link @click="$emit('edit', row)">{{ t('common.edit') }}</el-button>
-            <el-button type="danger" link @click="$emit('delete', row)">{{ t('common.delete') }}</el-button>
+          <div class="table-actions">
+            <el-button type="primary" link @click="$emit('table-manage', row)">
+              {{ t('datasource.tableManage') }}
+            </el-button>
+            <el-button type="primary" link @click="$emit('edit', row)">
+              {{ t('common.edit') }}
+            </el-button>
+            <el-dropdown trigger="click">
+              <el-button link :icon="MoreFilled" :aria-label="t('common.actions')" />
+              <template #dropdown>
+                <el-dropdown-menu>
+                  <el-dropdown-item @click="$emit('authorize', row)">
+                    {{ t('permission.button') }}
+                  </el-dropdown-item>
+                  <el-dropdown-item @click="$emit('delete', row)">
+                    <span class="text-[var(--ep-color-danger)]">{{ t('common.delete') }}</span>
+                  </el-dropdown-item>
+                </el-dropdown-menu>
+              </template>
+            </el-dropdown>
           </div>
         </template>
       </el-table-column>

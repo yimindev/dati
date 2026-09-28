@@ -416,12 +416,12 @@ onMounted(async () => {
         </el-table-column>
         <el-table-column
           :label="t('common.actions')"
-          width="160"
+          min-width="200"
           fixed="right"
           align="right"
         >
           <template #default="{ row }">
-            <div class="flex items-center justify-end gap-2">
+            <div class="table-actions">
               <el-button type="primary" link @click="handleColumnManage(row)">
                 {{ t("tableInfo.columnSettings") }}
               </el-button>

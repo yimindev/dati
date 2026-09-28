@@ -272,9 +272,11 @@ onMounted(() => {
           align="right"
         >
           <template #default="{ row }">
-            <el-button link type="danger" @click="handleRemoveTable(row)">
-              {{ t("common.remove") }}
-            </el-button>
+            <div class="table-actions">
+              <el-button link type="danger" @click="handleRemoveTable(row)">
+                {{ t("common.remove") }}
+              </el-button>
+            </div>
           </template>
         </el-table-column>
         <template #empty>

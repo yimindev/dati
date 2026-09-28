@@ -362,23 +362,42 @@ const rules: FormRules = {
 | Description | `min-width="160-240" show-overflow-tooltip` | Or shorter |
 | Status | `min-width="120"`, use `el-tag` with status type | Color + label |
 | Updated At | `min-width="160"`, use `formatDateTime` | Via composable |
-| Actions | `width="180-220" fixed="right"` | Link buttons |
+| Actions | `min-width="100-200" fixed="right" align="right"` | Link buttons + dropdown |
+
+**Action column conventions & adaptive width strategy:**
+- **Button layout hierarchy**: Keep 1-2 primary/frequent actions visible inline; collapse secondary, low-frequency, or destructive operations (`Authorize`, `Delete`, `Remove`, `Sync`) into an `el-dropdown` with `MoreFilled` icon.
+- **Use declarative `min-width` directly on `<el-table-column>`**:
+  - `min-width="80-100"`: 1 text/icon button (or 1 button + dropdown)
+  - `min-width="180-200"`: 2 text buttons + dropdown
+- **Unified container layout**: Action cell layout MUST use `.table-actions` (or `flex items-center justify-end gap-2 whitespace-nowrap` with `shrink-0` on buttons) to prevent multiline wrapping or compression.
 
 **Action button patterns:**
 ```html
-<!-- Inline visible actions (≤4) -->
-<el-button type="primary" link @click="edit">Edit</el-button>
-<el-button type="danger" link @click="delete">Delete</el-button>
+<el-table-column :label="t('common.actions')" min-width="180-200" fixed="right" align="right">
+  <template #default="{ row }">
+    <div class="table-actions">
+      <!-- 1-2 primary visible actions -->
+      <el-button type="primary" link @click="edit">
+        {{ t('common.edit') }}
+      </el-button>
 
-<!-- Overflow actions (>4), use dropdown -->
-<el-dropdown trigger="click">
-  <el-button link :icon="MoreFilled" />
-  <template #dropdown>
-    <el-dropdown-menu>
-      <el-dropdown-item @click="...">Action</el-dropdown-item>
-    </el-dropdown-menu>
+      <!-- Secondary / destructive actions in dropdown -->
+      <el-dropdown trigger="click">
+        <el-button link :icon="MoreFilled" :aria-label="t('common.actions')" />
+        <template #dropdown>
+          <el-dropdown-menu>
+            <el-dropdown-item @click="authorize">
+              {{ t('permission.button') }}
+            </el-dropdown-item>
+            <el-dropdown-item @click="remove">
+              <span class="text-[var(--ep-color-danger)]">{{ t('common.delete') }}</span>
+            </el-dropdown-item>
+          </el-dropdown-menu>
+        </template>
+      </el-dropdown>
+    </div>
   </template>
-</el-dropdown>
+</el-table-column>
 ```
 
 ### 5.6 Button Hierarchy

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ElMessage } from "element-plus";
-import { DocumentCopy } from "@element-plus/icons-vue";
+import { DocumentCopy, MoreFilled } from "@element-plus/icons-vue";
 import type { McpServiceVO } from "~/api/mcp-service";
 import { formatDateTime } from "~/composables";
 import { copyToClipboard } from "~/utils/clipboard";
@@ -65,7 +65,7 @@ const handleCopy = async (endpointPath: string) => {
     <el-table-column
       prop="name"
       :label="t('mcpService.serviceName')"
-      min-width="200"
+      min-width="140"
     >
       <template #default="{ row }">
         <div class="flex flex-col gap-0.5 min-w-0">
@@ -86,7 +86,7 @@ const handleCopy = async (endpointPath: string) => {
     <el-table-column
       prop="status"
       :label="t('mcpService.status.label')"
-      min-width="100"
+      min-width="80"
     >
       <template #default="{ row }">
         <el-tag :type="statusType(row.status)" size="small">
@@ -97,11 +97,11 @@ const handleCopy = async (endpointPath: string) => {
     <el-table-column
       prop="endpoint_path"
       :label="t('mcpService.endpointPath')"
-      min-width="240"
+      min-width="160"
     >
       <template #default="{ row }">
         <div v-if="row.endpoint_path" class="flex items-center gap-1.5 min-w-0">
-          <code class="text-xs px-1.5 py-0.5 rounded bg-[var(--ep-fill-color-light)] text-[var(--ep-text-color-primary)] font-mono truncate max-w-[180px]">
+          <code class="text-xs px-1.5 py-0.5 rounded bg-[var(--ep-fill-color-light)] text-[var(--ep-text-color-primary)] font-mono truncate max-w-[120px]">
             {{ row.endpoint_path }}
           </code>
           <el-button
@@ -118,7 +118,7 @@ const handleCopy = async (endpointPath: string) => {
     <el-table-column
       prop="tool_count"
       :label="t('mcpService.toolCount')"
-      min-width="90"
+      min-width="65"
       align="right"
     >
       <template #default="{ row }">
@@ -128,7 +128,7 @@ const handleCopy = async (endpointPath: string) => {
     <el-table-column
       prop="description"
       :label="t('common.description')"
-      min-width="200"
+      min-width="120"
       show-overflow-tooltip
     >
       <template #default="{ row }">
@@ -138,7 +138,7 @@ const handleCopy = async (endpointPath: string) => {
     <el-table-column
       prop="created_user_name"
       :label="t('common.createdBy')"
-      min-width="100"
+      min-width="90"
     />
     <el-table-column
       prop="updated_at"
@@ -151,21 +151,28 @@ const handleCopy = async (endpointPath: string) => {
     </el-table-column>
     <el-table-column
       :label="t('common.actions')"
-      width="240"
+      min-width="110"
       fixed="right"
       align="right"
     >
       <template #default="{ row }">
-        <div class="flex items-center justify-end gap-2">
+        <div class="table-actions">
           <el-button type="primary" link @click="$emit('detail', row)">
             {{ t("common.detail") }}
           </el-button>
-          <el-button type="primary" link @click="$emit('authorize', row)">
-            {{ t("permission.button") }}
-          </el-button>
-          <el-button type="danger" link @click="$emit('delete', row)">
-            {{ t("common.delete") }}
-          </el-button>
+          <el-dropdown trigger="click">
+            <el-button link :icon="MoreFilled" :aria-label="t('common.actions')" />
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item @click="$emit('authorize', row)">
+                  {{ t("permission.button") }}
+                </el-dropdown-item>
+                <el-dropdown-item @click="$emit('delete', row)">
+                  <span class="text-[var(--ep-color-danger)]">{{ t("common.delete") }}</span>
+                </el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
         </div>
       </template>
     </el-table-column>

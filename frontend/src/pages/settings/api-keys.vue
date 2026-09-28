@@ -172,11 +172,13 @@ onMounted(loadKeys);
           </template>
         </el-table-column>
 
-        <el-table-column :label="t('common.actions')" width="100" align="right" fixed="right">
+        <el-table-column :label="t('common.actions')" min-width="100" align="right" fixed="right">
           <template #default="{ row }">
-            <el-button type="danger" link @click="removeKey(row)">
-              {{ t("common.delete") }}
-            </el-button>
+            <div class="table-actions">
+              <el-button type="danger" link @click="removeKey(row)">
+                {{ t("common.delete") }}
+              </el-button>
+            </div>
           </template>
         </el-table-column>
 

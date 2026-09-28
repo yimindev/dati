@@ -2,6 +2,7 @@
 import type { SubjectVO } from '~/api/subject'
 import { formatDateTime } from '~/composables'
 import { useI18n } from 'vue-i18n'
+import { MoreFilled } from '@element-plus/icons-vue'
 
 const { t } = useI18n()
 
@@ -66,21 +67,28 @@ defineEmits<Emits>()
         {{ formatDateTime(row.updated_at) }}
       </template>
     </el-table-column>
-    <el-table-column :label="t('common.actions')" width="240" fixed="right" align="right">
+    <el-table-column :label="t('common.actions')" min-width="180" fixed="right" align="right">
       <template #default="{ row }">
-        <div class="flex items-center justify-end gap-2">
+        <div class="table-actions">
           <el-button type="primary" link @click.stop="$emit('detail', row)">
             {{ t('common.detail') }}
-          </el-button>
-          <el-button type="primary" link @click.stop="$emit('authorize', row)">
-            {{ t('permission.button') }}
           </el-button>
           <el-button type="primary" link @click.stop="$emit('edit', row)">
             {{ t('common.edit') }}
           </el-button>
-          <el-button type="danger" link @click.stop="$emit('delete', row)">
-            {{ t('common.delete') }}
-          </el-button>
+          <el-dropdown trigger="click">
+            <el-button link :icon="MoreFilled" :aria-label="t('common.actions')" @click.stop />
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item @click="$emit('authorize', row)">
+                  {{ t('permission.button') }}
+                </el-dropdown-item>
+                <el-dropdown-item @click="$emit('delete', row)">
+                  <span class="text-[var(--ep-color-danger)]">{{ t('common.delete') }}</span>
+                </el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
         </div>
       </template>
     </el-table-column>

@@ -10,7 +10,6 @@ import { getDataScope } from "~/api/mcp-service";
 import { extractTemplateVariables } from "~/api/template-preview";
 
 const { t } = useI18n();
-
 const props = defineProps<{
   modelValue: boolean;
   serviceId: string;
@@ -348,7 +347,7 @@ const handleSave = async () => {
               <el-input v-model="row.description" size="small" :placeholder="t('mcpService.tool.paramDesc')" />
             </template>
           </el-table-column>
-          <el-table-column :label="t('common.actions')" width="80" align="center">
+          <el-table-column :label="t('common.actions')" min-width="80" align="center">
             <template #default="{ $index }">
               <el-button size="small" text type="danger" :icon="Delete" @click="removeParam($index)" />
             </template>
