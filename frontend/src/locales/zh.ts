@@ -136,6 +136,8 @@ export default {
     side: {
       expand: "展开",
       collapse: "收起",
+      mcpServices: "MCP 服务",
+      subjects: "业务主题",
       dataSources: "数据源",
     },
   },
@@ -439,7 +441,7 @@ export default {
       unknownCaller: "匿名/系统",
     },
     createButton: "新建服务",
-    searchPlaceholder: "输入名称或 Code",
+    searchPlaceholder: "搜索名称或编码...",
     deleteConfirmMessage: "确定要删除 MCP 服务「{name}」吗？",
     deleteSuccess: "服务已删除",
     dataScope: {

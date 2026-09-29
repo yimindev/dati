@@ -29,13 +29,13 @@ const activeMenu = computed(() => {
         <el-icon>
           <span class="icon-[codicon--mcp]"></span>
         </el-icon>
-        <template #title> {{ t("mcpService.title") }} </template>
+        <template #title> {{ t("layout.side.mcpServices") }} </template>
       </el-menu-item>
       <el-menu-item index="/subjects">
         <el-icon>
           <IconMenu />
         </el-icon>
-        <template #title> {{ t("subject.title") }} </template>
+        <template #title> {{ t("layout.side.subjects") }} </template>
       </el-menu-item>
       <el-menu-item index="/datasources">
         <el-icon>

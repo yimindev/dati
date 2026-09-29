@@ -95,6 +95,7 @@ async function handleRegister() {
 
       <div class="text-center text-sm">
         <span class="text-[var(--ep-text-color-regular)]">{{ t("auth.hasAccount") }}</span>
+        {{ ' ' }}
         <RouterLink to="/login" class="text-[var(--ep-color-primary)] hover:underline">
           {{ t("auth.toLogin") }}
         </RouterLink>
