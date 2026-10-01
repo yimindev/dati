@@ -1,7 +1,7 @@
 export default {
   home: {
-    heroTitle: "Effortless Database Access for AI Agents",
-    heroDesc: "Transform your databases into agent-ready tools — auto-generate secure MCP services",
+    heroTitle: "Bring Databases to AI Agents",
+    heroDesc: "Turn databases into secure, semantically enriched MCP servers — enabling agents to flexibly analyze and maintain data.",
     brandTagline: "Data Intelligence",
     docLink: "View Documentation",
     workflow: {
