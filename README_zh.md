@@ -9,17 +9,13 @@ DatI(Data Intelligence) 是连接 **AI Agent 与企业数据库** 的轻量级�
 │  User A: OpenCode  │  │  User B: WorkBuddy │  │  User N: DataAgent │
 └──────────┬─────────┘  └──────────┬─────────┘  └──────────┬─────────┘
            └───────────────────────┼───────────────────────┘
-                                   │ MCP (Streamable HTTP)
-                                   ▼
+                                   ▼ MCP (Streamable HTTP)
 ┌─────────────────────────────── DatI ───────────────────────────────┐
-│     ┌──────────────┐     ┌──────────────┐     ┌──────────────┐     │
-│     │   Semantic   │     │   Security   │     │    Tools     │     │
-│     └──────────────┘     └──────────────┘     └──────────────┘     │
+│       Semantic       │       Security       │        Tools         │
 └──────────────────────────────────┬─────────────────────────────────┘
-                                   │
                                    ▼
 ┌────────────────────────────────────────────────────────────────────┐
-│    MySQL     │   PostgreSQL    │    ClickHouse    │      Doris     │
+│     MySQL      │   PostgreSQL    │   ClickHouse   │     Doris      │
 └────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -55,7 +51,7 @@ DatI(Data Intelligence) 是连接 **AI Agent 与企业数据库** 的轻量级�
 
 #### 3. MCP 配置（选定主题，开启预置工具，增加参数化 SQL 工具）
 
-<details>
+<details open>
 <summary><b>查看操作演示 (GIF)</b></summary>
 
 ![MCP 配置](docs/images/mcp-service-config.gif)
@@ -73,7 +69,7 @@ DatI(Data Intelligence) 是连接 **AI Agent 与企业数据库** 的轻量级�
 
 #### 5. Agent 中问数
 
-<details>
+<details open>
 <summary><b>查看效果演示 (GIF)</b></summary>
 
 ![Agent 中问数](docs/images/agy-analysis.gif)

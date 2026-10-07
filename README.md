@@ -9,17 +9,13 @@ DatI (Data Intelligence) is a lightweight semantic gateway connecting **AI Agent
 │  User A: OpenCode  │  │  User B: WorkBuddy │  │  User N: DataAgent │
 └──────────┬─────────┘  └──────────┬─────────┘  └──────────┬─────────┘
            └───────────────────────┼───────────────────────┘
-                                   │ MCP (Streamable HTTP)
-                                   ▼
+                                   ▼ MCP (Streamable HTTP)
 ┌─────────────────────────────── DatI ───────────────────────────────┐
-│     ┌──────────────┐     ┌──────────────┐     ┌──────────────┐     │
-│     │   Semantic   │     │   Security   │     │    Tools     │     │
-│     └──────────────┘     └──────────────┘     └──────────────┘     │
+│       Semantic       │       Security       │        Tools         │
 └──────────────────────────────────┬─────────────────────────────────┘
-                                   │
                                    ▼
 ┌────────────────────────────────────────────────────────────────────┐
-│    MySQL     │   PostgreSQL    │    ClickHouse    │      Doris     │
+│     MySQL      │   PostgreSQL    │   ClickHouse   │     Doris      │
 └────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -38,27 +34,27 @@ Data and configuration reference the [AdventureWorks sample](examples/adventurew
 #### 1. Data Source Metadata Configuration (configurable tables, columns, and values)
 
 <details>
-<summary><b>View Demo (GIF)</b></summary>
+<summary><b>View Demo</b></summary>
 
-![Data Source Metadata Configuration](docs/images/datasource_config.gif)
+![Data Source Metadata Configuration](docs/images/data-ops-en.webp)
 
 </details>
 
 #### 2. Business Subject Configuration (select relevant tables, define business terms)
 
 <details>
-<summary><b>View Demo (GIF)</b></summary>
+<summary><b>View Demo</b></summary>
 
-![Subject Configuration](docs/images/subject-config.gif)
+![Subject Configuration](docs/images/subject-ops-en.webp)
 
 </details>
 
 #### 3. MCP Service Configuration (choose business subjects, enable built-in tools, add parameterized SQL tools)
 
-<details>
-<summary><b>View Demo (GIF)</b></summary>
+<details open>
+<summary><b>View Demo</b></summary>
 
-![MCP Service Configuration](docs/images/mcp-service-config.gif)
+![MCP Service Configuration](docs/images/mcp-ops-en.webp)
 
 </details>
 
@@ -73,10 +69,10 @@ Data and configuration reference the [AdventureWorks sample](examples/adventurew
 
 #### 5. Query Data in Agent
 
-<details>
-<summary><b>View Demo (GIF)</b></summary>
+<details open>
+<summary><b>View Demo</b></summary>
 
-![Query Data in Agent](docs/images/agy-analysis.gif)
+![Query Data in Agent](docs/images/agy-ana-en.webp)
 
 </details>
 
