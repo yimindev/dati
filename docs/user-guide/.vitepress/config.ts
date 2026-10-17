@@ -24,13 +24,33 @@ export default defineConfig({
   title: 'DatI 帮助中心',
   description: 'DatI 数据智能平台使用文档',
 
-  head: [['link', { rel: 'icon', type: 'image/svg+xml', href: '/dati.svg' }]],
+  head: [
+    ['link', { rel: 'icon', type: 'image/svg+xml', href: '/dati.svg' }],
+    [
+      'script',
+      {},
+      `
+      (function() {
+        try {
+          var p = window.location.pathname;
+          var saved = localStorage.getItem('locale');
+          if ((p === '/docs/' || p === '/docs/index.html' || p === '/docs') && saved === 'en') {
+            window.location.replace('/docs/en/');
+          }
+        } catch (e) {}
+      })();
+      `,
+    ],
+  ],
 
   themeConfig: {
     logo: '/dati.svg',
     search: {
       provider: 'local',
     },
+    socialLinks: [
+      { icon: 'github', link: REPO_URL },
+    ],
     repoUrl: REPO_URL,
     skillsUrl: SKILLS_URL,
     skillUrl: SKILL_URL,

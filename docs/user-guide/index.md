@@ -23,3 +23,4 @@ DatI(Data Intelligence) 是连接 **AI Agent 与企业数据库** 的轻量级�
 - 前往 [快速上手](/quickstart) 开启你的第一个 DatI 服务
 - 深入了解 [模板语法详解](/template-syntax)
 - 查阅 [常见问题](/faq)
+- 访问 <a :href="$frontmatter.repoUrl" target="_blank" rel="noopener noreferrer">GitHub 仓库</a> 了解源码、提交 Issue 或参与共建

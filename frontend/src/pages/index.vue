@@ -14,8 +14,10 @@ import { listDataSources } from "~/api/datasource";
 import { listSubjects } from "~/api/subject";
 import { listMcpServices } from "~/api/mcp-service";
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
 const router = useRouter();
+
+const docLink = computed(() => (locale.value === "en" ? "/docs/en/" : "/docs/"));
 
 // State
 const loadingStats = ref(true);
@@ -127,7 +129,7 @@ onMounted(() => {
 
       <!-- Quiet docs link -->
       <a
-        href="/docs/"
+        :href="docLink"
         target="_blank"
         rel="noopener"
         class="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full border border-[var(--ep-border-color-lighter)] bg-[var(--ep-fill-color-light)] text-xs lg:text-sm text-[var(--ep-color-primary)] hover:border-[var(--ep-color-primary-light-5)] hover:bg-[var(--ep-color-primary-light-9)] transition-all"

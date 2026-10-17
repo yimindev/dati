@@ -30,7 +30,8 @@ function handleCommand(command: string) {
 }
 
 function goToDocs() {
-  window.open("/docs/", "_blank");
+  const target = locale.value === "en" ? "/docs/en/" : "/docs/";
+  window.open(target, "_blank");
 }
 </script>
 

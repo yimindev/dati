@@ -22,3 +22,4 @@ DatI (Data Intelligence) is a lightweight semantic gateway connecting **AI Agent
 - Go to [Quick Start](/en/quickstart) to publish your first DatI service
 - Learn about [Template Syntax](/en/template-syntax)
 - Browse [FAQ](/en/faq)
+- Visit the <a :href="$frontmatter.repoUrl" target="_blank" rel="noopener noreferrer">GitHub Repository</a> to explore the source code, report issues, or contribute
