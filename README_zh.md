@@ -21,7 +21,8 @@ DatI(Data Intelligence) 是连接 **AI Agent 与企业数据库** 的轻量级�
 
 ## 在线试用
 
-体验地址：https://dati-demo.zhangyimin.me
+- **国内节点（优先访问）**：https://dati.yimindev.cn
+- **海外节点**：https://dati-demo.zhangyimin.me
 
 内置示例数据仅供体验，环境会定期重置。
 
