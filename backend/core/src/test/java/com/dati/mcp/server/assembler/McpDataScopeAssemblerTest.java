@@ -46,7 +46,7 @@ class McpDataScopeAssemblerTest {
         scope.setId("scope-1");
         scope.setScopeType(McpDataScopeType.DATA_SOURCE);
         scope.setReferenceId("ds-1");
-        scope.setAccessMode(McpDataScopeAccessMode.MANAGED_SCHEMAS);
+        scope.setAccessMode(McpDataScopeAccessMode.SCHEMA_SCOPE);
         scope.setAllowedSchemas(List.of("sandbox"));
 
         when(dataSourceService.getDataSourceNameMap(any())).thenReturn(Map.of("ds-1", "DS"));
@@ -55,7 +55,7 @@ class McpDataScopeAssemblerTest {
         DataScopeResponse response = assembler.toDataScopeResponse(List.of(scope), Set.of("ds-1"));
 
         DataScopeItemVO item = response.getItems().getFirst();
-        assertThat(item.getAccessMode()).isEqualTo(McpDataScopeAccessMode.MANAGED_SCHEMAS);
+        assertThat(item.getAccessMode()).isEqualTo(McpDataScopeAccessMode.SCHEMA_SCOPE);
         assertThat(item.getAllowedSchemas()).containsExactly("sandbox");
     }
 

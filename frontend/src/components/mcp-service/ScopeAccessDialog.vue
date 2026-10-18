@@ -17,7 +17,10 @@ interface Props {
 
 interface Emits {
   (e: "update:modelValue", value: boolean): void;
-  (e: "confirm", payload: { access_mode: DataScopeAccessMode; allowed_schemas: string[] }): void;
+  (
+    e: "confirm",
+    payload: { access_mode: DataScopeAccessMode; allowed_schemas: string[] },
+  ): void;
 }
 
 const props = defineProps<Props>();
@@ -40,7 +43,7 @@ const form = reactive<{
   allowed_schemas: [],
 });
 
-const isManaged = computed(() => form.access_mode === "MANAGED_SCHEMAS");
+const isSchemaScope = computed(() => form.access_mode === "SCHEMA_SCOPE");
 
 const modeOptions = computed(() => [
   {
@@ -49,17 +52,21 @@ const modeOptions = computed(() => [
     description: t("mcpService.dataScope.modeImportedDesc"),
   },
   {
-    value: "MANAGED_SCHEMAS" as const,
-    label: t("mcpService.dataScope.modeManaged"),
-    description: t("mcpService.dataScope.modeManagedDesc"),
+    value: "SCHEMA_SCOPE" as const,
+    label: t("mcpService.dataScope.modeSchemaScope"),
+    description: t("mcpService.dataScope.modeSchemaScopeDesc"),
   },
 ]);
 
 const rules: FormRules = {
   allowed_schemas: [
     {
-      validator: (_rule: unknown, value: string[], callback: (error?: Error) => void) => {
-        if (isManaged.value && (!value || value.length === 0)) {
+      validator: (
+        _rule: unknown,
+        value: string[],
+        callback: (error?: Error) => void,
+      ) => {
+        if (isSchemaScope.value && (!value || value.length === 0)) {
           callback(new Error(t("mcpService.dataScope.allowedSchemasRequired")));
           return;
         }
@@ -94,7 +101,7 @@ watch(
     if (!open || !props.item) return;
 
     form.access_mode = accessModeOf(props.item);
-    form.allowed_schemas = isManaged.value
+    form.allowed_schemas = isSchemaScope.value
       ? normalizeAllowedSchemas(props.item.allowed_schemas)
       : [];
     schemaOptions.value = [...form.allowed_schemas];
@@ -126,7 +133,7 @@ const handleConfirm = async () => {
   emit("confirm", {
     access_mode: form.access_mode,
     allowed_schemas:
-      form.access_mode === "MANAGED_SCHEMAS"
+      form.access_mode === "SCHEMA_SCOPE"
         ? normalizeAllowedSchemas(form.allowed_schemas)
         : [],
   });
@@ -153,7 +160,11 @@ const handleConfirm = async () => {
             @click="form.access_mode = option.value"
           >
             <div class="flex items-start gap-3">
-              <el-radio :model-value="form.access_mode" :value="option.value" class="mode-radio" />
+              <el-radio
+                :model-value="form.access_mode"
+                :value="option.value"
+                class="mode-radio"
+              />
               <div class="flex flex-col gap-0.5 flex-1 min-w-0">
                 <span class="mode-title">{{ option.label }}</span>
                 <span class="mode-desc">{{ option.description }}</span>
@@ -164,7 +175,7 @@ const handleConfirm = async () => {
       </el-form-item>
 
       <el-form-item
-        v-if="isManaged"
+        v-if="isSchemaScope"
         prop="allowed_schemas"
         :label="t('mcpService.dataScope.allowedSchemas')"
       >
@@ -189,7 +200,9 @@ const handleConfirm = async () => {
             :value="schema"
           />
           <template #empty>
-            <div class="px-3 py-4 text-center text-xs text-[var(--ep-text-color-secondary)]">
+            <div
+              class="px-3 py-4 text-center text-xs text-[var(--ep-text-color-secondary)]"
+            >
               {{
                 loadingSchemas
                   ? t("common.loading")

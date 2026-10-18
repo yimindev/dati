@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   accessModeOf,
   allowedSchemasOf,
-  isManagedSchemaMode,
+  isSchemaScopeMode,
   normalizeAllowedSchemas,
 } from "../data-scope";
 import type { DataScopeItem } from "~/api/mcp-service";
@@ -20,18 +20,18 @@ describe("data scope access mode", () => {
     const item = dataSource();
 
     expect(accessModeOf(item)).toBe("IMPORTED_TABLES");
-    expect(isManagedSchemaMode(item)).toBe(false);
+    expect(isSchemaScopeMode(item)).toBe(false);
     expect(allowedSchemasOf(item)).toEqual([]);
   });
 
-  it("keeps MANAGED_SCHEMAS and normalizes allowed schemas", () => {
+  it("keeps SCHEMA_SCOPE and normalizes allowed schemas", () => {
     const item = dataSource({
-      access_mode: "MANAGED_SCHEMAS",
+      access_mode: "SCHEMA_SCOPE",
       allowed_schemas: [" sandbox ", "public", "sandbox", ""],
     });
 
-    expect(accessModeOf(item)).toBe("MANAGED_SCHEMAS");
-    expect(isManagedSchemaMode(item)).toBe(true);
+    expect(accessModeOf(item)).toBe("SCHEMA_SCOPE");
+    expect(isSchemaScopeMode(item)).toBe(true);
     expect(allowedSchemasOf(item)).toEqual(["sandbox", "public"]);
   });
 
@@ -39,12 +39,12 @@ describe("data scope access mode", () => {
     const item: DataScopeItem = {
       scope_type: "SUBJECT",
       reference_id: "subject-1",
-      access_mode: "MANAGED_SCHEMAS",
+      access_mode: "SCHEMA_SCOPE",
       allowed_schemas: ["sandbox"],
     };
 
     expect(accessModeOf(item)).toBe("IMPORTED_TABLES");
-    expect(isManagedSchemaMode(item)).toBe(false);
+    expect(isSchemaScopeMode(item)).toBe(false);
     expect(allowedSchemasOf(item)).toEqual([]);
   });
 
@@ -55,10 +55,8 @@ describe("data scope access mode", () => {
   });
 
   it("preserves first-seen order while deduplicating", () => {
-    expect(normalizeAllowedSchemas([" zeta ", "alpha", "zeta", "beta"])).toEqual([
-      "zeta",
-      "alpha",
-      "beta",
-    ]);
+    expect(
+      normalizeAllowedSchemas([" zeta ", "alpha", "zeta", "beta"]),
+    ).toEqual(["zeta", "alpha", "beta"]);
   });
 });

@@ -119,12 +119,12 @@ class McpServiceDataScopeServiceTest {
     }
 
 
-    private McpServiceDataScope managedScope(String... schemas) {
+    private McpServiceDataScope schemaScope(String... schemas) {
         McpServiceDataScope scope = new McpServiceDataScope();
         scope.setServiceId(TestFixtures.TEST_MCP_SERVICE_ID);
         scope.setScopeType(McpDataScopeType.DATA_SOURCE);
         scope.setReferenceId(TestFixtures.TEST_DATASOURCE_ID);
-        scope.setAccessMode(McpDataScopeAccessMode.MANAGED_SCHEMAS);
+        scope.setAccessMode(McpDataScopeAccessMode.SCHEMA_SCOPE);
         scope.setAllowedSchemas(List.of(schemas));
         return scope;
     }
@@ -162,32 +162,32 @@ class McpServiceDataScopeServiceTest {
 
 
     @Test
-    @DisplayName("Save data scope - MANAGED_SCHEMAS trims and deduplicates schemas")
-    void saveDataScope_managedSchemas_shouldNormalizeSchemas() {
+    @DisplayName("Save data scope - SCHEMA_SCOPE trims and deduplicates schemas")
+    void saveDataScope_schemaScope_shouldNormalizeSchemas() {
         when(mcpServiceDAO.findById(TestFixtures.TEST_MCP_SERVICE_ID))
                 .thenReturn(Optional.of(TestFixtures.createTestMcpServicePO()));
         stubScopeOwners();
         when(dataScopeDAO.saveAll(any())).thenReturn(List.of());
 
         dataScopeService.saveDataScope(TestFixtures.TEST_MCP_SERVICE_ID,
-                List.of(managedScope(" sandbox ", "sandbox", "public", " ")));
+                List.of(schemaScope(" sandbox ", "sandbox", "public", " ")));
 
         verify(dataScopeDAO).saveAll(captor.capture());
         McpServiceDataScopePO saved = captor.getValue().getFirst();
-        assertThat(saved.getAccessMode()).isEqualTo(McpDataScopeAccessMode.MANAGED_SCHEMAS);
+        assertThat(saved.getAccessMode()).isEqualTo(McpDataScopeAccessMode.SCHEMA_SCOPE);
         assertThat(saved.getAllowedSchemas()).containsExactly("sandbox", "public");
     }
 
     @Test
-    @DisplayName("Save data scope - MANAGED_SCHEMAS requires at least one schema")
-    void saveDataScope_managedSchemasWithoutSchemas_shouldThrow() {
+    @DisplayName("Save data scope - SCHEMA_SCOPE requires at least one schema")
+    void saveDataScope_schemaScopeWithoutSchemas_shouldThrow() {
         when(mcpServiceDAO.findById(TestFixtures.TEST_MCP_SERVICE_ID))
                 .thenReturn(Optional.of(TestFixtures.createTestMcpServicePO()));
         stubScopeOwners();
 
         DatiException e = assertThrows(DatiException.class,
                 () -> dataScopeService.saveDataScope(TestFixtures.TEST_MCP_SERVICE_ID,
-                        List.of(managedScope())));
+                        List.of(schemaScope())));
 
         assertThat(e.getCode()).isEqualTo(ErrorCode.INVALID_PARAMETER);
         verify(dataScopeDAO, never()).deleteAllByServiceId(anyString());
@@ -219,7 +219,7 @@ class McpServiceDataScopeServiceTest {
                 .thenReturn(Optional.of(TestFixtures.createTestMcpServicePO()));
         stubScopeOwners();
         when(dataScopeDAO.saveAll(any())).thenReturn(List.of());
-        testSubjectScope.setAccessMode(McpDataScopeAccessMode.MANAGED_SCHEMAS);
+        testSubjectScope.setAccessMode(McpDataScopeAccessMode.SCHEMA_SCOPE);
         testSubjectScope.setAllowedSchemas(List.of("public"));
 
         dataScopeService.saveDataScope(TestFixtures.TEST_MCP_SERVICE_ID,

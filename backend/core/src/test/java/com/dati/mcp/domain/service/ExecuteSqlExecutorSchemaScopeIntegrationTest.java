@@ -35,12 +35,12 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-@DisplayName("ExecuteSqlExecutor managed schema integration tests")
-class ExecuteSqlExecutorManagedSchemaIntegrationTest {
+@DisplayName("ExecuteSqlExecutor schema scope integration tests")
+class ExecuteSqlExecutorSchemaScopeIntegrationTest {
 
     private static final String DS_ID = "ds-h2";
     private static final String JDBC_URL =
-            "jdbc:h2:mem:managed_ddl_test;DB_CLOSE_DELAY=-1;MODE=MySQL";
+            "jdbc:h2:mem:schema_scope_ddl_test;DB_CLOSE_DELAY=-1;MODE=MySQL";
 
     @Mock
     private TableInfoDAO tableInfoDAO;
@@ -90,21 +90,21 @@ class ExecuteSqlExecutorManagedSchemaIntegrationTest {
         config.getSqlPolicy().setAllowSelect(true);
         config.getSqlPolicy().setAllowInsert(true);
         return new ToolExecutionContext("svc-h2", McpToolType.EXECUTE_SQL, config,
-                new ExecuteSqlArgs(DS_ID, sql), managedScope("PUBLIC"));
+                new ExecuteSqlArgs(DS_ID, sql), schemaScope("PUBLIC"));
     }
 
-    private List<McpServiceDataScope> managedScope(String... schemas) {
+    private List<McpServiceDataScope> schemaScope(String... schemas) {
         McpServiceDataScope scope = new McpServiceDataScope();
         scope.setServiceId("svc-h2");
         scope.setScopeType(McpDataScopeType.DATA_SOURCE);
         scope.setReferenceId(DS_ID);
-        scope.setAccessMode(McpDataScopeAccessMode.MANAGED_SCHEMAS);
+        scope.setAccessMode(McpDataScopeAccessMode.SCHEMA_SCOPE);
         scope.setAllowedSchemas(List.of(schemas));
         return List.of(scope);
     }
 
     @Test
-    @DisplayName("CREATE + INSERT in one multi-statement call works in managed schema")
+    @DisplayName("CREATE + INSERT in one multi-statement call works in schema scope")
     void createAndInsertInSameMultiStatement_shouldSucceed() throws Exception {
         executor.execute(ctx(
                 "CREATE TABLE sandbox_t (id INT, name VARCHAR(20)); "
@@ -119,23 +119,23 @@ class ExecuteSqlExecutorManagedSchemaIntegrationTest {
     }
 
     @Test
-    @DisplayName("SELECT from unimported table in managed schema is allowed")
-    void selectUnimportedTableInManagedSchema_shouldSucceed() throws Exception {
+    @DisplayName("SELECT from unimported table in schema scope is allowed")
+    void selectUnimportedTableInSchemaScope_shouldSucceed() throws Exception {
         try (Connection conn = DriverManager.getConnection(JDBC_URL, "sa", "");
              Statement stmt = conn.createStatement()) {
             stmt.execute("CREATE TABLE existing_unimported (id INT)");
             stmt.execute("INSERT INTO existing_unimported VALUES (7)");
         }
 
-        // No table_info rows: access is granted by the managed schema.
+        // No table_info rows: access is granted by the schema scope.
         var result = executor.execute(ctx("SELECT * FROM existing_unimported", false));
 
         assertThat(result).isNotNull();
     }
 
     @Test
-    @DisplayName("SELECT from table outside managed schema is rejected")
-    void selectTableOutsideManagedSchema_shouldReject() throws Exception {
+    @DisplayName("SELECT from table outside schema scope is rejected")
+    void selectTableOutsideSchemaScope_shouldReject() throws Exception {
         try (Connection conn = DriverManager.getConnection(JDBC_URL, "sa", "");
              Statement stmt = conn.createStatement()) {
             stmt.execute("CREATE SCHEMA other_schema");

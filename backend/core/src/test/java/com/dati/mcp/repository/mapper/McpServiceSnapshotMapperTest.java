@@ -136,15 +136,15 @@ class McpServiceSnapshotMapperTest {
         scope.setServiceId(TestFixtures.TEST_MCP_SERVICE_ID);
         scope.setScopeType(McpDataScopeType.DATA_SOURCE);
         scope.setReferenceId(TestFixtures.TEST_DATASOURCE_ID);
-        scope.setAccessMode(McpDataScopeAccessMode.MANAGED_SCHEMAS);
+        scope.setAccessMode(McpDataScopeAccessMode.SCHEMA_SCOPE);
         scope.setAllowedSchemas(List.of("sandbox", "public"));
 
         McpServiceSnapshot.DataScopeDraft draft = McpServiceSnapshotMapper.toDataScopeDraft(scope);
         McpServiceDataScope restored = McpServiceSnapshotMapper.toDataScope(draft);
 
-        assertThat(draft.accessMode()).isEqualTo(McpDataScopeAccessMode.MANAGED_SCHEMAS);
+        assertThat(draft.accessMode()).isEqualTo(McpDataScopeAccessMode.SCHEMA_SCOPE);
         assertThat(draft.allowedSchemas()).containsExactly("sandbox", "public");
-        assertThat(restored.getAccessMode()).isEqualTo(McpDataScopeAccessMode.MANAGED_SCHEMAS);
+        assertThat(restored.getAccessMode()).isEqualTo(McpDataScopeAccessMode.SCHEMA_SCOPE);
         assertThat(restored.getAllowedSchemas()).containsExactly("sandbox", "public");
     }
 
@@ -155,7 +155,7 @@ class McpServiceSnapshotMapperTest {
                 {
                   "data_scopes": [
                     {"service_id": "mcp-svc-001", "scope_type": "DATA_SOURCE", "reference_id": "ds-001",
-                     "access_mode": "MANAGED_SCHEMAS", "allowed_schemas": ["sandbox"]}
+                     "access_mode": "SCHEMA_SCOPE", "allowed_schemas": ["sandbox"]}
                   ]
                 }
                 """;
@@ -165,7 +165,7 @@ class McpServiceSnapshotMapperTest {
         McpServiceSnapshot snapshot = McpServiceSnapshotMapper.toModel(po);
 
         McpServiceSnapshot.DataScopeDraft draft = snapshot.getContent().getDataScopes().getFirst();
-        assertThat(draft.accessMode()).isEqualTo(McpDataScopeAccessMode.MANAGED_SCHEMAS);
+        assertThat(draft.accessMode()).isEqualTo(McpDataScopeAccessMode.SCHEMA_SCOPE);
         assertThat(draft.allowedSchemas()).containsExactly("sandbox");
     }
 

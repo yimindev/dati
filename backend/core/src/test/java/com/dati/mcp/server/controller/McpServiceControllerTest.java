@@ -218,7 +218,7 @@ class McpServiceControllerTest {
                       "description": "Test MCP service for unit tests",
                       "data_scopes": [
                         {"scope_type": "DATA_SOURCE", "reference_id": "ds-001",
-                         "access_mode": "MANAGED_SCHEMAS", "allowed_schemas": ["sandbox"]}
+                         "access_mode": "SCHEMA_SCOPE", "allowed_schemas": ["sandbox"]}
                       ]
                     }
                     """))
@@ -227,7 +227,7 @@ class McpServiceControllerTest {
 
         verify(mcpServiceService).createMcpService(any(), argThat(scopes ->
             scopes.size() == 1
-                && scopes.getFirst().getAccessMode() == McpDataScopeAccessMode.MANAGED_SCHEMAS
+                && scopes.getFirst().getAccessMode() == McpDataScopeAccessMode.SCHEMA_SCOPE
                 && scopes.getFirst().getAllowedSchemas().equals(List.of("sandbox"))));
     }
 
@@ -349,7 +349,7 @@ class McpServiceControllerTest {
         item.setScopeType(McpDataScopeType.DATA_SOURCE);
         item.setReferenceId(TestFixtures.TEST_DATASOURCE_ID);
         item.setReferenceName("Test MySQL");
-        item.setAccessMode(McpDataScopeAccessMode.MANAGED_SCHEMAS);
+        item.setAccessMode(McpDataScopeAccessMode.SCHEMA_SCOPE);
         item.setAllowedSchemas(List.of("sandbox"));
         response.setItems(List.of(item));
         response.setResolvedDataSources(List.of(new DataSourceRefVO(TestFixtures.TEST_DATASOURCE_ID, "Test MySQL")));
@@ -362,7 +362,7 @@ class McpServiceControllerTest {
                 .andExpect(jsonPath("$.items[0].scope_type").value("DATA_SOURCE"))
                 .andExpect(jsonPath("$.items[0].reference_id").value(TestFixtures.TEST_DATASOURCE_ID))
                 .andExpect(jsonPath("$.items[0].reference_name").value("Test MySQL"))
-                .andExpect(jsonPath("$.items[0].access_mode").value("MANAGED_SCHEMAS"))
+                .andExpect(jsonPath("$.items[0].access_mode").value("SCHEMA_SCOPE"))
                 .andExpect(jsonPath("$.items[0].allowed_schemas[0]").value("sandbox"))
                 .andExpect(jsonPath("$.resolved_data_sources").isArray())
                 .andExpect(jsonPath("$.resolved_data_sources[0].id").value(TestFixtures.TEST_DATASOURCE_ID))
@@ -399,7 +399,7 @@ class McpServiceControllerTest {
                                     {
                                       "scope_type": "DATA_SOURCE",
                                       "reference_id": "ds-001",
-                                      "access_mode": "MANAGED_SCHEMAS",
+                                      "access_mode": "SCHEMA_SCOPE",
                                       "allowed_schemas": ["sandbox"]
                                     }
                                   ]
@@ -410,7 +410,7 @@ class McpServiceControllerTest {
 
         verify(dataScopeService).saveDataScope(eq(TestFixtures.TEST_MCP_SERVICE_ID), argThat(scopes ->
             scopes.size() == 1
-                && scopes.getFirst().getAccessMode() == McpDataScopeAccessMode.MANAGED_SCHEMAS
+                && scopes.getFirst().getAccessMode() == McpDataScopeAccessMode.SCHEMA_SCOPE
                 && scopes.getFirst().getAllowedSchemas().equals(List.of("sandbox"))));
     }
 

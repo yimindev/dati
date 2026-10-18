@@ -56,9 +56,9 @@ class ScopeValidatorTest {
         return s;
     }
 
-    private static McpServiceDataScope managedDataSourceScope(String dsId, String... schemas) {
+    private static McpServiceDataScope dataSourceScopeWithSchemas(String dsId, String... schemas) {
         McpServiceDataScope s = dataSourceScope(dsId);
-        s.setAccessMode(McpDataScopeAccessMode.MANAGED_SCHEMAS);
+        s.setAccessMode(McpDataScopeAccessMode.SCHEMA_SCOPE);
         s.setAllowedSchemas(List.of(schemas));
         return s;
     }
@@ -221,25 +221,25 @@ class ScopeValidatorTest {
                 .isEqualTo(ToolError.SCOPE_VIOLATION));
     }
 
-    // ============ MANAGED_SCHEMAS ============
+    // ============ SCHEMA_SCOPE ============
 
     @Test
-    @DisplayName("MANAGED_SCHEMAS allows referenced table in authorized schema without import")
-    void managedSchemaReferencedTableInSchema_shouldPass() {
+    @DisplayName("SCHEMA_SCOPE allows referenced table in authorized schema without import")
+    void schemaScopeReferencedTableInSchema_shouldPass() {
         assertThatCode(() -> validator.validate(
-            List.of(managedDataSourceScope(DS_ID, "sandbox")), DS_ID,
+            List.of(dataSourceScopeWithSchemas(DS_ID, "sandbox")), DS_ID,
             Set.of(new TableRef("sandbox", "orders")), Set.of(),
             "public"))
             .doesNotThrowAnyException();
     }
 
     @Test
-    @DisplayName("MANAGED_SCHEMAS rejects referenced table outside authorized schema")
-    void managedSchemaReferencedTableOutsideSchema_shouldReject() {
+    @DisplayName("SCHEMA_SCOPE rejects referenced table outside authorized schema")
+    void schemaScopeReferencedTableOutsideSchema_shouldReject() {
         when(tableInfoDAO.findByDataSourceId(DS_ID)).thenReturn(List.of());
 
         assertThatThrownBy(() -> validator.validate(
-            List.of(managedDataSourceScope(DS_ID, "sandbox")), DS_ID,
+            List.of(dataSourceScopeWithSchemas(DS_ID, "sandbox")), DS_ID,
             Set.of(new TableRef("public", "orders")), Set.of(),
             "public"))
             .isInstanceOf(ToolExecuteException.class)
@@ -248,32 +248,32 @@ class ScopeValidatorTest {
     }
 
     @Test
-    @DisplayName("MANAGED_SCHEMAS keeps imported tables outside authorized schemas accessible")
-    void managedSchemaKeepsImportedTablesOutsideSchema() {
+    @DisplayName("SCHEMA_SCOPE keeps imported tables outside authorized schemas accessible")
+    void schemaScopeKeepsImportedTablesOutsideSchema() {
         when(tableInfoDAO.findByDataSourceId(DS_ID)).thenReturn(List.of(table()));
 
         assertThatCode(() -> validator.validate(
-            List.of(managedDataSourceScope(DS_ID, "sandbox")), DS_ID,
+            List.of(dataSourceScopeWithSchemas(DS_ID, "sandbox")), DS_ID,
             Set.of(new TableRef(null, "users")), Set.of(),
             "public"))
             .doesNotThrowAnyException();
     }
 
     @Test
-    @DisplayName("MANAGED_SCHEMAS allows created table in authorized schema")
-    void managedSchemaCreatedTable_shouldPass() {
+    @DisplayName("SCHEMA_SCOPE allows created table in authorized schema")
+    void schemaScopeCreatedTable_shouldPass() {
         assertThatCode(() -> validator.validate(
-            List.of(managedDataSourceScope(DS_ID, "sandbox")), DS_ID,
+            List.of(dataSourceScopeWithSchemas(DS_ID, "sandbox")), DS_ID,
             Set.of(), Set.of(new TableRef("sandbox", "tmp")),
             "public"))
             .doesNotThrowAnyException();
     }
 
     @Test
-    @DisplayName("MANAGED_SCHEMAS rejects created table outside authorized schema")
-    void managedSchemaCreatedTableOutsideSchema_shouldReject() {
+    @DisplayName("SCHEMA_SCOPE rejects created table outside authorized schema")
+    void schemaScopeCreatedTableOutsideSchema_shouldReject() {
         assertThatThrownBy(() -> validator.validate(
-            List.of(managedDataSourceScope(DS_ID, "sandbox")), DS_ID,
+            List.of(dataSourceScopeWithSchemas(DS_ID, "sandbox")), DS_ID,
             Set.of(), Set.of(new TableRef("public", "tmp")),
             "public"))
             .isInstanceOf(ToolExecuteException.class)
@@ -282,7 +282,7 @@ class ScopeValidatorTest {
     }
 
     @Test
-    @DisplayName("IMPORTED_TABLES rejects CREATE TABLE without managed schema")
+    @DisplayName("IMPORTED_TABLES rejects CREATE TABLE without schema scope")
     void importedTablesCreatedTable_shouldReject() {
         assertThatThrownBy(() -> validator.validate(
             List.of(dataSourceScope(DS_ID)), DS_ID,
@@ -294,20 +294,20 @@ class ScopeValidatorTest {
     }
 
     @Test
-    @DisplayName("MANAGED_SCHEMAS resolves unqualified created table using default schema")
-    void managedSchemaCreatedTableWithoutSchema_shouldUseDefaultSchema() {
+    @DisplayName("SCHEMA_SCOPE resolves unqualified created table using default schema")
+    void schemaScopeCreatedTableWithoutSchema_shouldUseDefaultSchema() {
         assertThatCode(() -> validator.validate(
-            List.of(managedDataSourceScope(DS_ID, "sandbox")), DS_ID,
+            List.of(dataSourceScopeWithSchemas(DS_ID, "sandbox")), DS_ID,
             Set.of(), Set.of(TableRef.of("tmp")),
             "sandbox"))
             .doesNotThrowAnyException();
     }
 
     @Test
-    @DisplayName("MANAGED_SCHEMAS rejects unqualified created table when default schema is null")
-    void managedSchemaCreatedTableWithoutSchemaAndDefaultSchema_shouldReject() {
+    @DisplayName("SCHEMA_SCOPE rejects unqualified created table when default schema is null")
+    void schemaScopeCreatedTableWithoutSchemaAndDefaultSchema_shouldReject() {
         assertThatThrownBy(() -> validator.validate(
-            List.of(managedDataSourceScope(DS_ID, "sandbox")), DS_ID,
+            List.of(dataSourceScopeWithSchemas(DS_ID, "sandbox")), DS_ID,
             Set.of(), Set.of(TableRef.of("tmp")),
             null))
             .isInstanceOf(ToolExecuteException.class)
@@ -316,10 +316,10 @@ class ScopeValidatorTest {
     }
 
     @Test
-    @DisplayName("MANAGED_SCHEMAS rejects unqualified created table when default schema is not managed")
-    void managedSchemaCreatedTableDefaultSchemaNotManaged_shouldReject() {
+    @DisplayName("SCHEMA_SCOPE rejects unqualified created table when default schema is not in schema scope")
+    void schemaScopeCreatedTableDefaultSchemaNotInScope_shouldReject() {
         assertThatThrownBy(() -> validator.validate(
-            List.of(managedDataSourceScope(DS_ID, "sandbox")), DS_ID,
+            List.of(dataSourceScopeWithSchemas(DS_ID, "sandbox")), DS_ID,
             Set.of(), Set.of(TableRef.of("tmp")),
             "public"))
             .isInstanceOf(ToolExecuteException.class)
@@ -328,10 +328,10 @@ class ScopeValidatorTest {
     }
 
     @Test
-    @DisplayName("System schemas are allowed when explicitly managed")
-    void systemSchemaExplicitlyManaged_shouldPass() {
+    @DisplayName("System schemas are allowed when explicitly in schema scope")
+    void systemSchemaExplicitlyInSchemaScope_shouldPass() {
         assertThatCode(() -> validator.validate(
-            List.of(managedDataSourceScope(DS_ID, "information_schema")), DS_ID,
+            List.of(dataSourceScopeWithSchemas(DS_ID, "information_schema")), DS_ID,
             Set.of(new TableRef("information_schema", "tables")), Set.of(),
             null))
             .doesNotThrowAnyException();
@@ -353,34 +353,34 @@ class ScopeValidatorTest {
     }
 
     @Test
-    @DisplayName("MANAGED_SCHEMAS allows created table in explicitly managed system schema")
-    void systemSchemaCreatedTable_shouldPassWhenManaged() {
+    @DisplayName("SCHEMA_SCOPE allows created table in explicitly listed system schema")
+    void systemSchemaCreatedTable_shouldPassWhenInSchemaScope() {
         assertThatCode(() -> validator.validate(
-            List.of(managedDataSourceScope(DS_ID, "information_schema")), DS_ID,
+            List.of(dataSourceScopeWithSchemas(DS_ID, "information_schema")), DS_ID,
             Set.of(), Set.of(new TableRef("information_schema", "tmp")),
             null))
             .doesNotThrowAnyException();
     }
 
     @Test
-    @DisplayName("MANAGED_SCHEMAS allows same-call CREATE and INSERT on authorized schema")
-    void managedSchemaSameCallCreateAndInsert_shouldPass() {
+    @DisplayName("SCHEMA_SCOPE allows same-call CREATE and INSERT on authorized schema")
+    void schemaScopeSameCallCreateAndInsert_shouldPass() {
         TableRef ref = new TableRef("sandbox", "tmp");
 
         assertThatCode(() -> validator.validate(
-            List.of(managedDataSourceScope(DS_ID, "sandbox")), DS_ID,
+            List.of(dataSourceScopeWithSchemas(DS_ID, "sandbox")), DS_ID,
             Set.of(ref), Set.of(ref),
             "public"))
             .doesNotThrowAnyException();
     }
 
     @Test
-    @DisplayName("MANAGED_SCHEMAS still rejects references outside authorized schema in same call")
-    void managedSchemaSameCallOutsideReference_shouldReject() {
+    @DisplayName("SCHEMA_SCOPE still rejects references outside authorized schema in same call")
+    void schemaScopeSameCallOutsideReference_shouldReject() {
         when(tableInfoDAO.findByDataSourceId(DS_ID)).thenReturn(List.of());
 
         assertThatThrownBy(() -> validator.validate(
-            List.of(managedDataSourceScope(DS_ID, "sandbox")), DS_ID,
+            List.of(dataSourceScopeWithSchemas(DS_ID, "sandbox")), DS_ID,
             Set.of(new TableRef("public", "sensitive")),
             Set.of(new TableRef("sandbox", "tmp")),
             "public"))
@@ -390,10 +390,10 @@ class ScopeValidatorTest {
     }
 
     @Test
-    @DisplayName("validate honors managed schema for referenced tables")
-    void validateHonorsManagedSchema() {
+    @DisplayName("validate honors schema scope for referenced tables")
+    void validateHonorsSchemaScope() {
         assertThatCode(() -> validator.validate(
-            List.of(managedDataSourceScope(DS_ID, "sandbox")), DS_ID,
+            List.of(dataSourceScopeWithSchemas(DS_ID, "sandbox")), DS_ID,
             Set.of(new TableRef("sandbox", "orders")), Set.of(),
             "public"))
             .doesNotThrowAnyException();

@@ -1,12 +1,18 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
 import { useI18n } from "vue-i18n";
-import { Plus, Delete, Edit, Menu as IconMenu, CopyDocument } from "@element-plus/icons-vue";
+import {
+  CopyDocument,
+  Delete,
+  Edit,
+  Menu as IconMenu,
+  Plus,
+} from "@element-plus/icons-vue";
 import type { DataScopeAccessMode, DataScopeItem } from "~/api/mcp-service";
 import { getDataScope, saveDataScope } from "~/api/mcp-service";
 import { notifyError } from "~/api/http";
-import { allowedSchemasOf, isManagedSchemaMode } from "~/utils/data-scope";
+import { allowedSchemasOf, isSchemaScopeMode } from "~/utils/data-scope";
 import { copyToClipboard } from "~/utils/clipboard";
 
 const { t } = useI18n();
@@ -30,7 +36,9 @@ const addDialogVisible = ref(false);
 const accessDialogVisible = ref(false);
 const accessDialogIndex = ref<number | null>(null);
 const accessDialogItem = computed(() =>
-  accessDialogIndex.value == null ? null : (items.value[accessDialogIndex.value] ?? null),
+  accessDialogIndex.value == null
+    ? null
+    : (items.value[accessDialogIndex.value] ?? null),
 );
 
 // ── Data loading ──
@@ -70,7 +78,9 @@ const handleConfirmAdd = async (newItems: DataScopeItem[]) => {
   const additions: DataScopeItem[] = newItems.map((item) => ({
     ...item,
     access_mode:
-      item.scope_type === "DATA_SOURCE" ? ("IMPORTED_TABLES" as const) : undefined,
+      item.scope_type === "DATA_SOURCE"
+        ? ("IMPORTED_TABLES" as const)
+        : undefined,
     allowed_schemas: [],
   }));
 
@@ -112,11 +122,15 @@ const handleAccessConfirm = async (payload: {
 // ── List actions ──
 const handleRemove = async (index: number) => {
   try {
-    await ElMessageBox.confirm(t("mcpService.dataScope.deleteConfirm"), t("common.confirm"), {
-      confirmButtonText: t("common.confirm"),
-      cancelButtonText: t("common.cancel"),
-      type: "warning",
-    });
+    await ElMessageBox.confirm(
+      t("mcpService.dataScope.deleteConfirm"),
+      t("common.confirm"),
+      {
+        confirmButtonText: t("common.confirm"),
+        cancelButtonText: t("common.cancel"),
+        type: "warning",
+      },
+    );
   } catch {
     return;
   }
@@ -126,9 +140,7 @@ const handleRemove = async (index: number) => {
 
 // ── Labels ──
 const scopeTypeLabel = (type: ScopeType) =>
-  type === "DATA_SOURCE"
-    ? t("common.dataSource")
-    : t("common.subject");
+  type === "DATA_SOURCE" ? t("common.dataSource") : t("common.subject");
 
 const accessSchemas = (item: DataScopeItem) => allowedSchemasOf(item);
 
@@ -140,7 +152,6 @@ const handleCopyId = async (id: string) => {
     ElMessage.error(t("common.copyFailed"));
   }
 };
-
 
 watch(accessDialogVisible, (open) => {
   if (!open) accessDialogIndex.value = null;
@@ -154,14 +165,24 @@ onMounted(() => {
 <template>
   <div v-loading="loading" class="flex flex-col gap-4">
     <!-- Action Header Line -->
-    <div class="flex items-center justify-end pb-2 border-b border-[var(--ep-border-color-lighter)]">
-      <el-button type="primary" :icon="Plus" :disabled="saving" @click="addDialogVisible = true">
+    <div
+      class="flex items-center justify-end pb-2 border-b border-[var(--ep-border-color-lighter)]"
+    >
+      <el-button
+        type="primary"
+        :icon="Plus"
+        :disabled="saving"
+        @click="addDialogVisible = true"
+      >
         {{ t("mcpService.dataScope.addScope") }}
       </el-button>
     </div>
 
     <!-- Empty -->
-    <el-empty v-if="items.length === 0" :description="t('mcpService.dataScope.empty')" />
+    <el-empty
+      v-if="items.length === 0"
+      :description="t('mcpService.dataScope.empty')"
+    />
 
     <!-- Scope list -->
     <div v-else class="flex flex-col gap-2">
@@ -175,20 +196,34 @@ onMounted(() => {
             class="scope-icon"
             :class="item.scope_type === 'SUBJECT' ? 'subject' : ''"
           >
-            <span v-if="item.scope_type === 'DATA_SOURCE'" class="icon-[codicon--database]"></span>
+            <span
+              v-if="item.scope_type === 'DATA_SOURCE'"
+              class="icon-[codicon--database]"
+            ></span>
             <IconMenu v-else />
           </el-icon>
           <div class="flex min-w-0 flex-col gap-1.5">
             <div class="flex min-w-0 flex-wrap items-center gap-2">
-              <span class="truncate text-sm font-semibold text-[var(--ep-text-color-primary)]">
+              <span
+                class="truncate text-sm font-semibold text-[var(--ep-text-color-primary)]"
+              >
                 {{ item.reference_name }}
               </span>
-              <el-tag size="small" :type="item.scope_type === 'DATA_SOURCE' ? 'primary' : 'success'">
+              <el-tag
+                size="small"
+                :type="
+                  item.scope_type === 'DATA_SOURCE' ? 'primary' : 'success'
+                "
+              >
                 {{ scopeTypeLabel(item.scope_type) }}
               </el-tag>
             </div>
-            <div class="flex min-w-0 items-center gap-1.5 text-xs text-[var(--ep-text-color-placeholder)]">
-              <span class="font-mono text-[11px] leading-none">{{ item.reference_id }}</span>
+            <div
+              class="flex min-w-0 items-center gap-1.5 text-xs text-[var(--ep-text-color-placeholder)]"
+            >
+              <span class="font-mono text-[11px] leading-none">{{
+                item.reference_id
+              }}</span>
               <button
                 type="button"
                 class="inline-flex items-center justify-center p-0.5 text-[var(--ep-text-color-placeholder)] hover:text-[var(--ep-color-primary)] bg-transparent border-0 cursor-pointer rounded transition-colors"
@@ -198,19 +233,30 @@ onMounted(() => {
                 <el-icon :size="12"><CopyDocument /></el-icon>
               </button>
             </div>
-            <div class="flex min-w-0 flex-wrap items-center gap-1.5 text-xs text-[var(--ep-text-color-secondary)]">
+            <div
+              class="flex min-w-0 flex-wrap items-center gap-1.5 text-xs text-[var(--ep-text-color-secondary)]"
+            >
               <span>{{ t("mcpService.dataScope.accessMode") }}：</span>
               <!-- DATA_SOURCE scope: interactive configuration pill -->
               <template v-if="item.scope_type === 'DATA_SOURCE'">
                 <button
                   type="button"
                   class="scope-access-pill group"
-                  :class="{ managed: isManagedSchemaMode(item) }"
+                  :class="{ 'schema-scope': isSchemaScopeMode(item) }"
                   :title="t('mcpService.dataScope.clickToConfig')"
                   @click="openAccessDialog(index)"
                 >
-                  <span class="pill-text">{{ isManagedSchemaMode(item) ? t("mcpService.dataScope.modeManaged") : t("mcpService.dataScope.modeImported") }}</span>
-                  <span v-if="isManagedSchemaMode(item) && accessSchemas(item).length > 0" class="schema-badge">
+                  <span class="pill-text">{{
+                    isSchemaScopeMode(item)
+                      ? t("mcpService.dataScope.modeSchemaScope")
+                      : t("mcpService.dataScope.modeImported")
+                  }}</span>
+                  <span
+                    v-if="
+                      isSchemaScopeMode(item) && accessSchemas(item).length > 0
+                    "
+                    class="schema-badge"
+                  >
                     {{ accessSchemas(item).join(", ") }}
                   </span>
                   <el-icon class="pill-icon"><Edit /></el-icon>
@@ -218,9 +264,14 @@ onMounted(() => {
               </template>
               <!-- SUBJECT scope: static informational badge -->
               <template v-else>
-                <el-tooltip :content="t('mcpService.dataScope.subjectScopeDesc')" placement="top">
+                <el-tooltip
+                  :content="t('mcpService.dataScope.subjectScopeDesc')"
+                  placement="top"
+                >
                   <span class="scope-access-pill static">
-                    <span class="pill-text">{{ t("mcpService.dataScope.subjectScope") }}</span>
+                    <span class="pill-text">{{
+                      t("mcpService.dataScope.subjectScope")
+                    }}</span>
                   </span>
                 </el-tooltip>
               </template>
@@ -296,13 +347,13 @@ onMounted(() => {
   background-color: var(--ep-color-primary-light-9);
 }
 
-.scope-access-pill.managed {
+.scope-access-pill.schema-scope {
   border-color: var(--ep-color-primary-light-5);
   background-color: var(--ep-color-primary-light-9);
   color: var(--ep-color-primary-dark-2);
 }
 
-.scope-access-pill.managed:hover {
+.scope-access-pill.schema-scope:hover {
   border-color: var(--ep-color-primary);
   background-color: var(--ep-color-primary-light-8);
 }
@@ -313,7 +364,6 @@ onMounted(() => {
   background-color: var(--ep-fill-color-light);
   color: var(--ep-text-color-secondary);
 }
-
 
 .pill-text {
   font-weight: 500;

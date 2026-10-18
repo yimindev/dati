@@ -60,11 +60,11 @@ public class ScopeValidator {
                                           Set<TableRef> tableRefs, @Nullable String defaultSchema) {
         if (tableRefs == null || tableRefs.isEmpty()) return;
 
-        Set<String> managedSchemas = managedSchemas(scopeItems, dsId);
+        Set<String> allowedSchemas = allowedSchemasFor(scopeItems, dsId);
         Set<TableRef> allowed = null;
         for (TableRef ref : tableRefs) {
             String schema = effectiveSchema(ref, defaultSchema);
-            if (schema != null && managedSchemas.contains(schema)) continue;
+            if (schema != null && allowedSchemas.contains(schema)) continue;
 
             if (allowed == null) {
                 allowed = buildAllowedTableRefs(scopeItems, dsId);
@@ -80,10 +80,10 @@ public class ScopeValidator {
                                        Set<TableRef> createdTables, @Nullable String defaultSchema) {
         if (createdTables == null || createdTables.isEmpty()) return;
 
-        Set<String> managedSchemas = managedSchemas(scopeItems, dsId);
-        if (managedSchemas.isEmpty()) {
+        Set<String> allowedSchemas = allowedSchemasFor(scopeItems, dsId);
+        if (allowedSchemas.isEmpty()) {
             throw new ToolExecuteException(ToolError.SCOPE_VIOLATION,
-                "No managed schema configured for data source " + dsId);
+                "No schema scope configured for data source " + dsId);
         }
 
         for (TableRef ref : createdTables) {
@@ -92,21 +92,21 @@ public class ScopeValidator {
                 throw new ToolExecuteException(ToolError.SCOPE_VIOLATION,
                     "Cannot resolve schema for created table " + ref.qualifiedName());
             }
-            if (!managedSchemas.contains(schema)) {
+            if (!allowedSchemas.contains(schema)) {
                 throw new ToolExecuteException(ToolError.SCOPE_VIOLATION,
-                    "Schema " + schema + " is not managed by this service");
+                    "Schema " + schema + " is not in the service schema scope");
             }
         }
     }
 
-    private Set<String> managedSchemas(List<McpServiceDataScope> scopeItems, String dsId) {
+    private Set<String> allowedSchemasFor(List<McpServiceDataScope> scopeItems, String dsId) {
         Set<String> schemas = new LinkedHashSet<>();
         if (scopeItems == null) return schemas;
 
         for (McpServiceDataScope scope : scopeItems) {
             if (scope.getScopeType() != McpDataScopeType.DATA_SOURCE
                     || !Objects.equals(scope.getReferenceId(), dsId)
-                    || scope.getAccessMode() != McpDataScopeAccessMode.MANAGED_SCHEMAS
+                    || scope.getAccessMode() != McpDataScopeAccessMode.SCHEMA_SCOPE
                     || scope.getAllowedSchemas() == null) {
                 continue;
             }

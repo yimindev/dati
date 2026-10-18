@@ -21,12 +21,12 @@ class McpServiceDataScopeMapperTest {
         scope.setServiceId("svc-1");
         scope.setScopeType(McpDataScopeType.DATA_SOURCE);
         scope.setReferenceId("ds-1");
-        scope.setAccessMode(McpDataScopeAccessMode.MANAGED_SCHEMAS);
+        scope.setAccessMode(McpDataScopeAccessMode.SCHEMA_SCOPE);
         scope.setAllowedSchemas(List.of("sandbox", "public"));
 
         McpServiceDataScopePO po = McpServiceDataScopeMapper.toPO(scope);
 
-        assertThat(po.getAccessMode()).isEqualTo(McpDataScopeAccessMode.MANAGED_SCHEMAS);
+        assertThat(po.getAccessMode()).isEqualTo(McpDataScopeAccessMode.SCHEMA_SCOPE);
         assertThat(po.getAllowedSchemas()).containsExactly("sandbox", "public");
     }
 

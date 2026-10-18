@@ -107,7 +107,7 @@ public class McpServiceDataScopeService {
     /**
      * Normalizes access configuration and validates it before persistence.
      * SUBJECT scopes are always IMPORTED_TABLES; IMPORTED_TABLES clears allowed schemas;
-     * MANAGED_SCHEMAS requires at least one non-blank schema.
+     * SCHEMA_SCOPE requires at least one non-blank schema.
      */
     public void normalizeAndValidateScopes(List<McpServiceDataScope> scopes) {
         if (scopes == null) {
@@ -135,7 +135,7 @@ public class McpServiceDataScopeService {
             List<String> schemas = normalizeSchemas(scope.getAllowedSchemas());
             if (schemas.isEmpty()) {
                 throw new DatiException(ErrorCode.INVALID_PARAMETER,
-                        "MANAGED_SCHEMAS requires at least one allowed schema");
+                        "SCHEMA_SCOPE requires at least one allowed schema");
             }
             scope.setAllowedSchemas(schemas);
         }

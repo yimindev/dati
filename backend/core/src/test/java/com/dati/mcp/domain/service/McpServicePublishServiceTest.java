@@ -496,7 +496,7 @@ class McpServicePublishServiceTest {
         currentScope.setServiceId(TestFixtures.TEST_MCP_SERVICE_ID);
         currentScope.setScopeType(McpDataScopeType.DATA_SOURCE);
         currentScope.setReferenceId(TestFixtures.TEST_DATASOURCE_ID);
-        currentScope.setAccessMode(McpDataScopeAccessMode.MANAGED_SCHEMAS);
+        currentScope.setAccessMode(McpDataScopeAccessMode.SCHEMA_SCOPE);
         currentScope.setAllowedSchemas(List.of("sandbox"));
 
         when(mcpServiceDAO.findById(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(Optional.of(testServicePO));

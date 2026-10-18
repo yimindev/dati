@@ -70,17 +70,17 @@ class SnapshotToolResolverTest {
     }
 
     @Test
-    @DisplayName("builds scope items with managed schema access config")
-    void buildsScopeItemsWithManagedSchemas() {
+    @DisplayName("builds scope items with schema scope access config")
+    void buildsScopeItemsWithSchemaScope() {
         var content = new McpServiceSnapshot.SnapshotContent();
         content.setDataScopes(List.of(new McpServiceSnapshot.DataScopeDraft(
                 TestFixtures.TEST_MCP_SERVICE_ID, McpDataScopeType.DATA_SOURCE,
                 TestFixtures.TEST_DATASOURCE_ID,
-                McpDataScopeAccessMode.MANAGED_SCHEMAS, List.of("sandbox"))));
+                McpDataScopeAccessMode.SCHEMA_SCOPE, List.of("sandbox"))));
 
         List<McpServiceDataScope> items = resolver.buildScopeItems(TestFixtures.TEST_MCP_SERVICE_ID, content);
 
-        assertEquals(McpDataScopeAccessMode.MANAGED_SCHEMAS, items.getFirst().getAccessMode());
+        assertEquals(McpDataScopeAccessMode.SCHEMA_SCOPE, items.getFirst().getAccessMode());
         assertEquals(List.of("sandbox"), items.getFirst().getAllowedSchemas());
     }
 
