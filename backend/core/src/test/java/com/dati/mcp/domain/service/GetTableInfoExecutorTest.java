@@ -20,11 +20,8 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
-import static org.mockito.ArgumentMatchers.anySet;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -67,7 +64,7 @@ class GetTableInfoExecutorTest {
         assertThat(def.table()).isEqualTo("orders");
         assertThat(def.schema()).isNull();
         assertThat(def.description()).isEqualTo("Orders table");
-        verify(scopeValidator).validate(anyList(), eq("ds-1"), anySet(), isNull());
+        verify(scopeValidator).validateDataSource(anyList(), eq("ds-1"));
     }
 
     @Test
@@ -86,7 +83,7 @@ class GetTableInfoExecutorTest {
     @DisplayName("scope violation still enforced per item")
     void scopeViolationStillEnforced() {
         doThrow(new ToolExecuteException(ToolError.SCOPE_VIOLATION, "ds-1 not in scope"))
-            .when(scopeValidator).validate(anyList(), eq("ds-1"), anySet(), any());
+            .when(scopeValidator).validateDataSource(anyList(), eq("ds-1"));
         GetTableInfoArgs args = new GetTableInfoArgs(List.of(
             new GetTableInfoArgs.TableRef("ds-1", null, "orders", null)));
 

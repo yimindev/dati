@@ -2,6 +2,7 @@ package com.dati.mcp.server.controller;
 
 import com.dati.TestFixtures;
 import com.dati.base.pojo.PageResponse;
+import com.dati.mcp.domain.model.McpDataScopeAccessMode;
 import com.dati.mcp.domain.model.McpDataScopeType;
 import com.dati.mcp.domain.model.McpService;
 import com.dati.mcp.domain.model.McpServiceDataScope;
@@ -39,9 +40,11 @@ import java.util.Set;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -214,12 +217,18 @@ class McpServiceControllerTest {
                       "name": "Test MCP Service",
                       "description": "Test MCP service for unit tests",
                       "data_scopes": [
-                        {"scope_type": "DATA_SOURCE", "reference_id": "ds-001"}
+                        {"scope_type": "DATA_SOURCE", "reference_id": "ds-001",
+                         "access_mode": "MANAGED_SCHEMAS", "allowed_schemas": ["sandbox"]}
                       ]
                     }
                     """))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.id").value(TestFixtures.TEST_MCP_SERVICE_ID));
+
+        verify(mcpServiceService).createMcpService(any(), argThat(scopes ->
+            scopes.size() == 1
+                && scopes.getFirst().getAccessMode() == McpDataScopeAccessMode.MANAGED_SCHEMAS
+                && scopes.getFirst().getAllowedSchemas().equals(List.of("sandbox"))));
     }
 
     @Test
@@ -340,6 +349,8 @@ class McpServiceControllerTest {
         item.setScopeType(McpDataScopeType.DATA_SOURCE);
         item.setReferenceId(TestFixtures.TEST_DATASOURCE_ID);
         item.setReferenceName("Test MySQL");
+        item.setAccessMode(McpDataScopeAccessMode.MANAGED_SCHEMAS);
+        item.setAllowedSchemas(List.of("sandbox"));
         response.setItems(List.of(item));
         response.setResolvedDataSources(List.of(new DataSourceRefVO(TestFixtures.TEST_DATASOURCE_ID, "Test MySQL")));
         when(dataScopeAssembler.toDataScopeResponse(List.of(scope), Set.of(TestFixtures.TEST_DATASOURCE_ID)))
@@ -351,6 +362,8 @@ class McpServiceControllerTest {
                 .andExpect(jsonPath("$.items[0].scope_type").value("DATA_SOURCE"))
                 .andExpect(jsonPath("$.items[0].reference_id").value(TestFixtures.TEST_DATASOURCE_ID))
                 .andExpect(jsonPath("$.items[0].reference_name").value("Test MySQL"))
+                .andExpect(jsonPath("$.items[0].access_mode").value("MANAGED_SCHEMAS"))
+                .andExpect(jsonPath("$.items[0].allowed_schemas[0]").value("sandbox"))
                 .andExpect(jsonPath("$.resolved_data_sources").isArray())
                 .andExpect(jsonPath("$.resolved_data_sources[0].id").value(TestFixtures.TEST_DATASOURCE_ID))
                 .andExpect(jsonPath("$.resolved_data_sources[0].name").value("Test MySQL"));
@@ -373,6 +386,32 @@ class McpServiceControllerTest {
                                 """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(TestFixtures.TEST_MCP_SERVICE_ID));
+    }
+
+    @Test
+    @DisplayName("Save data scope - maps access mode and allowed schemas")
+    void saveDataScope_mapsAccessConfig() throws Exception {
+        mockMvc.perform(put("/v1/mcp-services/{id}/data-scope", TestFixtures.TEST_MCP_SERVICE_ID)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "items": [
+                                    {
+                                      "scope_type": "DATA_SOURCE",
+                                      "reference_id": "ds-001",
+                                      "access_mode": "MANAGED_SCHEMAS",
+                                      "allowed_schemas": ["sandbox"]
+                                    }
+                                  ]
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(TestFixtures.TEST_MCP_SERVICE_ID));
+
+        verify(dataScopeService).saveDataScope(eq(TestFixtures.TEST_MCP_SERVICE_ID), argThat(scopes ->
+            scopes.size() == 1
+                && scopes.getFirst().getAccessMode() == McpDataScopeAccessMode.MANAGED_SCHEMAS
+                && scopes.getFirst().getAllowedSchemas().equals(List.of("sandbox"))));
     }
 
     @Test

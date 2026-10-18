@@ -19,6 +19,9 @@ public class SqlPolicy {
 
     /** 根据分析结果校验权限，不通过则抛 ToolExecuteException(SQL_POLICY_VIOLATION)。 */
     public void validate(SqlAnalysisResult result) {
+        if (result.type() == SqlOperationType.OTHER) {
+            throw new ToolExecuteException(ToolError.SQL_POLICY_VIOLATION, "OTHER not allowed");
+        }
         if (result.isMulti() && !allowMulti) {
             throw new ToolExecuteException(ToolError.SQL_POLICY_VIOLATION, "multi-statement not allowed");
         }

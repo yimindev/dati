@@ -4,6 +4,7 @@ import com.dati.TestFixtures;
 import com.dati.datasource.domain.service.DataSourceService;
 import com.dati.db.HikariPoolManager;
 import com.dati.db.JdbcConnector;
+import com.dati.db.analysis.TableRef;
 import com.dati.mcp.domain.model.McpToolType;
 import com.dati.mcp.domain.model.ToolConfig.ExecuteSqlConfig;
 import com.dati.mcp.domain.model.ToolError;
@@ -21,16 +22,19 @@ import java.sql.Connection;
 import java.sql.Statement;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anySet;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -84,12 +88,55 @@ class ExecuteSqlExecutorTest {
         when(dataSourceService.getDataSourceInternal("ds-1"))
             .thenReturn(Optional.of(TestFixtures.createTestDataSource()));
         doThrow(new ToolExecuteException(ToolError.SCOPE_VIOLATION, "orders not in scope"))
-            .when(scopeValidator).validate(anyList(), eq("ds-1"), anySet(), eq("public"));
+            .when(scopeValidator).validate(anyList(), eq("ds-1"), anySet(), anySet(), eq("public"));
         ExecuteSqlArgs args = new ExecuteSqlArgs("ds-1", "SELECT * FROM orders");
 
         assertThatThrownBy(() -> executor.execute(ctx(args)))
             .isInstanceOf(ToolExecuteException.class)
             .hasMessageContaining("not in scope");
+    }
+
+    @Test
+    @DisplayName("passes created tables to scope validation")
+    void passesCreatedTablesToScopeValidation() {
+        when(dataSourceService.getDataSourceInternal("ds-1"))
+            .thenReturn(Optional.of(TestFixtures.createTestDataSource()));
+        doThrow(new ToolExecuteException(ToolError.SCOPE_VIOLATION, "stop"))
+            .when(scopeValidator).validate(anyList(), eq("ds-1"), anySet(), anySet(), eq("public"));
+
+        ExecuteSqlConfig config = new ExecuteSqlConfig();
+        config.getSqlPolicy().setAllowDdl(true);
+        ToolExecutionContext ctx = new ToolExecutionContext("svc-1", McpToolType.EXECUTE_SQL,
+            config, new ExecuteSqlArgs("ds-1", "CREATE TABLE tmp (id INT)"), List.of());
+
+        assertThatThrownBy(() -> executor.execute(ctx)).hasMessageContaining("stop");
+
+        verify(scopeValidator).validate(anyList(), eq("ds-1"), eq(Set.of()),
+            argThat(created -> created.contains(TableRef.of("tmp"))), eq("public"));
+    }
+
+    @Test
+    @DisplayName("DDL is rejected by SQL policy when allowDdl is false")
+    void ddlRejectedByPolicyWhenAllowDdlFalse() {
+        ToolExecutionContext ctx = new ToolExecutionContext("svc-1", McpToolType.EXECUTE_SQL,
+            new ExecuteSqlConfig(), new ExecuteSqlArgs("ds-1", "CREATE TABLE tmp (id INT)"), List.of());
+
+        assertThatThrownBy(() -> executor.execute(ctx))
+            .isInstanceOf(ToolExecuteException.class)
+            .satisfies(e -> assertThat(((ToolExecuteException) e).getToolError())
+                .isEqualTo(ToolError.SQL_POLICY_VIOLATION));
+    }
+
+    @Test
+    @DisplayName("unparseable SQL is rejected by SQL policy")
+    void unparseableSqlRejectedByPolicy() {
+        ToolExecutionContext ctx = new ToolExecutionContext("svc-1", McpToolType.EXECUTE_SQL,
+            new ExecuteSqlConfig(), new ExecuteSqlArgs("ds-1", "NOT A SQL STATEMENT !!!"), List.of());
+
+        assertThatThrownBy(() -> executor.execute(ctx))
+            .isInstanceOf(ToolExecuteException.class)
+            .satisfies(e -> assertThat(((ToolExecuteException) e).getToolError())
+                .isEqualTo(ToolError.SQL_POLICY_VIOLATION));
     }
 
     @Test

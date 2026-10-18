@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 import java.util.List;
+import java.util.Objects;
 
 @EqualsAndHashCode(callSuper = true)
 @Data
@@ -49,7 +50,20 @@ public class McpServiceSnapshot extends BaseResource {
      * （早期格式含 id / 审计字段，反序列化时静默忽略）。
      */
     @JsonIgnoreProperties(ignoreUnknown = true)
-    public record DataScopeDraft(String serviceId, McpDataScopeType scopeType, String referenceId) {
+    public record DataScopeDraft(String serviceId, McpDataScopeType scopeType, String referenceId,
+                                 McpDataScopeAccessMode accessMode, List<String> allowedSchemas) {
+
+        /** Backward-compatible constructor for legacy snapshots/tests. */
+        public DataScopeDraft(String serviceId, McpDataScopeType scopeType, String referenceId) {
+            this(serviceId, scopeType, referenceId,
+                    McpDataScopeAccessMode.IMPORTED_TABLES, List.of());
+        }
+
+        public DataScopeDraft {
+            accessMode = accessMode != null ? accessMode : McpDataScopeAccessMode.IMPORTED_TABLES;
+            allowedSchemas = allowedSchemas == null ? List.of()
+                    : allowedSchemas.stream().filter(Objects::nonNull).toList();
+        }
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)

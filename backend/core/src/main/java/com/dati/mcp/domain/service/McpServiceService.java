@@ -15,13 +15,13 @@ import com.dati.mcp.repository.dao.McpPromptDAO;
 import com.dati.mcp.repository.dao.McpServiceDAO;
 import com.dati.mcp.repository.dao.McpServiceDataScopeDAO;
 import com.dati.mcp.repository.dao.McpServiceSnapshotDAO;
-import com.dati.mcp.repository.mapper.McpServiceMapper;
 import com.dati.mcp.repository.mapper.McpServiceDataScopeMapper;
-import com.dati.mcp.repository.po.McpServicePO;
+import com.dati.mcp.repository.mapper.McpServiceMapper;
 import com.dati.mcp.repository.po.McpServiceDataScopePO;
-import com.dati.permission.domain.service.PermissionService;
+import com.dati.mcp.repository.po.McpServicePO;
 import com.dati.permission.domain.model.Permission;
 import com.dati.permission.domain.model.ResourceType;
+import com.dati.permission.domain.service.PermissionService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -81,6 +81,7 @@ public class McpServiceService {
             throw new DatiException(ErrorCode.MS_SERVICE_DATA_SCOPE_REQUIRED);
         }
         dataScopeService.validateScopePermission(scopes);
+        dataScopeService.normalizeAndValidateScopes(scopes);
         service.setStatus(McpServiceStatus.DRAFT);
         McpServicePO po = McpServiceMapper.toPO(service);
         po = mcpServiceDAO.save(po);

@@ -47,6 +47,8 @@ public class SnapshotToolResolver {
                 scope.setServiceId(serviceId);
                 scope.setScopeType(d.scopeType());
                 scope.setReferenceId(d.referenceId());
+                scope.setAccessMode(d.accessMode());
+                scope.setAllowedSchemas(new ArrayList<>(d.allowedSchemas()));
                 items.add(scope);
             }
         }

@@ -5,20 +5,21 @@ import com.dati.auth.authentication.User;
 import com.dati.base.RequestContext;
 import com.dati.base.exception.DatiException;
 import com.dati.base.exception.ErrorCode;
-import com.dati.mcp.domain.model.McpDataScopeType;
-import com.dati.mcp.domain.model.McpServiceDataScope;
-import com.dati.mcp.repository.dao.McpServiceDataScopeDAO;
-import com.dati.mcp.repository.mapper.McpServiceDataScopeMapper;
 import com.dati.datasource.repository.dao.DataSourceDAO;
 import com.dati.datasource.repository.po.DataSourcePO;
+import com.dati.mcp.domain.model.McpDataScopeAccessMode;
+import com.dati.mcp.domain.model.McpDataScopeType;
+import com.dati.mcp.domain.model.McpServiceDataScope;
 import com.dati.mcp.repository.dao.McpServiceDAO;
+import com.dati.mcp.repository.dao.McpServiceDataScopeDAO;
+import com.dati.mcp.repository.mapper.McpServiceDataScopeMapper;
 import com.dati.mcp.repository.po.McpServiceDataScopePO;
 import com.dati.mcp.repository.po.McpServicePO;
 import com.dati.permission.domain.service.PermissionService;
-import com.dati.semantic.repository.dao.SubjectDAO;
-import com.dati.semantic.repository.po.SubjectPO;
 import com.dati.semantic.domain.model.Subject;
 import com.dati.semantic.domain.service.SubjectService;
+import com.dati.semantic.repository.dao.SubjectDAO;
+import com.dati.semantic.repository.po.SubjectPO;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -39,10 +40,10 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -118,16 +119,26 @@ class McpServiceDataScopeServiceTest {
     }
 
 
+    private McpServiceDataScope managedScope(String... schemas) {
+        McpServiceDataScope scope = new McpServiceDataScope();
+        scope.setServiceId(TestFixtures.TEST_MCP_SERVICE_ID);
+        scope.setScopeType(McpDataScopeType.DATA_SOURCE);
+        scope.setReferenceId(TestFixtures.TEST_DATASOURCE_ID);
+        scope.setAccessMode(McpDataScopeAccessMode.MANAGED_SCHEMAS);
+        scope.setAllowedSchemas(List.of(schemas));
+        return scope;
+    }
+
     /** stub 默认 scope（ds-001 数据源 + subject-001 主题）的 owner 查询，owner = 当前用户。 */
     private void stubScopeOwners() {
         DataSourcePO ds = new DataSourcePO();
         ds.setId(TestFixtures.TEST_DATASOURCE_ID);
         ds.setCreatedBy(TestFixtures.TEST_USER_ID);
-        when(dataSourceDAO.findById(TestFixtures.TEST_DATASOURCE_ID)).thenReturn(Optional.of(ds));
+        lenient().when(dataSourceDAO.findById(TestFixtures.TEST_DATASOURCE_ID)).thenReturn(Optional.of(ds));
         SubjectPO subject = new SubjectPO();
         subject.setId("subject-001");
         subject.setCreatedBy(TestFixtures.TEST_USER_ID);
-        when(subjectDAO.findById("subject-001")).thenReturn(Optional.of(subject));
+        lenient().when(subjectDAO.findById("subject-001")).thenReturn(Optional.of(subject));
     }
 
     @Test
@@ -149,6 +160,76 @@ class McpServiceDataScopeServiceTest {
         assertThat(saved.get(1).getScopeType()).isEqualTo(McpDataScopeType.SUBJECT);
     }
 
+
+    @Test
+    @DisplayName("Save data scope - MANAGED_SCHEMAS trims and deduplicates schemas")
+    void saveDataScope_managedSchemas_shouldNormalizeSchemas() {
+        when(mcpServiceDAO.findById(TestFixtures.TEST_MCP_SERVICE_ID))
+                .thenReturn(Optional.of(TestFixtures.createTestMcpServicePO()));
+        stubScopeOwners();
+        when(dataScopeDAO.saveAll(any())).thenReturn(List.of());
+
+        dataScopeService.saveDataScope(TestFixtures.TEST_MCP_SERVICE_ID,
+                List.of(managedScope(" sandbox ", "sandbox", "public", " ")));
+
+        verify(dataScopeDAO).saveAll(captor.capture());
+        McpServiceDataScopePO saved = captor.getValue().getFirst();
+        assertThat(saved.getAccessMode()).isEqualTo(McpDataScopeAccessMode.MANAGED_SCHEMAS);
+        assertThat(saved.getAllowedSchemas()).containsExactly("sandbox", "public");
+    }
+
+    @Test
+    @DisplayName("Save data scope - MANAGED_SCHEMAS requires at least one schema")
+    void saveDataScope_managedSchemasWithoutSchemas_shouldThrow() {
+        when(mcpServiceDAO.findById(TestFixtures.TEST_MCP_SERVICE_ID))
+                .thenReturn(Optional.of(TestFixtures.createTestMcpServicePO()));
+        stubScopeOwners();
+
+        DatiException e = assertThrows(DatiException.class,
+                () -> dataScopeService.saveDataScope(TestFixtures.TEST_MCP_SERVICE_ID,
+                        List.of(managedScope())));
+
+        assertThat(e.getCode()).isEqualTo(ErrorCode.INVALID_PARAMETER);
+        verify(dataScopeDAO, never()).deleteAllByServiceId(anyString());
+    }
+
+    @Test
+    @DisplayName("Save data scope - IMPORTED_TABLES clears allowed schemas")
+    void saveDataScope_importedTables_shouldClearSchemas() {
+        when(mcpServiceDAO.findById(TestFixtures.TEST_MCP_SERVICE_ID))
+                .thenReturn(Optional.of(TestFixtures.createTestMcpServicePO()));
+        stubScopeOwners();
+        when(dataScopeDAO.saveAll(any())).thenReturn(List.of());
+        testDataSourceScope.setAccessMode(McpDataScopeAccessMode.IMPORTED_TABLES);
+        testDataSourceScope.setAllowedSchemas(List.of("public"));
+
+        dataScopeService.saveDataScope(TestFixtures.TEST_MCP_SERVICE_ID,
+                List.of(testDataSourceScope));
+
+        verify(dataScopeDAO).saveAll(captor.capture());
+        McpServiceDataScopePO saved = captor.getValue().getFirst();
+        assertThat(saved.getAccessMode()).isEqualTo(McpDataScopeAccessMode.IMPORTED_TABLES);
+        assertThat(saved.getAllowedSchemas()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Save data scope - SUBJECT forces IMPORTED_TABLES and clears schemas")
+    void saveDataScope_subject_shouldForceImportedTables() {
+        when(mcpServiceDAO.findById(TestFixtures.TEST_MCP_SERVICE_ID))
+                .thenReturn(Optional.of(TestFixtures.createTestMcpServicePO()));
+        stubScopeOwners();
+        when(dataScopeDAO.saveAll(any())).thenReturn(List.of());
+        testSubjectScope.setAccessMode(McpDataScopeAccessMode.MANAGED_SCHEMAS);
+        testSubjectScope.setAllowedSchemas(List.of("public"));
+
+        dataScopeService.saveDataScope(TestFixtures.TEST_MCP_SERVICE_ID,
+                List.of(testSubjectScope));
+
+        verify(dataScopeDAO).saveAll(captor.capture());
+        McpServiceDataScopePO saved = captor.getValue().getFirst();
+        assertThat(saved.getAccessMode()).isEqualTo(McpDataScopeAccessMode.IMPORTED_TABLES);
+        assertThat(saved.getAllowedSchemas()).isEmpty();
+    }
 
     @Test
     @DisplayName("Save data scope - empty list clears existing")

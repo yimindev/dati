@@ -43,16 +43,16 @@ public final class SqlAnalyzer {
     private SqlAnalyzer() {}
 
     /**
-     * Analyzes a rendered SQL string (with ? placeholders) and extracts
-     * per-statement operation types and all referenced tables.
+     * Analyzes a rendered SQL string (with ? placeholders) and returns one
+     * {@link SqlAnalysisResult.StatementAnalysis} per statement, including
+     * referenced and created tables.
      *
      * @param sql the SQL to analyze; may be null
-     * @return analysis result: type=MULTI for multiple statements,
-     *         type=OTHER on parse failure, empty statementTypes on error
+     * @return analysis result; empty statements and type=OTHER on blank input or parse failure
      */
     public static SqlAnalysisResult analyze(String sql) {
         if (sql == null || sql.isBlank()) {
-            return new SqlAnalysisResult(SqlOperationType.OTHER, List.of(), Set.of());
+            return emptyResult();
         }
 
         try {
@@ -66,7 +66,7 @@ public final class SqlAnalyzer {
                 if (containsBeginOrStart(sql)) {
                     return transactionPreScan(sql);
                 }
-                return new SqlAnalysisResult(SqlOperationType.OTHER, List.of(), Set.of());
+                return emptyResult();
             }
         }
     }
@@ -88,72 +88,79 @@ public final class SqlAnalyzer {
      */
     private static SqlAnalysisResult transactionPreScan(String sql) {
         String[] parts = sql.split(";");
-        List<SqlOperationType> types = new ArrayList<>();
-        Set<TableRef> allTables = new LinkedHashSet<>();
+        List<SqlAnalysisResult.StatementAnalysis> statements = new ArrayList<>();
 
         for (String part : parts) {
             String trimmed = part.trim();
             if (trimmed.isEmpty()) continue;
 
             if (BEGIN_OR_START_PATTERN.matcher(trimmed).find()) {
-                types.add(SqlOperationType.TRANSACTION);
+                statements.add(new SqlAnalysisResult.StatementAnalysis(
+                        SqlOperationType.TRANSACTION, Set.of(), Set.of()));
                 continue;
             }
 
             try {
                 Statement stmt = CCJSqlParserUtil.parse(trimmed);
-                types.add(detectOperationType(stmt));
-                SchemaAwareTableFinder finder = new SchemaAwareTableFinder();
-                finder.extract(stmt);
-                allTables.addAll(finder.getTableRefs());
+                statements.add(analyzeStatement(stmt));
             } catch (JSQLParserException e) {
-                types.add(SqlOperationType.OTHER);
+                statements.add(new SqlAnalysisResult.StatementAnalysis(
+                        SqlOperationType.OTHER, Set.of(), Set.of()));
             }
         }
 
-        if (types.isEmpty()) {
-            return new SqlAnalysisResult(SqlOperationType.OTHER, List.of(), Set.of());
-        }
-
-        SqlOperationType resultType = types.size() > 1 ? SqlOperationType.MULTI : types.getFirst();
-        return new SqlAnalysisResult(resultType, types, Set.copyOf(allTables));
+        return new SqlAnalysisResult(statements);
     }
 
     private static SqlAnalysisResult analyzeStatements(Statements stmts) {
-        List<Statement> validStatements = stmts.stream()
+        List<SqlAnalysisResult.StatementAnalysis> statements = stmts.stream()
                 .filter(Objects::nonNull)
+                .map(SqlAnalyzer::analyzeStatement)
                 .toList();
-
-        if (validStatements.isEmpty()) {
-            return new SqlAnalysisResult(SqlOperationType.OTHER, List.of(), Set.of());
-        }
-
-        List<SqlOperationType> types = validStatements.stream()
-                .map(SqlAnalyzer::detectOperationType)
-                .toList();
-
-        SqlOperationType resultType = types.size() > 1
-                ? SqlOperationType.MULTI
-                : types.getFirst();
-
-        Set<TableRef> allTables = new LinkedHashSet<>();
-        SchemaAwareTableFinder finder = new SchemaAwareTableFinder();
-        for (Statement stmt : validStatements) {
-            finder.extract(stmt);
-            allTables.addAll(finder.getTableRefs());
-        }
-
-        return new SqlAnalysisResult(resultType, types, Set.copyOf(allTables));
+        return new SqlAnalysisResult(statements);
     }
 
     private static SqlAnalysisResult analyzeSingleStatement(Statement stmt) {
-        SqlOperationType opType = detectOperationType(stmt);
+        return new SqlAnalysisResult(List.of(analyzeStatement(stmt)));
+    }
+
+    private static SqlAnalysisResult.StatementAnalysis analyzeStatement(Statement stmt) {
+        SqlOperationType type = detectOperationType(stmt);
 
         SchemaAwareTableFinder finder = new SchemaAwareTableFinder();
         finder.extract(stmt);
-        Set<TableRef> tables = finder.getTableRefs();
 
-        return new SqlAnalysisResult(opType, List.of(opType), tables);
+        Set<TableRef> referenced = new LinkedHashSet<>(finder.getTableRefs());
+        Set<TableRef> created = new LinkedHashSet<>();
+
+        if (stmt instanceof CreateTable createTable) {
+            TableRef target = toTableRef(createTable.getTable());
+            if (target != null) {
+                created.add(target);
+                referenced.remove(target);
+            }
+            TableRef likeTable = toTableRef(createTable.getLikeTable());
+            if (likeTable != null) {
+                referenced.add(likeTable);
+            }
+        }
+
+        return new SqlAnalysisResult.StatementAnalysis(type, referenced, created);
+    }
+
+    private static TableRef toTableRef(Table table) {
+        if (table == null) {
+            return null;
+        }
+        String name = table.getUnquotedName();
+        if (name == null || name.isBlank()) {
+            return null;
+        }
+        return new TableRef(table.getUnquotedSchemaName(), name);
+    }
+
+    private static SqlAnalysisResult emptyResult() {
+        return new SqlAnalysisResult(List.of());
     }
 
     private static SqlOperationType detectOperationType(Statement stmt) {

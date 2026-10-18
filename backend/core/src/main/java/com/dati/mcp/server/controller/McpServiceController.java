@@ -90,6 +90,8 @@ public class McpServiceController {
             McpServiceDataScope scope = new McpServiceDataScope();
             scope.setScopeType(item.getScopeType());
             scope.setReferenceId(item.getReferenceId());
+            scope.setAccessMode(item.getAccessMode());
+            scope.setAllowedSchemas(item.getAllowedSchemas());
             return scope;
         }).toList();
         mcpServiceAssembler.fillUsersFromRequest(service);
@@ -134,6 +136,8 @@ public class McpServiceController {
             scope.setServiceId(id);
             scope.setScopeType(item.getScopeType());
             scope.setReferenceId(item.getReferenceId());
+            scope.setAccessMode(item.getAccessMode());
+            scope.setAllowedSchemas(item.getAllowedSchemas());
             return scope;
         }).toList();
         dataScopeService.saveDataScope(id, scopes);

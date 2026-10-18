@@ -158,6 +158,19 @@ class McpServiceServiceTest {
     }
 
     @Test
+    @DisplayName("Create MCP service - normalizes and validates data scopes")
+    void createMcpService_shouldNormalizeAndValidateScopes() {
+        McpServicePO savedPO = new McpServicePO();
+        savedPO.setId(TestFixtures.TEST_MCP_SERVICE_ID);
+        when(mcpServiceDAO.save(any(McpServicePO.class))).thenReturn(savedPO);
+        List<McpServiceDataScope> scopes = List.of(TestFixtures.createTestDataScope());
+
+        mcpServiceService.createMcpService(testService, scopes);
+
+        verify(dataScopeService).normalizeAndValidateScopes(scopes);
+    }
+
+    @Test
     @DisplayName("Create MCP service - empty data scopes rejected")
     void createMcpService_emptyScopes_throws() {
         DatiException ex = assertThrows(DatiException.class,

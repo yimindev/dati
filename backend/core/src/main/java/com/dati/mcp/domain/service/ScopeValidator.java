@@ -3,6 +3,7 @@ package com.dati.mcp.domain.service;
 import com.dati.datasource.repository.dao.TableInfoDAO;
 import com.dati.datasource.repository.po.TableInfoPO;
 import com.dati.db.analysis.TableRef;
+import com.dati.mcp.domain.model.McpDataScopeAccessMode;
 import com.dati.mcp.domain.model.McpDataScopeType;
 import com.dati.mcp.domain.model.McpServiceDataScope;
 import com.dati.mcp.domain.model.ToolError;
@@ -12,8 +13,11 @@ import com.dati.semantic.repository.po.SubjectPO;
 import jakarta.annotation.Nullable;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 
 @Service
@@ -29,8 +33,19 @@ public class ScopeValidator {
         this.subjectDAO = subjectDAO;
     }
 
+    /**
+     * Validates that referencing and creating the given tables stays within the service data scope.
+     * Operation-type permissions (including DDL allowance) are enforced by SqlPolicy before this call.
+     */
     public void validate(List<McpServiceDataScope> scopeItems, String dsId,
-                         Set<TableRef> tableRefs, @Nullable String defaultSchema) {
+                         Set<TableRef> referencedTables, Set<TableRef> createdTables,
+                         @Nullable String defaultSchema) {
+        validateScopeCoverage(scopeItems, dsId);
+        validateCreatedTables(scopeItems, dsId, createdTables, defaultSchema);
+        validateReferencedTables(scopeItems, dsId, referencedTables, defaultSchema);
+    }
+
+    private void validateScopeCoverage(List<McpServiceDataScope> scopeItems, String dsId) {
         if (scopeItems == null || scopeItems.isEmpty()) {
             throw new ToolExecuteException(ToolError.SCOPE_VIOLATION, "No data scope configured");
         }
@@ -39,16 +54,74 @@ public class ScopeValidator {
             throw new ToolExecuteException(ToolError.SCOPE_VIOLATION,
                 "Data source " + dsId + " not in service scope");
         }
+    }
 
+    private void validateReferencedTables(List<McpServiceDataScope> scopeItems, String dsId,
+                                          Set<TableRef> tableRefs, @Nullable String defaultSchema) {
         if (tableRefs == null || tableRefs.isEmpty()) return;
 
-        Set<TableRef> allowed = buildAllowedTableRefs(scopeItems, dsId);
+        Set<String> managedSchemas = managedSchemas(scopeItems, dsId);
+        Set<TableRef> allowed = null;
         for (TableRef ref : tableRefs) {
+            String schema = effectiveSchema(ref, defaultSchema);
+            if (schema != null && managedSchemas.contains(schema)) continue;
+
+            if (allowed == null) {
+                allowed = buildAllowedTableRefs(scopeItems, dsId);
+            }
             if (allowed.contains(ref)) continue;
             if (tryResolve(ref, defaultSchema, allowed)) continue;
             throw new ToolExecuteException(ToolError.SCOPE_VIOLATION,
                 "Table " + ref.qualifiedName() + " not in scope");
         }
+    }
+
+    private void validateCreatedTables(List<McpServiceDataScope> scopeItems, String dsId,
+                                       Set<TableRef> createdTables, @Nullable String defaultSchema) {
+        if (createdTables == null || createdTables.isEmpty()) return;
+
+        Set<String> managedSchemas = managedSchemas(scopeItems, dsId);
+        if (managedSchemas.isEmpty()) {
+            throw new ToolExecuteException(ToolError.SCOPE_VIOLATION,
+                "No managed schema configured for data source " + dsId);
+        }
+
+        for (TableRef ref : createdTables) {
+            String schema = effectiveSchema(ref, defaultSchema);
+            if (schema == null || schema.isBlank()) {
+                throw new ToolExecuteException(ToolError.SCOPE_VIOLATION,
+                    "Cannot resolve schema for created table " + ref.qualifiedName());
+            }
+            if (!managedSchemas.contains(schema)) {
+                throw new ToolExecuteException(ToolError.SCOPE_VIOLATION,
+                    "Schema " + schema + " is not managed by this service");
+            }
+        }
+    }
+
+    private Set<String> managedSchemas(List<McpServiceDataScope> scopeItems, String dsId) {
+        Set<String> schemas = new LinkedHashSet<>();
+        if (scopeItems == null) return schemas;
+
+        for (McpServiceDataScope scope : scopeItems) {
+            if (scope.getScopeType() != McpDataScopeType.DATA_SOURCE
+                    || !Objects.equals(scope.getReferenceId(), dsId)
+                    || scope.getAccessMode() != McpDataScopeAccessMode.MANAGED_SCHEMAS
+                    || scope.getAllowedSchemas() == null) {
+                continue;
+            }
+            for (String schema : scope.getAllowedSchemas()) {
+                if (schema != null && !schema.isBlank()) {
+                    schemas.add(schema);
+                }
+            }
+        }
+        return schemas;
+    }
+
+    @Nullable
+    private static String effectiveSchema(TableRef ref, @Nullable String defaultSchema) {
+        return ref.schema() != null && !ref.schema().isBlank() ? ref.schema() : defaultSchema;
     }
 
     private Set<String> coveredDataSourceIds(List<McpServiceDataScope> scopeItems) {
@@ -73,13 +146,7 @@ public class ScopeValidator {
      * required — metadata writes are not data access.
      */
     public void validateDataSource(List<McpServiceDataScope> scopeItems, String dsId) {
-        if (scopeItems == null || scopeItems.isEmpty()) {
-            throw new ToolExecuteException(ToolError.SCOPE_VIOLATION, "No data scope configured");
-        }
-        if (!coveredDataSourceIds(scopeItems).contains(dsId)) {
-            throw new ToolExecuteException(ToolError.SCOPE_VIOLATION,
-                "Data source " + dsId + " not in service scope");
-        }
+        validateScopeCoverage(scopeItems, dsId);
     }
 
     /**

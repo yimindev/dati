@@ -5,6 +5,7 @@ import com.dati.base.RequestContext;
 import com.dati.base.exception.DatiException;
 import com.dati.base.exception.ErrorCode;
 import com.dati.datasource.repository.dao.DataSourceDAO;
+import com.dati.mcp.domain.model.McpDataScopeAccessMode;
 import com.dati.mcp.domain.model.McpDataScopeType;
 import com.dati.mcp.domain.model.McpServiceDataScope;
 import com.dati.mcp.repository.dao.McpServiceDAO;
@@ -16,11 +17,12 @@ import com.dati.permission.domain.model.Permission;
 import com.dati.permission.domain.model.ResourceType;
 import com.dati.permission.domain.service.PermissionService;
 import com.dati.semantic.domain.model.Subject;
-import com.dati.semantic.repository.dao.SubjectDAO;
 import com.dati.semantic.domain.service.SubjectService;
+import com.dati.semantic.repository.dao.SubjectDAO;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
@@ -57,6 +59,7 @@ public class McpServiceDataScopeService {
                 .orElseThrow(() -> new DatiException(ErrorCode.MS_SERVICE_NOT_FOUND, serviceId));
         permissionService.requireCurrentUser(ResourceType.MCP_SERVICE, serviceId, Permission.EDIT, servicePO.getCreatedBy());
         validateScopePermission(scopes);
+        normalizeAndValidateScopes(scopes);
         dataScopeDAO.deleteAllByServiceId(serviceId);
         if (scopes != null && !scopes.isEmpty()) {
             List<McpServiceDataScopePO> pos = scopes.stream()
@@ -99,6 +102,56 @@ public class McpServiceDataScopeService {
                         scope.getReferenceId(), Permission.VIEW, ownerId);
             }
         }
+    }
+
+    /**
+     * Normalizes access configuration and validates it before persistence.
+     * SUBJECT scopes are always IMPORTED_TABLES; IMPORTED_TABLES clears allowed schemas;
+     * MANAGED_SCHEMAS requires at least one non-blank schema.
+     */
+    public void normalizeAndValidateScopes(List<McpServiceDataScope> scopes) {
+        if (scopes == null) {
+            return;
+        }
+        for (McpServiceDataScope scope : scopes) {
+            if (scope.getScopeType() == null) {
+                throw new DatiException(ErrorCode.INVALID_PARAMETER, "scope_type is required");
+            }
+            if (scope.getScopeType() == McpDataScopeType.SUBJECT) {
+                scope.setAccessMode(McpDataScopeAccessMode.IMPORTED_TABLES);
+                scope.setAllowedSchemas(new ArrayList<>());
+                continue;
+            }
+
+            McpDataScopeAccessMode accessMode = scope.getAccessMode() != null
+                    ? scope.getAccessMode() : McpDataScopeAccessMode.IMPORTED_TABLES;
+            scope.setAccessMode(accessMode);
+
+            if (accessMode == McpDataScopeAccessMode.IMPORTED_TABLES) {
+                scope.setAllowedSchemas(new ArrayList<>());
+                continue;
+            }
+
+            List<String> schemas = normalizeSchemas(scope.getAllowedSchemas());
+            if (schemas.isEmpty()) {
+                throw new DatiException(ErrorCode.INVALID_PARAMETER,
+                        "MANAGED_SCHEMAS requires at least one allowed schema");
+            }
+            scope.setAllowedSchemas(schemas);
+        }
+    }
+
+    private List<String> normalizeSchemas(List<String> schemas) {
+        if (schemas == null || schemas.isEmpty()) {
+            return new ArrayList<>();
+        }
+        Set<String> normalized = new LinkedHashSet<>();
+        for (String schema : schemas) {
+            if (schema != null && !schema.isBlank()) {
+                normalized.add(schema.trim());
+            }
+        }
+        return new ArrayList<>(normalized);
     }
 
     public Set<String> getResolvedDataSourceIds(String serviceId) {

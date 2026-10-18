@@ -1,7 +1,9 @@
 package com.dati.mcp.repository.mapper;
 
 import com.dati.TestFixtures;
+import com.dati.mcp.domain.model.McpDataScopeAccessMode;
 import com.dati.mcp.domain.model.McpDataScopeType;
+import com.dati.mcp.domain.model.McpServiceDataScope;
 import com.dati.mcp.domain.model.McpServiceSnapshot;
 import com.dati.mcp.domain.model.McpToolType;
 import com.dati.mcp.domain.model.ToolConfig;
@@ -115,6 +117,9 @@ class McpServiceSnapshotMapperTest {
         assertThat(content.getDataScopes()).hasSize(1);
         assertThat(content.getDataScopes().getFirst().scopeType()).isEqualTo(McpDataScopeType.DATA_SOURCE);
         assertThat(content.getDataScopes().getFirst().referenceId()).isEqualTo("ds-001");
+        assertThat(content.getDataScopes().getFirst().accessMode())
+                .isEqualTo(McpDataScopeAccessMode.IMPORTED_TABLES);
+        assertThat(content.getDataScopes().getFirst().allowedSchemas()).isEmpty();
         assertThat(content.getCustomTools()).hasSize(1);
         assertThat(content.getCustomTools().getFirst().name()).isEqualTo("list_tasks");
         assertThat(content.getCustomTools().getFirst().config()).isInstanceOf(ToolConfig.ParamSqlConfig.class);
@@ -122,6 +127,46 @@ class McpServiceSnapshotMapperTest {
         assertThat(content.getPrebuiltTools().getFirst().toolType()).isEqualTo(McpToolType.SEARCH_METADATA);
         assertThat(content.getPrompts()).hasSize(1);
         assertThat(content.getPrompts().getFirst().name()).isEqualTo("analyze_table");
+    }
+
+    @Test
+    @DisplayName("Data scope access config survives snapshot round-trip")
+    void dataScopeAccessConfig_roundTrip() {
+        McpServiceDataScope scope = new McpServiceDataScope();
+        scope.setServiceId(TestFixtures.TEST_MCP_SERVICE_ID);
+        scope.setScopeType(McpDataScopeType.DATA_SOURCE);
+        scope.setReferenceId(TestFixtures.TEST_DATASOURCE_ID);
+        scope.setAccessMode(McpDataScopeAccessMode.MANAGED_SCHEMAS);
+        scope.setAllowedSchemas(List.of("sandbox", "public"));
+
+        McpServiceSnapshot.DataScopeDraft draft = McpServiceSnapshotMapper.toDataScopeDraft(scope);
+        McpServiceDataScope restored = McpServiceSnapshotMapper.toDataScope(draft);
+
+        assertThat(draft.accessMode()).isEqualTo(McpDataScopeAccessMode.MANAGED_SCHEMAS);
+        assertThat(draft.allowedSchemas()).containsExactly("sandbox", "public");
+        assertThat(restored.getAccessMode()).isEqualTo(McpDataScopeAccessMode.MANAGED_SCHEMAS);
+        assertThat(restored.getAllowedSchemas()).containsExactly("sandbox", "public");
+    }
+
+    @Test
+    @DisplayName("Snapshot JSON with access config parses")
+    void parseContent_accessConfig() {
+        String json = """
+                {
+                  "data_scopes": [
+                    {"service_id": "mcp-svc-001", "scope_type": "DATA_SOURCE", "reference_id": "ds-001",
+                     "access_mode": "MANAGED_SCHEMAS", "allowed_schemas": ["sandbox"]}
+                  ]
+                }
+                """;
+
+        McpServiceSnapshotPO po = new McpServiceSnapshotPO();
+        po.setSnapshotContent(json);
+        McpServiceSnapshot snapshot = McpServiceSnapshotMapper.toModel(po);
+
+        McpServiceSnapshot.DataScopeDraft draft = snapshot.getContent().getDataScopes().getFirst();
+        assertThat(draft.accessMode()).isEqualTo(McpDataScopeAccessMode.MANAGED_SCHEMAS);
+        assertThat(draft.allowedSchemas()).containsExactly("sandbox");
     }
 
     @Test

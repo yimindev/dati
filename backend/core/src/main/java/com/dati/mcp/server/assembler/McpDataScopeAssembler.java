@@ -2,6 +2,7 @@ package com.dati.mcp.server.assembler;
 
 import com.dati.base.BaseAssembler;
 import com.dati.datasource.domain.service.DataSourceService;
+import com.dati.mcp.domain.model.McpDataScopeAccessMode;
 import com.dati.mcp.domain.model.McpDataScopeType;
 import com.dati.mcp.domain.model.McpServiceDataScope;
 import com.dati.mcp.server.pojo.DataScopeItemVO;
@@ -11,6 +12,7 @@ import com.dati.semantic.domain.model.Subject;
 import com.dati.semantic.domain.service.SubjectService;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -51,6 +53,10 @@ public class McpDataScopeAssembler extends BaseAssembler {
             vo.setId(scope.getId());
             vo.setScopeType(scope.getScopeType());
             vo.setReferenceId(scope.getReferenceId());
+            vo.setAccessMode(scope.getAccessMode() != null
+                    ? scope.getAccessMode() : McpDataScopeAccessMode.IMPORTED_TABLES);
+            vo.setAllowedSchemas(scope.getAllowedSchemas() != null
+                    ? new ArrayList<>(scope.getAllowedSchemas()) : List.of());
             if (scope.getScopeType() == McpDataScopeType.DATA_SOURCE) {
                 vo.setReferenceName(dsNameMap.getOrDefault(scope.getReferenceId(), scope.getReferenceId()));
             } else {

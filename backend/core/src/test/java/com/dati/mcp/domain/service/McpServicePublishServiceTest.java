@@ -3,10 +3,10 @@ package com.dati.mcp.domain.service;
 import com.dati.TestFixtures;
 import com.dati.auth.authentication.User;
 import com.dati.base.RequestContext;
-import com.dati.permission.domain.service.PermissionService;
 import com.dati.base.exception.DatiException;
 import com.dati.base.exception.ErrorCode;
 import com.dati.mcp.domain.model.McpCustomTool;
+import com.dati.mcp.domain.model.McpDataScopeAccessMode;
 import com.dati.mcp.domain.model.McpDataScopeType;
 import com.dati.mcp.domain.model.McpPrebuiltToolConfig;
 import com.dati.mcp.domain.model.McpPrompt;
@@ -21,6 +21,7 @@ import com.dati.mcp.repository.mapper.McpServiceSnapshotMapper;
 import com.dati.mcp.repository.po.McpServicePO;
 import com.dati.mcp.repository.po.McpServiceSnapshotPO;
 import com.dati.mcp.server.pojo.McpServiceDiffVO;
+import com.dati.permission.domain.service.PermissionService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -37,10 +38,10 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.lenient;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -459,6 +460,56 @@ class McpServicePublishServiceTest {
         McpServiceDiffVO diff = publishService.getDiff(TestFixtures.TEST_MCP_SERVICE_ID);
 
         assertThat(diff.isHasChanges()).isFalse();
+    }
+
+    @Test
+    @DisplayName("Data scope access mode change - diff reports DATA_SCOPE")
+    void getDiff_DataScopeAccessModeChanged_ReportsChange() {
+        testServicePO.setStatus(McpServiceStatus.PUBLISHED);
+        testServicePO.setActiveVersionId("snap-001");
+        testServicePO.setActiveVersionNumber(1);
+
+        McpServiceSnapshot.SnapshotContent content = new McpServiceSnapshot.SnapshotContent();
+        McpServiceSnapshot.ServiceInfo sInfo = new McpServiceSnapshot.ServiceInfo();
+        sInfo.setId(TestFixtures.TEST_MCP_SERVICE_ID);
+        sInfo.setName("Test MCP Service");
+        sInfo.setDescription("Test MCP service for unit tests");
+        sInfo.setCode("test-mcp-service");
+        content.setServiceInfo(sInfo);
+
+        McpServiceDataScope activeScope = new McpServiceDataScope();
+        activeScope.setServiceId(TestFixtures.TEST_MCP_SERVICE_ID);
+        activeScope.setScopeType(McpDataScopeType.DATA_SOURCE);
+        activeScope.setReferenceId(TestFixtures.TEST_DATASOURCE_ID);
+        content.setDataScopes(List.of(McpServiceSnapshotMapper.toDataScopeDraft(activeScope)));
+        content.setPrebuiltTools(Collections.emptyList());
+        content.setCustomTools(Collections.emptyList());
+        content.setPrompts(Collections.emptyList());
+
+        McpServiceSnapshotPO snapshotPO = new McpServiceSnapshotPO();
+        snapshotPO.setId("snap-001");
+        snapshotPO.setServiceId(TestFixtures.TEST_MCP_SERVICE_ID);
+        snapshotPO.setVersionNumber(1);
+        snapshotPO.setSnapshotContent(com.dati.common.JsonUtils.toJson(content));
+
+        McpServiceDataScope currentScope = new McpServiceDataScope();
+        currentScope.setServiceId(TestFixtures.TEST_MCP_SERVICE_ID);
+        currentScope.setScopeType(McpDataScopeType.DATA_SOURCE);
+        currentScope.setReferenceId(TestFixtures.TEST_DATASOURCE_ID);
+        currentScope.setAccessMode(McpDataScopeAccessMode.MANAGED_SCHEMAS);
+        currentScope.setAllowedSchemas(List.of("sandbox"));
+
+        when(mcpServiceDAO.findById(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(Optional.of(testServicePO));
+        when(snapshotDAO.findById("snap-001")).thenReturn(Optional.of(snapshotPO));
+        when(dataScopeService.getDataScope(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(List.of(currentScope));
+        when(toolService.listTools(TestFixtures.TEST_MCP_SERVICE_ID))
+                .thenReturn(new ToolsResult(Collections.emptyList(), Collections.emptyList()));
+        when(promptService.listPrompts(TestFixtures.TEST_MCP_SERVICE_ID)).thenReturn(Collections.emptyList());
+
+        McpServiceDiffVO diff = publishService.getDiff(TestFixtures.TEST_MCP_SERVICE_ID);
+
+        assertThat(diff.isDataScopeChanged()).isTrue();
+        assertThat(diff.getModifiedComponents()).contains("DATA_SCOPE");
     }
 
     // ── 回滚 ──

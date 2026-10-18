@@ -9,7 +9,11 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Stream;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class SqlAnalyzerTest {
 
@@ -139,8 +143,8 @@ class SqlAnalyzerTest {
     @MethodSource("basicTableCases")
     void shouldExtractBasicTables(String sql, Set<TableRef> expected) {
         SqlAnalysisResult result = SqlAnalyzer.analyze(sql);
-        assertEquals(expected, result.tables(),
-                "Expected tables " + expected + " but got " + result.tables() + " for: " + sql);
+        assertEquals(expected, result.referencedTables(),
+                "Expected tables " + expected + " but got " + result.referencedTables() + " for: " + sql);
     }
 
     // ============ 表提取 — 子查询 & CTE（用例 35-40） ============
@@ -166,8 +170,8 @@ class SqlAnalyzerTest {
     @MethodSource("subqueryTableCases")
     void shouldExtractSubqueryTables(String sql, Set<TableRef> expected) {
         SqlAnalysisResult result = SqlAnalyzer.analyze(sql);
-        assertEquals(expected, result.tables(),
-                "Expected tables " + expected + " but got " + result.tables() + " for: " + sql);
+        assertEquals(expected, result.referencedTables(),
+                "Expected tables " + expected + " but got " + result.referencedTables() + " for: " + sql);
     }
 
     // ============ 表提取 — 边界（用例 41-45） ============
@@ -175,31 +179,117 @@ class SqlAnalyzerTest {
     @Test
     void shouldNotExtractFunctionAsTable() {
         SqlAnalysisResult result = SqlAnalyzer.analyze("SELECT COUNT(*) FROM orders");
-        assertEquals(Set.of(TableRef.of("orders")), result.tables());
+        assertEquals(Set.of(TableRef.of("orders")), result.referencedTables());
     }
 
     @Test
     void shouldStripQuotesFromTableName() {
         SqlAnalysisResult result = SqlAnalyzer.analyze("SELECT * FROM \"Orders\"");
-        assertEquals(Set.of(TableRef.of("Orders")), result.tables());
+        assertEquals(Set.of(TableRef.of("Orders")), result.referencedTables());
     }
 
     @Test
     void shouldHandleBacktickTableName() {
         SqlAnalysisResult result = SqlAnalyzer.analyze("SELECT * FROM `order-items`");
-        assertEquals(Set.of(TableRef.of("order-items")), result.tables());
+        assertEquals(Set.of(TableRef.of("order-items")), result.referencedTables());
     }
 
     @Test
     void shouldReturnEmptyTablesForNoTableQuery() {
         SqlAnalysisResult result = SqlAnalyzer.analyze("SELECT 1+1");
-        assertEquals(Set.of(), result.tables());
+        assertEquals(Set.of(), result.referencedTables());
     }
 
     @Test
     void shouldExtractDdlTargetTable() {
         SqlAnalysisResult result = SqlAnalyzer.analyze("DROP TABLE orders");
-        assertEquals(Set.of(TableRef.of("orders")), result.tables());
+        assertEquals(Set.of(TableRef.of("orders")), result.referencedTables());
+    }
+
+    // ============ CREATE TABLE 目标表与引用表分离 ============
+
+    private static void assertTableSets(SqlAnalysisResult result,
+                                        Set<TableRef> referenced,
+                                        Set<TableRef> created) {
+        assertEquals(referenced, result.referencedTables());
+        assertEquals(created, result.createdTables());
+    }
+
+    @Test
+    void createTable_shouldExtractCreatedTableOnly() {
+        SqlAnalysisResult result = SqlAnalyzer.analyze("CREATE TABLE tmp (id INT)");
+        assertTableSets(result, Set.of(), Set.of(TableRef.of("tmp")));
+    }
+
+    @Test
+    void createTableWithSchema_shouldExtractCreatedTableOnly() {
+        SqlAnalysisResult result = SqlAnalyzer.analyze("CREATE TABLE public.tmp (id INT)");
+        assertTableSets(result, Set.of(), Set.of(TableRef.of("public", "tmp")));
+    }
+
+    @Test
+    void createTableAsSelect_shouldSeparateTargetAndSource() {
+        SqlAnalysisResult result = SqlAnalyzer.analyze(
+                "CREATE TABLE tmp AS SELECT * FROM public.orders");
+        assertTableSets(result,
+                Set.of(TableRef.of("public", "orders")),
+                Set.of(TableRef.of("tmp")));
+    }
+
+    @Test
+    void createTableLike_shouldTreatSourceAsReferenced() {
+        SqlAnalysisResult result = SqlAnalyzer.analyze(
+                "CREATE TABLE tmp LIKE public.orders");
+        assertTableSets(result,
+                Set.of(TableRef.of("public", "orders")),
+                Set.of(TableRef.of("tmp")));
+    }
+
+    @Test
+    void createOrReplaceTable_shouldRemainDdlAndTrackCreatedTable() {
+        SqlAnalysisResult result = SqlAnalyzer.analyze(
+                "CREATE OR REPLACE TABLE tmp (id INT)");
+        assertEquals(SqlOperationType.DDL, result.type());
+        assertTableSets(result, Set.of(), Set.of(TableRef.of("tmp")));
+    }
+
+    @Test
+    void multiStatementCreateThenInsert_shouldTrackCreatedAndReferenced() {
+        SqlAnalysisResult result = SqlAnalyzer.analyze(
+                "CREATE TABLE tmp (id INT); INSERT INTO tmp VALUES (1)");
+        assertTrue(result.isMulti());
+        assertTableSets(result, Set.of(TableRef.of("tmp")), Set.of(TableRef.of("tmp")));
+    }
+
+    @Test
+    void multiStatementShouldPreservePerStatementAnalysis() {
+        SqlAnalysisResult result = SqlAnalyzer.analyze(
+                "CREATE TABLE tmp (id INT); INSERT INTO tmp VALUES (1)");
+
+        assertEquals(2, result.statements().size());
+
+        SqlAnalysisResult.StatementAnalysis create = result.statements().get(0);
+        assertEquals(SqlOperationType.DDL, create.type());
+        assertEquals(Set.of(TableRef.of("tmp")), create.createdTables());
+        assertEquals(Set.of(), create.referencedTables());
+
+        SqlAnalysisResult.StatementAnalysis insert = result.statements().get(1);
+        assertEquals(SqlOperationType.INSERT, insert.type());
+        assertEquals(Set.of(TableRef.of("tmp")), insert.referencedTables());
+        assertEquals(Set.of(), insert.createdTables());
+    }
+
+    @Test
+    void dropTable_shouldBeReferencedOnly() {
+        SqlAnalysisResult result = SqlAnalyzer.analyze("DROP TABLE tmp");
+        assertTableSets(result, Set.of(TableRef.of("tmp")), Set.of());
+    }
+
+    @Test
+    void beginThenCreateTable_shouldTrackCreatedTable() {
+        SqlAnalysisResult result = SqlAnalyzer.analyze("BEGIN; CREATE TABLE tmp (id INT)");
+        assertTrue(result.isMulti());
+        assertTableSets(result, Set.of(), Set.of(TableRef.of("tmp")));
     }
 
     // ============ 模板渲染后 SQL — 含 ? 占位符（用例 46-50） ============
@@ -226,7 +316,7 @@ class SqlAnalyzerTest {
         assertFalse(result.isMulti());
         assertEquals(expectedType, result.type());
         assertEquals(List.of(expectedType), result.statementTypes());
-        assertEquals(expectedTables, result.tables());
+        assertEquals(expectedTables, result.referencedTables());
     }
 
     // ============ 多语句检测（用例 51-56） ============
@@ -287,7 +377,7 @@ class SqlAnalyzerTest {
         SqlAnalysisResult result = SqlAnalyzer.analyze(null);
         assertEquals(SqlOperationType.OTHER, result.type());
         assertEquals(List.of(), result.statementTypes());
-        assertEquals(Set.of(), result.tables());
+        assertEquals(Set.of(), result.referencedTables());
     }
 
     @Test
@@ -295,7 +385,7 @@ class SqlAnalyzerTest {
         SqlAnalysisResult result = SqlAnalyzer.analyze("");
         assertEquals(SqlOperationType.OTHER, result.type());
         assertEquals(List.of(), result.statementTypes());
-        assertEquals(Set.of(), result.tables());
+        assertEquals(Set.of(), result.referencedTables());
     }
 
     @Test
@@ -303,7 +393,7 @@ class SqlAnalyzerTest {
         SqlAnalysisResult result = SqlAnalyzer.analyze("NOT A SQL STATEMENT !!!");
         assertEquals(SqlOperationType.OTHER, result.type());
         assertEquals(List.of(), result.statementTypes());
-        assertEquals(Set.of(), result.tables());
+        assertEquals(Set.of(), result.referencedTables());
     }
 
     @Test
@@ -311,7 +401,7 @@ class SqlAnalyzerTest {
         SqlAnalysisResult result = SqlAnalyzer.analyze("SELECT * FROM WHERE id=?");
         assertEquals(SqlOperationType.OTHER, result.type());
         assertEquals(List.of(), result.statementTypes());
-        assertEquals(Set.of(), result.tables());
+        assertEquals(Set.of(), result.referencedTables());
     }
 
     // ============ 安全 — 注释绕过（用例 61-63） ============
@@ -320,21 +410,21 @@ class SqlAnalyzerTest {
     void shouldIgnoreLineCommentWhenDetectingType() {
         SqlAnalysisResult result = SqlAnalyzer.analyze("SELECT * FROM orders -- DROP TABLE users");
         assertEquals(SqlOperationType.SELECT, result.type());
-        assertEquals(Set.of(TableRef.of("orders")), result.tables());
+        assertEquals(Set.of(TableRef.of("orders")), result.referencedTables());
     }
 
     @Test
     void shouldIgnoreBlockCommentWhenDetectingType() {
         SqlAnalysisResult result = SqlAnalyzer.analyze("SELECT * FROM orders /* INSERT INTO users */ WHERE id=?");
         assertEquals(SqlOperationType.SELECT, result.type());
-        assertEquals(Set.of(TableRef.of("orders")), result.tables());
+        assertEquals(Set.of(TableRef.of("orders")), result.referencedTables());
     }
 
     @Test
     void shouldDetectDdlAfterLineComment() {
         SqlAnalysisResult result = SqlAnalyzer.analyze("-- SELECT * FROM orders\nDROP TABLE users");
         assertEquals(SqlOperationType.DDL, result.type());
-        assertEquals(Set.of(TableRef.of("users")), result.tables());
+        assertEquals(Set.of(TableRef.of("users")), result.referencedTables());
     }
 
     // ============ isMulti() 边界 ============
@@ -387,7 +477,7 @@ class SqlAnalyzerTest {
         assertTrue(result.isMulti());
         assertEquals(SqlOperationType.MULTI, result.type());
         assertEquals(List.of(SqlOperationType.TRANSACTION, SqlOperationType.SELECT), result.statementTypes());
-        assertEquals(Set.of(TableRef.of("orders")), result.tables());
+        assertEquals(Set.of(TableRef.of("orders")), result.referencedTables());
     }
 
     @Test
@@ -397,7 +487,7 @@ class SqlAnalyzerTest {
         assertEquals(SqlOperationType.MULTI, result.type());
         assertEquals(List.of(SqlOperationType.TRANSACTION, SqlOperationType.UPDATE, SqlOperationType.TRANSACTION),
                 result.statementTypes());
-        assertEquals(Set.of(TableRef.of("accounts")), result.tables());
+        assertEquals(Set.of(TableRef.of("accounts")), result.referencedTables());
     }
 
     @Test

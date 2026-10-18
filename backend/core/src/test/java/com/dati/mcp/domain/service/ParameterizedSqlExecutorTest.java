@@ -28,6 +28,7 @@ import java.sql.SQLException;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -122,7 +123,8 @@ class ParameterizedSqlExecutorTest {
 
         // table-level scope check still runs against the rendered SQL
         verify(scopeValidator).validate(eq(List.of()), eq("ds-1"),
-            argThat(tables -> tables.contains(new TableRef(null, "tasks"))), eq("public"));
+            argThat(tables -> tables.contains(new TableRef(null, "tasks"))),
+            eq(Set.of()), eq("public"));
     }
 
     @Test
@@ -130,7 +132,7 @@ class ParameterizedSqlExecutorTest {
     void execute_scopeViolation_stillEnforced() {
         when(dataSourceService.getDataSourceInternal("ds-1")).thenReturn(Optional.of(dataSource()));
         doThrow(new ToolExecuteException(ToolError.SCOPE_VIOLATION, "table 'tasks' not in scope"))
-            .when(scopeValidator).validate(any(), any(), any(), any());
+            .when(scopeValidator).validate(any(), any(), any(), any(), any());
 
         ToolExecutionContext ctx = new ToolExecutionContext(
             "svc-1", McpToolType.PARAMETERIZED_SQL,

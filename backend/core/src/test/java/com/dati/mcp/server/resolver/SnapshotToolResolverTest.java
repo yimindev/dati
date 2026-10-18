@@ -1,6 +1,7 @@
 package com.dati.mcp.server.resolver;
 
 import com.dati.TestFixtures;
+import com.dati.mcp.domain.model.McpDataScopeAccessMode;
 import com.dati.mcp.domain.model.McpDataScopeType;
 import com.dati.mcp.domain.model.McpServiceDataScope;
 import com.dati.mcp.domain.model.McpServiceSnapshot;
@@ -12,7 +13,9 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @DisplayName("SnapshotToolResolver tests")
 class SnapshotToolResolverTest {
@@ -62,6 +65,23 @@ class SnapshotToolResolverTest {
         assertEquals(McpDataScopeType.DATA_SOURCE, items.getFirst().getScopeType());
         assertEquals(TestFixtures.TEST_DATASOURCE_ID, items.getFirst().getReferenceId());
         assertEquals(TestFixtures.TEST_MCP_SERVICE_ID, items.getFirst().getServiceId());
+        assertEquals(McpDataScopeAccessMode.IMPORTED_TABLES, items.getFirst().getAccessMode());
+        assertTrue(items.getFirst().getAllowedSchemas().isEmpty());
+    }
+
+    @Test
+    @DisplayName("builds scope items with managed schema access config")
+    void buildsScopeItemsWithManagedSchemas() {
+        var content = new McpServiceSnapshot.SnapshotContent();
+        content.setDataScopes(List.of(new McpServiceSnapshot.DataScopeDraft(
+                TestFixtures.TEST_MCP_SERVICE_ID, McpDataScopeType.DATA_SOURCE,
+                TestFixtures.TEST_DATASOURCE_ID,
+                McpDataScopeAccessMode.MANAGED_SCHEMAS, List.of("sandbox"))));
+
+        List<McpServiceDataScope> items = resolver.buildScopeItems(TestFixtures.TEST_MCP_SERVICE_ID, content);
+
+        assertEquals(McpDataScopeAccessMode.MANAGED_SCHEMAS, items.getFirst().getAccessMode());
+        assertEquals(List.of("sandbox"), items.getFirst().getAllowedSchemas());
     }
 
     @Test

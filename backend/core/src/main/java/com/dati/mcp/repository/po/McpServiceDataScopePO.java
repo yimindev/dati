@@ -1,6 +1,7 @@
 package com.dati.mcp.repository.po;
 
 import com.dati.base.pojo.BasePO;
+import com.dati.mcp.domain.model.McpDataScopeAccessMode;
 import com.dati.mcp.domain.model.McpDataScopeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -10,8 +11,12 @@ import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.FieldNameConstants;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.io.Serial;
+import java.util.ArrayList;
+import java.util.List;
 
 @Setter
 @Getter
@@ -32,6 +37,14 @@ public class McpServiceDataScopePO extends BasePO {
 
     @Column(nullable = false)
     private String referenceId;
+
+    @Enumerated(EnumType.STRING)
+    @Column(length = 20)
+    private McpDataScopeAccessMode accessMode;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(columnDefinition = "json")
+    private List<String> allowedSchemas = new ArrayList<>();
 
 
 }

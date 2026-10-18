@@ -54,7 +54,8 @@ public class ExecuteSqlExecutor implements ToolExecutor {
         DataSource dataSource = dataSourceService.getDataSourceInternal(dsId)
             .orElseThrow(() -> new ToolExecuteException(ToolError.DATA_SOURCE_NOT_FOUND, dsId));
 
-        scopeValidator.validate(ctx.scopeItems(), dsId, analysis.tables(),
+        scopeValidator.validate(ctx.scopeItems(), dsId,
+            analysis.referencedTables(), analysis.createdTables(),
             dataSource.getDefaultSchema());
 
         JdbcConnector connector = new JdbcConnector(dataSource);

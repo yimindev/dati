@@ -316,7 +316,15 @@ public class McpServicePublishService {
      */
     private List<String> dataScopeKeys(List<McpServiceSnapshot.DataScopeDraft> scopes) {
         return scopes == null ? List.of() : scopes.stream()
-                .map(s -> s.scopeType() + "|" + s.referenceId())
+                .map(s -> s.scopeType() + "|" + s.referenceId() + "|" + s.accessMode()
+                        + "|" + String.join(",", sortedSchemas(s.allowedSchemas())))
+                .toList();
+    }
+
+    private List<String> sortedSchemas(List<String> schemas) {
+        return schemas == null ? List.of() : schemas.stream()
+                .filter(Objects::nonNull)
+                .sorted()
                 .toList();
     }
 

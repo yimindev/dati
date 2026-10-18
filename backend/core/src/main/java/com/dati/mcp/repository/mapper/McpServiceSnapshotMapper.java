@@ -151,6 +151,8 @@ public class McpServiceSnapshotMapper {
         scope.setServiceId(draft.serviceId());
         scope.setScopeType(draft.scopeType());
         scope.setReferenceId(draft.referenceId());
+        scope.setAccessMode(draft.accessMode());
+        scope.setAllowedSchemas(new ArrayList<>(draft.allowedSchemas()));
         return scope;
     }
 
@@ -189,7 +191,8 @@ public class McpServiceSnapshotMapper {
     // ── Model → Draft（发布打包用；仅业务字段入快照）──
 
     public static McpServiceSnapshot.DataScopeDraft toDataScopeDraft(McpServiceDataScope scope) {
-        return new McpServiceSnapshot.DataScopeDraft(scope.getServiceId(), scope.getScopeType(), scope.getReferenceId());
+        return new McpServiceSnapshot.DataScopeDraft(scope.getServiceId(), scope.getScopeType(),
+                scope.getReferenceId(), scope.getAccessMode(), scope.getAllowedSchemas());
     }
 
     public static McpServiceSnapshot.PrebuiltToolDraft toPrebuiltToolDraft(McpPrebuiltToolConfig tool) {
