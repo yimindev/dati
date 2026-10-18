@@ -79,6 +79,7 @@ declare module 'vue' {
     PromptTemplateEditor: typeof import('./components/common/editors/PromptTemplateEditor.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
+    ScopeAccessDialog: typeof import('./components/mcp-service/ScopeAccessDialog.vue')['default']
     ScopePicker: typeof import('./components/mcp-service/ScopePicker.vue')['default']
     SearchHitResult: typeof import('./components/mcp-service/tool-test/results/SearchHitResult.vue')['default']
     SearchMetadataParams: typeof import('./components/mcp-service/tool-test/params/SearchMetadataParams.vue')['default']

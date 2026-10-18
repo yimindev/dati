@@ -60,11 +60,15 @@ export function listMcpServices(
   return get<PageResponse<McpServiceVO>>("/v1/mcp-services", { page, size, keyword, status }, signal);
 }
 
+export type DataScopeAccessMode = "IMPORTED_TABLES" | "MANAGED_SCHEMAS";
+
 export interface DataScopeItem {
   id?: string;
   scope_type: "DATA_SOURCE" | "SUBJECT";
   reference_id: string;
   reference_name?: string;
+  access_mode?: DataScopeAccessMode;
+  allowed_schemas?: string[];
   table_names?: string[];
   tables?: Array<{
     name?: string;

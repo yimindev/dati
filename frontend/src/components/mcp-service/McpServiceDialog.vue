@@ -148,6 +148,10 @@ const handleCancel = () => {
           </el-button>
         </div>
       </div>
+
+      <p class="mt-2 text-xs text-[var(--ep-text-color-secondary)]">
+        {{ t("mcpService.create.dataScopeAccessModeHint") }}
+      </p>
     </div>
 
     <ScopePicker
