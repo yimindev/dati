@@ -77,7 +77,8 @@ com.dati.mcp/
 │       ├── McpParameterSchemaGenerator.java # 参数 record → JSON Schema（victools，DRAFT_2020_12，按类型缓存）
 │       ├── ToolParameterBinder.java         # 参数反序列化 + Jakarta Validation 校验（PARAM_INVALID，英文消息）
 │       ├── ToolResolver.java               # toolId 解析（枚举 → 预置，UUID → 自定义）
-│       ├── ScopeValidator.java             # 两层 scope 校验（数据源级 + 表级）+ 元数据写工具的 ds 级/主题定位
+│       ├── ScopeValidator.java             # 数据源级 + 表级 scope 校验，支持 SCHEMA_SCOPE + 元数据写工具的 ds 级/主题定位
+│       ├── McpDataScopeSchemas.java         # package-private helper：解析 SCHEMA_SCOPE 授权 Schema 与 effectiveSchema
 │       ├── ToolExecutor.java               # 接口：getToolType() + execute(ctx)
 │       ├── ToolExecutionContext.java        # record：serviceId, toolType, config, boundArgs, scopeItems
 │       ├── ExecuteSqlExecutor.java          # EXECUTE_SQL 执行器
@@ -293,13 +294,13 @@ com.dati.semantic.domain.model/
 | `ToolExecutor` | 接口：`McpToolType getToolType()` + `ToolTestData execute(ToolExecutionContext ctx)`。Spring 自动注入所有 `@Component` 实现，`McpToolTestService` 构造器中 `List<ToolExecutor>` → `Map<McpToolType, ToolExecutor>` |
 | `ToolExecutionContext` | record：`serviceId`、`toolType`、`config: ToolConfig`、`arguments: Object`（预置工具 = 绑定后的参数 record；动态工具 = 原始 Map）、`scopeItems: List<McpServiceDataScope>`。访问器：`args(Class<T>)` 取参数 record、`argumentsMap()` 取原始 Map |
 | `ToolResolver` | 解析 toolId：先尝试 `McpToolType.valueOf(toolId)` 匹配枚举 → 查 `McpPrebuiltToolConfigDAO`（有则取 DB 值，无则用默认）；解析失败则当 UUID 查 `McpCustomToolDAO`。disabled → throw `ToolExecuteException(TOOL_DISABLED)` |
-| `ScopeValidator` | 两层 scope 校验：① 数据源级 — 遍历 scopeItems 收集所有覆盖的 dsId（DATA_SOURCE 直接 + SUBJECT 展开）；② 表级 — 构建允许的 TableRef 集合，对比 SQL 分析结果。支持 `defaultSchema` 参数解析 schema-less 表引用。另提供 `validateDataSource()`（仅数据源级，供元数据写工具）与 `resolveSubjectInScope()`（按名称在 scope SUBJECT 中定位 subjectId，供 UPSERT_TERM） |
+| `ScopeValidator` | 两层 scope 校验：① 数据源级 — 遍历 scopeItems 收集所有覆盖的 dsId（DATA_SOURCE 直接 + SUBJECT 展开）；② 表级 — 构建允许的 TableRef 集合，对比 SQL 分析结果。`SCHEMA_SCOPE` 模式下，授权 Schema 内的表引用跳过表级白名单；`createdTables` 只校验目标 Schema 是否在授权范围内（DDL 权限由 `SqlPolicy` 负责）。支持 `defaultSchema` 参数解析 schema-less 表引用。另提供 `validateDataSource()`（仅数据源级，供元数据写工具）与 `resolveSubjectInScope()`（按名称在 scope SUBJECT 中定位 subjectId，供 UPSERT_TERM） |
 | `McpToolTestService` | 测试编排（极简，无分支）：前置强校验当前用户对服务的 `MCP_SERVICE (EDIT)` 权限（草稿态调试与测试需编辑权限） → `resolve()` → 查 scope → `ToolParameterBinder.bind()` 绑定参数 → `execute()` → 计时 → 组装响应。`ToolExecuteException` 在此层 catch 并转为 `ToolTestResponse(success=false, error=...)` |
 | `ExecuteSqlExecutor` | EXECUTE_SQL 执行器。`ctx.args(ExecuteSqlArgs.class)` 取参，dsId + sql 从 record 取，通过 `DataSourceService.getDataSourceInternal(dsId)` 内部通道加载数据源（解耦直属数据源用户权限），`Statement.execute()` 执行，`SqlExecutorHelper.collect()` 收集多语句结果。每条语句独立 policy 校验和 try-catch |
 | `ParameterizedSqlExecutor` | PARAMETERIZED_SQL 执行器。dsId 从 config 取，通过 `DataSourceService.getDataSourceInternal(dsId)` 内部通道加载数据源，合并客户端参数与系统内置参数（`SystemVariableResolver.resolve()`，含 `_user.id` / `_user.name` / `_user.display_name` / `_now` / `_date`，系统参数强制覆盖以防伪造）→ 模板渲染 → SQL，`PreparedStatement.execute()` 执行。支持 DateTime 类型参数转换（`DateTimeUtils.parseDateTime()`）。`bindings` 回传前端 |
 | `SystemVariableResolver` | 系统变量解析器。从 `RequestContext.getUser()` 和系统时钟解析 `_user.*` 与 `_now` / `_date`，提供 `isSystemVariable()` 供模板参数扫描与抽取时过滤 |
-| `GetTableInfoExecutor` | GET_TABLE_INFO 执行器。`ctx.args(GetTableInfoArgs.class)` 取参，逐条 `tables[]` 项做数据源级 scope 校验（每项自带 data_source_id），通过 `TableMetadataService` 查询平台元数据。不存在的表静默跳过 |
-| `ListTablesExecutor` | LIST_TABLES 执行器（`list_tables_and_terms`）。无参数（`ListTablesArgs` 空 record），通过 `McpServiceDataScopeService.getResolvedDataSourceIds()` 解析 scope 数据源 → 逐数据源 `TableInfoDAO.findByDataSourceId()` 查表组装表级清单；同时解析 scope 中的 SUBJECT 范围 → 查全部业务术语 `TermService.getTermsBySubjectIds()` 组装术语清单。空 scope 返回空结果。纯 DB 读、不查 ES/列 |
+| `GetTableInfoExecutor` | GET_TABLE_INFO 执行器。`ctx.args(GetTableInfoArgs.class)` 取参，逐条 `tables[]` 项做数据源级 scope 校验（每项自带 data_source_id），先查平台元数据；未注册且 `effectiveSchema` 在 `SCHEMA_SCOPE` 授权范围内时，回退到 JDBC 物理列。不存在的表静默跳过 |
+| `ListTablesExecutor` | LIST_TABLES 执行器（`list_tables_and_terms`）。无参数（`ListTablesArgs` 空 record），通过 `McpServiceDataScopeService.getResolvedDataSourceIds()` 解析 scope 数据源 → 已导入表 + `SCHEMA_SCOPE` 授权 Schema 的物理表合并（已导入元数据优先、按 schema+name 去重、JDBC 失败降级）；同时解析 scope 中的 SUBJECT 范围 → 查全部业务术语 `TermService.getTermsBySubjectIds()` 组装术语清单。空 scope 返回空结果。不查 ES/列 |
 | `SearchMetadataExecutor` | SEARCH_METADATA 执行器。`ctx.args(SearchMetadataArgs.class)` 取 keywords，通过 `McpServiceDataScopeService.getResolvedDataSourceIds()` 解析 scope → `SemanticSearchService.search()` → 组装分组结果。空 scope 返回空结果（不报错） |
 | `UpdateTableInfoExecutor` / `UpdateColumnInfoExecutor` / `UpsertTermExecutor` | 元数据写执行器（见「元数据更新工具」小节） |
 | `SqlExecutorHelper` | package-private 工具类：`collect(Statement)` — JDBC `getMoreResults() / getResultSet() / getUpdateCount()` 循环，每条独立 try-catch 返回 `StatementResult` |
@@ -435,11 +436,12 @@ Controller → HTTP 200 + ToolTestResponse JSON
 | 方法 | 功能 |
 |------|------|
 | `getTableMeta(dsId, schema, table) → Optional<TableMeta>` | 查单表：先从 `TableInfoDAO` 查表记录（按 dataSourceId + schema + name），再通过 `ColumnInfoDAO` 查列信息，最后通过 `SemanticIndexService` 查每列的样本值（前 5 个） |
+| `getPhysicalTableMeta(dsId, schema, table) → Optional<TableMeta>` | `SCHEMA_SCOPE` 下未注册表的 JDBC 回退：从 `JdbcMetaService.getTables/getColumns` 读取实际表名、注释和列，不写回 `table_info` / ES |
 | `getTableMetasByIds(Set<String>) → List<TableMeta>` | 批量查询（供 SEARCH_METADATA 使用） |
 
 `TableMeta` record：`tableId, tableName, schema, description, aliases, dataSourceId, columns: List<ColumnDef>`。
 
-**设计决策**：不再依赖 JDBC 连接查询表结构，统一使用平台同步的元数据。找不到表返回 `Optional.empty()`（GetTableInfoExecutor 静默跳过）。
+**设计决策**：已注册表优先使用平台同步的元数据；仅当 `SCHEMA_SCOPE` 授权且表未注册时，才回退到 JDBC 物理元数据。找不到表返回 `Optional.empty()`（GetTableInfoExecutor 静默跳过）。
 
 #### SEARCH_METADATA 全文搜索（SemanticSearchService）
 
@@ -786,10 +788,11 @@ StatementResult.writeFailure(errorMessage)           // WRITE 失败
 - 每个 Executor 内部自行完成参数校验、scope 校验、SQL 分析、策略校验、执行、异常捕获。
 - `ScopeValidator` 由 Executor 调用，不由 Service 层调用。
 
-#### GET_TABLE_INFO 使用平台元数据
+#### GET_TABLE_INFO 使用平台元数据 + Schema 范围回退
 
-- 不再依赖 JDBC 连接查询表结构，统一使用 `TableMetadataService` 查询平台同步的元数据。
-- 好处：离线可查、不消耗连接池、与 SEARCH_METADATA 返回结构一致。
+- 已注册表统一使用 `TableMetadataService` 查询平台同步的元数据：离线可查、不消耗连接池、与 SEARCH_METADATA 返回结构一致。
+- `SCHEMA_SCOPE` 下未注册的表，按 `effectiveSchema` 判断授权后回退到 JDBC 物理元数据；回退只读，不写回 `table_info` / ES。
+- 已导入表在非授权 Schema 下仍然可用（叠加语义），物理回退只对授权 Schema 生效。
 
 #### SEARCH_METADATA Executor 薄层化
 

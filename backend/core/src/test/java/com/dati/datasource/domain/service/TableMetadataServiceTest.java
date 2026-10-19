@@ -5,6 +5,8 @@ import com.dati.datasource.repository.dao.ColumnInfoDAO;
 import com.dati.datasource.repository.dao.TableInfoDAO;
 import com.dati.datasource.repository.po.ColumnInfoPO;
 import com.dati.datasource.repository.po.TableInfoPO;
+import com.dati.db.Column;
+import com.dati.db.Table;
 import com.dati.semantic.domain.SemanticEntityType;
 import com.dati.semantic.domain.service.SemanticIndexService;
 import com.dati.semantic.repository.po.EntityReference;
@@ -16,10 +18,13 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.sql.SQLException;
 import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -37,6 +42,9 @@ class TableMetadataServiceTest {
 
     @Mock
     private SemanticIndexService semanticIndexService;
+
+    @Mock
+    private JdbcMetaService jdbcMetaService;
 
     @InjectMocks
     private TableMetadataService service;
@@ -213,6 +221,78 @@ class TableMetadataServiceTest {
 
         Optional<TableMetadataService.TableMeta> result =
                 service.getTableMeta(DS_ID, "audit", "users");
+
+        assertThat(result).isEmpty();
+    }
+
+    // ── physical metadata fallback ──
+
+    @Test
+    @DisplayName("physical table metadata maps table and column comments")
+    void physicalTableFoundWithColumns() throws SQLException {
+        when(jdbcMetaService.getTables(DS_ID, "sandbox"))
+                .thenReturn(List.of(new Table("orders", "orders table")));
+        when(jdbcMetaService.getColumns(DS_ID, "sandbox", "orders"))
+                .thenReturn(List.of(
+                        new Column("id", "integer", "primary key"),
+                        new Column("name", "varchar", "order name")));
+
+        Optional<TableMetadataService.TableMeta> result =
+                service.getPhysicalTableMeta(DS_ID, "sandbox", "orders");
+
+        assertThat(result).isPresent();
+        TableMetadataService.TableMeta meta = result.get();
+        assertThat(meta.tableId()).isNull();
+        assertThat(meta.schema()).isEqualTo("sandbox");
+        assertThat(meta.tableName()).isEqualTo("orders");
+        assertThat(meta.description()).isEqualTo("orders table");
+        assertThat(meta.aliases()).isEmpty();
+        assertThat(meta.dataSourceId()).isEqualTo(DS_ID);
+        assertThat(meta.columns()).hasSize(2);
+        assertThat(meta.columns().getFirst().name()).isEqualTo("id");
+        assertThat(meta.columns().getFirst().type()).isEqualTo("integer");
+        assertThat(meta.columns().getFirst().comment()).isEqualTo("primary key");
+        assertThat(meta.columns().getFirst().aliases()).isEmpty();
+        assertThat(meta.columns().getFirst().sampleValues()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("physical table lookup is case-insensitive and uses the actual name")
+    void physicalTableLookupIsCaseInsensitive() throws SQLException {
+        when(jdbcMetaService.getTables(DS_ID, "SANDBOX"))
+                .thenReturn(List.of(new Table("ORDERS", null)));
+        when(jdbcMetaService.getColumns(DS_ID, "SANDBOX", "ORDERS"))
+                .thenReturn(List.of(new Column("ID", "INTEGER", null)));
+
+        Optional<TableMetadataService.TableMeta> result =
+                service.getPhysicalTableMeta(DS_ID, "SANDBOX", "orders");
+
+        assertThat(result).isPresent();
+        assertThat(result.get().tableName()).isEqualTo("ORDERS");
+        verify(jdbcMetaService).getColumns(DS_ID, "SANDBOX", "ORDERS");
+    }
+
+    @Test
+    @DisplayName("physical table not found returns empty without reading columns")
+    void physicalTableNotFoundReturnsEmpty() throws SQLException {
+        when(jdbcMetaService.getTables(DS_ID, "sandbox"))
+                .thenReturn(List.of(new Table("users", null)));
+
+        Optional<TableMetadataService.TableMeta> result =
+                service.getPhysicalTableMeta(DS_ID, "sandbox", "orders");
+
+        assertThat(result).isEmpty();
+        verify(jdbcMetaService, never()).getColumns(DS_ID, "sandbox", "orders");
+    }
+
+    @Test
+    @DisplayName("physical metadata JDBC failure returns empty")
+    void physicalMetadataFailureReturnsEmpty() throws SQLException {
+        when(jdbcMetaService.getTables(DS_ID, "sandbox"))
+                .thenThrow(new SQLException("metadata unavailable"));
+
+        Optional<TableMetadataService.TableMeta> result =
+                service.getPhysicalTableMeta(DS_ID, "sandbox", "orders");
 
         assertThat(result).isEmpty();
     }

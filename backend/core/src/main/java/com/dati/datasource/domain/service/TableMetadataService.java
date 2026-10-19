@@ -5,9 +5,11 @@ import com.dati.datasource.repository.dao.ColumnInfoDAO;
 import com.dati.datasource.repository.dao.TableInfoDAO;
 import com.dati.datasource.repository.po.ColumnInfoPO;
 import com.dati.datasource.repository.po.TableInfoPO;
+import com.dati.db.Table;
 import com.dati.semantic.domain.SemanticEntityType;
 import com.dati.semantic.domain.service.SemanticIndexService;
 import com.dati.semantic.repository.po.SemanticSearchDocument;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -18,8 +20,9 @@ import java.util.Set;
 import static java.util.stream.Collectors.groupingBy;
 
 /**
- * Queries platform-managed table metadata: columns, aliases, and sample dimension values.
+ * Queries table metadata: registered metadata plus physical fallback for schema-scoped access.
  */
+@Slf4j
 @Service
 public class TableMetadataService {
 
@@ -29,13 +32,16 @@ public class TableMetadataService {
     private final TableInfoDAO tableInfoDAO;
     private final ColumnInfoDAO columnInfoDAO;
     private final SemanticIndexService semanticIndexService;
+    private final JdbcMetaService jdbcMetaService;
 
     public TableMetadataService(TableInfoDAO tableInfoDAO,
                                 ColumnInfoDAO columnInfoDAO,
-                                SemanticIndexService semanticIndexService) {
+                                SemanticIndexService semanticIndexService,
+                                JdbcMetaService jdbcMetaService) {
         this.tableInfoDAO = tableInfoDAO;
         this.columnInfoDAO = columnInfoDAO;
         this.semanticIndexService = semanticIndexService;
+        this.jdbcMetaService = jdbcMetaService;
     }
 
     /**
@@ -59,6 +65,52 @@ public class TableMetadataService {
     private boolean matches(TableInfoPO table, String schema, String tableName) {
         return tableName.equals(table.getName())
                 && (schema == null || schema.equals(table.getSchema()));
+    }
+
+    /**
+     * Reads table and column metadata directly from the database for a table that is not
+     * registered in {@code table_info}. Intended for schema-scoped data access.
+     */
+    public Optional<TableMeta> getPhysicalTableMeta(String dsId, String schema, String tableName) {
+        if (isBlank(schema) || isBlank(tableName)) {
+            return Optional.empty();
+        }
+
+        try {
+            Table table = findTable(jdbcMetaService.getTables(dsId, schema), tableName);
+            if (table == null) {
+                return Optional.empty();
+            }
+
+            List<ColumnDef> columns = jdbcMetaService.getColumns(dsId, schema, table.name()).stream()
+                    .map(column -> new ColumnDef(
+                            column.name(), column.type(), column.comment(), List.of(), List.of()))
+                    .toList();
+
+            return Optional.of(new TableMeta(null, schema, table.name(), table.comment(),
+                    List.of(), dsId, columns));
+        } catch (Exception e) {
+            log.warn("Failed to read physical metadata for {}.{}: {}", schema, tableName, e.getMessage());
+            return Optional.empty();
+        }
+    }
+
+    private Table findTable(List<Table> tables, String tableName) {
+        for (Table table : tables) {
+            if (table.name().equals(tableName)) {
+                return table;
+            }
+        }
+        for (Table table : tables) {
+            if (table.name().equalsIgnoreCase(tableName)) {
+                return table;
+            }
+        }
+        return null;
+    }
+
+    private boolean isBlank(String value) {
+        return value == null || value.isBlank();
     }
 
     /**

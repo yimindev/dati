@@ -3,7 +3,6 @@ package com.dati.mcp.domain.service;
 import com.dati.datasource.repository.dao.TableInfoDAO;
 import com.dati.datasource.repository.po.TableInfoPO;
 import com.dati.db.analysis.TableRef;
-import com.dati.mcp.domain.model.McpDataScopeAccessMode;
 import com.dati.mcp.domain.model.McpDataScopeType;
 import com.dati.mcp.domain.model.McpServiceDataScope;
 import com.dati.mcp.domain.model.ToolError;
@@ -15,9 +14,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.HashSet;
-import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Objects;
 import java.util.Set;
 
 @Service
@@ -60,10 +57,10 @@ public class ScopeValidator {
                                           Set<TableRef> tableRefs, @Nullable String defaultSchema) {
         if (tableRefs == null || tableRefs.isEmpty()) return;
 
-        Set<String> allowedSchemas = allowedSchemasFor(scopeItems, dsId);
+        Set<String> allowedSchemas = McpDataScopeSchemas.allowedSchemas(scopeItems, dsId);
         Set<TableRef> allowed = null;
         for (TableRef ref : tableRefs) {
-            String schema = effectiveSchema(ref, defaultSchema);
+            String schema = McpDataScopeSchemas.effectiveSchema(ref, defaultSchema);
             if (schema != null && allowedSchemas.contains(schema)) continue;
 
             if (allowed == null) {
@@ -80,14 +77,14 @@ public class ScopeValidator {
                                        Set<TableRef> createdTables, @Nullable String defaultSchema) {
         if (createdTables == null || createdTables.isEmpty()) return;
 
-        Set<String> allowedSchemas = allowedSchemasFor(scopeItems, dsId);
+        Set<String> allowedSchemas = McpDataScopeSchemas.allowedSchemas(scopeItems, dsId);
         if (allowedSchemas.isEmpty()) {
             throw new ToolExecuteException(ToolError.SCOPE_VIOLATION,
                 "No schema scope configured for data source " + dsId);
         }
 
         for (TableRef ref : createdTables) {
-            String schema = effectiveSchema(ref, defaultSchema);
+            String schema = McpDataScopeSchemas.effectiveSchema(ref, defaultSchema);
             if (schema == null || schema.isBlank()) {
                 throw new ToolExecuteException(ToolError.SCOPE_VIOLATION,
                     "Cannot resolve schema for created table " + ref.qualifiedName());
@@ -97,31 +94,6 @@ public class ScopeValidator {
                     "Schema " + schema + " is not in the service schema scope");
             }
         }
-    }
-
-    private Set<String> allowedSchemasFor(List<McpServiceDataScope> scopeItems, String dsId) {
-        Set<String> schemas = new LinkedHashSet<>();
-        if (scopeItems == null) return schemas;
-
-        for (McpServiceDataScope scope : scopeItems) {
-            if (scope.getScopeType() != McpDataScopeType.DATA_SOURCE
-                    || !Objects.equals(scope.getReferenceId(), dsId)
-                    || scope.getAccessMode() != McpDataScopeAccessMode.SCHEMA_SCOPE
-                    || scope.getAllowedSchemas() == null) {
-                continue;
-            }
-            for (String schema : scope.getAllowedSchemas()) {
-                if (schema != null && !schema.isBlank()) {
-                    schemas.add(schema);
-                }
-            }
-        }
-        return schemas;
-    }
-
-    @Nullable
-    private static String effectiveSchema(TableRef ref, @Nullable String defaultSchema) {
-        return ref.schema() != null && !ref.schema().isBlank() ? ref.schema() : defaultSchema;
     }
 
     private Set<String> coveredDataSourceIds(List<McpServiceDataScope> scopeItems) {
