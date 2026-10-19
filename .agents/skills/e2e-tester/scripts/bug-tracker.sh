@@ -83,15 +83,21 @@ cmd_add() {
     # 确保 YAML 文件存在
     [ -f "$BUGS_FILE" ] || echo -e "# 待修复问题清单\n# Agent 跑完 E2E 测试后自动维护此文件\n\nbugs:" > "$BUGS_FILE"
 
-    cat >> "$BUGS_FILE" <<EOF
-  - id: $id
-    title: $title
-    module: $module
-    severity: $severity
-    found_at: $found_at
-    description: |
-      $description
-EOF
+    # 空列表标记 bugs: [] 无法直接追加块序列条目，追加前归一化为 bugs:
+    if grep -qE '^bugs:[[:space:]]*\[[[:space:]]*\]' "$BUGS_FILE"; then
+        sed -i.bak -E 's/^bugs:[[:space:]]*\[[[:space:]]*\]/bugs:/' "$BUGS_FILE"
+        rm -f "$BUGS_FILE.bak"
+    fi
+
+    {
+      echo "  - id: $id"
+      echo "    title: $title"
+      echo "    module: $module"
+      echo "    severity: $severity"
+      echo "    found_at: $found_at"
+      echo "    description: |"
+      printf '%s\n' "$description" | sed 's/^/      /'
+    } >> "$BUGS_FILE"
     echo "$id"
 }
 

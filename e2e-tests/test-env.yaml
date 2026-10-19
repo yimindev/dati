@@ -9,7 +9,7 @@ server:
   ready_signal: "Started DatIApplication"
 
 runner:
-  model: "deepseek-v4-flash"
+  model: "deepseek-flash"
 
 auth:
   register_endpoint: POST /v1/auth/register

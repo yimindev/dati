@@ -1,4 +1,130 @@
 # 待修复问题清单
 # Agent 跑完 E2E 测试后自动维护此文件
 
-bugs: []
+bugs:
+  - id: BUG-20261019-001
+    title: 模板预览显示 SQL 按 replaceFirst 逐个替换 '?'，模板文本含字面问号时替换错位
+    module: MCP 服务管理
+    severity: medium
+    found_at: 2026-10-19
+    description: |
+      复现（POST /v1/template/preview, mode=SQL）：
+      1) template="SELECT * FROM track WHERE name LIKE '%?%' AND genreid = {{g}}", values={g:1}
+         → rendered="SELECT * FROM track WHERE name LIKE '%1%' AND genreid = ?"（'?' 未被替换，字面 %?% 反被写成 %1%）
+      2) template="SELECT * FROM t WHERE data ? 'key' AND name = {{n}} AND id = {{i}}", values={n:'x', i:7}
+         → rendered="SELECT * FROM t WHERE data 'x' 'key' AND name = 7 AND id = ?"（PostgreSQL JSONB ? 运算符被吃掉，绑定值整体错位）
+      期望：rendered 应为 "... LIKE '%?%' AND genreid = 1" / "... data ? 'key' AND name = 'x' AND id = 7"。
+      根因：TemplatePreviewController.toDisplaySql 用 sql.replaceFirst("\\?") 循环替换，按字符串首次出现位置匹配，而 PreparedSql 的占位符只对应 VarNode 产生的 '?'；模板文本里的字面 '?'（PostgreSQL JSONB ? 运算符、LIKE '%?%'、普通文本问号）会被优先命中。
+      影响：预览给用户一段错误的 SQL（显示用，不会被执行），用户对照/复制时会得到与真实执行结果不一致的语句。
+      建议：改为按编译期 AST/绑定位置生成展示 SQL（SqlRenderer 一并返回变量在 SQL 中的位置），或渲染时用不可碰撞的临时占位符（如 \u0000）再按顺序替换，并对模板文本中的 '?' 做区分。需补单测覆盖上述两种模板。
+  - id: BUG-20261019-002
+    title: 模板预览字符串值未转义单引号，rendered 生成非法 SQL
+    module: MCP 服务管理
+    severity: low
+    found_at: 2026-10-19
+    description: |
+      复现：POST /v1/template/preview {"mode":"SQL","template":"SELECT * FROM artist WHERE name = {{name}}","values":{"name":"O'Brien"}}
+      → rendered="SELECT * FROM artist WHERE name = 'O'Brien'"（单引号未转义，SQL 语法错误）。
+      期望：rendered 中字符串值应转义为 'O''Brien'（或 \'），保证展示 SQL 可被直接复制执行。
+      根因：TemplatePreviewController.formatValue 仅做 "'"+s+"'" 拼接，未对 s 内的单引号做转义。
+      影响：仅影响预览展示（该 SQL 不执行），但用户复制到 SQL 客户端会报语法错误，同时误导判断输入是否合法。
+      建议：formatValue 对 String 内的单引号做 SQL 标准转义（s.replace("'", "''")），并补单测。
+  - id: BUG-20261019-003
+    title: 游客可创建 API Key，但生成的 key 永远无法通过认证（401）
+    module: 认证
+    severity: low
+    found_at: 2026-10-19
+    description: |
+      TC-AUTH（探索发现）：携带 guest token 调用 POST /v1/auth/api-keys 返回 201 并下发 sk_ 明文 key（expires_at=null），但用该 key 请求 GET /v1/auth/me、GET /v1/data-sources 均返回 401。根因：ApiKeyService.create 仅写入 userId，不校验该用户在 users 表中是否存在；guest 身份是纯 JWT（GuestService 不落库），ApiKeyAuthenticationProvider.authenticate 中 userRepository.findById(key.userId) 为空即认证失败。影响：①游客拿到的是永不过期的死凭证，前端若引导游客创建 key 会出现“创建成功但不可用”；②未登录者可无限创建 key 行，造成脏数据。建议：创建 API Key 时对游客身份直接拒绝（403，错误码 AUTH/GUEST 前缀）或校验 userId 存在。
+  - id: BUG-20261019-004
+    title: ES 索引中 TABLE/FIELD 文档的 createdTime 在元数据更新时被重置为更新时刻
+    module: 数据源管理
+    severity: low
+    found_at: 2026-10-19
+    description: |
+      TC-DS-010 步骤 13 / TC-DS-011 步骤 11 复现：更新表别名与描述后，ES 文档 table:{tableId} 的 createdTime 由 2026-10-19T22:53:23.092 变为 2026-10-19T22:53:33.471（等于 updatedTime）；列更新同样现象。根因：TableService.updateTable/ColumnService 重建 SemanticSearchDocument 时未回填原有 createdTime，SemanticIndexService.save 只在 createdTime 为 null 时才赋值为 now，故每次更新都会把创建时间覆盖为更新时刻。影响：语义检索侧无法区分创建与更新时间，审计信息失真。修复方向：更新时先按 id 取出既有文档并沿用其 createdTime。
+  - id: BUG-20261019-005
+    title: 重复添加 TABLE 级术语关联返回 200 并产生重复关系（FIELD 级有唯一约束，TABLE 级无）
+    module: 语义层-术语管理
+    severity: medium
+    found_at: 2026-10-19
+    description: |
+      TC-SEM-007：同一术语对同一表重复 POST /v1/terms/{id}/relations（entity_type=TABLE，不传 field_name）两次均返回 200，术语详情出现 2 条完全相同的 TABLE 关系；而 FIELD 级重复会返回 400 'Term relation already exists'。原因：唯一约束 UK_TERM_RELATION(term_id, table_id, field_name) 对 NULL field_name 不生效（NULL != NULL），服务层也未做 TABLE 级存在性校验。用例约束要求『同一术语下同表只能一条 TABLE 关系』，需在服务层按 field_name IS NULL 做存在性判断。
+  - id: BUG-20261019-006
+    title: FIELD 级术语关联不校验列是否存在，可关联到不存在的列名
+    module: 语义层-术语管理
+    severity: low
+    found_at: 2026-10-19
+    description: |
+      TC-SEM-007 探索：POST /v1/terms/{id}/relations，entity_type=FIELD，table_id 为真实表、field_name 传不存在列名（如 ghost_col_abc）返回 200 并落库；术语详情返回 entity_type=FIELD / table_name=artist / field_name=ghost_col_xyz 的脏关系，无任何校验（对比：不传 field_name 会正确返回 400 'fieldName is required'）。建议校验 (table_id, field_name) 存在于该表列元数据中。
+  - id: BUG-20261019-007
+    title: GET /v1/subjects/{subjectId}/tables 返回的 created_user_name/updated_user_name 恒为 null
+    module: 语义层-主题管理
+    severity: low
+    found_at: 2026-10-19
+    description: |
+      TC-SEM-002/TC-SEM-000：主题表列表响应中每条表的 created_user_name 与 updated_user_name 均为 null，而同一批表在 GET /v1/data-sources/{dsId}/tables 中能正常返回 qa-e2e-tester（说明 created_by 已正确填充、仅 Assembler 未调用 fillUserInfo）。与已修复的 BUG-20260726-004（数据源表列表同类问题）同源，主题侧遗漏。
+  - id: BUG-20261019-008
+    title: DELETE 术语关联无法删除 TABLE 级关系（fieldName 为空段会 404），仅支持未文档化的 '_' 哨兵值
+    module: 语义层-术语管理
+    severity: low
+    found_at: 2026-10-19
+    description: |
+      TC-SEM-004 探索：TABLE 级关系（field_name 为 null）通过 DELETE /v1/terms/{id}/relations/{tableId}/{fieldName} 无法删除——传空 fieldName 返回 404 CM002，唯一可行方式是传字面量 '_'（控制器内隐藏约定 '_' → null）。openapi 中该端点的 fieldName 只是 required path 参数，未说明该约定，调用方无从得知；且 POST 时把 field_name 传成 '_' 也会被静默转成 TABLE 级关系。
+  - id: BUG-20261019-009
+    title: 给主题添加不存在的 tableId 返回 'Data source not found' 且错误信息中是 tableId
+    module: 语义层-主题管理
+    severity: low
+    found_at: 2026-10-19
+    description: |
+      TC-SEM-006 步骤 6b 探索：POST /v1/subjects/{id}/tables 传随机 UUID 作为 table_id 时返回 404，但 code=DS002、message='Data source not found: {tableId}'——查的是表却报数据源不存在，且把 tableId 当作 datasourceId 回显，误导排查。应返回 SM/DS 层的 'Table not found: {tableId}'。
+  - id: BUG-20261019-010
+    title: 主题/术语列表 keyword 搜索不匹配 aliases（仅 ID 前缀 + name 模糊）
+    module: 语义层-列表查询
+    severity: low
+    found_at: 2026-10-19
+    description: |
+      TC-SEM-008 探索：给主题设置别名 e2e-unique-alias-xyz 后，GET /v1/subjects?keyword=e2e-unique-alias-xyz 返回 total=0，而 ES 文档 keywords 中已含该别名（SubjectService.getSubjects 仅按 ID 前缀 + name LIKE 匹配）。列表页搜索别名无结果与 ES 语义检索（MCP 侧可按别名命中）行为不一致，建议列表搜索同时匹配 aliases。
+  - id: BUG-20261019-011
+    title: 列表 keyword 中的 SQL LIKE 通配符（% 与 _）未转义，搜索命中全部记录
+    module: 语义层-列表查询
+    severity: low
+    found_at: 2026-10-19
+    description: |
+      TC-SEM-008 探索：GET /v1/subjects?keyword=%25（即 '%'）与 keyword=_ 均返回 total=4（全部主题），keyword 被直接拼进 LIKE 模式而未转义 %/_，用户搜索含下划线或百分号的名称时会得到全量结果。建议转义为 \% / \_ 或使用 ESCAPE 子句。
+  - id: BUG-20261019-012
+    title: 删除数据源/主题/MCP 服务后 ACL 授权记录未级联清理，RESOURCE_ACL 残留孤儿行
+    module: 权限-资源授权
+    severity: low
+    found_at: 2026-10-19
+    description: |
+      TC-PM-002~016 主线/自包含用例清理阶段发现：删除资源（DELETE /v1/data-sources/{id}、/v1/subjects/{id}、/v1/mcp-services/{id}）均返回 200 且资源本体与表/列元数据已级联删除，但 RESOURCE_ACL 中对应授权行全部保留。实测本轮 12 条 ACL 记录在资源删除后仍存在（如 ds-2 85111706…、svc-1 29b9215d…、subject-1 9ed4fc09…、ds-admin fca98f18… 等，直接查 H2 确认资源表 0 行、RESOURCE_ACL 仍 12 行），且 GET /v1/acls/{type}/{resourceId} 此时只会返回 404（资源不存在），前端无法清理这些脏数据。根因：ResourceAclDAO.deleteByResourceTypeAndResourceId 已定义但从未被调用，DataSourceService/SubjectService/McpServiceService 的删除路径未接权限侧清理。影响：授权表随测试/日常删除无限增长；若未来出现资源 ID 复用（导入、回滚、ID 手工指定）会直接复活旧授权。建议：三个资源删除处统一调用 aclDAO.deleteByResourceTypeAndResourceId（或抽象 PermissionService.onResourceDeleted），并补单测。
+  - id: BUG-20261019-013
+    title: GET /v1/acls/{type}/{resourceId} 返回的 created_by 恒为 null（Mapper 漏拷审计字段）
+    module: 权限-资源授权
+    severity: low
+    found_at: 2026-10-19
+    description: |
+      TC-PM-002/003/005/006/011/PUB-001 均复现：ACL 列表每条记录的 created_by 全部为 null，而 DB 中 resource_acl.created_by 已正确写入授权人（如 5a30e7ee… 用户 A、19407643… admin）。根因：ResourceAclMapper.toModel 只拷贝 id/resourceType/resourceId/principalType/principalId/permission，未拷贝 BasePO 的 createdBy（toPO 同样不回填），AclController.toVO 因此只能拿到 null。影响：前端 AclEntry.created_by 为非可选字段（frontend/src/api/types.ts:59），授权列表无法展示“授权人”，审计信息缺失。建议：Mapper 双向补齐 createdBy（必要时补 createdAt），并补 Mapper/Controller 单测断言。
+  - id: BUG-20261019-014
+    title: SEARCH_METADATA 空 keywords 校验错误文案为 size 约束，未说明 keywords 不能为空
+    module: MCP 服务管理
+    severity: low
+    found_at: 2026-10-19
+    description: |
+      TC-MCP-017 步骤5 复现：POST /v1/mcp-services/{id}/tools/SEARCH_METADATA/test，arguments={"keywords": []} → HTTP 200、success=false、error_category=PARAM_ERROR（符合预期），但 error.message 为「参数不合法：size must be between 1 and 2147483647」。该文案来自 Bean Validation 对 keywords 列表 @Size(min=1) 的默认消息，对调用方（含 LLM）不具可读性，无法判断是哪个参数、应如何修正；同类 UPDATE_TABLE_INFO 501 字符描述也返回「size must be between 0 and 500」。建议对工具测试参数增加自定义校验文案（如「keywords 不能为空」「description 最长 500 字符」）。
+  - id: BUG-20261019-015
+    title: PARAMETERIZED_SQL 工具的 required/default_value 仅在 inputSchema 声明，tools/call 运行时既不校验也不填充，缺参静默绑定 NULL
+    module: MCP Endpoint
+    severity: medium
+    found_at: 2026-10-19
+    description: |
+      探索发现（TC-END-003/TC-END-011 附带）：
+      复现：MCP 服务（code=e2e-end-main，v7）自定义工具 list_genres（PARAMETERIZED_SQL，parameters=[{name:genre_name,type:STRING,required:true}]），tools/list 的 inputSchema 正确输出 required=["genre_name"]；
+      ① tools/call params={name:list_genres, arguments:{}} → HTTP 200、result.isError=false、structuredContent.executed_sql="SELECT * FROM genre WHERE name = ?"、bindings=[null]、rows=[]（无任何错误提示）
+      ② 传错参数名 arguments={genre:"Rock"} 同样 isError=false + bindings=[null]
+      ③ default_value 同样不生效：工具 probe_default 的 parameters=[{name:genre_name,required:false,default_value:"Rock"}]，schema 输出 properties.genre_name.default="Rock"，但 arguments={} 时 bindings=[null]、rows=[]（默认值未填充）
+      期望：缺必填参数应返回 isError=true（与预置工具一致，PARAM_INVALID/PARAM_MISSING，供 LLM 自纠错），或至少按 default_value 填充后再渲染。
+      根因：ParameterizedSqlExecutor.execute 仅把 ctx.argumentsMap() 合并系统变量后交给 SqlRenderer，未遍历 config.getParameters() 校验 isRequired()，也未把 ToolParameter.defaultValue 回填进渲染上下文（ToolParameter.getDefaultValue 全项目仅被 ToolDefinitionConverter 用于生成 JSON Schema 的 default 字段）。
+      影响：inputSchema 声明的契约与实际执行不一致；LLM 用缺失/拼错参数名调用时拿到「空结果集 + 无错误」，会误判业务数据为空而无法自纠错；参数默认值形同虚设。
+      建议：ParameterizedSqlExecutor 渲染前按 config.parameters 做 required 校验（缺失 → ToolExecuteException PARAM_MISSING → isError=true），并缺失时用 defaultValue 回填；补充单测覆盖缺参/默认值/参数名拼错三种场景。

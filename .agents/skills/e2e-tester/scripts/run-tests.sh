@@ -42,9 +42,9 @@ PENDING_FILTER=""
 if [ -n "${E2E_MODEL:-}" ]; then
     MODEL="$E2E_MODEL"
 elif command -v yq &>/dev/null; then
-    MODEL=$(yq -r '.runner.model // "deepseek-v4-flash"' "$ENV_FILE")
+    MODEL=$(yq -r '.runner.model // "deepseek-flash"' "$ENV_FILE")
 else
-    MODEL="deepseek-v4-flash"
+    MODEL="deepseek-flash"
 fi
 
 while [[ $# -gt 0 ]]; do
