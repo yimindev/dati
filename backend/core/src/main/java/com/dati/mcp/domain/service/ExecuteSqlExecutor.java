@@ -14,6 +14,7 @@ import com.dati.mcp.domain.model.param.ExecuteSqlArgs;
 import com.dati.mcp.server.pojo.SqlExecution;
 import com.dati.mcp.server.pojo.StatementResult;
 import com.dati.mcp.server.pojo.ToolTestData;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.sql.Connection;
@@ -21,15 +22,20 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.List;
 
+@Slf4j
 @Component
 public class ExecuteSqlExecutor implements ToolExecutor {
 
     private final ScopeValidator scopeValidator;
     private final DataSourceService dataSourceService;
+    private final TableAutoRegistrationService tableAutoRegistrationService;
 
-    public ExecuteSqlExecutor(ScopeValidator scopeValidator, DataSourceService dataSourceService) {
+    public ExecuteSqlExecutor(ScopeValidator scopeValidator,
+                              DataSourceService dataSourceService,
+                              TableAutoRegistrationService tableAutoRegistrationService) {
         this.scopeValidator = scopeValidator;
         this.dataSourceService = dataSourceService;
+        this.tableAutoRegistrationService = tableAutoRegistrationService;
     }
 
     @Override
@@ -70,6 +76,22 @@ public class ExecuteSqlExecutor implements ToolExecutor {
             throw new ToolExecuteException(ToolError.SQL_EXECUTION_ERROR, e.getMessage());
         }
 
+        registerCreatedTables(dsId, analysis, dataSource.getDefaultSchema(), ctx.serviceId());
+
         return new SqlExecution(sql, results, null);
+    }
+
+    private void registerCreatedTables(String dsId, SqlAnalysisResult analysis,
+                                       String defaultSchema, String serviceId) {
+        if (analysis.createdTables().isEmpty()) {
+            return;
+        }
+        try {
+            tableAutoRegistrationService.registerCreatedTables(
+                dsId, analysis.createdTables(), defaultSchema, serviceId);
+        } catch (Exception e) {
+            log.warn("Failed to auto-register tables created by SQL on data source {}: {}",
+                dsId, e.getMessage());
+        }
     }
 }

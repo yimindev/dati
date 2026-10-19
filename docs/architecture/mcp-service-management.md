@@ -81,7 +81,8 @@ com.dati.mcp/
 │       ├── McpDataScopeSchemas.java         # package-private helper：解析 SCHEMA_SCOPE 授权 Schema 与 effectiveSchema
 │       ├── ToolExecutor.java               # 接口：getToolType() + execute(ctx)
 │       ├── ToolExecutionContext.java        # record：serviceId, toolType, config, boundArgs, scopeItems
-│       ├── ExecuteSqlExecutor.java          # EXECUTE_SQL 执行器
+│       ├── ExecuteSqlExecutor.java          # EXECUTE_SQL 执行器（DDL 成功后触发自动纳管）
+│       ├── TableAutoRegistrationService.java # 建表后写入 table_info/column_info + 语义索引（best-effort）
 │       ├── ParameterizedSqlExecutor.java    # PARAMETERIZED_SQL 执行器（自动注入系统变量 _user.* / _now / _date）
 │       ├── SystemVariableResolver.java      # 系统变量解析器（提取 RequestContext 用户与系统时间）
 │       ├── GetTableInfoExecutor.java        # GET_TABLE_INFO 执行器
@@ -296,7 +297,8 @@ com.dati.semantic.domain.model/
 | `ToolResolver` | 解析 toolId：先尝试 `McpToolType.valueOf(toolId)` 匹配枚举 → 查 `McpPrebuiltToolConfigDAO`（有则取 DB 值，无则用默认）；解析失败则当 UUID 查 `McpCustomToolDAO`。disabled → throw `ToolExecuteException(TOOL_DISABLED)` |
 | `ScopeValidator` | 两层 scope 校验：① 数据源级 — 遍历 scopeItems 收集所有覆盖的 dsId（DATA_SOURCE 直接 + SUBJECT 展开）；② 表级 — 构建允许的 TableRef 集合，对比 SQL 分析结果。`SCHEMA_SCOPE` 模式下，授权 Schema 内的表引用跳过表级白名单；`createdTables` 只校验目标 Schema 是否在授权范围内（DDL 权限由 `SqlPolicy` 负责）。支持 `defaultSchema` 参数解析 schema-less 表引用。另提供 `validateDataSource()`（仅数据源级，供元数据写工具）与 `resolveSubjectInScope()`（按名称在 scope SUBJECT 中定位 subjectId，供 UPSERT_TERM） |
 | `McpToolTestService` | 测试编排（极简，无分支）：前置强校验当前用户对服务的 `MCP_SERVICE (EDIT)` 权限（草稿态调试与测试需编辑权限） → `resolve()` → 查 scope → `ToolParameterBinder.bind()` 绑定参数 → `execute()` → 计时 → 组装响应。`ToolExecuteException` 在此层 catch 并转为 `ToolTestResponse(success=false, error=...)` |
-| `ExecuteSqlExecutor` | EXECUTE_SQL 执行器。`ctx.args(ExecuteSqlArgs.class)` 取参，dsId + sql 从 record 取，通过 `DataSourceService.getDataSourceInternal(dsId)` 内部通道加载数据源（解耦直属数据源用户权限），`Statement.execute()` 执行，`SqlExecutorHelper.collect()` 收集多语句结果。每条语句独立 policy 校验和 try-catch |
+| `ExecuteSqlExecutor` | EXECUTE_SQL 执行器。`ctx.args(ExecuteSqlArgs.class)` 取参，dsId + sql 从 record 取，通过 `DataSourceService.getDataSourceInternal(dsId)` 内部通道加载数据源（解耦直属数据源用户权限），`Statement.execute()` 执行，`SqlExecutorHelper.collect()` 收集多语句结果。每条语句独立 policy 校验和 try-catch。执行成功后若存在 `createdTables`，调用 `TableAutoRegistrationService` 自动纳管；纳管失败只记 WARN，不影响 SQL 结果 |
+| `TableAutoRegistrationService` | 建表后自动纳管：按 created table 的 effectiveSchema 读取 JDBC 物理表/列元数据，写入 `table_info` / `column_info`，并 best-effort 写 TABLE/FIELD 语义索引。已注册表跳过，不覆盖人工描述/别名；物理表缺失、列元数据为空、JDBC/ES 失败均降级，不阻塞 SQL 执行 |
 | `ParameterizedSqlExecutor` | PARAMETERIZED_SQL 执行器。dsId 从 config 取，通过 `DataSourceService.getDataSourceInternal(dsId)` 内部通道加载数据源，合并客户端参数与系统内置参数（`SystemVariableResolver.resolve()`，含 `_user.id` / `_user.name` / `_user.display_name` / `_now` / `_date`，系统参数强制覆盖以防伪造）→ 模板渲染 → SQL，`PreparedStatement.execute()` 执行。支持 DateTime 类型参数转换（`DateTimeUtils.parseDateTime()`）。`bindings` 回传前端 |
 | `SystemVariableResolver` | 系统变量解析器。从 `RequestContext.getUser()` 和系统时钟解析 `_user.*` 与 `_now` / `_date`，提供 `isSystemVariable()` 供模板参数扫描与抽取时过滤 |
 | `GetTableInfoExecutor` | GET_TABLE_INFO 执行器。`ctx.args(GetTableInfoArgs.class)` 取参，逐条 `tables[]` 项做数据源级 scope 校验（每项自带 data_source_id），先查平台元数据；未注册且 `effectiveSchema` 在 `SCHEMA_SCOPE` 授权范围内时，回退到 JDBC 物理列。不存在的表静默跳过 |
@@ -442,6 +444,21 @@ Controller → HTTP 200 + ToolTestResponse JSON
 `TableMeta` record：`tableId, tableName, schema, description, aliases, dataSourceId, columns: List<ColumnDef>`。
 
 **设计决策**：已注册表优先使用平台同步的元数据；仅当 `SCHEMA_SCOPE` 授权且表未注册时，才回退到 JDBC 物理元数据。找不到表返回 `Optional.empty()`（GetTableInfoExecutor 静默跳过）。
+
+#### CREATE TABLE 后自动纳管（TableAutoRegistrationService）
+
+`SCHEMA_SCOPE` 下 `EXECUTE_SQL` 的 `CREATE TABLE` 成功后，`TableAutoRegistrationService` 会尝试把新表沉淀到平台元数据：
+
+- 触发：SQL 执行成功且 `SqlAnalysisResult.createdTables()` 非空；
+- 解析：`effectiveSchema` = 建表语句显式 Schema 或数据源 `defaultSchema`；
+- 探测：`JdbcMetaService.getTables/getColumns`，exact 优先、大小写不敏感兜底，使用数据库返回的真实表名；
+- 写入：`table_info` + `column_info`，审计人取当前用户，否则 `mcp:<serviceId>`；
+- 索引：TABLE/FIELD 语义索引 best-effort；
+- 幂等：`table_info` 已存在则跳过，不覆盖人工描述/别名；
+- 降级：物理表缺失、列元数据为空、JDBC/ES 异常只记 WARN，不影响 SQL 返回；
+- 边界：只处理 `EXECUTE_SQL`；`PARAMETERIZED_SQL` 模板建表不纳管。`CREATE OR REPLACE` 已注册表时跳过更新，列元数据可能 stale。
+
+自动纳管写入的是数据源级 `table_info`，因此同数据源其他 `DATA_SOURCE` scope 的服务也可能看到新表；按服务隔离需要额外的归属字段，暂未实现。
 
 #### SEARCH_METADATA 全文搜索（SemanticSearchService）
 

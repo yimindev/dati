@@ -19,6 +19,7 @@ import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.sql.Connection;
+import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.List;
 import java.util.Optional;
@@ -26,16 +27,8 @@ import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyList;
-import static org.mockito.ArgumentMatchers.anySet;
-import static org.mockito.ArgumentMatchers.argThat;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.mockStatic;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("ExecuteSqlExecutor tests")
@@ -47,11 +40,28 @@ class ExecuteSqlExecutorTest {
     @Mock
     private DataSourceService dataSourceService;
 
+    @Mock
+    private TableAutoRegistrationService tableAutoRegistrationService;
+
     private ExecuteSqlExecutor executor;
 
     @BeforeEach
     void setUp() {
-        executor = new ExecuteSqlExecutor(scopeValidator, dataSourceService);
+        executor = new ExecuteSqlExecutor(scopeValidator, dataSourceService, tableAutoRegistrationService);
+    }
+
+    private Statement mockSuccessfulStatement() throws SQLException {
+        Statement stmt = mock(Statement.class);
+        when(stmt.getUpdateCount()).thenReturn(-1);
+        when(stmt.getMoreResults()).thenReturn(false);
+        return stmt;
+    }
+
+    private ToolExecutionContext ddlCtx(String sql) {
+        ExecuteSqlConfig config = new ExecuteSqlConfig();
+        config.getSqlPolicy().setAllowDdl(true);
+        return new ToolExecutionContext("svc-1", McpToolType.EXECUTE_SQL, config,
+            new ExecuteSqlArgs("ds-1", sql), List.of());
     }
 
     private ToolExecutionContext ctx(ExecuteSqlArgs args) {
@@ -137,6 +147,86 @@ class ExecuteSqlExecutorTest {
             .isInstanceOf(ToolExecuteException.class)
             .satisfies(e -> assertThat(((ToolExecuteException) e).getToolError())
                 .isEqualTo(ToolError.SQL_POLICY_VIOLATION));
+    }
+
+    @Test
+    @DisplayName("registers created table after successful DDL")
+    void registersCreatedTableAfterSuccessfulDdl() throws Exception {
+        when(dataSourceService.getDataSourceInternal("ds-1"))
+            .thenReturn(Optional.of(TestFixtures.createTestDataSource()));
+        Statement stmt = mockSuccessfulStatement();
+        Connection conn = mock(Connection.class);
+        when(conn.createStatement()).thenReturn(stmt);
+
+        try (MockedStatic<HikariPoolManager> hpm = mockStatic(HikariPoolManager.class)) {
+            hpm.when(() -> HikariPoolManager.getConnection(any(JdbcConnector.class))).thenReturn(conn);
+
+            executor.execute(ddlCtx("CREATE TABLE tmp (id INT)"));
+        }
+
+        verify(tableAutoRegistrationService).registerCreatedTables(
+            eq("ds-1"), eq(Set.of(TableRef.of("tmp"))), eq("public"), eq("svc-1"));
+    }
+
+    @Test
+    @DisplayName("does not register for non-DDL")
+    void doesNotRegisterForNonDdl() throws Exception {
+        when(dataSourceService.getDataSourceInternal("ds-1"))
+            .thenReturn(Optional.of(TestFixtures.createTestDataSource()));
+        Statement stmt = mockSuccessfulStatement();
+        Connection conn = mock(Connection.class);
+        when(conn.createStatement()).thenReturn(stmt);
+
+        try (MockedStatic<HikariPoolManager> hpm = mockStatic(HikariPoolManager.class)) {
+            hpm.when(() -> HikariPoolManager.getConnection(any(JdbcConnector.class))).thenReturn(conn);
+
+            executor.execute(ctx(new ExecuteSqlArgs("ds-1", "SELECT 1")));
+        }
+
+        verifyNoInteractions(tableAutoRegistrationService);
+    }
+
+    @Test
+    @DisplayName("does not register when SQL execution fails")
+    void doesNotRegisterWhenExecutionFails() throws Exception {
+        when(dataSourceService.getDataSourceInternal("ds-1"))
+            .thenReturn(Optional.of(TestFixtures.createTestDataSource()));
+        Statement stmt = mock(Statement.class);
+        doThrow(new SQLException("boom")).when(stmt).execute(anyString());
+        Connection conn = mock(Connection.class);
+        when(conn.createStatement()).thenReturn(stmt);
+
+        try (MockedStatic<HikariPoolManager> hpm = mockStatic(HikariPoolManager.class)) {
+            hpm.when(() -> HikariPoolManager.getConnection(any(JdbcConnector.class))).thenReturn(conn);
+
+            assertThatThrownBy(() -> executor.execute(ddlCtx("CREATE TABLE tmp (id INT)")))
+                .isInstanceOf(ToolExecuteException.class)
+                .satisfies(e -> assertThat(((ToolExecuteException) e).getToolError())
+                    .isEqualTo(ToolError.SQL_EXECUTION_ERROR));
+        }
+
+        verifyNoInteractions(tableAutoRegistrationService);
+    }
+
+    @Test
+    @DisplayName("registration failure does not fail SQL execution")
+    void registrationFailureDoesNotFailSqlExecution() throws Exception {
+        when(dataSourceService.getDataSourceInternal("ds-1"))
+            .thenReturn(Optional.of(TestFixtures.createTestDataSource()));
+        Statement stmt = mockSuccessfulStatement();
+        Connection conn = mock(Connection.class);
+        when(conn.createStatement()).thenReturn(stmt);
+        doThrow(new RuntimeException("registration down"))
+            .when(tableAutoRegistrationService)
+            .registerCreatedTables(anyString(), anySet(), anyString(), anyString());
+
+        try (MockedStatic<HikariPoolManager> hpm = mockStatic(HikariPoolManager.class)) {
+            hpm.when(() -> HikariPoolManager.getConnection(any(JdbcConnector.class))).thenReturn(conn);
+
+            SqlExecution execution = (SqlExecution) executor.execute(ddlCtx("CREATE TABLE tmp (id INT)"));
+
+            assertThat(execution.executedSql()).isEqualTo("CREATE TABLE tmp (id INT)");
+        }
     }
 
     @Test
