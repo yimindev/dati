@@ -310,6 +310,24 @@ chinook:
         # genre.name 抽取的维度值数量
         value_count: 25
 
+    # ---- Schema scope 数据访问测试（TC-END-015）----
+    schema_scope:
+      schema: "e2e_schema_scope"
+      imported_table: "imported_table"
+      unimported_table: "unimported_table"
+      created_table: "e2e_created_by_agent"
+      imported_table_columns: ["id", "name"]
+      unimported_table_columns: ["id", "amount"]
+      created_table_columns: ["id", "name"]
+      setup_sql: |
+        DROP SCHEMA IF EXISTS e2e_schema_scope CASCADE;
+        CREATE SCHEMA e2e_schema_scope;
+        CREATE TABLE e2e_schema_scope.imported_table (id INT PRIMARY KEY, name TEXT);
+        CREATE TABLE e2e_schema_scope.unimported_table (id INT PRIMARY KEY, amount NUMERIC(10,2));
+        INSERT INTO e2e_schema_scope.imported_table VALUES (1, 'imported');
+        INSERT INTO e2e_schema_scope.unimported_table VALUES (1, 9.99);
+      cleanup_sql: "DROP SCHEMA IF EXISTS e2e_schema_scope CASCADE;"
+
     # ---- 语义层测试 ----
     semantic:
       # TC-SEM-002 主题表管理

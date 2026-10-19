@@ -227,7 +227,8 @@ onMounted(() => {
               <button
                 type="button"
                 class="inline-flex items-center justify-center p-0.5 text-[var(--ep-text-color-placeholder)] hover:text-[var(--ep-color-primary)] bg-transparent border-0 cursor-pointer rounded transition-colors"
-                :title="t('common.copySuccess')"
+                :title="t('common.copy')"
+                :aria-label="t('common.copy')"
                 @click="handleCopyId(item.reference_id)"
               >
                 <el-icon :size="12"><CopyDocument /></el-icon>

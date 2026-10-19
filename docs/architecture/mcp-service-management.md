@@ -777,6 +777,17 @@ StatementResult.writeFailure(errorMessage)           // WRITE 失败
 - 数据范围采用「先删后插」策略，客户端每次提交完整列表。空列表即清空。
 - 自定义工具创建时的数据源选择列表限定为当前服务的 `data_scope` 内数据源。
 
+#### 数据范围访问模式（IMPORTED_TABLES / SCHEMA_SCOPE）
+
+- `DATA_SOURCE` 范围支持两种 `access_mode`：
+  - `IMPORTED_TABLES`（默认）：只允许 `table_info` 已导入表；
+  - `SCHEMA_SCOPE`（叠加）：在已导入表基础上，额外开放 `allowed_schemas` 下的全部表（含未导入表）。
+- `SUBJECT` 范围始终只允许主题绑定表，强制 `IMPORTED_TABLES`。
+- `SCHEMA_SCOPE` 只解决数据范围；DDL 仍由 `SqlPolicy.allowDdl` 控制。
+- 未注册表的元数据通过 JDBC 物理回退（`list_tables` / `get_table_schema`）；`CREATE TABLE` 成功后 `TableAutoRegistrationService` 自动纳管。
+- 自动纳管写入数据源级 `table_info`，同数据源其他 `DATA_SOURCE` scope 服务可见；按服务隔离暂未实现。
+- `access_mode` 通过 `McpDataScopeAccessModeConverter` 映射为 `varchar(20)`，不生成数据库 enum 约束，避免枚举值重命名时 `ddl-auto: update` 无法更新约束。旧库若已由 enum 映射创建该列，需要手动改为 `varchar` 或重建库。
+
 #### Tool Test 异常架构
 
 - `ToolExecuteException extends RuntimeException`（不继承 `DatiException`），避免与 HTTP 层混淆。
@@ -937,7 +948,7 @@ src/
 | `ExecuteSqlConfigDialog` | 权限勾选组（SELECT ~ MULTI）+ maxRows + timeout。 |
 | `CustomToolList` | 搜索栏 + 工具列表。编辑/删除图标。显示数据源名称。`el-switch` 开关。每张卡片操作区有「测试」按钮。 |
 | `CustomToolDialog` | el-dialog 弹窗表单。el-form 校验（name/desc/SQL/数据源必填）。参数编辑器 + 执行限制（maxRows/timeout）。无 SQL 权限配置（模板由作者编写，不做运行时策略校验）。 |
-| `DataScopeTab` | 数据范围管理。显示已添加列表（数据源/主题 Tag），支持删除。**选择器为独立 `ScopePicker` 组件**（数据源/主题双 Tab、分页、搜索、多选 + 已添加去重、全量提交）。含已发布提示。 |
+| `DataScopeTab` | 数据范围管理。显示已添加列表（数据源/主题 Tag + 访问模式 pill + `SCHEMA_SCOPE` Schema 标签），支持复制 ID、配置访问模式、删除。**选择器为独立 `ScopePicker` 组件**（数据源/主题双 Tab、分页、搜索、多选 + 已添加去重、全量提交）。访问模式由 `ScopeAccessDialog` 配置：`IMPORTED_TABLES` / `SCHEMA_SCOPE`，后者通过 `el-select` 多选或手输 Schema。含已发布提示。 |
 | `PromptsTab` | Prompt 管理 Tab 容器。加载 Prompt 列表，集成 `PromptList`。 |
 | `PromptList` | 搜索栏 + 列表。每个条目显示 name、description、参数计数、开关、编辑/删除图标。 |
 | `PromptDialog` | 创建/编辑弹窗。**基本信息**（name/description）。**模板内容**：使用 `PromptTemplateEditor`（CodeMirror）。**参数列表**：el-table 编辑（name/required/description）+ 「提取参数」按钮调用 `/v1/template/extract` 自动填充。底部「测试渲染」按钮打开预览。 |

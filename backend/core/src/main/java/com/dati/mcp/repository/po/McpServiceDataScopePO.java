@@ -3,7 +3,9 @@ package com.dati.mcp.repository.po;
 import com.dati.base.pojo.BasePO;
 import com.dati.mcp.domain.model.McpDataScopeAccessMode;
 import com.dati.mcp.domain.model.McpDataScopeType;
+import com.dati.mcp.repository.converter.McpDataScopeAccessModeConverter;
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -38,7 +40,7 @@ public class McpServiceDataScopePO extends BasePO {
     @Column(nullable = false)
     private String referenceId;
 
-    @Enumerated(EnumType.STRING)
+    @Convert(converter = McpDataScopeAccessModeConverter.class)
     @Column(length = 20)
     private McpDataScopeAccessMode accessMode;
 

@@ -226,3 +226,46 @@
    - 发送 `tools/call`，params `{name: "query_genre_by_user", arguments: {"genre_id": 1, "_user.name": "attacker"}}`
    - 验证 HTTP 200，`result.isError` == false（客户端伪造参数被服务端真实上下文强制覆盖）
 5. 删除服务（清理）
+
+---
+
+## TC-END-015 Schema scope：未导入表访问、建表与自动纳管
+**级别：** P0
+**前置：** 已登录；PostgreSQL 可用；本机可执行 psql（连接信息见 `datasources.postgres_local`）
+**数据：** `chinook.e2e.schema_scope`
+
+> 本用例覆盖 `SCHEMA_SCOPE` 叠加语义、物理元数据回退、DDL 权限，以及 `CREATE TABLE` 后自动纳管。
+> 所有对象使用独立 Schema，避免污染 Chinook 种子数据。
+
+1. **准备隔离 Schema**：用 psql 执行 `schema_scope.setup_sql`，创建 `e2e_schema_scope`、`imported_table`、`unimported_table` 及种子行。
+2. **创建专用数据源**：使用 `datasources.postgres_local` 创建数据源，name 唯一（如 `e2e-schema-scope-{timestamp}`），记录 datasourceId。
+3. **仅导入一张表**：`POST /v1/data-sources/{datasourceId}/tables/batch`，body `[{"name":"<imported_table>","schema":"<schema>"}]`。
+   - GET `/tables/added-names` 确认只包含 `imported_table`，不包含 `unimported_table`。
+4. **创建 MCP 服务并配置 SCHEMA_SCOPE**：
+   - 创建服务，`data_scopes` 先绑定该数据源（默认 `IMPORTED_TABLES`）；
+   - PUT `/v1/mcp-services/{id}/data-scope`，body：
+     `{"items":[{"scope_type":"DATA_SOURCE","reference_id":"<datasourceId>","access_mode":"SCHEMA_SCOPE","allowed_schemas":["<schema>"]}]}`
+   - GET `/data-scope` 回读：`access_mode`=`SCHEMA_SCOPE`，`allowed_schemas` 包含 `<schema>`，`reference_name` 非空。
+5. **启用 EXECUTE_SQL 并发布**：
+   - PUT `/v1/mcp-services/{id}/tools/EXECUTE_SQL`，`enabled`=true，config 的 `sql_policy` 至少 `allow_select`/`allow_insert`/`allow_ddl`/`allow_multi`=true；
+   - POST `/v1/mcp-services/{id}/publish`。
+6. **list_tables_and_terms（叠加 + 物理表合并）**：MCP `tools/call`，name=`list_tables_and_terms`，无参数。
+   - `result.isError`=false；
+   - `result.structuredContent.data_sources` 中该数据源的 `tables` 同时包含 `imported_table` 与 `unimported_table`；
+   - 两项的 `schema` 均为 `<schema>`。
+7. **get_table_schema（未导入表，物理回退）**：MCP `tools/call`，name=`get_table_schema`，arguments：
+   `{"tables":[{"data_source_id":"<datasourceId>","schema":"<schema>","table":"<unimported_table>"}]}`
+   - `result.isError`=false；
+   - `result.structuredContent.tables[0].columns` 的列名集合等于 `unimported_table_columns`。
+8. **execute_sql 建表（DDL）**：MCP `tools/call`，name=`execute_sql`，arguments：
+   `{"data_source_id":"<datasourceId>","sql":"CREATE TABLE <schema>.<created_table> (id INT, name TEXT)"}`
+   - `result.isError`=false。
+9. **execute_sql 写入 + 查询**：
+   - INSERT `INSERT INTO <schema>.<created_table> VALUES (1, 'a')` → `isError`=false；
+   - SELECT `SELECT * FROM <schema>.<created_table>` → `isError`=false，`structuredContent.results[0].rows` 长度为 1，列包含 `id`/`name`。
+10. **自动纳管验证**：
+    - GET `/v1/data-sources/{datasourceId}/tables/added-names` 包含 `<created_table>`；
+    - 再次 MCP `get_table_schema` 查 `<created_table>`，`columns` 列名集合等于 `created_table_columns`。
+11. **边界验证（非授权 Schema）**：MCP `execute_sql` 执行 `SELECT * FROM public.genre`
+    - `result.isError`=true，错误信息含 `SCOPE_ERROR` / `not in scope`（`public` 未在 `allowed_schemas` 且未导入）。
+12. **清理**：删除 MCP 服务；删除专用数据源（级联清理 `table_info`/`column_info`/ES）；用 psql 执行 `schema_scope.cleanup_sql`。
