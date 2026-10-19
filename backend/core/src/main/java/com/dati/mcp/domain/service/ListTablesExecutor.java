@@ -15,6 +15,7 @@ import com.dati.mcp.server.pojo.ToolTestData;
 import com.dati.semantic.domain.model.TermDef;
 import com.dati.semantic.domain.service.TermService;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -38,17 +39,21 @@ public class ListTablesExecutor implements ToolExecutor {
     private final DataSourceService dataSourceService;
     private final TermService termService;
     private final JdbcMetaService jdbcMetaService;
+    private final int maxPhysicalTablesPerDataSource;
 
     public ListTablesExecutor(McpServiceDataScopeService dataScopeService,
                               TableInfoDAO tableInfoDAO,
                               DataSourceService dataSourceService,
                               TermService termService,
-                              JdbcMetaService jdbcMetaService) {
+                              JdbcMetaService jdbcMetaService,
+                              @Value("${dati.mcp.list-tables.max-physical-tables-per-datasource:1000}")
+                              int maxPhysicalTablesPerDataSource) {
         this.dataScopeService = dataScopeService;
         this.tableInfoDAO = tableInfoDAO;
         this.dataSourceService = dataSourceService;
         this.termService = termService;
         this.jdbcMetaService = jdbcMetaService;
+        this.maxPhysicalTablesPerDataSource = Math.max(0, maxPhysicalTablesPerDataSource);
     }
 
     @Override
@@ -113,19 +118,34 @@ public class ListTablesExecutor implements ToolExecutor {
             }
         }
 
+        int physicalCount = 0;
+        boolean truncated = false;
         for (String schema : allowedSchemas) {
             try {
                 for (Table table : jdbcMetaService.getTables(dsId, schema)) {
                     TableKey key = new TableKey(schema, table.name());
-                    if (seen.add(key)) {
-                        tableDefs.add(new TableDef(table.name(), schema, table.comment(),
-                            List.of(), null));
+                    if (!seen.add(key)) {
+                        continue;
                     }
+                    if (physicalCount >= maxPhysicalTablesPerDataSource) {
+                        truncated = true;
+                        break;
+                    }
+                    tableDefs.add(new TableDef(table.name(), schema, table.comment(),
+                        List.of(), null));
+                    physicalCount++;
                 }
             } catch (Exception e) {
                 log.warn("Failed to read physical tables for data source {} schema {}: {}",
                     dsId, schema, e.getMessage());
             }
+            if (truncated) {
+                break;
+            }
+        }
+        if (truncated) {
+            log.warn("Physical table listing truncated for data source {} at {} tables (limit {})",
+                dsId, physicalCount, maxPhysicalTablesPerDataSource);
         }
 
         return tableDefs;

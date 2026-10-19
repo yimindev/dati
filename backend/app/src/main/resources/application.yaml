@@ -54,6 +54,9 @@ dati:
     # 查询时的分词器类型；留空则回退为 index-analyzer；ik_smart 需要 IK 插件
     search-analyzer: ${DATI_ELASTICSEARCH_SEARCH_ANALYZER:}
   mcp:
+    # list_tables 每个数据源最多合并多少张未导入的物理表（已导入表不计入此上限）
+    list-tables:
+      max-physical-tables-per-datasource: ${DATI_MCP_LIST_TABLES_MAX_PHYSICAL_TABLES_PER_DATASOURCE:1000}
     # MCP endpoint 基础 URL（完整 URL 前缀，如 https://mcp.example.com），空则返回相对路径 /{code}/mcp
     endpoint-base-url: ${MCP_ENDPOINT_BASE_URL:}
     # Origin 白名单（逗号分隔完整 origin，如 https://dati.example.com），默认空：

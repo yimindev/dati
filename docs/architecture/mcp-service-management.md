@@ -302,7 +302,7 @@ com.dati.semantic.domain.model/
 | `ParameterizedSqlExecutor` | PARAMETERIZED_SQL 执行器。dsId 从 config 取，通过 `DataSourceService.getDataSourceInternal(dsId)` 内部通道加载数据源，合并客户端参数与系统内置参数（`SystemVariableResolver.resolve()`，含 `_user.id` / `_user.name` / `_user.display_name` / `_now` / `_date`，系统参数强制覆盖以防伪造）→ 模板渲染 → SQL，`PreparedStatement.execute()` 执行。支持 DateTime 类型参数转换（`DateTimeUtils.parseDateTime()`）。`bindings` 回传前端 |
 | `SystemVariableResolver` | 系统变量解析器。从 `RequestContext.getUser()` 和系统时钟解析 `_user.*` 与 `_now` / `_date`，提供 `isSystemVariable()` 供模板参数扫描与抽取时过滤 |
 | `GetTableInfoExecutor` | GET_TABLE_INFO 执行器。`ctx.args(GetTableInfoArgs.class)` 取参，逐条 `tables[]` 项做数据源级 scope 校验（每项自带 data_source_id），先查平台元数据；未注册且 `effectiveSchema` 在 `SCHEMA_SCOPE` 授权范围内时，回退到 JDBC 物理列。不存在的表静默跳过 |
-| `ListTablesExecutor` | LIST_TABLES 执行器（`list_tables_and_terms`）。无参数（`ListTablesArgs` 空 record），通过 `McpServiceDataScopeService.getResolvedDataSourceIds()` 解析 scope 数据源 → 已导入表 + `SCHEMA_SCOPE` 授权 Schema 的物理表合并（已导入元数据优先、按 schema+name 去重、JDBC 失败降级）；同时解析 scope 中的 SUBJECT 范围 → 查全部业务术语 `TermService.getTermsBySubjectIds()` 组装术语清单。空 scope 返回空结果。不查 ES/列 |
+| `ListTablesExecutor` | LIST_TABLES 执行器（`list_tables_and_terms`）。无参数（`ListTablesArgs` 空 record），通过 `McpServiceDataScopeService.getResolvedDataSourceIds()` 解析 scope 数据源 → 已导入表 + `SCHEMA_SCOPE` 授权 Schema 的物理表合并（已导入元数据优先、按 schema+name 去重、JDBC 失败降级）；物理表合并受 `dati.mcp.list-tables.max-physical-tables-per-datasource`（默认 1000）限制，已导入表不计入上限，超限记录 WARN。同时解析 scope 中的 SUBJECT 范围 → 查全部业务术语 `TermService.getTermsBySubjectIds()` 组装术语清单。空 scope 返回空结果。不查 ES/列 |
 | `SearchMetadataExecutor` | SEARCH_METADATA 执行器。`ctx.args(SearchMetadataArgs.class)` 取 keywords，通过 `McpServiceDataScopeService.getResolvedDataSourceIds()` 解析 scope → `SemanticSearchService.search()` → 组装分组结果。空 scope 返回空结果（不报错） |
 | `UpdateTableInfoExecutor` / `UpdateColumnInfoExecutor` / `UpsertTermExecutor` | 元数据写执行器（见「元数据更新工具」小节） |
 | `SqlExecutorHelper` | package-private 工具类：`collect(Statement)` — JDBC `getMoreResults() / getResultSet() / getUpdateCount()` 循环，每条独立 try-catch 返回 `StatementResult` |
@@ -787,6 +787,7 @@ StatementResult.writeFailure(errorMessage)           // WRITE 失败
 - 未注册表的元数据通过 JDBC 物理回退（`list_tables` / `get_table_schema`）；`CREATE TABLE` 成功后 `TableAutoRegistrationService` 自动纳管。
 - 自动纳管写入数据源级 `table_info`，同数据源其他 `DATA_SOURCE` scope 服务可见；按服务隔离暂未实现。
 - `access_mode` 通过 `McpDataScopeAccessModeConverter` 映射为 `varchar(20)`，不生成数据库 enum 约束，避免枚举值重命名时 `ddl-auto: update` 无法更新约束。旧库若已由 enum 映射创建该列，需要手动改为 `varchar` 或重建库。
+- `list_tables` 合并物理表受 `dati.mcp.list-tables.max-physical-tables-per-datasource`（默认 1000）保护；已导入表不计入上限且始终保留，超限只记录 WARN。
 
 #### Tool Test 异常架构
 

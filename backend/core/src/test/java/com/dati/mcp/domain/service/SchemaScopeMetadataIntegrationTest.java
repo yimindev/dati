@@ -115,7 +115,7 @@ class SchemaScopeMetadataIntegrationTest {
         TableMetadataService tableMetadataService = new TableMetadataService(
                 tableInfoDAO, columnInfoDAO, semanticIndexService, jdbcMetaService);
         listTablesExecutor = new ListTablesExecutor(
-                dataScopeService, tableInfoDAO, dataSourceService, termService, jdbcMetaService);
+                dataScopeService, tableInfoDAO, dataSourceService, termService, jdbcMetaService, 1000);
         getTableInfoExecutor = new GetTableInfoExecutor(
                 scopeValidator, tableMetadataService, dataSourceService);
 

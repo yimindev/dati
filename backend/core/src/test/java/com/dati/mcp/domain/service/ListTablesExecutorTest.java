@@ -56,7 +56,7 @@ class ListTablesExecutorTest {
     @BeforeEach
     void setUp() {
         executor = new ListTablesExecutor(dataScopeService, tableInfoDAO, dataSourceService,
-            termService, jdbcMetaService);
+            termService, jdbcMetaService, 1000);
     }
 
     private static McpServiceDataScope schemaScope(String... schemas) {
@@ -212,6 +212,49 @@ class ListTablesExecutorTest {
             .containsExactly(
                 org.assertj.core.groups.Tuple.tuple("sandbox", "orders"),
                 org.assertj.core.groups.Tuple.tuple("audit", "events"));
+    }
+
+    @Test
+    @DisplayName("caps physical tables per data source while keeping imported tables")
+    void capsPhysicalTablesPerDataSource() throws SQLException {
+        when(dataScopeService.getResolvedDataSourceIds("svc-1")).thenReturn(Set.of("ds-1"));
+        when(tableInfoDAO.findByDataSourceId("ds-1"))
+            .thenReturn(List.of(importedTable("sandbox", "imported", "imported table", List.of())));
+        when(dataSourceService.getDataSourceBriefs(Set.of("ds-1")))
+            .thenReturn(Map.of("ds-1", new DataSourceService.DsBrief("音乐库", DbType.POSTGRESQL, "sandbox", null)));
+        when(jdbcMetaService.getTables("ds-1", "sandbox"))
+            .thenReturn(List.of(
+                new Table("physical1", null),
+                new Table("physical2", null),
+                new Table("physical3", null)));
+
+        ListTablesExecutor capped = new ListTablesExecutor(dataScopeService, tableInfoDAO,
+            dataSourceService, termService, jdbcMetaService, 2);
+        TableListData data = (TableListData) capped.execute(ctx(List.of(schemaScope("sandbox"))));
+
+        assertThat(data.dataSources().getFirst().tables())
+            .extracting(TableDef::table)
+            .containsExactly("imported", "physical1", "physical2");
+    }
+
+    @Test
+    @DisplayName("zero physical limit keeps imported tables only")
+    void zeroPhysicalLimitKeepsImportedTablesOnly() throws SQLException {
+        when(dataScopeService.getResolvedDataSourceIds("svc-1")).thenReturn(Set.of("ds-1"));
+        when(tableInfoDAO.findByDataSourceId("ds-1"))
+            .thenReturn(List.of(importedTable("sandbox", "imported", null, null)));
+        when(dataSourceService.getDataSourceBriefs(Set.of("ds-1")))
+            .thenReturn(Map.of("ds-1", new DataSourceService.DsBrief("音乐库", DbType.POSTGRESQL, "sandbox", null)));
+        when(jdbcMetaService.getTables("ds-1", "sandbox"))
+            .thenReturn(List.of(new Table("physical1", null)));
+
+        ListTablesExecutor capped = new ListTablesExecutor(dataScopeService, tableInfoDAO,
+            dataSourceService, termService, jdbcMetaService, 0);
+        TableListData data = (TableListData) capped.execute(ctx(List.of(schemaScope("sandbox"))));
+
+        assertThat(data.dataSources().getFirst().tables())
+            .extracting(TableDef::table)
+            .containsExactly("imported");
     }
 
     @Test
