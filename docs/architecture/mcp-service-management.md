@@ -502,6 +502,7 @@ SemanticSearchService.search(keywords, dsIds, subjectIds)
 - 不裁剪列（对 NL2SQL 有害）
 - BM25 自动加权，不用手动字段加权
 - ES filter 利用 `EntityReference.datasourceId` 字段过滤 scope
+- `SCHEMA_SCOPE` 下未注册的已有表不会进入 ES，因此 `search_metadata` 只返回已导入/自动纳管的表；发现未注册表请用 `list_tables`，查看结构用 `get_table_schema`。`CREATE TABLE` 自动纳管的新表会被索引
 
 #### 模板预览引擎（Template Preview）
 
