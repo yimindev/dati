@@ -152,7 +152,10 @@ public class TermService {
             throw new DatiException(ErrorCode.SM_TABLE_NOT_IN_SUBJECT, tableId, termPO.getSubjectId());
         }
 
-        if (fieldName != null && termRelationDAO.findByTermIdAndTableIdAndFieldName(termId, tableId, fieldName).isPresent()) {
+        boolean duplicate = fieldName != null
+                ? termRelationDAO.findByTermIdAndTableIdAndFieldName(termId, tableId, fieldName).isPresent()
+                : termRelationDAO.findByTermIdAndTableIdAndFieldNameIsNull(termId, tableId).isPresent();
+        if (duplicate) {
             throw new DatiException(ErrorCode.INVALID_PARAMETER, "Term relation already exists");
         }
 

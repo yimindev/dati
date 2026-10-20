@@ -3,8 +3,6 @@ package com.dati.mcp.server.controller;
 import com.dati.base.exception.DatiException;
 import com.dati.base.exception.ErrorCode;
 import com.dati.common.template.CompiledTemplate;
-import com.dati.common.template.ParamBinding;
-import com.dati.common.template.PreparedSql;
 import com.dati.common.template.SqlRenderer;
 import com.dati.common.template.TemplateParseException;
 import com.dati.common.template.TemplateParser;
@@ -68,8 +66,7 @@ public class TemplatePreviewController {
             response.setRendered(textRenderer.render(compiled, values));
         } else {
             try {
-                PreparedSql ps = sqlRenderer.render(compiled, values);
-                response.setRendered(toDisplaySql(ps));
+                response.setRendered(sqlRenderer.renderDisplay(compiled, values, this::formatValue));
             } catch (TemplateRenderException e) {
                 throw new DatiException(ErrorCode.INVALID_PARAMETER, e.getMessage());
             }
@@ -92,23 +89,15 @@ public class TemplatePreviewController {
     }
 
     /**
-     * Convert a PreparedSql to human-readable SQL by inlining bound values.
-     * Strings are quoted, numeric strings are left bare, nulls become NULL.
-     * This SQL is for DISPLAY ONLY — it is never executed.
+     * Formats a bound value as a SQL literal for DISPLAY ONLY (never executed).
+     * Numeric strings are left bare; other strings are quoted and single quotes
+     * are escaped per the SQL standard.
      */
-    private String toDisplaySql(PreparedSql ps) {
-        String sql = ps.sql();
-        for (ParamBinding binding : ps.bindings()) {
-            sql = sql.replaceFirst("\\?", formatValue(binding.value()));
-        }
-        return sql;
-    }
-
     private String formatValue(Object value) {
         if (value == null) return "NULL";
         if (value instanceof String s) {
             if (s.matches("-?\\d+(\\.\\d+)?")) return s;
-            return "'" + s + "'";
+            return "'" + s.replace("'", "''") + "'";
         }
         return value.toString();
     }

@@ -483,4 +483,50 @@ class SqlRendererTest {
         PreparedSql r = renderer.render(parser.parse("SELECT * FROM {{{table}}}"), Map.of("table", evil));
         assertEquals("SELECT * FROM " + evil, r.sql());
     }
+
+    // ---- 展示 SQL（renderDisplay） ----
+
+    @Test @DisplayName("renderDisplay - literal '?' in template text is preserved")
+    void testRenderDisplayLiteralQuestionMark() {
+        String display = renderer.renderDisplay(
+            parser.parse("SELECT * FROM track WHERE name LIKE '%?%' AND genreid = {{g}}"),
+            Map.of("g", 1),
+            value -> "'" + value + "'");
+        assertEquals("SELECT * FROM track WHERE name LIKE '%?%' AND genreid = '1'", display);
+    }
+
+    @Test @DisplayName("renderDisplay - JSONB '?' operator keeps bindings aligned")
+    void testRenderDisplayJsonbOperator() {
+        String display = renderer.renderDisplay(
+            parser.parse("SELECT * FROM t WHERE data ? 'key' AND name = {{n}} AND id = {{i}}"),
+            Map.of("n", "x", "i", 7),
+            Object::toString);
+        assertEquals("SELECT * FROM t WHERE data ? 'key' AND name = x AND id = 7", display);
+    }
+
+    @Test @DisplayName("renderDisplay - array placeholders expand in order")
+    void testRenderDisplayArray() {
+        String display = renderer.renderDisplay(
+            parser.parse("SELECT * FROM t WHERE note = '?' AND id IN ({{ids}})"),
+            Map.of("ids", List.of(1, 2)),
+            Object::toString);
+        assertEquals("SELECT * FROM t WHERE note = '?' AND id IN (1, 2)", display);
+    }
+
+    @Test @DisplayName("renderDisplay - #where trimming keeps placeholders aligned")
+    void testRenderDisplayWhere() {
+        String display = renderer.renderDisplay(
+            parser.parse("SELECT * FROM t {{#where}}  AND a = {{a}} AND b = {{b}}{{/where}}"),
+            Map.of("a", 1, "b", "x"),
+            Object::toString);
+        assertEquals("SELECT * FROM t WHERE a = 1 AND b = x", display);
+    }
+
+    @Test @DisplayName("renderDisplay - reserved NUL marker is rejected")
+    void testRenderDisplayRejectsReservedMarker() {
+        assertThrows(TemplateRenderException.class, () -> renderer.renderDisplay(
+            parser.parse("SELECT '\u0000' FROM t"), Map.of(), Object::toString));
+        assertThrows(TemplateRenderException.class, () -> renderer.render(
+            parser.parse("SELECT '\u0000' FROM t"), Map.of()));
+    }
 }

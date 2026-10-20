@@ -16,6 +16,8 @@ public interface TermRelationDAO extends JpaRepository<TermRelationPO, String> {
 
     Optional<TermRelationPO> findByTermIdAndTableIdAndFieldName(String termId, String tableId, String fieldName);
 
+    Optional<TermRelationPO> findByTermIdAndTableIdAndFieldNameIsNull(String termId, String tableId);
+
     List<TermRelationPO> findByTermIdAndTableId(String termId, String tableId);
 
     void deleteByTermId(String termId);

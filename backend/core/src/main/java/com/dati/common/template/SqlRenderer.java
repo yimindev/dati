@@ -6,18 +6,76 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.function.UnaryOperator;
 
 @Component
 public class SqlRenderer {
 
+    /**
+     * Internal marker for a bound placeholder. NUL cannot occur in a valid SQL
+     * template, so a literal '?' in the template text can never be mistaken for
+     * a placeholder. It is replaced before the SQL leaves the renderer.
+     */
+    private static final char PLACEHOLDER = '\u0000';
+
     public PreparedSql render(CompiledTemplate compiled, Map<String, Object> params) {
+        RenderedSql rendered = renderInternal(compiled, params);
+        StringBuilder sql = new StringBuilder(rendered.text().length());
+        int placeholderCount = 0;
+        for (int i = 0; i < rendered.text().length(); i++) {
+            char c = rendered.text().charAt(i);
+            if (c == PLACEHOLDER) {
+                placeholderCount++;
+                sql.append('?');
+            } else {
+                sql.append(c);
+            }
+        }
+        assertPlaceholderCount(placeholderCount, rendered.bindings().size());
+        return new PreparedSql(sql.toString(), rendered.bindings());
+    }
+
+    /**
+     * Renders human-readable SQL by inlining each binding with the given formatter.
+     * DISPLAY ONLY: the result is never executed. Literal '?' in the template text
+     * is preserved because placeholders are tracked with an internal sentinel.
+     */
+    public String renderDisplay(CompiledTemplate compiled, Map<String, Object> params,
+                                UnaryOperator<Object> formatter) {
+        RenderedSql rendered = renderInternal(compiled, params);
+        StringBuilder display = new StringBuilder(rendered.text().length());
+        int bindingIndex = 0;
+        for (int i = 0; i < rendered.text().length(); i++) {
+            char c = rendered.text().charAt(i);
+            if (c != PLACEHOLDER) {
+                display.append(c);
+                continue;
+            }
+            if (bindingIndex >= rendered.bindings().size()) {
+                throw new TemplateRenderException("Placeholder count does not match binding count");
+            }
+            display.append(formatter.apply(rendered.bindings().get(bindingIndex++).value()));
+        }
+        assertPlaceholderCount(bindingIndex, rendered.bindings().size());
+        return display.toString();
+    }
+
+    private void assertPlaceholderCount(int placeholders, int bindings) {
+        if (placeholders != bindings) {
+            throw new TemplateRenderException("Placeholder count does not match binding count");
+        }
+    }
+
+    private RenderedSql renderInternal(CompiledTemplate compiled, Map<String, Object> params) {
         if (!(compiled instanceof ParsedTemplate(List<Node> nodes)))
             throw new IllegalArgumentException("CompiledTemplate must be produced by HandlebarsStyleParser");
         StringBuilder sql = new StringBuilder();
         List<ParamBinding> bindings = new ArrayList<>();
         renderNodes(nodes, params, sql, bindings);
-        return new PreparedSql(sql.toString(), List.copyOf(bindings));
+        return new RenderedSql(sql.toString(), List.copyOf(bindings));
     }
+
+    private record RenderedSql(String text, List<ParamBinding> bindings) {}
 
     private void renderNodes(List<Node> nodes, Map<String, Object> params,
                              StringBuilder sql, List<ParamBinding> bindings) {
@@ -47,11 +105,11 @@ public class SqlRenderer {
             List<?> list = toList(value);
             for (int i = 0; i < list.size(); i++) {
                 if (i > 0) sql.append(", ");
-                sql.append('?');
+                sql.append(PLACEHOLDER);
                 bindings.add(new ParamBinding(v.name(), list.get(i)));
             }
         } else {
-            sql.append('?');
+            sql.append(PLACEHOLDER);
             bindings.add(new ParamBinding(v.name(), value));
         }
     }

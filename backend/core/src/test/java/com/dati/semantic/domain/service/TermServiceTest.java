@@ -36,6 +36,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -136,6 +137,52 @@ class TermServiceTest {
         assertThatThrownBy(() -> termService.linkEntity(termId, TermRelationType.FIELD, tableId, fieldName))
                 .isInstanceOf(DatiException.class)
                 .satisfies(e -> assertThat(((DatiException) e).getCode()).isEqualTo(ErrorCode.INVALID_PARAMETER));
+    }
+
+    @Test
+    @DisplayName("linkEntity - duplicate TABLE-level relation throws INVALID_PARAMETER")
+    void linkEntity_duplicateTableRelation_throwsInvalidParameter() {
+        String termId = "term-001";
+        String tableId = "table-001";
+
+        TermPO term = new TermPO();
+        term.setId(termId);
+        term.setSubjectId("subject-001");
+        term.setName("客户");
+
+        when(termDAO.findById(termId)).thenReturn(Optional.of(term));
+        when(subjectTableDAO.existsBySubjectIdAndTableId("subject-001", tableId)).thenReturn(true);
+        when(termRelationDAO.findByTermIdAndTableIdAndFieldNameIsNull(termId, tableId))
+                .thenReturn(Optional.of(new TermRelationPO()));
+
+        assertThatThrownBy(() -> termService.linkEntity(termId, TermRelationType.TABLE, tableId, null))
+                .isInstanceOf(DatiException.class)
+                .satisfies(e -> assertThat(((DatiException) e).getCode()).isEqualTo(ErrorCode.INVALID_PARAMETER));
+        verify(termRelationDAO, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("linkEntity - TABLE and FIELD relations on the same table can coexist")
+    void linkEntity_tableAndFieldRelations_coexist() {
+        String termId = "term-001";
+        String tableId = "table-001";
+
+        TermPO term = new TermPO();
+        term.setId(termId);
+        term.setSubjectId("subject-001");
+        term.setName("客户");
+
+        when(termDAO.findById(termId)).thenReturn(Optional.of(term));
+        when(subjectTableDAO.existsBySubjectIdAndTableId("subject-001", tableId)).thenReturn(true);
+        when(termRelationDAO.findByTermIdAndTableIdAndFieldNameIsNull(termId, tableId))
+                .thenReturn(Optional.empty());
+
+        termService.linkEntity(termId, TermRelationType.TABLE, tableId, null);
+
+        ArgumentCaptor<TermRelationPO> captor = ArgumentCaptor.forClass(TermRelationPO.class);
+        verify(termRelationDAO).save(captor.capture());
+        assertThat(captor.getValue().getEntityType()).isEqualTo(TermRelationType.TABLE);
+        assertThat(captor.getValue().getFieldName()).isNull();
     }
 
     @Test

@@ -21,6 +21,7 @@
 #   MCP_TOKEN      JWT or user API key (sk_...) - Authorization: Bearer <token>
 #   MCP_DS_ID      data source id for execute_sql tool call (optional)
 #   MCP_TOOL_NAME  custom tool name for tools/call demo (optional, default test-env.yaml mcp.tool_name)
+#   MCP_TOOL_ARG   tool argument for tools/call demo (optional, default genre_name=Rock)
 #   MCP_PROMPT     prompt name for prompts/get (optional, default test-env.yaml mcp.prompt)
 #   MCP_PROXY_PORT conformance proxy port (optional, default test-env.yaml mcp.proxy_port)
 #   MCP_BASELINE   conformance expected-failures baseline (default <repo>/e2e-tests/conformance/baseline.yml)
@@ -38,12 +39,14 @@ if command -v yq &>/dev/null && [ -f "$ENV_FILE" ]; then
     MCP_BASE_URL="${MCP_BASE_URL:-$(yq -r '.server.base_url' "$ENV_FILE")}"
     MCP_CODE="${MCP_CODE:-$(yq -r '.mcp.code' "$ENV_FILE")}"
     MCP_TOOL_NAME="${MCP_TOOL_NAME:-$(yq -r '.mcp.tool_name' "$ENV_FILE")}"
+    MCP_TOOL_ARG="${MCP_TOOL_ARG:-genre_name=Rock}"
     MCP_PROMPT="${MCP_PROMPT:-$(yq -r '.mcp.prompt' "$ENV_FILE")}"
     PROXY_PORT="${MCP_PROXY_PORT:-$(yq -r '.mcp.proxy_port' "$ENV_FILE")}"
 else
     MCP_BASE_URL="${MCP_BASE_URL:-http://localhost:8085}"
     MCP_CODE="${MCP_CODE:-mcp-verify-demo}"
     MCP_TOOL_NAME="${MCP_TOOL_NAME:-list_genres}"
+    MCP_TOOL_ARG="${MCP_TOOL_ARG:-genre_name=Rock}"
     MCP_PROMPT="${MCP_PROMPT:-analyze_genre}"
     PROXY_PORT="${MCP_PROXY_PORT:-18085}"
 fi
@@ -72,7 +75,7 @@ if [ -n "$MCP_DS_ID" ]; then
 fi
 npx -y @modelcontextprotocol/inspector@latest --cli \
   --server-url "$ENDPOINT" --header "Authorization: Bearer $MCP_TOKEN" \
-  --method tools/call --tool-name "$MCP_TOOL_NAME" ${ARGS[@]+"${ARGS[@]}"} --tool-arg "genre=Rock"
+  --method tools/call --tool-name "$MCP_TOOL_NAME" ${ARGS[@]+"${ARGS[@]}"} --tool-arg "$MCP_TOOL_ARG"
 
 echo ""
 echo "==> [3/4] Inspector CLI: prompts/get (${MCP_PROMPT})"

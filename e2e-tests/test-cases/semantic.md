@@ -148,8 +148,11 @@
 
 1. 查找种子数据源 → 创建主题（不删）
 2. 创建术语不填 name → 400
-3. 正常创建术语
-4. 重复添加相同 relation → 应报错（400/409，不能 200）
+3. 正常创建术语，并把 `chinook.e2e.semantic.term_relation.table` 表加入主题
+4. **重复添加相同 relation**：
+   - **FIELD 级**：`entity_type=FIELD` + `fieldName` 添加一次 → 200；再次 POST 相同 body → 400/409，术语详情仍只有 1 条 FIELD 关系
+   - **TABLE 级**：`entity_type=TABLE`、不传 `field_name` 添加一次 → 200；再次 POST 相同 body → 400/409，术语详情仍只有 1 条 TABLE 关系
+   - **TABLE + FIELD 共存**：同一表先建 TABLE 关系再建 FIELD 关系 → 均 200，术语详情 2 条关系（TABLE 查重不得误伤 FIELD）
 5. 删不存在的 relation → 应 404（不能 200）
 6. 给不存在的 termId 加 relation → 404
 7. 更新不存在的术语 → 404

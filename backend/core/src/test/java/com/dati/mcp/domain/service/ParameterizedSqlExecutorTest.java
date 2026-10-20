@@ -11,6 +11,7 @@ import com.dati.db.analysis.TableRef;
 import com.dati.mcp.domain.model.McpToolType;
 import com.dati.mcp.domain.model.ToolConfig;
 import com.dati.mcp.domain.model.ToolError;
+import com.dati.mcp.domain.model.ToolParameter;
 import com.dati.mcp.server.pojo.SqlExecution;
 import com.dati.mcp.server.pojo.ToolTestData;
 import org.junit.jupiter.api.AfterEach;
@@ -39,7 +40,9 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 /**
@@ -79,6 +82,12 @@ class ParameterizedSqlExecutorTest {
         ToolConfig.ParamSqlConfig cfg = new ToolConfig.ParamSqlConfig();
         cfg.setDataSourceId("ds-1");
         cfg.setSqlTemplate(sqlTemplate);
+        return cfg;
+    }
+
+    private ToolConfig.ParamSqlConfig paramSqlConfigWithParams(String sqlTemplate, ToolParameter... parameters) {
+        ToolConfig.ParamSqlConfig cfg = paramSqlConfig(sqlTemplate);
+        cfg.setParameters(List.of(parameters));
         return cfg;
     }
 
@@ -281,6 +290,152 @@ class ParameterizedSqlExecutorTest {
             assertThat(exec.executedSql()).isEqualTo("SELECT * FROM tasks WHERE owner_id = ?");
             assertThat(exec.bindings()).containsExactly("usr-legit");
             verify(stmt).setObject(1, "usr-legit");
+        }
+    }
+
+    @Test
+    @DisplayName("execute - missing required parameter throws PARAM_MISSING before touching the datasource")
+    void execute_missingRequiredParameter_throwsParamMissing() {
+        ToolConfig.ParamSqlConfig cfg = paramSqlConfigWithParams(
+            "SELECT * FROM genre WHERE name = {{genre_name}}",
+            new ToolParameter("genre_name", "String", true, null, null));
+
+        ToolExecutionContext ctx = new ToolExecutionContext(
+            "svc-1", McpToolType.PARAMETERIZED_SQL, cfg, Map.of(), List.of());
+
+        assertThatThrownBy(() -> executor.execute(ctx))
+            .isInstanceOf(ToolExecuteException.class)
+            .satisfies(e -> {
+                ToolExecuteException ex = (ToolExecuteException) e;
+                assertThat(ex.getToolError()).isEqualTo(ToolError.PARAM_MISSING);
+                assertThat(ex.getMessage()).contains("genre_name");
+            });
+        verifyNoInteractions(dataSourceService);
+    }
+
+    @Test
+    @DisplayName("execute - misspelled argument is reported as missing required parameter")
+    void execute_misspelledArgument_throwsParamMissing() {
+        ToolConfig.ParamSqlConfig cfg = paramSqlConfigWithParams(
+            "SELECT * FROM genre WHERE name = {{genre_name}}",
+            new ToolParameter("genre_name", "String", true, null, null));
+
+        ToolExecutionContext ctx = new ToolExecutionContext(
+            "svc-1", McpToolType.PARAMETERIZED_SQL, cfg, Map.of("genre", "Rock"), List.of());
+
+        assertThatThrownBy(() -> executor.execute(ctx))
+            .isInstanceOf(ToolExecuteException.class)
+            .satisfies(e -> assertThat(((ToolExecuteException) e).getToolError())
+                .isEqualTo(ToolError.PARAM_MISSING));
+        verifyNoInteractions(dataSourceService);
+    }
+
+    @Test
+    @DisplayName("execute - explicit null for required parameter throws PARAM_MISSING")
+    void execute_nullRequiredParameter_throwsParamMissing() {
+        ToolConfig.ParamSqlConfig cfg = paramSqlConfigWithParams(
+            "SELECT * FROM genre WHERE name = {{genre_name}}",
+            new ToolParameter("genre_name", "String", true, null, null));
+
+        Map<String, Object> arguments = new java.util.HashMap<>();
+        arguments.put("genre_name", null);
+        ToolExecutionContext ctx = new ToolExecutionContext(
+            "svc-1", McpToolType.PARAMETERIZED_SQL, cfg, arguments, List.of());
+
+        assertThatThrownBy(() -> executor.execute(ctx))
+            .isInstanceOf(ToolExecuteException.class)
+            .satisfies(e -> assertThat(((ToolExecuteException) e).getToolError())
+                .isEqualTo(ToolError.PARAM_MISSING));
+        verifyNoInteractions(dataSourceService);
+    }
+
+    @Test
+    @DisplayName("execute - required parameter with default_value still requires an argument")
+    void execute_requiredParameterWithDefault_stillThrowsParamMissing() {
+        ToolConfig.ParamSqlConfig cfg = paramSqlConfigWithParams(
+            "SELECT * FROM genre WHERE name = {{genre_name}}",
+            new ToolParameter("genre_name", "String", true, "Rock", null));
+
+        ToolExecutionContext ctx = new ToolExecutionContext(
+            "svc-1", McpToolType.PARAMETERIZED_SQL, cfg, Map.of(), List.of());
+
+        assertThatThrownBy(() -> executor.execute(ctx))
+            .isInstanceOf(ToolExecuteException.class)
+            .satisfies(e -> assertThat(((ToolExecuteException) e).getToolError())
+                .isEqualTo(ToolError.PARAM_MISSING));
+    }
+
+    @Test
+    @DisplayName("execute - missing optional parameter uses default_value")
+    void execute_missingOptionalParameter_fillsDefaultValue() throws SQLException {
+        when(dataSourceService.getDataSourceInternal("ds-1")).thenReturn(Optional.of(dataSource()));
+        PreparedStatement stmt = mockStatementNoResults();
+        Connection conn = mock(Connection.class);
+        when(conn.prepareStatement(anyString())).thenReturn(stmt);
+
+        ToolConfig.ParamSqlConfig cfg = paramSqlConfigWithParams(
+            "SELECT * FROM genre WHERE name = {{genre_name}}",
+            new ToolParameter("genre_name", "String", false, "Rock", null));
+        ToolExecutionContext ctx = new ToolExecutionContext(
+            "svc-1", McpToolType.PARAMETERIZED_SQL, cfg, Map.of(), List.of());
+
+        try (MockedStatic<HikariPoolManager> hpm = mockStatic(HikariPoolManager.class)) {
+            hpm.when(() -> HikariPoolManager.getConnection(any(JdbcConnector.class))).thenReturn(conn);
+
+            SqlExecution exec = (SqlExecution) executor.execute(ctx);
+
+            assertThat(exec.executedSql()).isEqualTo("SELECT * FROM genre WHERE name = ?");
+            assertThat(exec.bindings()).containsExactly("Rock");
+            verify(stmt).setObject(1, "Rock");
+        }
+    }
+
+    @Test
+    @DisplayName("execute - explicit argument overrides default_value")
+    void execute_explicitArgument_overridesDefaultValue() throws SQLException {
+        when(dataSourceService.getDataSourceInternal("ds-1")).thenReturn(Optional.of(dataSource()));
+        PreparedStatement stmt = mockStatementNoResults();
+        Connection conn = mock(Connection.class);
+        when(conn.prepareStatement(anyString())).thenReturn(stmt);
+
+        ToolConfig.ParamSqlConfig cfg = paramSqlConfigWithParams(
+            "SELECT * FROM genre WHERE name = {{genre_name}}",
+            new ToolParameter("genre_name", "String", false, "Jazz", null));
+        ToolExecutionContext ctx = new ToolExecutionContext(
+            "svc-1", McpToolType.PARAMETERIZED_SQL, cfg, Map.of("genre_name", "Rock"), List.of());
+
+        try (MockedStatic<HikariPoolManager> hpm = mockStatic(HikariPoolManager.class)) {
+            hpm.when(() -> HikariPoolManager.getConnection(any(JdbcConnector.class))).thenReturn(conn);
+
+            SqlExecution exec = (SqlExecution) executor.execute(ctx);
+
+            assertThat(exec.bindings()).containsExactly("Rock");
+            verify(stmt).setObject(1, "Rock");
+            verify(stmt, never()).setObject(1, "Jazz");
+        }
+    }
+
+    @Test
+    @DisplayName("execute - Number default_value is converted to a numeric binding")
+    void execute_numberDefault_convertedToNumber() throws SQLException {
+        when(dataSourceService.getDataSourceInternal("ds-1")).thenReturn(Optional.of(dataSource()));
+        PreparedStatement stmt = mockStatementNoResults();
+        Connection conn = mock(Connection.class);
+        when(conn.prepareStatement(anyString())).thenReturn(stmt);
+
+        ToolConfig.ParamSqlConfig cfg = paramSqlConfigWithParams(
+            "SELECT * FROM genre WHERE genreid = {{id}}",
+            new ToolParameter("id", "Number", false, "7", null));
+        ToolExecutionContext ctx = new ToolExecutionContext(
+            "svc-1", McpToolType.PARAMETERIZED_SQL, cfg, Map.of(), List.of());
+
+        try (MockedStatic<HikariPoolManager> hpm = mockStatic(HikariPoolManager.class)) {
+            hpm.when(() -> HikariPoolManager.getConnection(any(JdbcConnector.class))).thenReturn(conn);
+
+            SqlExecution exec = (SqlExecution) executor.execute(ctx);
+
+            assertThat(exec.bindings()).containsExactly(7L);
+            verify(stmt).setObject(1, 7L);
         }
     }
 

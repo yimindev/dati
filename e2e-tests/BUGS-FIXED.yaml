@@ -363,3 +363,52 @@ bugs:
     fixed_at: 2026-08-25
     description: |
       TC-PM-012/013/015 前置步骤复现：POST /v1/data-sources/{id}/tables/batch 传 [{"name":"artist"}]（不传 schema）→ 500 CM003 Internal server error，表未添加。openapi AddTableRequest.schema 非 required；TableService.batchAddTables 直接传 tables.getFirst().getSchema()（null）给 jdbcMetaService.getTables → dbClient.getTables 无法处理 null schema 抛异常。传 schema:public 则 200 正常。建议：schema 缺省时回退数据源 default_schema（BUG-013 已自动探测），或至少返回 400 友好错误。
+  - id: BUG-20261019-001
+    title: 模板预览显示 SQL 按 replaceFirst 逐个替换 '?'，模板文本含字面问号时替换错位
+    module: MCP 服务管理
+    severity: medium
+    fixed_at: 2026-10-20
+    description: |
+      复现（POST /v1/template/preview, mode=SQL）：
+      1) template="SELECT * FROM track WHERE name LIKE '%?%' AND genreid = {{g}}", values={g:1}
+         → rendered="SELECT * FROM track WHERE name LIKE '%1%' AND genreid = ?"（'?' 未被替换，字面 %?% 反被写成 %1%）
+      2) template="SELECT * FROM t WHERE data ? 'key' AND name = {{n}} AND id = {{i}}", values={n:'x', i:7}
+         → rendered="SELECT * FROM t WHERE data 'x' 'key' AND name = 7 AND id = ?"（PostgreSQL JSONB ? 运算符被吃掉，绑定值整体错位）
+      期望：rendered 应为 "... LIKE '%?%' AND genreid = 1" / "... data ? 'key' AND name = 'x' AND id = 7"。
+      根因：TemplatePreviewController.toDisplaySql 用 sql.replaceFirst("\\?") 循环替换，按字符串首次出现位置匹配，而 PreparedSql 的占位符只对应 VarNode 产生的 '?'；模板文本里的字面 '?'（PostgreSQL JSONB ? 运算符、LIKE '%?%'、普通文本问号）会被优先命中。
+      影响：预览给用户一段错误的 SQL（显示用，不会被执行），用户对照/复制时会得到与真实执行结果不一致的语句。
+      建议：改为按编译期 AST/绑定位置生成展示 SQL（SqlRenderer 一并返回变量在 SQL 中的位置），或渲染时用不可碰撞的临时占位符（如 \u0000）再按顺序替换，并对模板文本中的 '?' 做区分。需补单测覆盖上述两种模板。
+  - id: BUG-20261019-002
+    title: 模板预览字符串值未转义单引号，rendered 生成非法 SQL
+    module: MCP 服务管理
+    severity: low
+    fixed_at: 2026-10-20
+    description: |
+      复现：POST /v1/template/preview {"mode":"SQL","template":"SELECT * FROM artist WHERE name = {{name}}","values":{"name":"O'Brien"}}
+      → rendered="SELECT * FROM artist WHERE name = 'O'Brien'"（单引号未转义，SQL 语法错误）。
+      期望：rendered 中字符串值应转义为 'O''Brien'（或 \'），保证展示 SQL 可被直接复制执行。
+      根因：TemplatePreviewController.formatValue 仅做 "'"+s+"'" 拼接，未对 s 内的单引号做转义。
+      影响：仅影响预览展示（该 SQL 不执行），但用户复制到 SQL 客户端会报语法错误，同时误导判断输入是否合法。
+      建议：formatValue 对 String 内的单引号做 SQL 标准转义（s.replace("'", "''")），并补单测。
+  - id: BUG-20261019-005
+    title: 重复添加 TABLE 级术语关联返回 200 并产生重复关系（FIELD 级有唯一约束，TABLE 级无）
+    module: 语义层-术语管理
+    severity: medium
+    fixed_at: 2026-10-20
+    description: |
+      TC-SEM-007：同一术语对同一表重复 POST /v1/terms/{id}/relations（entity_type=TABLE，不传 field_name）两次均返回 200，术语详情出现 2 条完全相同的 TABLE 关系；而 FIELD 级重复会返回 400 'Term relation already exists'。原因：唯一约束 UK_TERM_RELATION(term_id, table_id, field_name) 对 NULL field_name 不生效（NULL != NULL），服务层也未做 TABLE 级存在性校验。用例约束要求『同一术语下同表只能一条 TABLE 关系』，需在服务层按 field_name IS NULL 做存在性判断。
+  - id: BUG-20261019-015
+    title: PARAMETERIZED_SQL 工具的 required/default_value 仅在 inputSchema 声明，tools/call 运行时既不校验也不填充，缺参静默绑定 NULL
+    module: MCP Endpoint
+    severity: medium
+    fixed_at: 2026-10-20
+    description: |
+      探索发现（TC-END-003/TC-END-011 附带）：
+      复现：MCP 服务（code=e2e-end-main，v7）自定义工具 list_genres（PARAMETERIZED_SQL，parameters=[{name:genre_name,type:STRING,required:true}]），tools/list 的 inputSchema 正确输出 required=["genre_name"]；
+      ① tools/call params={name:list_genres, arguments:{}} → HTTP 200、result.isError=false、structuredContent.executed_sql="SELECT * FROM genre WHERE name = ?"、bindings=[null]、rows=[]（无任何错误提示）
+      ② 传错参数名 arguments={genre:"Rock"} 同样 isError=false + bindings=[null]
+      ③ default_value 同样不生效：工具 probe_default 的 parameters=[{name:genre_name,required:false,default_value:"Rock"}]，schema 输出 properties.genre_name.default="Rock"，但 arguments={} 时 bindings=[null]、rows=[]（默认值未填充）
+      期望：缺必填参数应返回 isError=true（与预置工具一致，PARAM_INVALID/PARAM_MISSING，供 LLM 自纠错），或至少按 default_value 填充后再渲染。
+      根因：ParameterizedSqlExecutor.execute 仅把 ctx.argumentsMap() 合并系统变量后交给 SqlRenderer，未遍历 config.getParameters() 校验 isRequired()，也未把 ToolParameter.defaultValue 回填进渲染上下文（ToolParameter.getDefaultValue 全项目仅被 ToolDefinitionConverter 用于生成 JSON Schema 的 default 字段）。
+      影响：inputSchema 声明的契约与实际执行不一致；LLM 用缺失/拼错参数名调用时拿到「空结果集 + 无错误」，会误判业务数据为空而无法自纠错；参数默认值形同虚设。
+      建议：ParameterizedSqlExecutor 渲染前按 config.parameters 做 required 校验（缺失 → ToolExecuteException PARAM_MISSING → isError=true），并缺失时用 defaultValue 回填；补充单测覆盖缺参/默认值/参数名拼错三种场景。

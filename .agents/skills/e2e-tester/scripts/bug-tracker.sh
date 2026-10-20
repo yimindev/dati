@@ -112,7 +112,10 @@ cmd_fix() {
     local entry
     entry=$(awk -v id="$id" '
         $0 ~ "id: " id { found=1; print; next }
-        found { print; if ($0 ~ /^  - id:|^bugs:/) found=0 }
+        found {
+            if ($0 ~ /^  - id:|^bugs:/) { found=0; next }
+            print
+        }
     ' "$BUGS_FILE")
 
     # 从 BUGS.yaml 中删除
@@ -156,8 +159,11 @@ cmd_regress() {
     # 从 FIXED 移到 BUGS，标记回归
     local entry
     entry=$(awk -v id="$id" '
-        $0 ~ "id: " id { found=1 }
-        found { print; if ($0 ~ /^  - id:|^bugs:/) found=0 }
+        $0 ~ "id: " id { found=1; print; next }
+        found {
+            if ($0 ~ /^  - id:|^bugs:/) { found=0; next }
+            print
+        }
     ' "$FIXED_FILE")
 
     # 从 FIXED 删除

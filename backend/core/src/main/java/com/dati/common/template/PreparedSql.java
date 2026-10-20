@@ -8,6 +8,10 @@ import java.util.List;
  * <p>
  * The consumer is responsible for obtaining a {@link java.sql.PreparedStatement}
  * and calling {@code setXxx(index, binding.value())} for each binding.
+ * <p>
+ * For display SQL (never executed), use {@link SqlRenderer#renderDisplay} instead of
+ * string-replacing '?' in {@code sql}: template text may contain literal '?' characters
+ * (e.g. {@code LIKE '%?%'} or PostgreSQL's JSONB {@code ?} operator).
  */
 public record PreparedSql(String sql, List<ParamBinding> bindings) {
     public static PreparedSql of(String sql) {

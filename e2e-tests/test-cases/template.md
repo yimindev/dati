@@ -61,3 +61,29 @@
    - `rendered` 中 `owner = '...'` 的值为当前登录用户的真实 `id`（而不是传入的 `fake_hacker_id`，系统参数强制覆盖）
    - `rendered` 中 `name = '...'` 包含当前登录用户的真实 `name`
    - `rendered` 中 `status = 'open'`
+
+---
+
+## TC-TPL-005 模板预览：字面问号与引号转义
+**级别：** P1
+**前置：** 已登录
+
+> 预览 SQL 仅用于展示（不执行），但必须与真实执行语句一致，且可被用户直接复制。
+
+1. **字面 `?`（LIKE 模式）**：`POST /v1/template/preview`
+   ```json
+   {"mode":"SQL","template":"SELECT * FROM track WHERE name LIKE '%?%' AND genreid = {{g}}","values":{"g":1}}
+   ```
+   - 200；`rendered` == `SELECT * FROM track WHERE name LIKE '%?%' AND genreid = 1`（字面 `?` 保留，绑定值落在真正的占位符）
+2. **字面 `?`（PostgreSQL JSONB 运算符）**：
+   ```json
+   {"mode":"SQL","template":"SELECT * FROM t WHERE data ? 'key' AND name = {{n}} AND id = {{i}}","values":{"n":"x","i":7}}
+   ```
+   - 200；`rendered` == `SELECT * FROM t WHERE data ? 'key' AND name = 'x' AND id = 7`（`?` 运算符不被吃掉，绑定值不错位）
+3. **数组与字面 `?` 混用**：template=`SELECT * FROM t WHERE note = '?' AND id IN ({{ids}})`，values=`{"ids":[1,2]}`
+   - `rendered` == `SELECT * FROM t WHERE note = '?' AND id IN (1, 2)`
+4. **字符串单引号转义**：
+   ```json
+   {"mode":"SQL","template":"SELECT * FROM artist WHERE name = {{name}}","values":{"name":"O'Brien"}}
+   ```
+   - `rendered` == `SELECT * FROM artist WHERE name = 'O''Brien'`（SQL 标准转义，复制后可执行）

@@ -801,7 +801,7 @@ StatementResult.writeFailure(errorMessage)           // WRITE 失败
 
 - 预置工具参数以 record（`param` 包）+ 注解声明，`McpParameterSchemaGenerator`（victools 4.38.0：jsonschema-generator / jsonschema-module-jackson / jsonschema-module-jakarta-validation）生成 `tools/list` inputSchema，`ToolParameterBinder`（Jakarta Validation）做运行时校验 —— 同一份注解，schema 与校验不可能漂移
 - GET_TABLE_INFO 采用 decision 12：`data_source_id` 在每个 `tables[]` 项内（支持一次跨多数据源查询）
-- 校验失败统一 `PARAM_INVALID`；validator 固定英文 locale（错误消息对 LLM 客户端确定性）；动态工具（PARAMETERIZED_SQL）无 record 契约，原始 Map 透传
+- 校验失败统一 `PARAM_INVALID`；validator 固定英文 locale（错误消息对 LLM 客户端确定性）；动态工具（PARAMETERIZED_SQL）无 record 契约，原始 Map 透传，由 `ParameterizedSqlExecutor` 按 `parameters` 做必填校验与默认值回填
 - `ToolExecutionContext.arguments` 由 `Map<String,Object>` 改为 `Object`：预置工具为绑定后 record（`args(Class)` 访问），动态工具为原始 Map（`argumentsMap()` 访问）
 
 #### 元数据更新工具（写共享元数据）
@@ -840,6 +840,13 @@ StatementResult.writeFailure(errorMessage)           // WRITE 失败
 - `ToolParameter.type` 支持 `DateTime`。前端 `el-date-picker type="datetime"`。
 - 后端 `DateTimeUtils.parseDateTime()` 处理 3 种 ISO 8601 格式 → `LocalDateTime` 用于 PreparedStatement 绑定。
 - 解析失败时记录 WARN 日志，原始字符串原样传给 JDBC（不阻断执行）。
+
+#### 参数化工具运行时校验必填参数并填充默认值
+
+- `tools/call` 渲染前遍历 `ParamSqlConfig.parameters`：缺失（含显式 null）且 `required=true` → `ToolExecuteException(PARAM_MISSING)` → `CallToolResult(isError=true)`，供 LLM 自纠错；参数名拼错同样按缺必填处理。
+- 非必填参数缺失且配置了 `defaultValue` 时按 Type 转换后回填（String/DateTime 原样、Number→Long/BigDecimal、Boolean→Boolean、Array→逗号分隔列表）；显式传参优先于默认值。
+- 系统变量（`_user.*` / `_now` / `_date`）最后注入，始终覆盖客户端同名参数，且不要求客户端传值。
+- 校验规则与 `tools/list` 的 `inputSchema.required/default` 契约一致；管理端 `/tools/{id}/test` 与 MCP Endpoint 走同一 `ParameterizedSqlExecutor`，行为一致。
 
 #### confirmRequired 已移除
 

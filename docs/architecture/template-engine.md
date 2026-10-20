@@ -43,7 +43,9 @@ CompiledTemplate (AST: List<Node>)
     │
     ├──► TextRenderer.render() → String
     │
-    └──► SqlRenderer.render()  → PreparedSql(sql, bindings)
+    ├──► SqlRenderer.render()  → PreparedSql(sql, bindings)   // 执行用
+    │
+    └──► SqlRenderer.renderDisplay() → String                  // 预览展示用（内联绑定值）
 ```
 
 ## 语法支持（V1）
@@ -77,6 +79,7 @@ CompiledTemplate (AST: List<Node>)
 5. **不缓存 CompiledTemplate**：模板规模小，解析耗时远低于 DB IO。
 6. **PreparedSql 不碰 JDBC**：消费方自行 `prepareStatement()` + 遍历 bindings 绑定。
 7. **`{{#where}}` 智能行为仅限 SQL 模式**：Text 模式下只输出 body 内容，不处理 WHERE 前缀和 AND/OR 裁剪。
+8. **预览展示 SQL 与执行 SQL 同源**：`render()` 内部用哨兵 `\u0000` 标记绑定占位符，收尾时替换为 `?`；`renderDisplay()` 在收尾前按绑定顺序内联格式化值。模板文本中的字面 `?`（`LIKE '%?%'`、PostgreSQL JSONB `?` 运算符）不会被误当作占位符，展示结果与真实执行语句一致。
 
 ## 错误处理
 

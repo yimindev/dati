@@ -269,3 +269,28 @@
 11. **边界验证（非授权 Schema）**：MCP `execute_sql` 执行 `SELECT * FROM public.genre`
     - `result.isError`=true，错误信息含 `SCOPE_ERROR` / `not in scope`（`public` 未在 `allowed_schemas` 且未导入）。
 12. **清理**：删除 MCP 服务；删除专用数据源（级联清理 `table_info`/`column_info`/ES）；用 psql 执行 `schema_scope.cleanup_sql`。
+
+---
+
+## TC-END-016 参数化 SQL 必填参数与默认值运行时校验
+**级别：** P1
+**前置：** 已登录，种子数据源已就绪
+**数据：** `chinook.e2e.seeded_datasource_name`
+
+> **回归锚点**：`tools/list` 的 `inputSchema.required` / `default` 必须与 `tools/call` 运行时行为一致。缺必填参数或参数名拼错返回 `isError=true`（PARAM_ERROR），供 LLM 自纠错；未传非必填参数时按 `default_value` 回填。
+
+1. **准备服务与工具**：
+   - 创建 MCP 服务（携带 `data_scopes` 绑定种子数据源）
+   - 创建自定义工具 `req_genre`（`tool_type`=PARAMETERIZED_SQL，`config` 为 JSON 字符串）：
+     - `sql_template`: `SELECT * FROM genre WHERE name = {{genre_name}}`
+     - `parameters`: `[{"name":"genre_name","type":"String","required":true}]`
+   - 创建自定义工具 `default_genre`（`tool_type`=PARAMETERIZED_SQL）：
+     - `sql_template`: `SELECT * FROM genre WHERE name = {{genre_name}}`
+     - `parameters`: `[{"name":"genre_name","type":"String","required":false,"default_value":"Rock"}]`
+   - 发布服务（`POST /v1/mcp-services/{id}/publish`）
+2. **tools/list 契约**：`req_genre` 的 `inputSchema.required` 含 `genre_name`；`default_genre` 的 `inputSchema.properties.genre_name.default` == `Rock`
+3. **缺必填参数**：`tools/call` params `{name:"req_genre", arguments:{}}` → HTTP 200，`result.isError`==true，`result.content[0].text` 含 `genre_name`（PARAM_MISSING，非 JSON-RPC error）
+4. **参数名拼错**：`tools/call` params `{name:"req_genre", arguments:{"genre":"Rock"}}` → `result.isError`==true，`result.content[0].text` 含 `genre_name`
+5. **默认值生效**：`tools/call` params `{name:"default_genre", arguments:{}}` → `result.isError`==false；`structuredContent.executed_sql` == `SELECT * FROM genre WHERE name = ?`；`structuredContent.bindings` == `["Rock"]`；rows 含 `Rock`
+6. **显式参数覆盖默认值**：`tools/call` params `{name:"default_genre", arguments:{"genre_name":"Jazz"}}` → `structuredContent.bindings` == `["Jazz"]`；rows 含 `Jazz`
+7. 删除服务（清理）

@@ -198,6 +198,74 @@ class TemplatePreviewControllerTest {
                 .andExpect(jsonPath("$.rendered").value("SELECT * FROM tasks WHERE status IN ('active', 'pending')"));
     }
 
+    @Test
+    @DisplayName("SQL - literal '?' in template text is not replaced (LIKE pattern)")
+    void testSqlLiteralQuestionMarkInLike() throws Exception {
+        Map<String, Object> body = Map.of(
+                "mode", "SQL",
+                "template", "SELECT * FROM track WHERE name LIKE '%?%' AND genreid = {{g}}",
+                "values", Map.of("g", 1)
+        );
+
+        mockMvc.perform(post("/v1/template/preview")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(body)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.rendered").value(
+                        "SELECT * FROM track WHERE name LIKE '%?%' AND genreid = 1"));
+    }
+
+    @Test
+    @DisplayName("SQL - PostgreSQL JSONB '?' operator does not shift bindings")
+    void testSqlJsonbQuestionOperator() throws Exception {
+        Map<String, Object> body = Map.of(
+                "mode", "SQL",
+                "template", "SELECT * FROM t WHERE data ? 'key' AND name = {{n}} AND id = {{i}}",
+                "values", Map.of("n", "x", "i", 7)
+        );
+
+        mockMvc.perform(post("/v1/template/preview")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(body)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.rendered").value(
+                        "SELECT * FROM t WHERE data ? 'key' AND name = 'x' AND id = 7"));
+    }
+
+    @Test
+    @DisplayName("SQL - literal '?' before an array keeps array bindings aligned")
+    void testSqlLiteralQuestionMarkWithArray() throws Exception {
+        Map<String, Object> body = Map.of(
+                "mode", "SQL",
+                "template", "SELECT * FROM t WHERE note = '?' AND id IN ({{ids}})",
+                "values", Map.of("ids", List.of(1, 2))
+        );
+
+        mockMvc.perform(post("/v1/template/preview")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(body)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.rendered").value(
+                        "SELECT * FROM t WHERE note = '?' AND id IN (1, 2)"));
+    }
+
+    @Test
+    @DisplayName("SQL - single quote in string value is SQL-escaped")
+    void testSqlSingleQuoteEscaped() throws Exception {
+        Map<String, Object> body = Map.of(
+                "mode", "SQL",
+                "template", "SELECT * FROM artist WHERE name = {{name}}",
+                "values", Map.of("name", "O'Brien")
+        );
+
+        mockMvc.perform(post("/v1/template/preview")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(body)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.rendered").value(
+                        "SELECT * FROM artist WHERE name = 'O''Brien'"));
+    }
+
     // ===== SQL 模式 — {{{var}}} 原始变量 =====
 
     @Test

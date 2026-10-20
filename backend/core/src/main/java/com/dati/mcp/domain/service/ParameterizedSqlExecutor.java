@@ -22,9 +22,11 @@ import com.dati.mcp.server.pojo.ToolTestData;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
+import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -61,8 +63,7 @@ public class ParameterizedSqlExecutor implements ToolExecutor {
         String dsId = config.getDataSourceId();
 
         CompiledTemplate compiled = templateParser.parse(config.getSqlTemplate());
-        Map<String, Object> params = new HashMap<>(ctx.argumentsMap());
-        params.putAll(systemVariableResolver.resolve());
+        Map<String, Object> params = resolveParameters(config, ctx.argumentsMap());
         PreparedSql prepared = sqlRenderer.render(compiled, params);
         String sql = prepared.sql();
 
@@ -106,5 +107,54 @@ public class ParameterizedSqlExecutor implements ToolExecutor {
 
         return new SqlExecution(sql, results, prepared.bindings().stream()
             .map(ParamBinding::value).toList());
+    }
+
+    /**
+     * Validates required business parameters and fills configured default values.
+     * System variables are resolved server-side and always win over client arguments,
+     * so they are merged last and never required from the caller.
+     */
+    private Map<String, Object> resolveParameters(ParamSqlConfig config, Map<String, Object> arguments) {
+        Map<String, Object> params = new HashMap<>(arguments);
+        for (ToolParameter parameter : config.getParameters()) {
+            String name = parameter.getName();
+            if (name == null || SystemVariableResolver.isSystemVariable(name)) continue;
+            if (params.get(name) != null) continue;
+            if (parameter.isRequired()) {
+                throw new ToolExecuteException(ToolError.PARAM_MISSING, name);
+            }
+            if (parameter.getDefaultValue() != null) {
+                params.put(name, toTypedDefault(parameter));
+            }
+        }
+        params.putAll(systemVariableResolver.resolve());
+        return params;
+    }
+
+    private Object toTypedDefault(ToolParameter parameter) {
+        String raw = parameter.getDefaultValue();
+        return switch (parameter.getType() == null ? "" : parameter.getType()) {
+            case "Number" -> toNumber(parameter.getName(), raw);
+            case "Boolean" -> Boolean.parseBoolean(raw);
+            case "Array" -> Arrays.stream(raw.split(","))
+                .map(String::trim)
+                .filter(value -> !value.isEmpty())
+                .toList();
+            default -> raw; // String / DateTime (DateTime is converted before JDBC binding)
+        };
+    }
+
+    private Object toNumber(String name, String raw) {
+        String trimmed = raw.trim();
+        try {
+            return Long.valueOf(trimmed);
+        } catch (NumberFormatException ignored) {
+            try {
+                return new BigDecimal(trimmed);
+            } catch (NumberFormatException e) {
+                throw new ToolExecuteException(ToolError.PARAM_INVALID,
+                    "Invalid default value for parameter '" + name + "': " + raw);
+            }
+        }
     }
 }
