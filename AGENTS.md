@@ -14,6 +14,7 @@ This file guides agentic coding assistants working on the DatI repository.
 2. **Write a detailed test suite as you add more features.** The test must be re-executed at every major change.
 3. **Stage new files to git before running tests.** Uncommitted changes make it harder to verify what was added or modified.
 4. **English in code, Chinese in docs.** Log messages, test `@DisplayName`, console output, and comments use English; Chinese is reserved for user-facing text (i18n) and PRD docs.
+5. **No backward compatibility during beta.** Unless explicitly required, do not support historical data, legacy APIs/fields, or old behavior; no migrations or compatibility shims. Prefer the cleanest design.
 
 ## Commands
 
