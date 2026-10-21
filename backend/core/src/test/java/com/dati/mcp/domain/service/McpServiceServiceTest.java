@@ -19,6 +19,7 @@ import com.dati.mcp.repository.dao.McpServiceSnapshotDAO;
 import com.dati.mcp.repository.po.McpServiceDataScopePO;
 import com.dati.mcp.repository.po.McpServicePO;
 import com.dati.permission.domain.model.PrincipalType;
+import com.dati.permission.domain.model.ResourceType;
 import com.dati.permission.domain.service.PermissionService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -474,6 +475,8 @@ class McpServiceServiceTest {
             verify(customToolDAO).deleteAllByServiceId(TestFixtures.TEST_MCP_SERVICE_ID);
             verify(promptDAO).deleteAllByServiceId(TestFixtures.TEST_MCP_SERVICE_ID);
             verify(mcpServiceDAO).deleteById(TestFixtures.TEST_MCP_SERVICE_ID);
+            verify(permissionService).onResourceDeleted(
+                    ResourceType.MCP_SERVICE, TestFixtures.TEST_MCP_SERVICE_ID);
         }
 
         @Test

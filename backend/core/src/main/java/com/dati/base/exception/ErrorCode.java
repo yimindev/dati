@@ -67,6 +67,7 @@ public enum ErrorCode {
     AUTH_KEY_FORBIDDEN("AUTH005", 403, "Cannot operate on API key of another user"),
     AUTH_KEY_INVALID_EXPIRY("AUTH006", 400, "expiresInDays must be one of 7/30/90/180/365"),
     AUTH_GUEST_DISABLED("AUTH007", 403, "Guest access is disabled"),
+    AUTH_KEY_OWNER_INVALID("AUTH008", 403, "API keys can only be created for registered user accounts"),
 
     // ── Permission module (PM) ───────────────────────────
 

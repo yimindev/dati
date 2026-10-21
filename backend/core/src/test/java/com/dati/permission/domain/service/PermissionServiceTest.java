@@ -10,6 +10,7 @@ import com.dati.mcp.repository.dao.McpServiceDAO;
 import com.dati.mcp.repository.po.McpServicePO;
 import com.dati.permission.domain.model.Permission;
 import com.dati.permission.domain.model.ResourceType;
+import com.dati.permission.repository.dao.ResourceAclDAO;
 import com.dati.semantic.repository.dao.SubjectDAO;
 import com.dati.semantic.repository.po.SubjectPO;
 import org.junit.jupiter.api.AfterEach;
@@ -44,12 +45,14 @@ class PermissionServiceTest {
     private SubjectDAO subjectDAO;
     @Mock
     private McpServiceDAO mcpServiceDAO;
+    @Mock
+    private ResourceAclDAO aclDAO;
 
     private PermissionService service;
 
     @BeforeEach
     void setUp() {
-        service = new PermissionService(checker, dataSourceDAO, subjectDAO, mcpServiceDAO, "admin");
+        service = new PermissionService(checker, dataSourceDAO, subjectDAO, mcpServiceDAO, aclDAO, "admin");
         User user = new User();
         user.setId("u-1");
         user.setName("u1");
@@ -60,6 +63,14 @@ class PermissionServiceTest {
     @AfterEach
     void tearDown() {
         RequestContext.clear();
+    }
+
+    @Test
+    @DisplayName("onResourceDeleted - deletes all ACL grants for the resource")
+    void onResourceDeleted_deletesAcls() {
+        service.onResourceDeleted(ResourceType.SUBJECT, "subject-1");
+
+        verify(aclDAO).deleteByResourceTypeAndResourceId(ResourceType.SUBJECT, "subject-1");
     }
 
     @Test

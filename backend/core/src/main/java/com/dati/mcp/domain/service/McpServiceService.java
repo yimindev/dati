@@ -168,6 +168,7 @@ public class McpServiceService {
         customToolDAO.deleteAllByServiceId(serviceId);
         promptDAO.deleteAllByServiceId(serviceId);
         mcpServiceDAO.deleteById(serviceId);
+        permissionService.onResourceDeleted(ResourceType.MCP_SERVICE, serviceId);
     }
 
 }

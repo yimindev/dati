@@ -25,6 +25,8 @@ public interface ColumnInfoDAO extends JpaRepository<ColumnInfoPO, String> {
                                                @Param("keyword") String keyword,
                                                Pageable pageable);
 
+    boolean existsByTableIdAndName(String tableId, String name);
+
     void deleteByTableId(String tableId);
 
     void deleteByTableIdIn(List<String> tableIds);

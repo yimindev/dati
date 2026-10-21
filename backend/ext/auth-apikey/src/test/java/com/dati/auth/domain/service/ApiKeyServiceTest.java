@@ -2,6 +2,7 @@ package com.dati.auth.domain.service;
 
 import com.dati.auth.domain.model.ApiKey;
 import com.dati.auth.repository.dao.ApiKeyRepository;
+import com.dati.auth.repository.dao.UserRepository;
 import com.dati.auth.repository.po.ApiKeyPO;
 import com.dati.base.exception.DatiException;
 import com.dati.base.exception.ErrorCode;
@@ -30,16 +31,19 @@ class ApiKeyServiceTest {
 
     @Mock
     private ApiKeyRepository repository;
+    @Mock
+    private UserRepository userRepository;
 
     private ApiKeyService service;
 
     @BeforeEach
     void setUp() {
-        service = new ApiKeyService(repository);
+        service = new ApiKeyService(repository, userRepository);
     }
 
     @Test
     void createGeneratesSkPrefixedKeyWithMaskAndHash() {
+        when(userRepository.existsById("user-1")).thenReturn(true);
         when(repository.save(any(ApiKeyPO.class))).thenAnswer(inv -> inv.getArgument(0));
 
         ApiKeyService.CreateApiKeyResult result = service.create("user-1", "Claude Desktop", null);
@@ -61,6 +65,7 @@ class ApiKeyServiceTest {
 
     @Test
     void createWithExpirySetsExpiresAt() {
+        when(userRepository.existsById("user-1")).thenReturn(true);
         when(repository.save(any(ApiKeyPO.class))).thenAnswer(inv -> inv.getArgument(0));
 
         ApiKeyService.CreateApiKeyResult result = service.create("user-1", "CI script", 30);
@@ -71,6 +76,7 @@ class ApiKeyServiceTest {
 
     @Test
     void createWithBoundaryExpiryDaysAccepted() {
+        when(userRepository.existsById("user-1")).thenReturn(true);
         when(repository.save(any(ApiKeyPO.class))).thenAnswer(inv -> inv.getArgument(0));
 
         ApiKeyService.CreateApiKeyResult shortKey = service.create("user-1", "short", 7);
@@ -86,6 +92,18 @@ class ApiKeyServiceTest {
                 .isInstanceOf(DatiException.class)
                 .extracting(e -> ((DatiException) e).getCode())
                 .isEqualTo(ErrorCode.AUTH_KEY_INVALID_EXPIRY);
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("create rejects guest identities without a registered user row")
+    void createGuestRejected() {
+        when(userRepository.existsById("guest-abc")).thenReturn(false);
+
+        assertThatThrownBy(() -> service.create("guest-abc", "guest key", null))
+                .isInstanceOf(DatiException.class)
+                .extracting(e -> ((DatiException) e).getCode())
+                .isEqualTo(ErrorCode.AUTH_KEY_OWNER_INVALID);
         verify(repository, never()).save(any());
     }
 

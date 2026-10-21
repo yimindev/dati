@@ -17,6 +17,7 @@ import com.dati.db.HikariPoolManager;
 import com.dati.db.JdbcConnector;
 import com.dati.db.JdbcUtils;
 import com.dati.permission.domain.model.PrincipalType;
+import com.dati.permission.domain.model.ResourceType;
 import com.dati.permission.domain.service.PermissionService;
 import com.dati.semantic.domain.service.SemanticIndexService;
 import org.junit.jupiter.api.AfterEach;
@@ -248,6 +249,8 @@ class DataSourceServiceTest {
             // then
             verify(dataSourceDAO).findById(TestFixtures.TEST_DATASOURCE_ID);
             verify(dataSourceDAO).deleteById(TestFixtures.TEST_DATASOURCE_ID);
+            verify(permissionService).onResourceDeleted(
+                    ResourceType.DATA_SOURCE, TestFixtures.TEST_DATASOURCE_ID);
             mockedHikari.verify(() -> HikariPoolManager.close(any(JdbcConnector.class)));
         }
     }

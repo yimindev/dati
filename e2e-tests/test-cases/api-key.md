@@ -92,3 +92,16 @@
 2. 若已存在同名 key（幂等约定），跳过创建
 3. 将明文保存到本地文件（如 `/tmp/dati_apikey.txt`），供 `mcp-verify.sh` 以 `MCP_TOKEN=<sk_...>` 复用
 4. API Key 不过期（expires_at=null），替代 JWT 作为长期有效的 MCP 验收凭证
+
+---
+
+## TC-AK-010 游客身份禁止创建 API Key
+**级别：** P2
+**前置：** 无
+
+> 游客身份是纯 JWT（`guest-` 前缀，不落 `users` 表），API Key 认证要求 `users` 中存在对应用户，因此游客创建的 key 永远无法通过认证。创建时必须拒绝，避免产生死凭证和脏数据。
+
+1. 调用 `POST /v1/auth/guest` 获取游客 token，确认 `GET /v1/auth/me` 的 `id` 以 `guest-` 开头
+2. 携带该 token 调用 `POST /v1/auth/api-keys`，body `{"name": "e2e-guest-key", "expires_in_days": null}`
+3. 预期返回 **403**，错误码 `AUTH008`（`API keys can only be created for registered user accounts`），响应中**没有** `key` 明文
+4. 用该游客 token 调 `GET /v1/auth/api-keys`，确认列表为空（创建未落库）

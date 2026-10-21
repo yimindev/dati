@@ -103,6 +103,8 @@ WHERE d.createdBy = :userId                      -- owner 分支
 - `GROUP` 主体 V1 仅接受 `ALL_USERS`，且权限仅允许 `VIEW`（全公开只读）
 - `USER` 主体必须真实存在（通过 UserService 校验）
 
+**ACL 生命周期**：删除 `DATA_SOURCE` / `SUBJECT` / `MCP_SERVICE` 时，对应删除路径调用 `PermissionService.onResourceDeleted(type, resourceId)` 级联清理 ACL 行，避免孤儿数据；资源删除后 `GET /v1/acls/{type}/{resourceId}` 因资源不存在返回 404。
+
 **已知设计问题**：grant 返回 ACL 记录 id，revoke 返回资源 id，响应语义不对称（待统一）。
 
 ## 分层与级联权限体系（Cascading Permissions）

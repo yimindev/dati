@@ -3,6 +3,7 @@ package com.dati.semantic.domain.service;
 import com.dati.base.exception.DatiException;
 import com.dati.base.exception.ErrorCode;
 import com.dati.common.StringUtils;
+import com.dati.datasource.repository.dao.ColumnInfoDAO;
 import com.dati.datasource.repository.dao.TableInfoDAO;
 import com.dati.datasource.repository.po.TableInfoPO;
 import com.dati.permission.domain.model.Permission;
@@ -43,18 +44,21 @@ public class TermService {
     private final TermRelationDAO termRelationDAO;
     private final SubjectTableDAO subjectTableDAO;
     private final TableInfoDAO tableInfoDAO;
+    private final ColumnInfoDAO columnInfoDAO;
     private final SemanticIndexService semanticIndexService;
     private final SubjectDAO subjectDAO;
     private final PermissionService permissionService;
 
     public TermService(TermDAO termDAO, TermRelationDAO termRelationDAO,
                        SubjectTableDAO subjectTableDAO, TableInfoDAO tableInfoDAO,
+                       ColumnInfoDAO columnInfoDAO,
                        SemanticIndexService semanticIndexService, SubjectDAO subjectDAO,
                        PermissionService permissionService) {
         this.termDAO = termDAO;
         this.termRelationDAO = termRelationDAO;
         this.subjectTableDAO = subjectTableDAO;
         this.tableInfoDAO = tableInfoDAO;
+        this.columnInfoDAO = columnInfoDAO;
         this.semanticIndexService = semanticIndexService;
         this.subjectDAO = subjectDAO;
         this.permissionService = permissionService;
@@ -150,6 +154,12 @@ public class TermService {
 
         if (!subjectTableDAO.existsBySubjectIdAndTableId(termPO.getSubjectId(), tableId)) {
             throw new DatiException(ErrorCode.SM_TABLE_NOT_IN_SUBJECT, tableId, termPO.getSubjectId());
+        }
+
+        if (entityType == TermRelationType.FIELD
+                && !columnInfoDAO.existsByTableIdAndName(tableId, fieldName)) {
+            throw new DatiException(ErrorCode.SM_TERM_RELATION_INVALID,
+                    "column '" + fieldName + "' does not exist in table " + tableId);
         }
 
         boolean duplicate = fieldName != null

@@ -2,6 +2,7 @@ package com.dati.auth.domain.service;
 
 import com.dati.auth.domain.model.ApiKey;
 import com.dati.auth.repository.dao.ApiKeyRepository;
+import com.dati.auth.repository.dao.UserRepository;
 import com.dati.auth.repository.mapper.ApiKeyMapper;
 import com.dati.auth.repository.po.ApiKeyPO;
 import com.dati.base.exception.DatiException;
@@ -25,9 +26,11 @@ public class ApiKeyService {
     private static final SecureRandom RANDOM = new SecureRandom();
 
     private final ApiKeyRepository apiKeyRepository;
+    private final UserRepository userRepository;
 
-    public ApiKeyService(ApiKeyRepository apiKeyRepository) {
+    public ApiKeyService(ApiKeyRepository apiKeyRepository, UserRepository userRepository) {
         this.apiKeyRepository = apiKeyRepository;
+        this.userRepository = userRepository;
     }
 
     /** Created key with its plaintext; the plaintext is returned only once. */
@@ -37,6 +40,11 @@ public class ApiKeyService {
     public CreateApiKeyResult create(String userId, String name, Integer expiresInDays) {
         if (expiresInDays != null && !ALLOWED_EXPIRY_DAYS.contains(expiresInDays)) {
             throw new DatiException(ErrorCode.AUTH_KEY_INVALID_EXPIRY);
+        }
+        // Guest identities are JWT-only and have no users row, so a key bound to them
+        // could never authenticate. Require a real registered account.
+        if (!userRepository.existsById(userId)) {
+            throw new DatiException(ErrorCode.AUTH_KEY_OWNER_INVALID);
         }
         String plaintext = generatePlaintext();
         ApiKey key = new ApiKey(

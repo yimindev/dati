@@ -158,4 +158,5 @@ unlinkTermRelation(termId, tableId, fieldName, signal?): IdResponse
 6. **数据源名称富集**：`SubjectVO.datasourceName` 由 `SubjectAssembler` 批量解析——`toVO()` 和 `toVOList()` 内部通过 `DataSourceService.getDataSourceNameMap()` 一次查询完成所有 ID→名称映射
 7. **DTO 命名**：后端使用 `camelCase`，前端 API 层转换为 `snake_case`（后端统一按 dev profile 的 snake_case 处理）
 8. **分层权限管控**：主题（`SUBJECT`）作为根资源受 ACL 控制。创建主题需校验关联数据源的 `VIEW` 权限；主题及其子资源（`SubjectTable`、`Term`、`TermRelation`）的读写操作均级联校验所属 `SUBJECT` 的 `VIEW` 或 `EDIT` 权限
+9. **关联目标校验**：FIELD 级术语关联在写入前校验 `(tableId, fieldName)` 存在于平台列元数据，不存在返回 400 `SM004`；TABLE 级关联只校验表属于主题，不做列校验，因此不会误伤 TABLE/FIELD 共存
 

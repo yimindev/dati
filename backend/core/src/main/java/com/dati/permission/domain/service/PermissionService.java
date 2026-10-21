@@ -10,6 +10,7 @@ import com.dati.mcp.repository.dao.McpServiceDAO;
 import com.dati.mcp.repository.po.McpServicePO;
 import com.dati.permission.domain.model.Permission;
 import com.dati.permission.domain.model.ResourceType;
+import com.dati.permission.repository.dao.ResourceAclDAO;
 import com.dati.semantic.repository.dao.SubjectDAO;
 import com.dati.semantic.repository.po.SubjectPO;
 import org.springframework.beans.factory.annotation.Value;
@@ -26,18 +27,26 @@ public class PermissionService {
     private final DataSourceDAO dataSourceDAO;
     private final SubjectDAO subjectDAO;
     private final McpServiceDAO mcpServiceDAO;
+    private final ResourceAclDAO aclDAO;
     private final Set<String> adminUsers;
 
     public PermissionService(PermissionChecker checker,
                              DataSourceDAO dataSourceDAO,
                              SubjectDAO subjectDAO,
                              McpServiceDAO mcpServiceDAO,
+                             ResourceAclDAO aclDAO,
                              @Value("${auth.admin-users:}") String adminUsers) {
         this.checker = checker;
         this.dataSourceDAO = dataSourceDAO;
         this.subjectDAO = subjectDAO;
         this.mcpServiceDAO = mcpServiceDAO;
+        this.aclDAO = aclDAO;
         this.adminUsers = new HashSet<>(Arrays.asList(adminUsers.split(",")));
+    }
+
+    /** Remove all ACL grants after a resource has been deleted. */
+    public void onResourceDeleted(ResourceType type, String resourceId) {
+        aclDAO.deleteByResourceTypeAndResourceId(type, resourceId);
     }
 
     /** 全局管理员按用户名（登录名）配置，如 auth.admin-users: admin。 */

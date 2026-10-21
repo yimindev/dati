@@ -428,3 +428,27 @@ bugs:
     description: |
       TC-SEM-008 探索：GET /v1/subjects?keyword=%25（即 '%'）与 keyword=_ 均返回 total=4（全部主题），keyword 被直接拼进 LIKE 模式而未转义 %/_，用户搜索含下划线或百分号的名称时会得到全量结果。建议转义为 \% / \_ 或使用 ESCAPE 子句。
       修复：管理端全部 keyword 查询（Subject/Term/SubjectTable/TableInfo/ColumnInfo/DataSource/McpService）由 SQL LIKE 改为 LOCATE 字面匹配，`%`/`_` 不再作为通配符；ID 前缀匹配改为 `locate(lower(:keyword), lower(id)) = 1`。验证：@DataJpaTest 覆盖 `%`/`_` 字面匹配；真实后端 curl 验证主题/术语/表/列/数据源/MCP 服务列表 `keyword=%25` 返回 0、`keyword=_` 仅命中包含下划线的记录。
+  - id: BUG-20261019-006
+    title: FIELD 级术语关联不校验列是否存在，可关联到不存在的列名
+    module: 语义层-术语管理
+    severity: low
+    fixed_at: 2026-10-21
+    description: |
+      TC-SEM-007 探索：POST /v1/terms/{id}/relations，entity_type=FIELD，table_id 为真实表、field_name 传不存在列名（如 ghost_col_abc）返回 200 并落库；术语详情返回 entity_type=FIELD / table_name=artist / field_name=ghost_col_xyz 的脏关系，无任何校验（对比：不传 field_name 会正确返回 400 'fieldName is required'）。建议校验 (table_id, field_name) 存在于该表列元数据中。
+      修复：TermService.linkEntity 对 FIELD 级关联增加 (tableId, fieldName) 列存在性校验（ColumnInfoDAO.existsByTableIdAndName），不存在返回 400 SM004；TABLE 级跳过列校验，TABLE/FIELD 共存不受影响。验证：TermServiceTest 覆盖幽灵列/合法列/TABLE 跳过校验；真实后端 curl 验证 ghost_col_xyz → 400 SM004，合法列 name → 200。
+  - id: BUG-20261019-012
+    title: 删除数据源/主题/MCP 服务后 ACL 授权记录未级联清理，RESOURCE_ACL 残留孤儿行
+    module: 权限-资源授权
+    severity: low
+    fixed_at: 2026-10-21
+    description: |
+      TC-PM-002~016 主线/自包含用例清理阶段发现：删除资源（DELETE /v1/data-sources/{id}、/v1/subjects/{id}、/v1/mcp-services/{id}）均返回 200 且资源本体与表/列元数据已级联删除，但 RESOURCE_ACL 中对应授权行全部保留。实测本轮 12 条 ACL 记录在资源删除后仍存在（如 ds-2 85111706…、svc-1 29b9215d…、subject-1 9ed4fc09…、ds-admin fca98f18… 等，直接查 H2 确认资源表 0 行、RESOURCE_ACL 仍 12 行），且 GET /v1/acls/{type}/{resourceId} 此时只会返回 404（资源不存在），前端无法清理这些脏数据。根因：ResourceAclDAO.deleteByResourceTypeAndResourceId 已定义但从未被调用，DataSourceService/SubjectService/McpServiceService 的删除路径未接权限侧清理。影响：授权表随测试/日常删除无限增长；若未来出现资源 ID 复用（导入、回滚、ID 手工指定）会直接复活旧授权。建议：三个资源删除处统一调用 aclDAO.deleteByResourceTypeAndResourceId（或抽象 PermissionService.onResourceDeleted），并补单测。
+      修复：PermissionService 新增 onResourceDeleted(type, resourceId)，DataSourceService/SubjectService/McpServiceService 删除路径统一调用 ResourceAclDAO.deleteByResourceTypeAndResourceId 清理 ACL。验证：PermissionServiceTest + 三个 service 测试断言调用；真实后端创建 subject/MCP 服务/数据源 → 授权 → 删除后直接查 H2，resource_acl 对应 resource_id 均为 0 行。
+  - id: BUG-20261019-003
+    title: 游客可创建 API Key，但生成的 key 永远无法通过认证（401）
+    module: 认证
+    severity: low
+    fixed_at: 2026-10-21
+    description: |
+      TC-AUTH（探索发现）：携带 guest token 调用 POST /v1/auth/api-keys 返回 201 并下发 sk_ 明文 key（expires_at=null），但用该 key 请求 GET /v1/auth/me、GET /v1/data-sources 均返回 401。根因：ApiKeyService.create 仅写入 userId，不校验该用户在 users 表中是否存在；guest 身份是纯 JWT（GuestService 不落库），ApiKeyAuthenticationProvider.authenticate 中 userRepository.findById(key.userId) 为空即认证失败。影响：①游客拿到的是永不过期的死凭证，前端若引导游客创建 key 会出现“创建成功但不可用”；②未登录者可无限创建 key 行，造成脏数据。建议：创建 API Key 时对游客身份直接拒绝（403，错误码 AUTH/GUEST 前缀）或校验 userId 存在。
+      修复：ApiKeyService.create 在生成 key 前校验 userId 在 users 表存在（UserRepository.existsById），游客/未知用户返回 403 AUTH008「API keys can only be created for registered user accounts」，不再产生死凭证。验证：ApiKeyServiceTest 覆盖游客拒绝且不落库；真实后端 curl 验证 guest token 创建 key → 403 AUTH008，列表仍为空。

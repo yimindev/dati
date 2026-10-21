@@ -177,6 +177,7 @@ public class DataSourceService {
         semanticIndexService.deleteByEntityTableIds(tableIds);
 
         dataSourceDAO.deleteById(id);
+        permissionService.onResourceDeleted(ResourceType.DATA_SOURCE, id);
     }
 
     public Map<String, String> getDataSourceNameMap(Collection<String> ids) {

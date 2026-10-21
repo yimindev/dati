@@ -126,6 +126,7 @@ ApiKeyAuthenticationProvider.authenticate(request)
 
 - 明文 Key 仅在创建时返回一次，库中只存 SHA-256 哈希 + 掩码（如 `sk_ab12***cd34`），数据库泄露也无法还原
 - 删除 Key 即时生效（下次请求查不到哈希，直接 401）
+- 仅注册用户可创建 API Key：游客身份是纯 JWT（`guest-` 前缀，不落 `users` 表），`ApiKeyService.create` 会校验用户存在性并拒绝（403 `AUTH008`），避免生成永远无法认证的死凭证
 - API Key 无登录流程（`login()` 不支持），也不参与 `AuthenticationService` 的 type 路由
 
 ## 扩展机制
@@ -174,7 +175,9 @@ auth:
 | `AUTH003` | 409 | 用户名已存在 |
 | `AUTH004` | 400 | 不支持的认证类型 |
 | `AUTH005` | 403 | 不能操作其他用户的 API Key |
-| `AUTH006` | 400 | expiresInDays 必须是 30/90/180 |
+| `AUTH006` | 400 | expiresInDays 必须是 7/30/90/180/365 |
+| `AUTH007` | 403 | 游客访问已关闭（`auth.guest.enabled=false`） |
+| `AUTH008` | 403 | 仅注册用户可创建 API Key（游客身份无 users 记录） |
 
 ## 前端架构
 

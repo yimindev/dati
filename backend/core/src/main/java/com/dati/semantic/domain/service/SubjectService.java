@@ -135,6 +135,7 @@ public class SubjectService {
         permissionService.requireCurrentUser(ResourceType.SUBJECT, id, Permission.EDIT, subjectPO.getCreatedBy());
         subjectDAO.deleteById(id);
         semanticIndexService.deleteByEntity_SubjectId(id);
+        permissionService.onResourceDeleted(ResourceType.SUBJECT, id);
     }
 
     @Transactional

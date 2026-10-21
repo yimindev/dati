@@ -2,6 +2,7 @@ package com.dati.semantic.domain.service;
 
 import com.dati.base.exception.DatiException;
 import com.dati.base.exception.ErrorCode;
+import com.dati.datasource.repository.dao.ColumnInfoDAO;
 import com.dati.datasource.repository.dao.TableInfoDAO;
 import com.dati.datasource.repository.po.TableInfoPO;
 import com.dati.semantic.domain.SemanticEntityType;
@@ -61,6 +62,9 @@ class TermServiceTest {
 
     @Mock
     private TableInfoDAO tableInfoDAO;
+
+    @Mock
+    private ColumnInfoDAO columnInfoDAO;
 
     @Mock
     private com.dati.permission.domain.service.PermissionService permissionService;
@@ -131,12 +135,84 @@ class TermServiceTest {
 
         when(termDAO.findById(termId)).thenReturn(Optional.of(term));
         when(subjectTableDAO.existsBySubjectIdAndTableId("subject-001", tableId)).thenReturn(true);
+        when(columnInfoDAO.existsByTableIdAndName(tableId, fieldName)).thenReturn(true);
         when(termRelationDAO.findByTermIdAndTableIdAndFieldName(termId, tableId, fieldName))
                 .thenReturn(Optional.of(new TermRelationPO()));
 
         assertThatThrownBy(() -> termService.linkEntity(termId, TermRelationType.FIELD, tableId, fieldName))
                 .isInstanceOf(DatiException.class)
                 .satisfies(e -> assertThat(((DatiException) e).getCode()).isEqualTo(ErrorCode.INVALID_PARAMETER));
+    }
+
+    @Test
+    @DisplayName("linkEntity - FIELD relation rejects a column that does not exist in the table")
+    void linkEntity_fieldColumnNotFound_throwsInvalidRelation() {
+        String termId = "term-001";
+        String tableId = "table-001";
+        String fieldName = "ghost_col";
+
+        TermPO term = new TermPO();
+        term.setId(termId);
+        term.setSubjectId("subject-001");
+        term.setName("客户");
+
+        when(termDAO.findById(termId)).thenReturn(Optional.of(term));
+        when(subjectTableDAO.existsBySubjectIdAndTableId("subject-001", tableId)).thenReturn(true);
+        when(columnInfoDAO.existsByTableIdAndName(tableId, fieldName)).thenReturn(false);
+
+        assertThatThrownBy(() -> termService.linkEntity(termId, TermRelationType.FIELD, tableId, fieldName))
+                .isInstanceOf(DatiException.class)
+                .satisfies(e -> assertThat(((DatiException) e).getCode())
+                        .isEqualTo(ErrorCode.SM_TERM_RELATION_INVALID));
+        verify(termRelationDAO, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("linkEntity - FIELD relation saves when the column exists")
+    void linkEntity_fieldColumnExists_savesRelation() {
+        String termId = "term-001";
+        String tableId = "table-001";
+        String fieldName = "customer_name";
+
+        TermPO term = new TermPO();
+        term.setId(termId);
+        term.setSubjectId("subject-001");
+        term.setName("客户");
+
+        when(termDAO.findById(termId)).thenReturn(Optional.of(term));
+        when(subjectTableDAO.existsBySubjectIdAndTableId("subject-001", tableId)).thenReturn(true);
+        when(columnInfoDAO.existsByTableIdAndName(tableId, fieldName)).thenReturn(true);
+        when(termRelationDAO.findByTermIdAndTableIdAndFieldName(termId, tableId, fieldName))
+                .thenReturn(Optional.empty());
+
+        termService.linkEntity(termId, TermRelationType.FIELD, tableId, fieldName);
+
+        ArgumentCaptor<TermRelationPO> captor = ArgumentCaptor.forClass(TermRelationPO.class);
+        verify(termRelationDAO).save(captor.capture());
+        assertThat(captor.getValue().getEntityType()).isEqualTo(TermRelationType.FIELD);
+        assertThat(captor.getValue().getFieldName()).isEqualTo(fieldName);
+    }
+
+    @Test
+    @DisplayName("linkEntity - TABLE relation does not require a column")
+    void linkEntity_tableRelation_skipsColumnValidation() {
+        String termId = "term-001";
+        String tableId = "table-001";
+
+        TermPO term = new TermPO();
+        term.setId(termId);
+        term.setSubjectId("subject-001");
+        term.setName("客户");
+
+        when(termDAO.findById(termId)).thenReturn(Optional.of(term));
+        when(subjectTableDAO.existsBySubjectIdAndTableId("subject-001", tableId)).thenReturn(true);
+        when(termRelationDAO.findByTermIdAndTableIdAndFieldNameIsNull(termId, tableId))
+                .thenReturn(Optional.empty());
+
+        termService.linkEntity(termId, TermRelationType.TABLE, tableId, null);
+
+        verify(columnInfoDAO, never()).existsByTableIdAndName(any(), any());
+        verify(termRelationDAO).save(any(TermRelationPO.class));
     }
 
     @Test

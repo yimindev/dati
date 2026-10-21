@@ -2,13 +2,6 @@
 # Agent 跑完 E2E 测试后自动维护此文件
 
 bugs:
-  - id: BUG-20261019-003
-    title: 游客可创建 API Key，但生成的 key 永远无法通过认证（401）
-    module: 认证
-    severity: low
-    found_at: 2026-10-19
-    description: |
-      TC-AUTH（探索发现）：携带 guest token 调用 POST /v1/auth/api-keys 返回 201 并下发 sk_ 明文 key（expires_at=null），但用该 key 请求 GET /v1/auth/me、GET /v1/data-sources 均返回 401。根因：ApiKeyService.create 仅写入 userId，不校验该用户在 users 表中是否存在；guest 身份是纯 JWT（GuestService 不落库），ApiKeyAuthenticationProvider.authenticate 中 userRepository.findById(key.userId) 为空即认证失败。影响：①游客拿到的是永不过期的死凭证，前端若引导游客创建 key 会出现“创建成功但不可用”；②未登录者可无限创建 key 行，造成脏数据。建议：创建 API Key 时对游客身份直接拒绝（403，错误码 AUTH/GUEST 前缀）或校验 userId 存在。
   - id: BUG-20261019-004
     title: ES 索引中 TABLE/FIELD 文档的 createdTime 在元数据更新时被重置为更新时刻
     module: 数据源管理
@@ -16,13 +9,6 @@ bugs:
     found_at: 2026-10-19
     description: |
       TC-DS-010 步骤 13 / TC-DS-011 步骤 11 复现：更新表别名与描述后，ES 文档 table:{tableId} 的 createdTime 由 2026-10-19T22:53:23.092 变为 2026-10-19T22:53:33.471（等于 updatedTime）；列更新同样现象。根因：TableService.updateTable/ColumnService 重建 SemanticSearchDocument 时未回填原有 createdTime，SemanticIndexService.save 只在 createdTime 为 null 时才赋值为 now，故每次更新都会把创建时间覆盖为更新时刻。影响：语义检索侧无法区分创建与更新时间，审计信息失真。修复方向：更新时先按 id 取出既有文档并沿用其 createdTime。
-  - id: BUG-20261019-006
-    title: FIELD 级术语关联不校验列是否存在，可关联到不存在的列名
-    module: 语义层-术语管理
-    severity: low
-    found_at: 2026-10-19
-    description: |
-      TC-SEM-007 探索：POST /v1/terms/{id}/relations，entity_type=FIELD，table_id 为真实表、field_name 传不存在列名（如 ghost_col_abc）返回 200 并落库；术语详情返回 entity_type=FIELD / table_name=artist / field_name=ghost_col_xyz 的脏关系，无任何校验（对比：不传 field_name 会正确返回 400 'fieldName is required'）。建议校验 (table_id, field_name) 存在于该表列元数据中。
   - id: BUG-20261019-007
     title: GET /v1/subjects/{subjectId}/tables 返回的 created_user_name/updated_user_name 恒为 null
     module: 语义层-主题管理
@@ -44,13 +30,6 @@ bugs:
     found_at: 2026-10-19
     description: |
       TC-SEM-006 步骤 6b 探索：POST /v1/subjects/{id}/tables 传随机 UUID 作为 table_id 时返回 404，但 code=DS002、message='Data source not found: {tableId}'——查的是表却报数据源不存在，且把 tableId 当作 datasourceId 回显，误导排查。应返回 SM/DS 层的 'Table not found: {tableId}'。
-  - id: BUG-20261019-012
-    title: 删除数据源/主题/MCP 服务后 ACL 授权记录未级联清理，RESOURCE_ACL 残留孤儿行
-    module: 权限-资源授权
-    severity: low
-    found_at: 2026-10-19
-    description: |
-      TC-PM-002~016 主线/自包含用例清理阶段发现：删除资源（DELETE /v1/data-sources/{id}、/v1/subjects/{id}、/v1/mcp-services/{id}）均返回 200 且资源本体与表/列元数据已级联删除，但 RESOURCE_ACL 中对应授权行全部保留。实测本轮 12 条 ACL 记录在资源删除后仍存在（如 ds-2 85111706…、svc-1 29b9215d…、subject-1 9ed4fc09…、ds-admin fca98f18… 等，直接查 H2 确认资源表 0 行、RESOURCE_ACL 仍 12 行），且 GET /v1/acls/{type}/{resourceId} 此时只会返回 404（资源不存在），前端无法清理这些脏数据。根因：ResourceAclDAO.deleteByResourceTypeAndResourceId 已定义但从未被调用，DataSourceService/SubjectService/McpServiceService 的删除路径未接权限侧清理。影响：授权表随测试/日常删除无限增长；若未来出现资源 ID 复用（导入、回滚、ID 手工指定）会直接复活旧授权。建议：三个资源删除处统一调用 aclDAO.deleteByResourceTypeAndResourceId（或抽象 PermissionService.onResourceDeleted），并补单测。
   - id: BUG-20261019-013
     title: GET /v1/acls/{type}/{resourceId} 返回的 created_by 恒为 null（Mapper 漏拷审计字段）
     module: 权限-资源授权

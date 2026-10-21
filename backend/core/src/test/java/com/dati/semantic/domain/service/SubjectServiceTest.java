@@ -17,6 +17,7 @@ import com.dati.semantic.repository.po.SemanticSearchDocument;
 import com.dati.semantic.repository.po.SubjectPO;
 import com.dati.semantic.repository.po.SubjectTablePO;
 import com.dati.permission.domain.model.PrincipalType;
+import com.dati.permission.domain.model.ResourceType;
 import com.dati.permission.domain.service.PermissionService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -228,6 +229,7 @@ class SubjectServiceTest {
 
         verify(subjectDAO).deleteById(id);
         verify(semanticIndexService).deleteByEntity_SubjectId(id);
+        verify(permissionService).onResourceDeleted(ResourceType.SUBJECT, id);
     }
 
     @Test

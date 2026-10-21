@@ -265,3 +265,19 @@
 4. A 授权 B 对 svc-ep 拥有 `VIEW` 权限（POST /v1/acls/MCP_SERVICE/{svc-ep}）
 5. B 再次向 `POST /svc_ep_test/mcp` 发送请求 → 预期返回 **200**，正常消费服务
 6. A 清理服务与数据源
+
+---
+
+## TC-PM-017 删除资源后 ACL 级联清理（自包含）
+**级别：** P2
+**前置：** 用户 A、B 均已注册并登录
+
+> 资源删除后若保留 ACL 行，会随删除次数无限增长；若未来资源 ID 复用还会复活旧授权。删除必须级联清理。
+
+1. A 创建数据源 ds-acl（postgres_local），授权 B `VIEW`（POST `/v1/acls/DATA_SOURCE/{ds-acl}`）→ 200
+2. A 删除 ds-acl（DELETE `/v1/data-sources/{ds-acl}`）→ 200
+3. 查询 H2/数据库：`SELECT COUNT(*) FROM resource_acl WHERE resource_type='DATA_SOURCE' AND resource_id='{ds-acl}'` → **0**
+4. 同法验证 `SUBJECT` 与 `MCP_SERVICE`：
+   - A 创建主题 subject-acl，授权 B `VIEW`，删除主题 → 该 `resource_id` 的 ACL 行为 0
+   - A 创建 MCP 服务 svc-acl，授权 B `VIEW`，删除服务 → 该 `resource_id` 的 ACL 行为 0
+5. 说明：`GET /v1/acls/{type}/{resourceId}` 在资源删除后返回 404（资源不存在），不能用于验证残留，需直接查库
