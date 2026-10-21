@@ -226,23 +226,10 @@ class TermControllerTest {
     }
 
     @Test
-    @DisplayName("Legacy unlink route (table + field) - returns 200")
-    void unlinkTermRelation_legacyRoute_shouldReturn200() throws Exception {
-        doNothing().when(termService).unlinkEntity(anyString(), anyString(), anyString());
-
+    @DisplayName("Legacy composite unlink route is removed - returns 404")
+    void legacyUnlinkRoute_shouldReturn404() throws Exception {
         mockMvc.perform(delete("/v1/terms/term-001/relations/table-001/field-001"))
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$.id").value("term-001"));
-    }
-
-    @Test
-    @DisplayName("Legacy TABLE-level unlink route with '_' sentinel - returns 200")
-    void unlinkTermRelation_legacyTableSentinel_shouldReturn200() throws Exception {
-        doNothing().when(termService).unlinkEntity("term-001", "table-001", null);
-
-        mockMvc.perform(delete("/v1/terms/term-001/relations/table-001/_"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value("term-001"));
+                .andExpect(status().isNotFound());
     }
 
     @Test

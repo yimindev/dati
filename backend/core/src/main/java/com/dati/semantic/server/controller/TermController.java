@@ -69,8 +69,7 @@ public class TermController {
 
     @PostMapping("/terms/{id}/relations")
     public IdResponse linkTermRelation(@PathVariable String id, @Valid @RequestBody LinkTermRelationRequest request) {
-        String fieldName = "_".equals(request.getFieldName()) ? null : request.getFieldName();
-        termService.linkEntity(id, request.getEntityType(), request.getTableId(), fieldName);
+        termService.linkEntity(id, request.getEntityType(), request.getTableId(), request.getFieldName());
         return new IdResponse(id);
     }
 
@@ -78,19 +77,5 @@ public class TermController {
     public IdResponse unlinkRelationById(@PathVariable String id, @PathVariable String relationId) {
         termService.unlinkRelation(id, relationId);
         return new IdResponse(relationId);
-    }
-
-    /**
-     * Legacy composite-key route.
-     *
-     * @deprecated use {@code DELETE /v1/terms/{id}/relations/{relationId}} instead;
-     *             TABLE-level relations can omit the field segment there.
-     */
-    @Deprecated
-    @DeleteMapping("/terms/{id}/relations/{tableId}/{fieldName}")
-    public IdResponse unlinkTermRelation(@PathVariable String id, @PathVariable String tableId, @PathVariable String fieldName) {
-        String actualFieldName = "_".equals(fieldName) ? null : fieldName;
-        termService.unlinkEntity(id, tableId, actualFieldName);
-        return new IdResponse(id);
     }
 }

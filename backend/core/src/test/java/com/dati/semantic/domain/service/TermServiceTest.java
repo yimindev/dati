@@ -238,6 +238,27 @@ class TermServiceTest {
     }
 
     @Test
+    @DisplayName("linkEntity - TABLE relation rejects fieldName")
+    void linkEntity_tableRelationWithFieldName_throwsInvalidRelation() {
+        String termId = "term-001";
+        String tableId = "table-001";
+
+        TermPO term = new TermPO();
+        term.setId(termId);
+        term.setSubjectId("subject-001");
+        term.setName("客户");
+
+        when(termDAO.findById(termId)).thenReturn(Optional.of(term));
+
+        assertThatThrownBy(() -> termService.linkEntity(
+                termId, TermRelationType.TABLE, tableId, "customer_name"))
+                .isInstanceOf(DatiException.class)
+                .satisfies(e -> assertThat(((DatiException) e).getCode())
+                        .isEqualTo(ErrorCode.SM_TERM_RELATION_INVALID));
+        verify(termRelationDAO, never()).save(any());
+    }
+
+    @Test
     @DisplayName("linkEntity - TABLE and FIELD relations on the same table can coexist")
     void linkEntity_tableAndFieldRelations_coexist() {
         String termId = "term-001";
@@ -259,48 +280,6 @@ class TermServiceTest {
         verify(termRelationDAO).save(captor.capture());
         assertThat(captor.getValue().getEntityType()).isEqualTo(TermRelationType.TABLE);
         assertThat(captor.getValue().getFieldName()).isNull();
-    }
-
-    @Test
-    @DisplayName("unlinkEntity - null fieldName deletes TABLE-level relation")
-    void unlinkEntity_shouldDeleteTableRelation() {
-        String termId = "term-001";
-        String tableId = "table-001";
-        TermPO termPO = new TermPO();
-        termPO.setId(termId);
-        termPO.setSubjectId("subject-001");
-
-        when(termDAO.findById(termId)).thenReturn(Optional.of(termPO));
-
-        termService.unlinkEntity(termId, tableId, null);
-
-        verify(termRelationDAO).deleteByTermIdAndTableId(termId, tableId);
-    }
-
-    @Test
-    @DisplayName("unlinkEntity - non-empty fieldName deletes FIELD-level relation")
-    void unlinkEntity_shouldDeleteFieldRelation() {
-        String termId = "term-001";
-        String tableId = "table-001";
-        String fieldName = "customer_name";
-        TermPO termPO = new TermPO();
-        termPO.setId(termId);
-        termPO.setSubjectId("subject-001");
-
-        TermRelationPO relation = new TermRelationPO();
-        relation.setId("relation-001");
-        relation.setTermId(termId);
-        relation.setEntityType(TermRelationType.FIELD);
-        relation.setTableId(tableId);
-        relation.setFieldName(fieldName);
-
-        when(termDAO.findById(termId)).thenReturn(Optional.of(termPO));
-        when(termRelationDAO.findByTermIdAndTableIdAndFieldName(termId, tableId, fieldName))
-                .thenReturn(Optional.of(relation));
-
-        termService.unlinkEntity(termId, tableId, fieldName);
-
-        verify(termRelationDAO).delete(relation);
     }
 
     @Test
@@ -361,25 +340,6 @@ class TermServiceTest {
                 .isInstanceOf(DatiException.class)
                 .satisfies(e -> assertThat(((DatiException) e).getCode()).isEqualTo(ErrorCode.NOT_FOUND));
         verify(termRelationDAO, never()).delete(any());
-    }
-
-    @Test
-    @DisplayName("unlinkEntity - nonexistent relation throws NOT_FOUND")
-    void unlinkEntity_nonexistentRelation_throwsNotFound() {
-        String termId = "term-001";
-        String tableId = "table-001";
-        String fieldName = "customer_name";
-        TermPO termPO = new TermPO();
-        termPO.setId(termId);
-        termPO.setSubjectId("subject-001");
-
-        when(termDAO.findById(termId)).thenReturn(Optional.of(termPO));
-        when(termRelationDAO.findByTermIdAndTableIdAndFieldName(termId, tableId, fieldName))
-                .thenReturn(Optional.empty());
-
-        assertThatThrownBy(() -> termService.unlinkEntity(termId, tableId, fieldName))
-                .isInstanceOf(DatiException.class)
-                .satisfies(e -> assertThat(((DatiException) e).getCode()).isEqualTo(ErrorCode.NOT_FOUND));
     }
 
     @Test

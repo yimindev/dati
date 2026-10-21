@@ -94,21 +94,6 @@ class TermRepositoryTest {
     }
 
     @Test
-    @DisplayName("Query by termId and tableId - success")
-    void findByTermIdAndTableId_shouldReturnTermRelationPO() {
-        TermRelationPO termRelationPO = new TermRelationPO();
-        termRelationPO.setTermId("term-999");
-        termRelationPO.setEntityType(TermRelationType.TABLE);
-        termRelationPO.setTableId("table-def");
-        termRelationDAO.save(termRelationPO);
-
-        List<TermRelationPO> foundList = termRelationDAO.findByTermIdAndTableId("term-999", "table-def");
-
-        assertThat(foundList).hasSize(1);
-        assertThat(foundList.getFirst().getEntityType()).isEqualTo(TermRelationType.TABLE);
-    }
-
-    @Test
     @DisplayName("Delete TermRelationPO by termId - success")
     void deleteByTermId_shouldRemoveTermRelationPO() {
         TermRelationPO termRelationPO = new TermRelationPO();
@@ -123,18 +108,4 @@ class TermRepositoryTest {
         assertThat(foundList).isEmpty();
     }
 
-    @Test
-    @DisplayName("Delete TermRelationPO by termId and tableId - success")
-    void deleteByTermIdAndTableId_shouldRemoveTermRelationPO() {
-        TermRelationPO termRelationPO = new TermRelationPO();
-        termRelationPO.setTermId("term-to-delete-2");
-        termRelationPO.setEntityType(TermRelationType.TABLE);
-        termRelationPO.setTableId("table-jkl");
-        termRelationDAO.save(termRelationPO);
-
-        termRelationDAO.deleteByTermIdAndTableId("term-to-delete-2", "table-jkl");
-
-        List<TermRelationPO> foundList = termRelationDAO.findByTermIdAndTableId("term-to-delete-2", "table-jkl");
-        assertThat(foundList).isEmpty();
-    }
 }

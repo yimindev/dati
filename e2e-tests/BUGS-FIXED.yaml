@@ -483,4 +483,4 @@ bugs:
     fixed_at: 2026-10-21
     description: |
       TC-SEM-004 探索：TABLE 级关系（field_name 为 null）通过 DELETE /v1/terms/{id}/relations/{tableId}/{fieldName} 无法删除——传空 fieldName 返回 404 CM002，唯一可行方式是传字面量 '_'（控制器内隐藏约定 '_' → null）。openapi 中该端点的 fieldName 只是 required path 参数，未说明该约定，调用方无从得知；且 POST 时把 field_name 传成 '_' 也会被静默转成 TABLE 级关系。
-      修复：新增按关系 ID 删除的语义化路由 DELETE /v1/terms/{id}/relations/{relationId}（校验 relation 归属该 term，精确删除单条）；旧复合键路由保留并标记 Deprecated（TABLE 级仍兼容 `_`）。前端改为传 relation.id；OpenAPI 重新生成，新路由可见、旧路由 deprecated=true。验证：TermServiceTest 覆盖按 ID 删除/跨 term 404/不存在 404；TermControllerTest 覆盖新路由与旧路由兼容；真实后端 curl 删除 TABLE/FIELD 关系均 200，跨 term 删除 404 且关系保留，旧 `_` 路由仍可用。
+      修复：新增按关系 ID 删除的语义化路由 DELETE /v1/terms/{id}/relations/{relationId}（校验 relation 归属该 term，精确删除单条）。beta 阶段不考虑兼容：旧的 `{tableId}/{fieldName}` 复合键路由和 `_` 哨兵直接移除（访问返回 404），POST 也不再将 `_` 当作 null；TABLE 级传 field_name 返回 400 SM004。前端改为传 relation.id；OpenAPI 重新生成，仅保留新路由。验证：TermServiceTest 覆盖按 ID 删除/跨 term 404/不存在 404/TABLE+fieldName 拒绝；TermControllerTest 覆盖新路由与旧路由 404；真实后端 curl 删除 TABLE/FIELD 关系均 200，跨 term 删除 404 且关系保留，旧路由 404，TABLE+field_name POST 400。

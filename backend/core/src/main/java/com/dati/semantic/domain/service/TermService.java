@@ -148,6 +148,10 @@ public class TermService {
                 .orElseThrow(() -> new DatiException(ErrorCode.SM_TERM_NOT_FOUND, termId));
         permissionService.requireSubject(termPO.getSubjectId(), Permission.EDIT);
 
+        if (entityType == TermRelationType.TABLE && fieldName != null) {
+            throw new DatiException(ErrorCode.SM_TERM_RELATION_INVALID,
+                    "TABLE relation must not specify fieldName");
+        }
         if (entityType == TermRelationType.FIELD && fieldName == null) {
             throw new DatiException(ErrorCode.INVALID_PARAMETER, "fieldName is required");
         }
@@ -183,20 +187,6 @@ public class TermService {
                 .filter(r -> termId.equals(r.getTermId()))
                 .orElseThrow(() -> new DatiException(ErrorCode.NOT_FOUND, "Term relation not found"));
         termRelationDAO.delete(relation);
-    }
-
-    @Transactional
-    public void unlinkEntity(String termId, String tableId, String fieldName) {
-        TermPO termPO = termDAO.findById(termId)
-                .orElseThrow(() -> new DatiException(ErrorCode.SM_TERM_NOT_FOUND, termId));
-        permissionService.requireSubject(termPO.getSubjectId(), Permission.EDIT);
-        if (fieldName == null) {
-            termRelationDAO.deleteByTermIdAndTableId(termId, tableId);
-        } else {
-            TermRelationPO po = termRelationDAO.findByTermIdAndTableIdAndFieldName(termId, tableId, fieldName)
-                    .orElseThrow(() -> new DatiException(ErrorCode.NOT_FOUND, "Term relation not found"));
-            termRelationDAO.delete(po);
-        }
     }
 
     @Transactional(readOnly = true)

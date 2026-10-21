@@ -103,8 +103,7 @@ backend/src/main/java/com/dati/semantic/
 | PUT | `/v1/terms/{id}` | 更新术语 |
 | DELETE | `/v1/terms/{id}` | 删除术语 |
 | POST | `/v1/terms/{id}/relations` | 关联术语到表/字段 |
-| DELETE | `/v1/terms/{id}/relations/{relationId}` | 取消关联（推荐：按关系 ID，TABLE/FIELD 通用） |
-| DELETE | `/v1/terms/{id}/relations/{tableId}/{fieldNameOr_}` | 取消关联（Deprecated：复合键路由；TABLE 级用 `_` 占位） |
+| DELETE | `/v1/terms/{id}/relations/{relationId}` | 取消关联（按关系 ID，TABLE/FIELD 通用） |
 
 ## 前端架构
 
@@ -161,5 +160,5 @@ unlinkTermRelation(termId, tableId, fieldName, signal?): IdResponse
 8. **分层权限管控**：主题（`SUBJECT`）作为根资源受 ACL 控制。创建主题需校验关联数据源的 `VIEW` 权限；主题及其子资源（`SubjectTable`、`Term`、`TermRelation`）的读写操作均级联校验所属 `SUBJECT` 的 `VIEW` 或 `EDIT` 权限
 9. **关联目标校验**：FIELD 级术语关联在写入前校验 `(tableId, fieldName)` 存在于平台列元数据，不存在返回 400 `SM004`；TABLE 级关联只校验表属于主题，不做列校验，因此不会误伤 TABLE/FIELD 共存
 10. **主题表响应**：主题表列表复用 `TableAssembler.toPageResponse`，统一填充 `created_user_name` / `updated_user_name`；给主题添加不存在的表返回 404 `DS007`（`Table not found: {tableId}`），不再误报数据源不存在
-11. **关系删除按 ID**：TermRelation 本身有 `id`，统一使用 `DELETE /v1/terms/{id}/relations/{relationId}` 精确删除单条关系（同时校验 relation 属于该 term）；旧的 `{tableId}/{fieldName}` 复合键路由标记为 Deprecated，TABLE 级仍兼容 `_` 占位，避免继续扩散哨兵值语义
+11. **关系删除按 ID**：TermRelation 本身有 `id`，统一使用 `DELETE /v1/terms/{id}/relations/{relationId}` 精确删除单条关系（同时校验 relation 属于该 term）；旧的 `{tableId}/{fieldName}` 复合键路由与 `_` 哨兵已移除（beta 阶段不保留兼容）。POST 关联时 TABLE 级不得传 `field_name`（400 `SM004`），FIELD 级必须传且校验列存在
 

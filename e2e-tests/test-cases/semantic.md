@@ -108,7 +108,7 @@
 7. **非法类型被拒**：entityType=`FIELD_VALUE`，tableId，fieldName=`term_relation.field` → 预期 **400**（非法枚举值，Jackson 拦截，不落库）
 8. 查术语详情，验证 relations 有 1 条，entity_type=FIELD，table_name/field_name 正确
 9. **删 FIELD 关系（按关系 ID）**：取步骤 8 返回的 relation id → `DELETE /v1/terms/{termId}/relations/{relationId}` → 200，响应 id 为该 relation id
-   - 旧复合键路由 `DELETE /v1/terms/{termId}/relations/{tableId}/{fieldName}` 仍兼容（Deprecated），新调用一律走关系 ID
+   - 旧复合键路由 `DELETE /v1/terms/{termId}/relations/{tableId}/{fieldName}` 已移除 → 404（beta 不保留兼容）
 10. 查术语详情，验证 relations 为空
 11. 删除术语，删除主题（不删数据源）
 
@@ -156,8 +156,9 @@
    - **TABLE 级**：`entity_type=TABLE`、不传 `field_name` 添加一次 → 200；再次 POST 相同 body → 400/409，术语详情仍只有 1 条 TABLE 关系
    - **TABLE + FIELD 共存**：同一表先建 TABLE 关系再建 FIELD 关系 → 均 200，术语详情 2 条关系（TABLE 查重不得误伤 FIELD）
    - **不存在的列**：`entity_type=FIELD` + `fieldName=ghost_col_xyz`（真实表、表中无此列）→ 预期 **400**（错误码 `SM004`），术语详情不含该关系
+   - **TABLE 不允许 fieldName**：`entity_type=TABLE` + `field_name=name` → 预期 **400**（错误码 `SM004`），不落库
    - **删除 TABLE 关系（按关系 ID）**：GET 术语详情取 TABLE 关系的 `id` → `DELETE /v1/terms/{termId}/relations/{relationId}` → 200；再次查详情只剩 FIELD 关系（TABLE 级不再需要 `_` 占位）
-5. 删不存在的 relation → 应 404（不能 200；关系 ID 路由与旧复合键路由均适用）
+5. 删不存在的 relation → 应 404（不能 200）；旧复合键路由已移除 → 404
 6. 给不存在的 termId 加 relation → 404
 7. 更新不存在的术语 → 404
 8. 删不存在的术语 → 404
