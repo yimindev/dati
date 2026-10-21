@@ -195,7 +195,7 @@
 2. **upsert_business_term 幂等 upsert（CREATE→UPDATE）**：`tools/call`，params `{name: "upsert_business_term", arguments: {terms: [{subject_name: "<seeded_subject_name>", name: "<write_tool.term_name>", description: "<write_tool.term_desc>", aliases: ["<write_tool.term_aliases[0]>"]}]}}`
    - 状态码 200；`result.isError`==false；`structuredContent.results[0].change_type`==**CREATE**、`old`==null
    - **再次调用同参数** → `change_type`==**UPDATE**、`old.description`==`term_desc`（幂等 upsert，不重复创建）
-3. **参数错误 → isError 结果（既有 ToolExecuteException 语义）**：`tools/call` update_table_metadata，arguments.description 为 501 字符 → 状态码 200，`result.isError`==**true**，`result.content[0].text` 含 `size must be between 0 and 500`（binder 层 PARAM_INVALID 走 isError 供 LLM 自纠错，与 TC-END-003 的 SQL 策略违规一致；非 JSON-RPC error）
+3. **参数错误 → isError 结果（既有 ToolExecuteException 语义）**：`tools/call` update_table_metadata，arguments 中 `tables[0].description` 为 501 字符（其余字段合法）→ 状态码 200，`result.isError`==**true**，`result.content[0].text` 含 `tables[0].description: must be at most 500 characters`（binder 层 PARAM_INVALID 走 isError 供 LLM 自纠错，与 TC-END-003 的 SQL 策略违规一致；非 JSON-RPC error）
 4. **清理**：平台 API DELETE `/v1/terms/{id}` 删除测试术语（按步骤 2 术语名查询 id）；删除两个测试服务
 
 ---

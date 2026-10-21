@@ -295,7 +295,7 @@
 4. **LIST_TABLES（表级清单，无参数）**：POST `/tools/LIST_TABLES/test`，args `{}` → HTTP 200
    - `success`=true，`data.type`=TABLE_LIST，`data.data_sources` 非空
    - data_sources[0]：`id`=seedDsId，`name` 为种子数据源名；`tables` 含 `mcp.subject.term.relation_table`，每项含 `schema`/`table`/`description`/`aliases`，**无 `columns` 字段**
-5. **空关键词**：args `{"keywords": []}` → HTTP 200，`success`=false，`error.error_category`=PARAM_ERROR（PARAM_MISSING）
+5. **空关键词**：args `{"keywords": []}` → HTTP 200，`success`=false，`error.error_category`=PARAM_ERROR，`error.message` 含 `keywords: must not be empty`（不再返回笼统的 size 约束文案）
 6. 删除服务（清理）
 
 ---

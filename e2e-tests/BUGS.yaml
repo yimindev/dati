@@ -9,10 +9,3 @@ bugs:
     found_at: 2026-10-19
     description: |
       TC-DS-010 步骤 13 / TC-DS-011 步骤 11 复现：更新表别名与描述后，ES 文档 table:{tableId} 的 createdTime 由 2026-10-19T22:53:23.092 变为 2026-10-19T22:53:33.471（等于 updatedTime）；列更新同样现象。根因：TableService.updateTable/ColumnService 重建 SemanticSearchDocument 时未回填原有 createdTime，SemanticIndexService.save 只在 createdTime 为 null 时才赋值为 now，故每次更新都会把创建时间覆盖为更新时刻。影响：语义检索侧无法区分创建与更新时间，审计信息失真。修复方向：更新时先按 id 取出既有文档并沿用其 createdTime。
-  - id: BUG-20261019-014
-    title: SEARCH_METADATA 空 keywords 校验错误文案为 size 约束，未说明 keywords 不能为空
-    module: MCP 服务管理
-    severity: low
-    found_at: 2026-10-19
-    description: |
-      TC-MCP-017 步骤5 复现：POST /v1/mcp-services/{id}/tools/SEARCH_METADATA/test，arguments={"keywords": []} → HTTP 200、success=false、error_category=PARAM_ERROR（符合预期），但 error.message 为「参数不合法：size must be between 1 and 2147483647」。该文案来自 Bean Validation 对 keywords 列表 @Size(min=1) 的默认消息，对调用方（含 LLM）不具可读性，无法判断是哪个参数、应如何修正；同类 UPDATE_TABLE_INFO 501 字符描述也返回「size must be between 0 and 500」。建议对工具测试参数增加自定义校验文案（如「keywords 不能为空」「description 最长 500 字符」）。

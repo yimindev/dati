@@ -160,7 +160,7 @@ class McpProtocolHandlerTest {
         McpSchema.CallToolResult result = (McpSchema.CallToolResult) resp.result();
         assertTrue(result.isError());
         String text = ((McpSchema.TextContent) result.content().getFirst()).text();
-        assertTrue(text.contains("must not be null"));
+        assertTrue(text.contains("keywords: is required"));
     }
 
     @Test

@@ -484,3 +484,11 @@ bugs:
     description: |
       TC-SEM-004 探索：TABLE 级关系（field_name 为 null）通过 DELETE /v1/terms/{id}/relations/{tableId}/{fieldName} 无法删除——传空 fieldName 返回 404 CM002，唯一可行方式是传字面量 '_'（控制器内隐藏约定 '_' → null）。openapi 中该端点的 fieldName 只是 required path 参数，未说明该约定，调用方无从得知；且 POST 时把 field_name 传成 '_' 也会被静默转成 TABLE 级关系。
       修复：新增按关系 ID 删除的语义化路由 DELETE /v1/terms/{id}/relations/{relationId}（校验 relation 归属该 term，精确删除单条）。beta 阶段不考虑兼容：旧的 `{tableId}/{fieldName}` 复合键路由和 `_` 哨兵直接移除（访问返回 404），POST 也不再将 `_` 当作 null；TABLE 级传 field_name 返回 400 SM004。前端改为传 relation.id；OpenAPI 重新生成，仅保留新路由。验证：TermServiceTest 覆盖按 ID 删除/跨 term 404/不存在 404/TABLE+fieldName 拒绝；TermControllerTest 覆盖新路由与旧路由 404；真实后端 curl 删除 TABLE/FIELD 关系均 200，跨 term 删除 404 且关系保留，旧路由 404，TABLE+field_name POST 400。
+  - id: BUG-20261019-014
+    title: SEARCH_METADATA 空 keywords 校验错误文案为 size 约束，未说明 keywords 不能为空
+    module: MCP 服务管理
+    severity: low
+    fixed_at: 2026-10-21
+    description: |
+      TC-MCP-017 步骤5 复现：POST /v1/mcp-services/{id}/tools/SEARCH_METADATA/test，arguments={"keywords": []} → HTTP 200、success=false、error_category=PARAM_ERROR（符合预期），但 error.message 为「参数不合法：size must be between 1 and 2147483647」。该文案来自 Bean Validation 对 keywords 列表 @Size(min=1) 的默认消息，对调用方（含 LLM）不具可读性，无法判断是哪个参数、应如何修正；同类 UPDATE_TABLE_INFO 501 字符描述也返回「size must be between 0 and 500」。建议对工具测试参数增加自定义校验文案（如「keywords 不能为空」「description 最长 500 字符」）。
+      修复：ToolParameterBinder 校验消息统一加 snake_case 字段路径（dataSourceId → data_source_id；嵌套字段如 tables[0].table），参数 record 对 list/字符串约束补自定义 message（keywords must not be empty、description must be at most 500 characters 等）。验证：ToolParameterBinderTest 覆盖空 keywords、501 字符 description、嵌套空白字段；McpProtocolHandlerTest 断言 keywords: is required；真实后端管理端测试接口返回「参数不合法：keywords: must not be empty」「参数不合法：tables[0].description: must be at most 500 characters」。

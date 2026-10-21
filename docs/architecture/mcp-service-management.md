@@ -262,7 +262,7 @@ com.dati.semantic.domain.model/
 |---|---|
 | `SearchMetadataArgs` / `GetTableInfoArgs` / `ExecuteSqlArgs` / `UpdateTableInfoArgs` / `UpdateColumnInfoArgs` / `UpsertTermArgs` | 预置工具参数 record（`domain.model.param` 包）。`@JsonProperty`（snake_case）+ `@JsonPropertyDescription` + Jakarta Validation 注解同时驱动 inputSchema 生成与运行时校验 —— 单一事实源，schema 与校验不可能漂移 |
 | `McpParameterSchemaGenerator` | `@Component`。victools `jsonschema-generator` 4.38.0（DRAFT_2020_12 + JacksonModule + JakartaValidationModule `NOT_NULLABLE_FIELD_IS_REQUIRED` + `FORBIDDEN_ADDITIONAL_PROPERTIES_BY_DEFAULT` + `INLINE_ALL_SCHEMAS`），从 record 生成 `tools/list` 的 inputSchema，按类型缓存 |
-| `ToolParameterBinder` | `@Component`。工具测试与 MCP 调用共用：原始 arguments → 反序列化为参数 record → Jakarta Validation 校验。失败统一 `ToolExecuteException(PARAM_INVALID)`；`parameterType=null`（PARAMETERIZED_SQL）时透传原始 Map。Validator 固定英文 locale（协议错误消息对 LLM 客户端确定性），`@PreDestroy` 关闭工厂 |
+| `ToolParameterBinder` | `@Component`。工具测试与 MCP 调用共用：原始 arguments → 反序列化为参数 record → Jakarta Validation 校验。失败统一 `ToolExecuteException(PARAM_INVALID)`；`parameterType=null`（PARAMETERIZED_SQL）时透传原始 Map。Validator 固定英文 locale（协议错误消息对 LLM 客户端确定性），`@PreDestroy` 关闭工厂。校验消息包含 snake_case 字段路径与可读约束说明，如 `tables[0].description: must be at most 500 characters`、`keywords: must not be empty` |
 
 **参数契约要点：**
 

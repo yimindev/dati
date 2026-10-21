@@ -51,7 +51,7 @@ class ToolParameterBinderTest {
         assertThatThrownBy(() -> binder.bind(ExecuteSqlArgs.class, Map.of("data_source_id", "ds-1")))
             .isInstanceOf(ToolExecuteException.class)
             .satisfies(e -> assertThat(((ToolExecuteException) e).getErrorCategory()).isEqualTo("PARAM_ERROR"))
-            .hasMessageContaining("must not be null");
+            .hasMessageContaining("sql: is required");
     }
 
     @Test
@@ -72,7 +72,40 @@ class ToolParameterBinderTest {
         }
         assertThatThrownBy(() -> binder.bind(GetTableInfoArgs.class, Map.of("tables", tooMany)))
             .isInstanceOf(ToolExecuteException.class)
-            .hasMessageContaining("size must be between 1 and 20");
+            .hasMessageContaining("tables: must contain between 1 and 20 items");
+    }
+
+    @Test
+    @DisplayName("empty keywords reports the field name and a readable message")
+    void emptyKeywordsReportsFieldName() {
+        assertThatThrownBy(() -> binder.bind(SearchMetadataArgs.class, Map.of("keywords", List.of())))
+            .isInstanceOf(ToolExecuteException.class)
+            .hasMessageContaining("keywords: must not be empty");
+    }
+
+    @Test
+    @DisplayName("over-limit description reports nested field path and limit")
+    void overLimitDescriptionReportsNestedPath() {
+        List<Map<String, Object>> tables = List.of(Map.of(
+            "data_source_id", "ds-1",
+            "table", "orders",
+            "description", "x".repeat(501)));
+
+        assertThatThrownBy(() -> binder.bind(UpdateTableInfoArgs.class, Map.of("tables", tables)))
+            .isInstanceOf(ToolExecuteException.class)
+            .hasMessageContaining("tables[0].description: must be at most 500 characters");
+    }
+
+    @Test
+    @DisplayName("blank nested field reports the nested path")
+    void blankNestedFieldReportsPath() {
+        List<Map<String, String>> tables = List.of(Map.of(
+            "data_source_id", "ds-1",
+            "table", " "));
+
+        assertThatThrownBy(() -> binder.bind(UpdateTableInfoArgs.class, Map.of("tables", tables)))
+            .isInstanceOf(ToolExecuteException.class)
+            .hasMessageContaining("tables[0].table: must not be blank");
     }
 
     @Test
@@ -88,7 +121,7 @@ class ToolParameterBinderTest {
     void nullArgumentsFails() {
         assertThatThrownBy(() -> binder.bind(ExecuteSqlArgs.class, null))
             .isInstanceOf(ToolExecuteException.class)
-            .hasMessageContaining("must not be null");
+            .hasMessageContaining("data_source_id: is required");
     }
 
     @Test
@@ -96,7 +129,7 @@ class ToolParameterBinderTest {
     void aggregatesViolations() {
         assertThatThrownBy(() -> binder.bind(ExecuteSqlArgs.class, Map.of()))
             .isInstanceOf(ToolExecuteException.class)
-            .hasMessageContaining("must not be null", "; ");
+            .hasMessageContaining("is required", "; ");
     }
 
     @Test

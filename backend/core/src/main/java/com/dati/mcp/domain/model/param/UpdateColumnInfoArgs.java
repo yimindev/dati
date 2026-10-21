@@ -11,32 +11,32 @@ import java.util.List;
 
 /** UPDATE_COLUMN_INFO tool parameters. */
 public record UpdateColumnInfoArgs(
-    @NotNull @Size(min = 1, max = 20) @Valid
+    @NotNull(message = "is required") @Size(min = 1, max = 20, message = "must contain between 1 and 20 items") @Valid
     @JsonPropertyDescription("Columns to update (1-20)")
     List<UpdateColumnItem> columns
 ) {
     public record UpdateColumnItem(
-        @JsonProperty("data_source_id") @NotNull @NotBlank
+        @JsonProperty("data_source_id") @NotNull(message = "is required") @NotBlank(message = "must not be blank")
         @JsonPropertyDescription("Data source ID")
         String dataSourceId,
 
         @JsonPropertyDescription("Table schema (optional)")
         String schema,
 
-        @JsonProperty("table") @NotNull @NotBlank
+        @JsonProperty("table") @NotNull(message = "is required") @NotBlank(message = "must not be blank")
         @JsonPropertyDescription("Table name")
         String table,
 
-        @JsonProperty("column") @NotNull @NotBlank
+        @JsonProperty("column") @NotNull(message = "is required") @NotBlank(message = "must not be blank")
         @JsonPropertyDescription("Column name")
         String column,
 
-        @Size(max = 500)
+        @Size(max = 500, message = "must be at most 500 characters")
         @JsonPropertyDescription("New description (omit to keep current)")
         String description,
 
-        @Size(max = 20)
+        @Size(max = 20, message = "must contain at most 20 items")
         @JsonPropertyDescription("Complete alias list, replaces existing (omit to keep current)")
-        List<@Size(max = 100) String> aliases
+        List<@Size(max = 100, message = "must be at most 100 characters") String> aliases
     ) {}
 }

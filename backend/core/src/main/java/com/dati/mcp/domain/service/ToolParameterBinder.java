@@ -63,11 +63,18 @@ public class ToolParameterBinder {
         Set<ConstraintViolation<Object>> violations = validator.validate(record);
         if (!violations.isEmpty()) {
             String message = violations.stream()
-                .map(ConstraintViolation::getMessage)
+                .map(v -> toApiPropertyPath(v) + ": " + v.getMessage())
                 .sorted()
                 .collect(Collectors.joining("; "));
             throw new ToolExecuteException(ToolError.PARAM_INVALID, message);
         }
         return record;
+    }
+
+    /** Bean Validation exposes Java component names (dataSourceId); API clients send snake_case. */
+    private static String toApiPropertyPath(ConstraintViolation<?> violation) {
+        return violation.getPropertyPath().toString()
+            .replaceAll("([a-z0-9])([A-Z])", "$1_$2")
+            .toLowerCase(Locale.ROOT);
     }
 }
