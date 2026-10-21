@@ -10,7 +10,10 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 @Service
 public class SemanticIndexService {
@@ -22,22 +25,44 @@ public class SemanticIndexService {
     }
 
     public void save(SemanticSearchDocument doc) {
-        doc.setUpdatedTime(LocalDateTime.now());
+        LocalDateTime now = LocalDateTime.now();
+        doc.setUpdatedTime(now);
         if (doc.getCreatedTime() == null) {
-            doc.setCreatedTime(doc.getUpdatedTime());
+            doc.setCreatedTime(existingCreatedTime(doc.getId()).orElse(now));
         }
         semanticSearchDAO.save(doc);
     }
 
     public void saveBatch(List<SemanticSearchDocument> docs) {
         LocalDateTime now = LocalDateTime.now();
+        List<String> idsToLookup = docs.stream()
+                .filter(doc -> doc.getCreatedTime() == null && doc.getId() != null)
+                .map(SemanticSearchDocument::getId)
+                .toList();
+        Map<String, LocalDateTime> existingCreatedTimes = new HashMap<>();
+        if (!idsToLookup.isEmpty()) {
+            semanticSearchDAO.findAllById(idsToLookup).forEach(existingDoc -> {
+                if (existingDoc.getCreatedTime() != null) {
+                    existingCreatedTimes.put(existingDoc.getId(), existingDoc.getCreatedTime());
+                }
+            });
+        }
         docs.forEach(doc -> {
             doc.setUpdatedTime(now);
             if (doc.getCreatedTime() == null) {
-                doc.setCreatedTime(now);
+                doc.setCreatedTime(existingCreatedTimes.getOrDefault(doc.getId(), now));
             }
         });
         semanticSearchDAO.saveAll(docs);
+    }
+
+    private Optional<LocalDateTime> existingCreatedTime(String id) {
+        if (id == null) {
+            return Optional.empty();
+        }
+        return semanticSearchDAO.findById(id)
+                .map(SemanticSearchDocument::getCreatedTime)
+                .filter(createdTime -> createdTime != null);
     }
 
     public void deleteByEntityTableIds(List<String> tableIds) {

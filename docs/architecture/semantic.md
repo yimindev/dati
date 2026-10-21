@@ -161,4 +161,5 @@ unlinkTermRelation(termId, tableId, fieldName, signal?): IdResponse
 9. **关联目标校验**：FIELD 级术语关联在写入前校验 `(tableId, fieldName)` 存在于平台列元数据，不存在返回 400 `SM004`；TABLE 级关联只校验表属于主题，不做列校验，因此不会误伤 TABLE/FIELD 共存
 10. **主题表响应**：主题表列表复用 `TableAssembler.toPageResponse`，统一填充 `created_user_name` / `updated_user_name`；给主题添加不存在的表返回 404 `DS007`（`Table not found: {tableId}`），不再误报数据源不存在
 11. **关系删除按 ID**：TermRelation 本身有 `id`，统一使用 `DELETE /v1/terms/{id}/relations/{relationId}` 精确删除单条关系（同时校验 relation 属于该 term）；旧的 `{tableId}/{fieldName}` 复合键路由与 `_` 哨兵已移除（beta 阶段不保留兼容）。POST 关联时 TABLE 级不得传 `field_name`（400 `SM004`），FIELD 级必须传且校验列存在
+12. **索引时间戳**：`SemanticIndexService.save/saveBatch` 在 `createdTime` 为空时先读取既有文档并保留创建时间，仅刷新 `updatedTime`；列结构同步重建 FIELD 文档前先读取旧文档的 `createdTime`，避免把创建时间重置为同步/更新时刻
 

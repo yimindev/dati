@@ -132,7 +132,7 @@
 7. 验证 ES 中有与 `add_tables` 数量相等的 TABLE 文档，每条 `entity.tableName` 对应一个表名
    - 每条 `keywords` 数组至少包含表名本身
    - `entity.datasourceId`、`entity.tableId` 正确
-   - `createdTime`、`updatedTime` 非空
+   - `createdTime`、`updatedTime` 非空；记录该 TABLE 文档的 `createdTime`（后续更新不得改变）
 8. **查询表列表**（GET tables，用 `table_mgmt.update.target` 作为 keyword 搜索）
 9. 验证分页列表中的表记录：
    - `name`、`schema` 正确
@@ -150,6 +150,7 @@
     - `keywords` 数组包含 `table_mgmt.update.aliases` 中的所有值
     - `description` 为 `table_mgmt.update.description`
     - `updatedTime` 晚于之前的值
+    - `createdTime` 与步骤 7 记录的值一致（不得被重置为更新时刻）
 16. **删除一张表**：删除 `table_mgmt.delete_target` 表
 17. 验证删除返回 200
 18. 查询已添加表名列表，确认 `delete_target` 已不在，其余表仍存在
@@ -181,6 +182,7 @@
 7. 验证有与 `expected_columns` 数量相等的 FIELD 文档，`entity.field` 分别对应各列名
    - 每条 `keywords` 至少包含列名本身
    - `entity.datasourceId`、`entity.tableId`、`entity.tableName` 正确
+   - `createdTime`、`updatedTime` 非空；记录目标列的 `createdTime`（后续更新/同步不得改变）
 8. **部分更新列元数据（不含 name）**：将 `column_values.target_column` 列进行部分更新：
    - body 中 **只传** `description`、`aliases`、`extract_value_enabled` 三个字段
    - **不传 `name`、不传 `column_type`**
@@ -199,6 +201,7 @@
 13. **ES 验证 - FIELD 已更新**：查询 ES 中 `id` = `field:{该列的columnId}` 的文档
     - `keywords` 包含 `column_values.column_aliases` 中的所有值
     - `description` 为 `column_values.column_description`
+    - `createdTime` 与步骤 7 记录的值一致（更新不得重置创建时间）
 14. **抽取维度值**（POST column values/extract）：对 `target_column` 列触发维度值提取
 15. 验证抽取返回 200
 16. **查询维度值列表**（GET column values），验证抽取结果：
@@ -219,6 +222,7 @@
     - **预期**：重新查询列列表，`extract_value_enabled` 仍为 **true**（用户配置而非数据库结构，应与 aliases 一样被保留）
     - **预期**：`aliases`、`description` 仍为步骤 8 写入的值（既有保留语义不回归）
     - **预期**：ES 中该列 FIELD_VALUE 文档数仍为 `value_count`（同步不应删除已抽取的维度值）
+    - **预期**：ES 中该列 FIELD 文档的 `createdTime` 仍为步骤 7 记录的值（同步重建不得重置创建时间）
     - **注**：当前实现（2026-08-20 前）会静默重置 `extract_value_enabled=false` 并删除全部 FIELD_VALUE 文档，本步骤为回归验证锚点
 22. 删除数据源（清理）
 23. **ES 验证 - 全部清理**：查询 ES 中 `entity.datasourceId` = datasourceId 的所有文档，应返回 0 条

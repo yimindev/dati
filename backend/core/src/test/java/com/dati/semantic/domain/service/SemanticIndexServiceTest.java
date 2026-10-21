@@ -19,6 +19,7 @@ import org.springframework.data.domain.Pageable;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.anyList;
@@ -96,6 +97,60 @@ class SemanticIndexServiceTest {
         assertThat(savedDoc.getCreatedTime()).isEqualTo(originalCreatedTime);
         assertThat(savedDoc.getUpdatedTime()).isNotNull();
         assertThat(savedDoc.getUpdatedTime()).isAfter(originalCreatedTime);
+    }
+
+    @Test
+    @DisplayName("Save document - preserves createdTime from the existing index document")
+    void save_shouldPreserveExistingCreatedTimeWhenDocHasNone() {
+        LocalDateTime originalCreatedTime = LocalDateTime.now().minusDays(2);
+        SemanticSearchDocument existing = SemanticSearchDocument.builder()
+                .id("field:test-id")
+                .createdTime(originalCreatedTime)
+                .build();
+        when(semanticSearchDAO.findById("field:test-id")).thenReturn(Optional.of(existing));
+
+        SemanticSearchDocument doc = SemanticSearchDocument.builder()
+                .id("field:test-id")
+                .type(SemanticEntityType.FIELD)
+                .keywords(List.of("test_column"))
+                .description("Updated description")
+                .build();
+
+        semanticIndexService.save(doc);
+
+        ArgumentCaptor<SemanticSearchDocument> captor = ArgumentCaptor.forClass(SemanticSearchDocument.class);
+        verify(semanticSearchDAO).save(captor.capture());
+        assertThat(captor.getValue().getCreatedTime()).isEqualTo(originalCreatedTime);
+        assertThat(captor.getValue().getUpdatedTime()).isAfter(originalCreatedTime);
+    }
+
+    @Test
+    @DisplayName("Batch save documents - preserves createdTime from existing index documents")
+    void saveBatch_shouldPreserveExistingCreatedTimes() {
+        LocalDateTime originalCreatedTime = LocalDateTime.now().minusDays(3);
+        SemanticSearchDocument existing = SemanticSearchDocument.builder()
+                .id("field:test-id-1")
+                .createdTime(originalCreatedTime)
+                .build();
+        when(semanticSearchDAO.findAllById(List.of("field:test-id-1", "field:test-id-2")))
+                .thenReturn(List.of(existing));
+
+        SemanticSearchDocument doc1 = SemanticSearchDocument.builder()
+                .id("field:test-id-1")
+                .type(SemanticEntityType.FIELD)
+                .build();
+        SemanticSearchDocument doc2 = SemanticSearchDocument.builder()
+                .id("field:test-id-2")
+                .type(SemanticEntityType.FIELD)
+                .build();
+
+        semanticIndexService.saveBatch(List.of(doc1, doc2));
+
+        verify(semanticSearchDAO).saveAll(captor.capture());
+        List<SemanticSearchDocument> savedDocs = captor.getValue();
+        assertThat(savedDocs.get(0).getCreatedTime()).isEqualTo(originalCreatedTime);
+        assertThat(savedDocs.get(1).getCreatedTime()).isNotNull();
+        assertThat(savedDocs.get(1).getCreatedTime()).isNotEqualTo(originalCreatedTime);
     }
 
     @Test

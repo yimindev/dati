@@ -28,6 +28,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.sql.SQLException;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -180,7 +181,17 @@ public class ColumnService {
         
         List<ColumnInfoPO> savedList = columnInfoDAO.saveAll(columnInfoPOList);
         
-        // FIELD 结构索引整表重建；FIELD_VALUE 仅清理消失列，保留仍存在列的值（配置与数据均为用户资产，不随结构同步销毁）
+        // FIELD 结构索引整表重建；重建前保留既有文档的 createdTime（删除后无法再从索引读回）
+        Map<String, LocalDateTime> existingCreatedTimes = semanticIndexService
+                .findByTableIdAndType(tableId, SemanticEntityType.FIELD, 10_000)
+                .stream()
+                .filter(doc -> doc.getCreatedTime() != null
+                        && doc.getEntity() != null
+                        && doc.getEntity().getField() != null)
+                .collect(Collectors.toMap(
+                        doc -> doc.getEntity().getField(),
+                        SemanticSearchDocument::getCreatedTime,
+                        (first, second) -> first));
         semanticIndexService.deleteByTableIdAndType(tableId, SemanticEntityType.FIELD);
         for (ColumnInfoPO removed : removedColumns) {
             semanticIndexService.deleteByTableFieldAndType(tableId, removed.getName(), SemanticEntityType.FIELD_VALUE);
@@ -203,6 +214,7 @@ public class ColumnService {
                     .type(SemanticEntityType.FIELD)
                     .keywords(columnKeywords.stream().distinct().toList())
                     .description(po.getDescription())
+                    .createdTime(existingCreatedTimes.get(po.getName()))
                     .entity(entity)
                     .build();
         }).toList();

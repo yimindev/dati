@@ -15,6 +15,7 @@ import com.dati.db.Column;
 import com.dati.permission.domain.service.PermissionService;
 import com.dati.semantic.domain.SemanticEntityType;
 import com.dati.semantic.domain.service.SemanticIndexService;
+import com.dati.semantic.repository.po.EntityReference;
 import com.dati.semantic.repository.po.SemanticSearchDocument;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -29,6 +30,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 
 import java.sql.SQLException;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -355,6 +357,51 @@ class ColumnServiceTest {
             }));
             verify(columnInfoDAO, never()).deleteByTableId(any());
         }
+    }
+
+    @Test
+    @DisplayName("Sync columns - preserves FIELD createdTime across index rebuild")
+    void syncColumns_shouldPreserveFieldCreatedTime() throws SQLException {
+        LocalDateTime originalCreatedTime = LocalDateTime.now().minusDays(2);
+
+        ColumnInfoPO existingGenre = new ColumnInfoPO();
+        existingGenre.setId("existing_genre_id");
+        existingGenre.setTableId(TestFixtures.TEST_TABLE_ID);
+        existingGenre.setName("genre");
+        existingGenre.setColumnType("VARCHAR");
+
+        when(columnInfoDAO.findByTableId(TestFixtures.TEST_TABLE_ID))
+            .thenReturn(List.of(existingGenre));
+
+        Column mockColumn = mock(Column.class);
+        when(mockColumn.name()).thenReturn("genre");
+        when(mockColumn.type()).thenReturn("VARCHAR");
+        when(mockColumn.comment()).thenReturn("DB comment");
+        when(jdbcMetaService.getColumns(TestFixtures.TEST_DATASOURCE_ID, "public", "test_table"))
+            .thenReturn(List.of(mockColumn));
+        when(columnInfoDAO.saveAll(anyList())).thenReturn(List.of(existingGenre));
+
+        SemanticSearchDocument oldDoc = SemanticSearchDocument.builder()
+            .id("field:existing_genre_id")
+            .type(SemanticEntityType.FIELD)
+            .createdTime(originalCreatedTime)
+            .entity(EntityReference.builder().field("genre").build())
+            .build();
+        when(semanticIndexService.findByTableIdAndType(
+            TestFixtures.TEST_TABLE_ID, SemanticEntityType.FIELD, 10_000))
+            .thenReturn(List.of(oldDoc));
+
+        try (MockedStatic<RequestContext> mocked = mockStatic(RequestContext.class)) {
+            mocked.when(RequestContext::getUser).thenReturn(null);
+
+            columnService.syncColumns(TestFixtures.TEST_DATASOURCE_ID, TestFixtures.TEST_TABLE_ID, true);
+        }
+
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<List<SemanticSearchDocument>> docsCaptor = ArgumentCaptor.forClass(List.class);
+        verify(semanticIndexService).saveBatch(docsCaptor.capture());
+        assertThat(docsCaptor.getValue()).hasSize(1);
+        assertThat(docsCaptor.getValue().getFirst().getCreatedTime()).isEqualTo(originalCreatedTime);
     }
 
     @Test
