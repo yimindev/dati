@@ -151,6 +151,7 @@ class AclServiceTest {
         List<ResourceAcl> acls = service.list(ResourceType.DATA_SOURCE, "ds-1");
         assertThat(acls).hasSize(1);
         assertThat(acls.getFirst().getPrincipalName()).isEqualTo("Bob");
+        assertThat(acls.getFirst().getCreatedBy()).isEqualTo("creator-1");
     }
 
     @Test
@@ -182,6 +183,7 @@ class AclServiceTest {
         po.setPrincipalType(PrincipalType.USER);
         po.setPrincipalId("u3");
         po.setPermission(Permission.VIEW);
+        po.setCreatedBy("creator-1");
         return po;
     }
 

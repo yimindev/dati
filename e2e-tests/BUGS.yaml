@@ -9,13 +9,6 @@ bugs:
     found_at: 2026-10-19
     description: |
       TC-DS-010 步骤 13 / TC-DS-011 步骤 11 复现：更新表别名与描述后，ES 文档 table:{tableId} 的 createdTime 由 2026-10-19T22:53:23.092 变为 2026-10-19T22:53:33.471（等于 updatedTime）；列更新同样现象。根因：TableService.updateTable/ColumnService 重建 SemanticSearchDocument 时未回填原有 createdTime，SemanticIndexService.save 只在 createdTime 为 null 时才赋值为 now，故每次更新都会把创建时间覆盖为更新时刻。影响：语义检索侧无法区分创建与更新时间，审计信息失真。修复方向：更新时先按 id 取出既有文档并沿用其 createdTime。
-  - id: BUG-20261019-007
-    title: GET /v1/subjects/{subjectId}/tables 返回的 created_user_name/updated_user_name 恒为 null
-    module: 语义层-主题管理
-    severity: low
-    found_at: 2026-10-19
-    description: |
-      TC-SEM-002/TC-SEM-000：主题表列表响应中每条表的 created_user_name 与 updated_user_name 均为 null，而同一批表在 GET /v1/data-sources/{dsId}/tables 中能正常返回 qa-e2e-tester（说明 created_by 已正确填充、仅 Assembler 未调用 fillUserInfo）。与已修复的 BUG-20260726-004（数据源表列表同类问题）同源，主题侧遗漏。
   - id: BUG-20261019-008
     title: DELETE 术语关联无法删除 TABLE 级关系（fieldName 为空段会 404），仅支持未文档化的 '_' 哨兵值
     module: 语义层-术语管理
@@ -23,20 +16,6 @@ bugs:
     found_at: 2026-10-19
     description: |
       TC-SEM-004 探索：TABLE 级关系（field_name 为 null）通过 DELETE /v1/terms/{id}/relations/{tableId}/{fieldName} 无法删除——传空 fieldName 返回 404 CM002，唯一可行方式是传字面量 '_'（控制器内隐藏约定 '_' → null）。openapi 中该端点的 fieldName 只是 required path 参数，未说明该约定，调用方无从得知；且 POST 时把 field_name 传成 '_' 也会被静默转成 TABLE 级关系。
-  - id: BUG-20261019-009
-    title: 给主题添加不存在的 tableId 返回 'Data source not found' 且错误信息中是 tableId
-    module: 语义层-主题管理
-    severity: low
-    found_at: 2026-10-19
-    description: |
-      TC-SEM-006 步骤 6b 探索：POST /v1/subjects/{id}/tables 传随机 UUID 作为 table_id 时返回 404，但 code=DS002、message='Data source not found: {tableId}'——查的是表却报数据源不存在，且把 tableId 当作 datasourceId 回显，误导排查。应返回 SM/DS 层的 'Table not found: {tableId}'。
-  - id: BUG-20261019-013
-    title: GET /v1/acls/{type}/{resourceId} 返回的 created_by 恒为 null（Mapper 漏拷审计字段）
-    module: 权限-资源授权
-    severity: low
-    found_at: 2026-10-19
-    description: |
-      TC-PM-002/003/005/006/011/PUB-001 均复现：ACL 列表每条记录的 created_by 全部为 null，而 DB 中 resource_acl.created_by 已正确写入授权人（如 5a30e7ee… 用户 A、19407643… admin）。根因：ResourceAclMapper.toModel 只拷贝 id/resourceType/resourceId/principalType/principalId/permission，未拷贝 BasePO 的 createdBy（toPO 同样不回填），AclController.toVO 因此只能拿到 null。影响：前端 AclEntry.created_by 为非可选字段（frontend/src/api/types.ts:59），授权列表无法展示“授权人”，审计信息缺失。建议：Mapper 双向补齐 createdBy（必要时补 createdAt），并补 Mapper/Controller 单测断言。
   - id: BUG-20261019-014
     title: SEARCH_METADATA 空 keywords 校验错误文案为 size 约束，未说明 keywords 不能为空
     module: MCP 服务管理

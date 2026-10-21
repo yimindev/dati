@@ -83,11 +83,13 @@ class AclControllerTest {
         acl.setPrincipalType(PrincipalType.USER);
         acl.setPrincipalId("u2");
         acl.setPermission(Permission.VIEW);
+        acl.setCreatedBy("creator-1");
         when(aclService.list(ResourceType.DATA_SOURCE, "ds-1")).thenReturn(List.of(acl));
         mockMvc.perform(get("/v1/acls/DATA_SOURCE/ds-1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].principal_id").value("u2"))
-                .andExpect(jsonPath("$[0].permission").value("VIEW"));
+                .andExpect(jsonPath("$[0].permission").value("VIEW"))
+                .andExpect(jsonPath("$[0].created_by").value("creator-1"));
     }
 
     @Test

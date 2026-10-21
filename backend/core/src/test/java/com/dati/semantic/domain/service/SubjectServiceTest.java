@@ -316,6 +316,20 @@ class SubjectServiceTest {
     }
 
     @Test
+    @DisplayName("addTableToSubject - nonexistent table throws DS_TABLE_NOT_FOUND")
+    void addTableToSubject_shouldThrowTableNotFound() {
+        String subjectId = "subject-001";
+        String tableId = "ghost-table";
+
+        when(subjectDAO.findById(subjectId)).thenReturn(Optional.of(sampleSubjectPO));
+        when(tableInfoDAO.findById(tableId)).thenReturn(Optional.empty());
+
+        DatiException ex = assertThrows(DatiException.class,
+                () -> subjectService.addTableToSubject(subjectId, tableId));
+        assertThat(ex.getCode()).isEqualTo(ErrorCode.DS_TABLE_NOT_FOUND);
+    }
+
+    @Test
     @DisplayName("addTableToSubject - throws when relation already exists")
     void addTableToSubject_shouldThrowWhenAlreadyAssociated() {
         String subjectId = "subject-001";

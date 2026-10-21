@@ -145,7 +145,7 @@ public class SubjectService {
         permissionService.requireCurrentUser(ResourceType.SUBJECT, subjectId, Permission.EDIT, subjectPO.getCreatedBy());
 
         TableInfoPO tableInfoPO = tableInfoDAO.findById(tableId)
-                .orElseThrow(() -> new DatiException(ErrorCode.DS_NOT_FOUND, tableId));
+                .orElseThrow(() -> new DatiException(ErrorCode.DS_TABLE_NOT_FOUND, tableId));
 
         if (!subjectPO.getDatasourceId().equals(tableInfoPO.getDataSourceId())) {
             throw new DatiException(ErrorCode.SM_TABLE_NOT_IN_SUBJECT, tableInfoPO.getName(), subjectId);

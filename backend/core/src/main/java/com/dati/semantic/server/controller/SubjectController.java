@@ -14,7 +14,6 @@ import com.dati.semantic.server.pojo.request.UpdateSubjectRequest;
 import com.dati.semantic.server.pojo.vo.SubjectAvailableTableVO;
 import com.dati.semantic.server.pojo.vo.SubjectVO;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Sort;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -78,10 +77,8 @@ public class SubjectController {
             @Valid PageReq pageReq,
             @RequestParam(required = false) String keyword) {
         Sort sortBy = Sort.by(Sort.Direction.DESC, "updatedAt");
-        Page<TableInfoVO> tableVOPage = subjectService
-                .getTablesBySubjectId(id, keyword, pageReq.toPageRequest().withSort(sortBy))
-                .map(tableAssembler::toTableInfoVO);
-        return PageResponse.of(tableVOPage);
+        return tableAssembler.toPageResponse(
+                subjectService.getTablesBySubjectId(id, keyword, pageReq.toPageRequest().withSort(sortBy)));
     }
 
     @GetMapping("/{id}/available-tables")

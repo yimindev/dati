@@ -29,6 +29,7 @@ import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -121,27 +122,38 @@ class SubjectControllerTest {
         tableVO.setName("users");
         tableVO.setSchema("public");
         tableVO.setDescription("Users table description");
+        tableVO.setCreatedUserName("qa-e2e-tester");
+        tableVO.setUpdatedUserName("qa-e2e-tester");
 
         Page<TableInfo> tablePage = new PageImpl<>(
                 List.of(tableInfo),
                 PageRequest.of(0, 10),
                 1);
+        PageResponse<TableInfoVO> tablePageResponse = new PageResponse<>();
+        tablePageResponse.setData(List.of(tableVO));
+        tablePageResponse.setTotal(1);
+        tablePageResponse.setPage(1);
+        tablePageResponse.setSize(10);
 
         when(subjectService.getTablesBySubjectId(
                 org.mockito.ArgumentMatchers.eq("subject-001"),
                 org.mockito.ArgumentMatchers.isNull(),
                 org.mockito.ArgumentMatchers.any()))
                 .thenReturn(tablePage);
-        when(tableAssembler.toTableInfoVO(any(TableInfo.class))).thenReturn(tableVO);
+        when(tableAssembler.toPageResponse(any())).thenReturn(tablePageResponse);
 
         mockMvc.perform(get("/v1/subjects/subject-001/tables?page=1&size=10"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.length()").value(1))
                 .andExpect(jsonPath("$.data[0].id").value("table-001"))
                 .andExpect(jsonPath("$.data[0].name").value("users"))
+                .andExpect(jsonPath("$.data[0].created_user_name").value("qa-e2e-tester"))
+                .andExpect(jsonPath("$.data[0].updated_user_name").value("qa-e2e-tester"))
                 .andExpect(jsonPath("$.total").value(1))
                 .andExpect(jsonPath("$.page").value(1))
                 .andExpect(jsonPath("$.size").value(10));
+
+        verify(tableAssembler).toPageResponse(any());
     }
 
     @Test

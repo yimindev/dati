@@ -65,7 +65,7 @@
 2. **创建主题**（绑定 datasourceId）
 3. 查 available-tables，验证包含 `subject_tables` 中的表名，每条有 `table_id`/`table_name`/`schema`
 4. 从 available-tables 选第一张表添加到主题
-5. 查主题表列表，确认已添加
+5. 查主题表列表，确认已添加；每条 `created_user_name` / `updated_user_name` 不为 null
 6. 将其余表也添加，确认全部在列表中
 7. 移除最后添加的表，确认已不在、其余仍存
 8. 删除主题（不删数据源）
@@ -137,8 +137,9 @@
 4. 正常创建主题
 5. 更新不存在的主题 → 404
 6. 给不存在的主题加表 → 404
-7. 删除不存在的主题 → 404
-8. 删正常主题（不删数据源）
+7. 给正常主题加不存在的 tableId（随机 UUID）→ 404，错误码 `DS007`，message 含 `Table not found: {tableId}`（不得报数据源不存在）
+8. 删除不存在的主题 → 404
+9. 删正常主题（不删数据源）
 
 ---
 

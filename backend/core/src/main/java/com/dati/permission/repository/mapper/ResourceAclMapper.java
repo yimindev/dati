@@ -15,6 +15,10 @@ public final class ResourceAclMapper {
         po.setPrincipalType(acl.getPrincipalType());
         po.setPrincipalId(acl.getPrincipalId());
         po.setPermission(acl.getPermission());
+        po.setCreatedBy(acl.getCreatedBy());
+        po.setCreatedAt(acl.getCreatedAt());
+        po.setUpdatedBy(acl.getUpdatedBy());
+        po.setUpdatedAt(acl.getUpdatedAt());
         return po;
     }
 
@@ -26,6 +30,10 @@ public final class ResourceAclMapper {
         acl.setPrincipalType(po.getPrincipalType());
         acl.setPrincipalId(po.getPrincipalId());
         acl.setPermission(po.getPermission());
+        acl.setCreatedBy(po.getCreatedBy());
+        acl.setCreatedAt(po.getCreatedAt());
+        acl.setUpdatedBy(po.getUpdatedBy());
+        acl.setUpdatedAt(po.getUpdatedAt());
         return acl;
     }
 }

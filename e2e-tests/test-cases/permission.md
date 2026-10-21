@@ -52,6 +52,7 @@
 5. B GET /v1/data-sources/{ds-1} → 200
 6. B PUT /v1/data-sources/{ds-1}（改 name）→ 预期 403
 7. 校验重复授权幂等：A 再调一次相同 POST → 200，ACL 列表仍只有一条记录（GET /v1/acls/DATA_SOURCE/{ds-1}）
+8. 校验审计字段：GET /v1/acls/DATA_SOURCE/{ds-1} 的每条记录 `created_by` 非空，且等于授权人 A 的 UUID（不得为 null）
 
 ---
 
