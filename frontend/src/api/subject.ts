@@ -164,14 +164,11 @@ export function linkTermRelation(termId: string, body: LinkTermRelationRequest, 
 
 export function unlinkTermRelation(
   termId: string,
-  tableId: string,
-  fieldName: string | null,
+  relationId: string,
   signal?: AbortSignal
 ): Promise<IdResponse> {
-  const encodedTableId = encodeURIComponent(tableId);
-  const encodedFieldName = encodeURIComponent(fieldName === null ? '_' : fieldName);
   return del<IdResponse>(
-    `/v1/terms/${encodeURIComponent(termId)}/relations/${encodedTableId}/${encodedFieldName}`,
+    `/v1/terms/${encodeURIComponent(termId)}/relations/${encodeURIComponent(relationId)}`,
     undefined,
     signal
   );

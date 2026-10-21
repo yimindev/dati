@@ -173,6 +173,18 @@ public class TermService {
         termRelationDAO.save(relationPO);
     }
 
+    /** Delete exactly one relation addressed by its own id. */
+    @Transactional
+    public void unlinkRelation(String termId, String relationId) {
+        TermPO termPO = termDAO.findById(termId)
+                .orElseThrow(() -> new DatiException(ErrorCode.SM_TERM_NOT_FOUND, termId));
+        permissionService.requireSubject(termPO.getSubjectId(), Permission.EDIT);
+        TermRelationPO relation = termRelationDAO.findById(relationId)
+                .filter(r -> termId.equals(r.getTermId()))
+                .orElseThrow(() -> new DatiException(ErrorCode.NOT_FOUND, "Term relation not found"));
+        termRelationDAO.delete(relation);
+    }
+
     @Transactional
     public void unlinkEntity(String termId, String tableId, String fieldName) {
         TermPO termPO = termDAO.findById(termId)

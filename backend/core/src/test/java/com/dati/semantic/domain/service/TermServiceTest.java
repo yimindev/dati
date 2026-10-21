@@ -304,6 +304,66 @@ class TermServiceTest {
     }
 
     @Test
+    @DisplayName("unlinkRelation - deletes the addressed relation by id")
+    void unlinkRelation_shouldDeleteById() {
+        String termId = "term-001";
+        TermPO termPO = new TermPO();
+        termPO.setId(termId);
+        termPO.setSubjectId("subject-001");
+
+        TermRelationPO relation = new TermRelationPO();
+        relation.setId("relation-001");
+        relation.setTermId(termId);
+        relation.setEntityType(TermRelationType.TABLE);
+        relation.setTableId("table-001");
+
+        when(termDAO.findById(termId)).thenReturn(Optional.of(termPO));
+        when(termRelationDAO.findById("relation-001")).thenReturn(Optional.of(relation));
+
+        termService.unlinkRelation(termId, "relation-001");
+
+        verify(termRelationDAO).delete(relation);
+    }
+
+    @Test
+    @DisplayName("unlinkRelation - relation belonging to another term throws NOT_FOUND")
+    void unlinkRelation_otherTermRelation_throwsNotFound() {
+        String termId = "term-001";
+        TermPO termPO = new TermPO();
+        termPO.setId(termId);
+        termPO.setSubjectId("subject-001");
+
+        TermRelationPO relation = new TermRelationPO();
+        relation.setId("relation-001");
+        relation.setTermId("term-002");
+
+        when(termDAO.findById(termId)).thenReturn(Optional.of(termPO));
+        when(termRelationDAO.findById("relation-001")).thenReturn(Optional.of(relation));
+
+        assertThatThrownBy(() -> termService.unlinkRelation(termId, "relation-001"))
+                .isInstanceOf(DatiException.class)
+                .satisfies(e -> assertThat(((DatiException) e).getCode()).isEqualTo(ErrorCode.NOT_FOUND));
+        verify(termRelationDAO, never()).delete(any());
+    }
+
+    @Test
+    @DisplayName("unlinkRelation - nonexistent relation throws NOT_FOUND")
+    void unlinkRelation_nonexistent_throwsNotFound() {
+        String termId = "term-001";
+        TermPO termPO = new TermPO();
+        termPO.setId(termId);
+        termPO.setSubjectId("subject-001");
+
+        when(termDAO.findById(termId)).thenReturn(Optional.of(termPO));
+        when(termRelationDAO.findById("relation-001")).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> termService.unlinkRelation(termId, "relation-001"))
+                .isInstanceOf(DatiException.class)
+                .satisfies(e -> assertThat(((DatiException) e).getCode()).isEqualTo(ErrorCode.NOT_FOUND));
+        verify(termRelationDAO, never()).delete(any());
+    }
+
+    @Test
     @DisplayName("unlinkEntity - nonexistent relation throws NOT_FOUND")
     void unlinkEntity_nonexistentRelation_throwsNotFound() {
         String termId = "term-001";

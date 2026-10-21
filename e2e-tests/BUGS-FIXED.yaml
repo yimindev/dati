@@ -476,3 +476,11 @@ bugs:
     description: |
       TC-PM-002/003/005/006/011/PUB-001 均复现：ACL 列表每条记录的 created_by 全部为 null，而 DB 中 resource_acl.created_by 已正确写入授权人（如 5a30e7ee… 用户 A、19407643… admin）。根因：ResourceAclMapper.toModel 只拷贝 id/resourceType/resourceId/principalType/principalId/permission，未拷贝 BasePO 的 createdBy（toPO 同样不回填），AclController.toVO 因此只能拿到 null。影响：前端 AclEntry.created_by 为非可选字段（frontend/src/api/types.ts:59），授权列表无法展示“授权人”，审计信息缺失。建议：Mapper 双向补齐 createdBy（必要时补 createdAt），并补 Mapper/Controller 单测断言。
       修复：ResourceAclMapper.toModel/toPO 双向保留 createdBy、createdAt、updatedBy、updatedAt。验证：ResourceAclMapperTest 双向审计字段；AclServiceTest/AclControllerTest 断言 created_by；真实后端 curl 授权后列表返回 created_by=授权人 UUID。
+  - id: BUG-20261019-008
+    title: DELETE 术语关联无法删除 TABLE 级关系（fieldName 为空段会 404），仅支持未文档化的 '_' 哨兵值
+    module: 语义层-术语管理
+    severity: low
+    fixed_at: 2026-10-21
+    description: |
+      TC-SEM-004 探索：TABLE 级关系（field_name 为 null）通过 DELETE /v1/terms/{id}/relations/{tableId}/{fieldName} 无法删除——传空 fieldName 返回 404 CM002，唯一可行方式是传字面量 '_'（控制器内隐藏约定 '_' → null）。openapi 中该端点的 fieldName 只是 required path 参数，未说明该约定，调用方无从得知；且 POST 时把 field_name 传成 '_' 也会被静默转成 TABLE 级关系。
+      修复：新增按关系 ID 删除的语义化路由 DELETE /v1/terms/{id}/relations/{relationId}（校验 relation 归属该 term，精确删除单条）；旧复合键路由保留并标记 Deprecated（TABLE 级仍兼容 `_`）。前端改为传 relation.id；OpenAPI 重新生成，新路由可见、旧路由 deprecated=true。验证：TermServiceTest 覆盖按 ID 删除/跨 term 404/不存在 404；TermControllerTest 覆盖新路由与旧路由兼容；真实后端 curl 删除 TABLE/FIELD 关系均 200，跨 term 删除 404 且关系保留，旧 `_` 路由仍可用。

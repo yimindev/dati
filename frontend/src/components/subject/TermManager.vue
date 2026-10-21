@@ -610,11 +610,7 @@ const handleRemoveRelation = async (
         type: "warning",
       },
     );
-    await unlinkTermRelation(
-      termId,
-      relation.table_id,
-      relation.field_name || null,
-    );
+    await unlinkTermRelation(termId, relation.id);
     ElMessage.success(t("subject.removeRelationSuccess"));
     await loadTerms();
   } catch (error: any) {

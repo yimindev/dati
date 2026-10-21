@@ -74,6 +74,19 @@ public class TermController {
         return new IdResponse(id);
     }
 
+    @DeleteMapping("/terms/{id}/relations/{relationId}")
+    public IdResponse unlinkRelationById(@PathVariable String id, @PathVariable String relationId) {
+        termService.unlinkRelation(id, relationId);
+        return new IdResponse(relationId);
+    }
+
+    /**
+     * Legacy composite-key route.
+     *
+     * @deprecated use {@code DELETE /v1/terms/{id}/relations/{relationId}} instead;
+     *             TABLE-level relations can omit the field segment there.
+     */
+    @Deprecated
     @DeleteMapping("/terms/{id}/relations/{tableId}/{fieldName}")
     public IdResponse unlinkTermRelation(@PathVariable String id, @PathVariable String tableId, @PathVariable String fieldName) {
         String actualFieldName = "_".equals(fieldName) ? null : fieldName;
