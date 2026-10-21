@@ -83,12 +83,12 @@ backend/src/main/java/com/dati/semantic/
 
 | Method | Path | 说明 |
 |--------|------|------|
-| GET | `/v1/subjects?keyword=&page=&size=` | 分页查询主题（按名称搜索） |
+| GET | `/v1/subjects?keyword=&page=&size=` | 分页查询主题（按 ID 前缀 / 名称 / 别名搜索） |
 | GET | `/v1/subjects/{id}` | 获取主题详情（含数据源名称） |
 | POST | `/v1/subjects` | 创建主题 |
 | PUT | `/v1/subjects/{id}` | 更新主题 |
 | DELETE | `/v1/subjects/{id}` | 删除主题 |
-| GET | `/v1/subjects/{id}/tables?keyword=&page=&size=` | 分页查询已关联的表（按表名搜索，DB 层分页） |
+| GET | `/v1/subjects/{id}/tables?keyword=&page=&size=` | 分页查询已关联的表（按表名 / 表别名搜索，DB 层分页） |
 | GET | `/v1/subjects/{id}/available-tables?schema=` | 获取可关联的表 |
 | POST | `/v1/subjects/{id}/tables` | 关联表到主题 |
 | DELETE | `/v1/subjects/{id}/tables/{tableId}` | 取消关联 |
@@ -97,7 +97,7 @@ backend/src/main/java/com/dati/semantic/
 
 | Method | Path | 说明 |
 |--------|------|------|
-| GET | `/v1/subjects/{subjectId}/terms?keyword=&page=&size=` | 分页查询主题下的术语（DB 层分页） |
+| GET | `/v1/subjects/{subjectId}/terms?keyword=&page=&size=` | 分页查询主题下的术语（按名称 / 别名搜索，DB 层分页） |
 | GET | `/v1/terms/{id}` | 获取术语详情（含关联） |
 | POST | `/v1/subjects/{subjectId}/terms` | 创建术语 |
 | PUT | `/v1/terms/{id}` | 更新术语 |
@@ -154,7 +154,7 @@ unlinkTermRelation(termId, tableId, fieldName, signal?): IdResponse
 2. **级联删除**：删除 Subject 会清理 ES 索引；删除 Term 会清理关联的 TermRelation
 3. **表归属校验**：关联表到主题时校验表必须属于同一数据源
 4. **数据库级分页**：`getSubjectTables` 和 `getTermsBySubject` 通过 JPQL 子查询在 DB 层完成分页/排序/关键词过滤，避免内存分页
-5. **关键词搜索**：主题列表按名称搜索，已关联的表按表名搜索，术语按名称/别名搜索；均采用 Java 层分支（keyword 空/非空分别调用不同 DAO 方法），避免 `IS NULL OR` 影响查询计划
+5. **关键词搜索**：主题（ID 前缀 / 名称 / 别名）、主题表（表名 / 表别名）、术语（名称 / 别名）均在 DB 层过滤；keyword 空/非空走不同 DAO 方法，避免 `IS NULL OR` 影响查询计划。关键字使用 `LOCATE` 做大小写不敏感的字面匹配，`%` / `_` 不作为 SQL 通配符（避免搜索特殊字符返回全量）；别名（JSON 列）通过 `CAST(aliases AS String)` 参与匹配
 6. **数据源名称富集**：`SubjectVO.datasourceName` 由 `SubjectAssembler` 批量解析——`toVO()` 和 `toVOList()` 内部通过 `DataSourceService.getDataSourceNameMap()` 一次查询完成所有 ID→名称映射
 7. **DTO 命名**：后端使用 `camelCase`，前端 API 层转换为 `snake_case`（后端统一按 dev profile 的 snake_case 处理）
 8. **分层权限管控**：主题（`SUBJECT`）作为根资源受 ACL 控制。创建主题需校验关联数据源的 `VIEW` 权限；主题及其子资源（`SubjectTable`、`Term`、`TermRelation`）的读写操作均级联校验所属 `SUBJECT` 的 `VIEW` 或 `EDIT` 权限

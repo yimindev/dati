@@ -92,6 +92,28 @@ class DataSourceAccessibleTest {
     }
 
     @Test
+    void keywordSearchTreatsWildcardsLiterally() {
+        String underscore = dataSourceDAO.save(ds("u1", "sales_data")).getId();
+        dataSourceDAO.save(ds("u1", "salesdata"));
+
+        Page<DataSourcePO> adminPercent = dataSourceDAO.findAllByNameContainingOrId(
+                "%", PageRequest.of(0, 10));
+        Page<DataSourcePO> adminUnderscore = dataSourceDAO.findAllByNameContainingOrId(
+                "_", PageRequest.of(0, 10));
+        Page<DataSourcePO> accessiblePercent = dataSourceDAO.findByNameContainingOrIdAndAccessible(
+                "%", "u1", Set.of(PrincipalType.ALL_USERS), PageRequest.of(0, 10));
+        Page<DataSourcePO> accessibleUnderscore = dataSourceDAO.findByNameContainingOrIdAndAccessible(
+                "_", "u1", Set.of(PrincipalType.ALL_USERS), PageRequest.of(0, 10));
+
+        assertThat(adminPercent.getContent()).isEmpty();
+        assertThat(adminUnderscore.getContent()).extracting(DataSourcePO::getId)
+                .containsExactly(underscore);
+        assertThat(accessiblePercent.getContent()).isEmpty();
+        assertThat(accessibleUnderscore.getContent()).extracting(DataSourcePO::getId)
+                .containsExactly(underscore);
+    }
+
+    @Test
     void groupOutsideMembershipDoesNotGrantAccess() {
         String granted = dataSourceDAO.save(ds("u3", "team-ds")).getId();
         ResourceAclPO po = new ResourceAclPO();

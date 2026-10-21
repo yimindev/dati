@@ -144,17 +144,19 @@
     - `description` = `table_mgmt.update.description`
 11. 验证更新返回 200，且响应 `id` 不为 null
 12. 再次查表列表，验证更新后的 aliases 和 description 已生效
-13. **ES 验证 - TABLE 已更新**：查询 ES 中 `id` = `table:{该表的tableId}` 的文档
+13. **按别名搜索表**：GET tables，keyword 分别取 `table_mgmt.update.aliases` 中的值 → 只返回 `table_mgmt.update.target` 表（列表搜索同时匹配 name 与 aliases）
+14. **通配符按字面匹配**：keyword=`%25`（即 `%`）→ 返回 0 条；keyword=`_` → 只返回 name/aliases 中真正含下划线的表，不得返回全量
+15. **ES 验证 - TABLE 已更新**：查询 ES 中 `id` = `table:{该表的tableId}` 的文档
     - `keywords` 数组包含 `table_mgmt.update.aliases` 中的所有值
     - `description` 为 `table_mgmt.update.description`
     - `updatedTime` 晚于之前的值
-14. **删除一张表**：删除 `table_mgmt.delete_target` 表
-15. 验证删除返回 200
-16. 查询已添加表名列表，确认 `delete_target` 已不在，其余表仍存在
-17. **ES 验证 - 已删表的 TABLE 已清理**：查询 ES 中 `entity.tableName` = `delete_target` AND `entity.datasourceId` = datasourceId 的 TABLE 文档
+16. **删除一张表**：删除 `table_mgmt.delete_target` 表
+17. 验证删除返回 200
+18. 查询已添加表名列表，确认 `delete_target` 已不在，其余表仍存在
+19. **ES 验证 - 已删表的 TABLE 已清理**：查询 ES 中 `entity.tableName` = `delete_target` AND `entity.datasourceId` = datasourceId 的 TABLE 文档
     - 应返回 0 条（已物理删除）
-18. **ES 验证 - 其余表的 TABLE 仍存在**：确认未删除表的 TABLE 文档不受影响
-19. 删除数据源（清理）
+20. **ES 验证 - 其余表的 TABLE 仍存在**：确认未删除表的 TABLE 文档不受影响
+21. 删除数据源（清理）
 
 ---
 
@@ -192,32 +194,34 @@
     - `extract_value_enabled` 为 `true`
     - **`name` 未被清空**，仍为原来的列名（验证部分更新语义正确）
     - **`column_type` 未被清空**，仍为原来的类型
-11. **ES 验证 - FIELD 已更新**：查询 ES 中 `id` = `field:{该列的columnId}` 的文档
+11. **按别名搜索列**：GET columns，keyword 分别取 `column_values.column_aliases` 中的值 → 只返回 `column_values.target_column` 列（列表搜索同时匹配 name 与 aliases）
+12. **通配符按字面匹配**：keyword=`%25`（即 `%`）→ 返回 0 条；keyword=`_` → 只返回 name/aliases 中真正含下划线的列，不得返回全量
+13. **ES 验证 - FIELD 已更新**：查询 ES 中 `id` = `field:{该列的columnId}` 的文档
     - `keywords` 包含 `column_values.column_aliases` 中的所有值
     - `description` 为 `column_values.column_description`
-12. **抽取维度值**（POST column values/extract）：对 `target_column` 列触发维度值提取
-13. 验证抽取返回 200
-14. **查询维度值列表**（GET column values），验证抽取结果：
+14. **抽取维度值**（POST column values/extract）：对 `target_column` 列触发维度值提取
+15. 验证抽取返回 200
+16. **查询维度值列表**（GET column values），验证抽取结果：
     - 返回 `column_values.value_count` 个值
     - 每项包含 `id`、`value`、`synonyms` 字段
     - 包含 `column_values.sample_values` 中的值（至少匹配 3 个）
     - `synonyms` 初始为空数组，分页参数合理
-15. **ES 验证 - FIELD_VALUE 已抽取**：查询 ES 中 `entity.tableId` = tableId AND `entity.field` = `target_column` AND `type` = `FIELD_VALUE`
+17. **ES 验证 - FIELD_VALUE 已抽取**：查询 ES 中 `entity.tableId` = tableId AND `entity.field` = `target_column` AND `type` = `FIELD_VALUE`
     - 共 `value_count` 条文档
     - 每条 `keywords` 数组包含维度值文本本身
     - 能找到 `keywords` 含 `sample_values` 中各值的文档
-16. **更新维度值**（PUT column values）：遍历 `column_values.synonym_updates`，为每个 value 设置对应的 synonyms
+18. **更新维度值**（PUT column values）：遍历 `column_values.synonym_updates`，为每个 value 设置对应的 synonyms
     - 注意：需要传完整 values 列表（id + value + synonyms），deletedIds 为空数组
-17. 再次查询维度值列表，确认更新的 values 的 synonyms 已生效
-18. **ES 验证 - FIELD_VALUE 同义词已更新**：查询 ES 中对应的 FIELD_VALUE 文档
+19. 再次查询维度值列表，确认更新的 values 的 synonyms 已生效
+20. **ES 验证 - FIELD_VALUE 同义词已更新**：查询 ES 中对应的 FIELD_VALUE 文档
     - 每条被更新的 value 的 `keywords` 包含其 synonyms 中的所有值
-19. **再次同步列（回归锚点：同步不得重置值抽取配置）**：再次 POST columns/sync（不传 overwrite_existing）
+21. **再次同步列（回归锚点：同步不得重置值抽取配置）**：再次 POST columns/sync（不传 overwrite_existing）
     - **预期**：重新查询列列表，`extract_value_enabled` 仍为 **true**（用户配置而非数据库结构，应与 aliases 一样被保留）
     - **预期**：`aliases`、`description` 仍为步骤 8 写入的值（既有保留语义不回归）
     - **预期**：ES 中该列 FIELD_VALUE 文档数仍为 `value_count`（同步不应删除已抽取的维度值）
     - **注**：当前实现（2026-08-20 前）会静默重置 `extract_value_enabled=false` 并删除全部 FIELD_VALUE 文档，本步骤为回归验证锚点
-20. 删除数据源（清理）
-21. **ES 验证 - 全部清理**：查询 ES 中 `entity.datasourceId` = datasourceId 的所有文档，应返回 0 条
+22. 删除数据源（清理）
+23. **ES 验证 - 全部清理**：查询 ES 中 `entity.datasourceId` = datasourceId 的所有文档，应返回 0 条
 
 ---
 
@@ -245,5 +249,6 @@
 2. 用默认分页参数（page=1）查询数据源列表
 3. 验证分页信息合理：`page`=1、`size` 有默认值、`total` ≥ `pagination_count`
 4. 用 keyword 搜索其中一个的名称，确认只返回匹配的
-5. 用 page=1, size=1 查询，验证只返回 1 条，`total_pages` 根据 total 计算正确
-6. 依次删除 3 个数据源（清理）
+5. **通配符按字面匹配**：keyword=`%25`（即 `%`）→ total=0（不得返回全量）；keyword=`_` → 只返回名称中真正含下划线的数据源
+6. 用 page=1, size=1 查询，验证只返回 1 条，`total_pages` 根据 total 计算正确
+7. 依次删除 3 个数据源（清理）

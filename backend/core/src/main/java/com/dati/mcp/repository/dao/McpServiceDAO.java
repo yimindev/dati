@@ -17,15 +17,20 @@ public interface McpServiceDAO extends JpaRepository<McpServicePO, String> {
 
     Optional<McpServicePO> findByCode(String code);
 
-    @Query("SELECT m FROM McpServicePO m WHERE LOWER(m.name) LIKE LOWER(CONCAT('%', :name, '%')) OR LOWER(m.code) LIKE LOWER(CONCAT('%', :name, '%')) OR m.id = :id")
-    Page<McpServicePO> findAllByNameContainingOrId(@Param("name") String name, @Param("id") String id, Pageable pageable);
+    @Query("""
+            SELECT m FROM McpServicePO m
+            WHERE locate(lower(:keyword), lower(m.name)) > 0
+               OR locate(lower(:keyword), lower(m.code)) > 0
+               OR m.id = :keyword
+            """)
+    Page<McpServicePO> findAllByNameContainingOrId(@Param("keyword") String keyword, Pageable pageable);
 
     Page<McpServicePO> findAllByStatus(McpServiceStatus status, Pageable pageable);
 
     @Query("""
             SELECT m FROM McpServicePO m
-            WHERE ((LOWER(m.name) LIKE LOWER(CONCAT('%', :keyword, '%'))
-                   OR LOWER(m.code) LIKE LOWER(CONCAT('%', :keyword, '%'))
+            WHERE ((locate(lower(:keyword), lower(m.name)) > 0
+                   OR locate(lower(:keyword), lower(m.code)) > 0
                    OR m.id = :keyword)
                   AND m.status = :status)
             """)
@@ -35,8 +40,8 @@ public interface McpServiceDAO extends JpaRepository<McpServicePO, String> {
 
     @Query("""
             SELECT m FROM McpServicePO m
-            WHERE (LOWER(m.name) LIKE LOWER(CONCAT('%', :keyword, '%'))
-                   OR LOWER(m.code) LIKE LOWER(CONCAT('%', :keyword, '%'))
+            WHERE (locate(lower(:keyword), lower(m.name)) > 0
+                   OR locate(lower(:keyword), lower(m.code)) > 0
                    OR m.id = :keyword)
               AND (m.createdBy = :userId
                    OR EXISTS (SELECT 1 FROM ResourceAclPO a
@@ -67,8 +72,8 @@ public interface McpServiceDAO extends JpaRepository<McpServicePO, String> {
 
     @Query("""
             SELECT m FROM McpServicePO m
-            WHERE ((LOWER(m.name) LIKE LOWER(CONCAT('%', :keyword, '%'))
-                   OR LOWER(m.code) LIKE LOWER(CONCAT('%', :keyword, '%'))
+            WHERE ((locate(lower(:keyword), lower(m.name)) > 0
+                   OR locate(lower(:keyword), lower(m.code)) > 0
                    OR m.id = :keyword)
                   AND m.status = :status)
               AND (m.createdBy = :userId

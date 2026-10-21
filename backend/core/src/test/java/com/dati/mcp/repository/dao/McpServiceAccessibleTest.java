@@ -95,6 +95,28 @@ class McpServiceAccessibleTest {
     }
 
     @Test
+    void keywordSearchTreatsWildcardsLiterally() {
+        String underscore = mcpServiceDAO.save(svc("u1", "sales_data", McpServiceStatus.DRAFT)).getId();
+        mcpServiceDAO.save(svc("u1", "salesdata", McpServiceStatus.DRAFT));
+
+        Page<McpServicePO> adminPercent = mcpServiceDAO.findAllByNameContainingOrId(
+                "%", PageRequest.of(0, 10));
+        Page<McpServicePO> adminUnderscore = mcpServiceDAO.findAllByNameContainingOrId(
+                "_", PageRequest.of(0, 10));
+        Page<McpServicePO> accessiblePercent = mcpServiceDAO.searchByKeywordAndStatusAndAccessible(
+                "%", McpServiceStatus.DRAFT, "u1", Set.of(PrincipalType.ALL_USERS), PageRequest.of(0, 10));
+        Page<McpServicePO> accessibleUnderscore = mcpServiceDAO.searchByKeywordAndStatusAndAccessible(
+                "_", McpServiceStatus.DRAFT, "u1", Set.of(PrincipalType.ALL_USERS), PageRequest.of(0, 10));
+
+        assertThat(adminPercent.getContent()).isEmpty();
+        assertThat(adminUnderscore.getContent()).extracting(McpServicePO::getId)
+                .containsExactly(underscore);
+        assertThat(accessiblePercent.getContent()).isEmpty();
+        assertThat(accessibleUnderscore.getContent()).extracting(McpServicePO::getId)
+                .containsExactly(underscore);
+    }
+
+    @Test
     void groupOutsideMembershipDoesNotGrantAccess() {
         String granted = mcpServiceDAO.save(svc("u3", "team-svc", McpServiceStatus.DRAFT)).getId();
         ResourceAclPO po = new ResourceAclPO();

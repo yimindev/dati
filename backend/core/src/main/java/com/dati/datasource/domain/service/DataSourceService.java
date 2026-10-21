@@ -193,7 +193,7 @@ public class DataSourceService {
             if (StringUtils.isEmpty(keyword)) {
                 return dataSourceDAO.findAll(pageable).map(DSMapper::toDataSource);
             }
-            return dataSourceDAO.findAllByNameContainingOrId(keyword, keyword, pageable)
+            return dataSourceDAO.findAllByNameContainingOrId(keyword, pageable)
                     .map(DSMapper::toDataSource);
         }
         if (StringUtils.isEmpty(keyword)) {

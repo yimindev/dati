@@ -146,7 +146,7 @@ public class McpServiceService {
             return mcpServiceDAO.findAllByStatus(status, pageable).map(McpServiceMapper::toModel);
         }
         if (status == null) {
-            return mcpServiceDAO.findAllByNameContainingOrId(keyword, keyword, pageable)
+            return mcpServiceDAO.findAllByNameContainingOrId(keyword, pageable)
                     .map(McpServiceMapper::toModel);
         }
         return mcpServiceDAO.searchByKeywordAndStatus(keyword, status, pageable)

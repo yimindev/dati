@@ -13,13 +13,19 @@ import java.util.Collection;
 @Repository
 public interface SubjectDAO extends JpaRepository<SubjectPO, String> {
 
-    @Query("SELECT s FROM SubjectPO s WHERE " +
-           "s.id LIKE CONCAT(:keyword, '%') OR LOWER(s.name) LIKE LOWER(CONCAT('%', :keyword, '%'))")
+    @Query("""
+            SELECT s FROM SubjectPO s
+            WHERE locate(lower(:keyword), lower(s.id)) = 1
+               OR locate(lower(:keyword), lower(s.name)) > 0
+               OR locate(lower(:keyword), lower(cast(s.aliases as String))) > 0
+            """)
     Page<SubjectPO> findByKeyword(@Param("keyword") String keyword, Pageable pageable);
 
     @Query("""
             SELECT s FROM SubjectPO s
-            WHERE (s.id LIKE CONCAT(:keyword, '%') OR LOWER(s.name) LIKE LOWER(CONCAT('%', :keyword, '%')))
+            WHERE (locate(lower(:keyword), lower(s.id)) = 1
+                   OR locate(lower(:keyword), lower(s.name)) > 0
+                   OR locate(lower(:keyword), lower(cast(s.aliases as String))) > 0)
               AND (s.createdBy = :userId
                    OR EXISTS (SELECT 1 FROM ResourceAclPO a
                               WHERE a.resourceType = 'SUBJECT'

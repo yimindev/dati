@@ -36,7 +36,8 @@ public interface SubjectTableDAO extends JpaRepository<SubjectTablePO, String> {
             WHERE ti.id IN (
                 SELECT st.tableId FROM SubjectTablePO st WHERE st.subjectId = :subjectId
             )
-            AND LOWER(ti.name) LIKE LOWER(CONCAT('%', :keyword, '%'))
+            AND (locate(lower(:keyword), lower(ti.name)) > 0
+                 OR locate(lower(:keyword), lower(cast(ti.aliases as String))) > 0)
             """)
     Page<TableInfoPO> findTablesBySubjectIdAndNameContaining(
             @Param("subjectId") String subjectId,

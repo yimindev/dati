@@ -3,6 +3,8 @@ package com.dati.datasource.domain.service;
 import com.dati.TestFixtures;
 import com.dati.auth.authentication.User;
 import com.dati.base.RequestContext;
+import com.dati.base.exception.DatiException;
+import com.dati.base.exception.ErrorCode;
 import com.dati.base.pojo.PageReq;
 import com.dati.datasource.domain.model.TableInfo;
 import com.dati.datasource.repository.dao.ColumnInfoDAO;
@@ -30,8 +32,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
-import com.dati.base.exception.DatiException;
-import com.dati.base.exception.ErrorCode;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -102,7 +102,7 @@ class TableServiceTest {
         pageReq.setSize(10);
 
         Page<TableInfoPO> page = new PageImpl<>(List.of(testTableInfoPO));
-        when(tableInfoDAO.findByDataSourceIdAndNameContaining(
+        when(tableInfoDAO.findByDataSourceIdAndKeyword(
             eq(TestFixtures.TEST_DATASOURCE_ID), eq("test"), any()))
             .thenReturn(page);
 

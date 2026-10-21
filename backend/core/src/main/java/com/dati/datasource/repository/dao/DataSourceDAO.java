@@ -11,11 +11,16 @@ import java.util.Collection;
 
 public interface DataSourceDAO extends JpaRepository<DataSourcePO, String> {
 
-    Page<DataSourcePO> findAllByNameContainingOrId(String name, String id, Pageable pageable);
+    @Query("""
+            SELECT d FROM DataSourcePO d
+            WHERE locate(lower(:keyword), lower(d.name)) > 0
+               OR d.id = :keyword
+            """)
+    Page<DataSourcePO> findAllByNameContainingOrId(@Param("keyword") String keyword, Pageable pageable);
 
     @Query("""
             SELECT d FROM DataSourcePO d
-            WHERE (d.name LIKE %:keyword% OR d.id = :keyword)
+            WHERE (locate(lower(:keyword), lower(d.name)) > 0 OR d.id = :keyword)
               AND (d.createdBy = :userId
                    OR EXISTS (SELECT 1 FROM ResourceAclPO a
                               WHERE a.resourceType = 'DATA_SOURCE'

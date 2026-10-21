@@ -65,7 +65,7 @@ backend/src/main/java/com/dati/datasource/
 | POST | `/v1/data-sources` | 创建数据源 |
 | PUT | `/v1/data-sources/{id}` | 更新数据源（null 字段不覆盖） |
 | DELETE | `/v1/data-sources/{id}` | 删除数据源（级联清理表/列/ES索引） |
-| GET | `/v1/data-sources` | 分页查询数据源列表，支持 keyword 搜索 |
+| GET | `/v1/data-sources` | 分页查询数据源列表，keyword 匹配名称 / ID；`%` / `_` 按字面匹配 |
 | GET | `/v1/data-sources/{id}/schemas` | 获取数据库 Schema 列表（校验 VIEW 权限） |
 | GET | `/v1/data-sources/{id}/schemas/{schema}/tables` | 获取表列表（校验 VIEW 权限） |
 
@@ -73,7 +73,7 @@ backend/src/main/java/com/dati/datasource/
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
-| GET | `/v1/data-sources/{datasourceId}/tables` | 分页查询已添加的表列表，支持 keyword 搜索（校验 VIEW 权限） |
+| GET | `/v1/data-sources/{datasourceId}/tables` | 分页查询已添加的表列表，keyword 匹配表名 / 表别名（字面匹配，校验 VIEW 权限） |
 | GET | `/v1/data-sources/{datasourceId}/tables/added-names` | 获取已添加的表名列表（校验 VIEW 权限） |
 | POST | `/v1/data-sources/{datasourceId}/tables/batch` | 批量添加表（从数据库同步表+列+ES索引，校验 EDIT 权限） |
 | DELETE | `/v1/data-sources/{datasourceId}/tables/{tableId}` | 删除表（级联删列+ES索引，校验 EDIT 权限） |
@@ -83,11 +83,11 @@ backend/src/main/java/com/dati/datasource/
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
-| GET | `.../columns` | 分页查询列列表，支持 keyword 搜索（校验 VIEW 权限） |
+| GET | `.../columns` | 分页查询列列表，keyword 匹配列名 / 列别名（字面匹配，校验 VIEW 权限） |
 | PUT | `.../columns/{id}` | 更新列元数据（别名、描述、值匹配开关，校验 EDIT 权限） |
 | POST | `.../columns/sync` | 从数据库同步最新列信息（校验 EDIT 权限） |
 | POST | `.../columns/{columnId}/values/extract` | 从数据库抽取列去重值写入 ES（强校验所属数据源一致性 + EDIT 权限） |
-| GET | `.../columns/{columnId}/values` | 分页查询列值列表，支持 keyword 搜索（校验 VIEW 权限） |
+| GET | `.../columns/{columnId}/values` | 分页查询列值列表，keyword 匹配值与同义词（ES keywords，校验 VIEW 权限） |
 | PUT | `.../columns/{columnId}/values` | 保存列值（增/删/改同义词，校验 EDIT 权限） |
 
 ### 2.3 核心领域模型
@@ -363,7 +363,8 @@ DataSourceService.deleteDataSource()
 - **前后端分离**: 前端 Vue 3 + TypeScript + Element Plus，后端 REST API
 - **命名转换**: 前端 API JSON 使用 snake_case（如 `jdbc_url`），前端脚本内部使用 camelCase
 - **ES 集成**: 表/字段元数据自动同步到 ES，支持语义搜索；列值可抽取到 ES 实现值级别匹配
-- **别名系统**: 表/字段支持多个别名（aliases），同步到 ES keywords 去重存储，支持语义搜索匹配
+- **别名系统**: 表/字段支持多个别名（aliases），同步到 ES keywords 去重存储，支持语义搜索匹配；管理端列表搜索同样匹配 aliases（DB 层 `CAST(aliases AS String)` + `LOCATE`）
+- **列表搜索字面匹配**: 所有管理端 keyword 搜索使用 `LOCATE` 而非 SQL `LIKE`，`%` / `_` 不再作为通配符，避免搜索特殊字符命中全量数据
 - **列值抽取**: 通过 `ColumnValueService` 执行 `SELECT DISTINCT` 抽取列的去重值到 ES，支持覆盖/追加两种模式，受 `ColumnValueConfig` 限制采样数量和值长度
 - **值匹配开关**: 仅字符串类型列（varchar/char/text）支持，开启后可管理列值；关闭时自动清理 ES 中的 FIELD_VALUE 数据
 

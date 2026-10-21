@@ -23,7 +23,8 @@ public interface TermDAO extends JpaRepository<TermPO, String> {
     @Query("""
             SELECT t FROM TermPO t
             WHERE t.subjectId = :subjectId
-            AND LOWER(t.name) LIKE LOWER(CONCAT('%', :keyword, '%'))
+            AND (locate(lower(:keyword), lower(t.name)) > 0
+                 OR locate(lower(:keyword), lower(cast(t.aliases as String))) > 0)
             """)
     Page<TermPO> findBySubjectIdAndKeyword(@Param("subjectId") String subjectId,
                                            @Param("keyword") String keyword,

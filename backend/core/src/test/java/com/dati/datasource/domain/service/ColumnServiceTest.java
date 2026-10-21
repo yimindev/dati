@@ -3,6 +3,8 @@ package com.dati.datasource.domain.service;
 import com.dati.TestFixtures;
 import com.dati.auth.authentication.User;
 import com.dati.base.RequestContext;
+import com.dati.base.exception.DatiException;
+import com.dati.base.exception.ErrorCode;
 import com.dati.base.pojo.PageReq;
 import com.dati.datasource.domain.model.ColumnInfo;
 import com.dati.datasource.repository.dao.ColumnInfoDAO;
@@ -30,8 +32,6 @@ import java.sql.SQLException;
 import java.util.List;
 import java.util.Optional;
 
-import com.dati.base.exception.DatiException;
-import com.dati.base.exception.ErrorCode;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -40,12 +40,7 @@ import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.lenient;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.mockStatic;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("ColumnService unit tests")
@@ -110,7 +105,7 @@ class ColumnServiceTest {
         pageReq.setSize(10);
 
         Page<ColumnInfoPO> page = new PageImpl<>(List.of(testColumnInfoPO));
-        when(columnInfoDAO.findByTableIdAndNameContaining(eq(TestFixtures.TEST_TABLE_ID), eq("test"), any()))
+        when(columnInfoDAO.findByTableIdAndKeyword(eq(TestFixtures.TEST_TABLE_ID), eq("test"), any()))
             .thenReturn(page);
 
         // when

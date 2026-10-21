@@ -63,7 +63,7 @@ public class TableService {
         if (StringUtils.isEmpty(keyword)) {
             return tableInfoDAO.findByDataSourceId(datasourceId, pageReq.toPageRequest().withSort(sortBy)).map(TableMapper::toTableInfo);
         }
-        return tableInfoDAO.findByDataSourceIdAndNameContaining(datasourceId, keyword, pageReq.toPageRequest().withSort(sortBy)).map(TableMapper::toTableInfo);
+        return tableInfoDAO.findByDataSourceIdAndKeyword(datasourceId, keyword, pageReq.toPageRequest().withSort(sortBy)).map(TableMapper::toTableInfo);
     }
 
     public List<String> getAddedTableNames(String datasourceId) {

@@ -44,20 +44,6 @@ bugs:
     found_at: 2026-10-19
     description: |
       TC-SEM-006 步骤 6b 探索：POST /v1/subjects/{id}/tables 传随机 UUID 作为 table_id 时返回 404，但 code=DS002、message='Data source not found: {tableId}'——查的是表却报数据源不存在，且把 tableId 当作 datasourceId 回显，误导排查。应返回 SM/DS 层的 'Table not found: {tableId}'。
-  - id: BUG-20261019-010
-    title: 主题/术语列表 keyword 搜索不匹配 aliases（仅 ID 前缀 + name 模糊）
-    module: 语义层-列表查询
-    severity: low
-    found_at: 2026-10-19
-    description: |
-      TC-SEM-008 探索：给主题设置别名 e2e-unique-alias-xyz 后，GET /v1/subjects?keyword=e2e-unique-alias-xyz 返回 total=0，而 ES 文档 keywords 中已含该别名（SubjectService.getSubjects 仅按 ID 前缀 + name LIKE 匹配）。列表页搜索别名无结果与 ES 语义检索（MCP 侧可按别名命中）行为不一致，建议列表搜索同时匹配 aliases。
-  - id: BUG-20261019-011
-    title: 列表 keyword 中的 SQL LIKE 通配符（% 与 _）未转义，搜索命中全部记录
-    module: 语义层-列表查询
-    severity: low
-    found_at: 2026-10-19
-    description: |
-      TC-SEM-008 探索：GET /v1/subjects?keyword=%25（即 '%'）与 keyword=_ 均返回 total=4（全部主题），keyword 被直接拼进 LIKE 模式而未转义 %/_，用户搜索含下划线或百分号的名称时会得到全量结果。建议转义为 \% / \_ 或使用 ESCAPE 子句。
   - id: BUG-20261019-012
     title: 删除数据源/主题/MCP 服务后 ACL 授权记录未级联清理，RESOURCE_ACL 残留孤儿行
     module: 权限-资源授权

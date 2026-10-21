@@ -347,6 +347,8 @@ chinook:
       seed_term_name: "音乐流派"
       # TC-SEM-008 分页搜索
       search_keyword: "chinook-e2e-search"
+      search_alias: "chinook-e2e-alias"
+      search_underscore: "chinook_e2e_underscore"
 
     # ---- 模板预览测试 ----
     template:

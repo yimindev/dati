@@ -412,3 +412,19 @@ bugs:
       根因：ParameterizedSqlExecutor.execute 仅把 ctx.argumentsMap() 合并系统变量后交给 SqlRenderer，未遍历 config.getParameters() 校验 isRequired()，也未把 ToolParameter.defaultValue 回填进渲染上下文（ToolParameter.getDefaultValue 全项目仅被 ToolDefinitionConverter 用于生成 JSON Schema 的 default 字段）。
       影响：inputSchema 声明的契约与实际执行不一致；LLM 用缺失/拼错参数名调用时拿到「空结果集 + 无错误」，会误判业务数据为空而无法自纠错；参数默认值形同虚设。
       建议：ParameterizedSqlExecutor 渲染前按 config.parameters 做 required 校验（缺失 → ToolExecuteException PARAM_MISSING → isError=true），并缺失时用 defaultValue 回填；补充单测覆盖缺参/默认值/参数名拼错三种场景。
+  - id: BUG-20261019-010
+    title: 主题/术语列表 keyword 搜索不匹配 aliases（仅 ID 前缀 + name 模糊）
+    module: 语义层-列表查询
+    severity: low
+    fixed_at: 2026-10-21
+    description: |
+      TC-SEM-008 探索：给主题设置别名 e2e-unique-alias-xyz 后，GET /v1/subjects?keyword=e2e-unique-alias-xyz 返回 total=0，而 ES 文档 keywords 中已含该别名（SubjectService.getSubjects 仅按 ID 前缀 + name LIKE 匹配）。列表页搜索别名无结果与 ES 语义检索（MCP 侧可按别名命中）行为不一致，建议列表搜索同时匹配 aliases。
+      修复：范围扩展到主题/术语/主题表/表/列列表。SubjectDAO、TermDAO、SubjectTableDAO、TableInfoDAO、ColumnInfoDAO 的关键词查询统一追加 `LOCATE(lower(:keyword), lower(CAST(aliases AS String))) > 0`；列值列表继续走 ES keywords（value + synonyms），无需改动。前端术语关联弹窗的客户端列过滤同步匹配 aliases，主题表列表补 aliases 展示。验证：@DataJpaTest 覆盖主题/术语/主题表/表/列别名搜索；真实后端 curl 验证表别名「音乐风格」、列别名「流派编号」、主题/术语别名均能命中。
+  - id: BUG-20261019-011
+    title: 列表 keyword 中的 SQL LIKE 通配符（% 与 _）未转义，搜索命中全部记录
+    module: 语义层-列表查询
+    severity: low
+    fixed_at: 2026-10-21
+    description: |
+      TC-SEM-008 探索：GET /v1/subjects?keyword=%25（即 '%'）与 keyword=_ 均返回 total=4（全部主题），keyword 被直接拼进 LIKE 模式而未转义 %/_，用户搜索含下划线或百分号的名称时会得到全量结果。建议转义为 \% / \_ 或使用 ESCAPE 子句。
+      修复：管理端全部 keyword 查询（Subject/Term/SubjectTable/TableInfo/ColumnInfo/DataSource/McpService）由 SQL LIKE 改为 LOCATE 字面匹配，`%`/`_` 不再作为通配符；ID 前缀匹配改为 `locate(lower(:keyword), lower(id)) = 1`。验证：@DataJpaTest 覆盖 `%`/`_` 字面匹配；真实后端 curl 验证主题/术语/表/列/数据源/MCP 服务列表 `keyword=%25` 返回 0、`keyword=_` 仅命中包含下划线的记录。

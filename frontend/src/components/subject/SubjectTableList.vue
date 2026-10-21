@@ -1,11 +1,16 @@
 <script setup lang="ts">
-import { onMounted, ref, computed } from "vue";
+import { computed, onMounted, ref } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
-import { Plus, Search, CopyDocument } from "@element-plus/icons-vue";
+import { CopyDocument, Plus, Search } from "@element-plus/icons-vue";
 import { useI18n } from "vue-i18n";
 import { copyToClipboard } from "~/utils/clipboard";
-import type { TableInfoVO, SubjectAvailableTableVO } from "~/api/subject";
-import { getSubjectTables, getAvailableTables, addTableToSubject, removeTableFromSubject } from "~/api/subject";
+import type { SubjectAvailableTableVO, TableInfoVO } from "~/api/subject";
+import {
+  addTableToSubject,
+  getAvailableTables,
+  getSubjectTables,
+  removeTableFromSubject,
+} from "~/api/subject";
 import { notifyError } from "~/api/http";
 import { getSchemas } from "~/api/datasource";
 
@@ -43,11 +48,11 @@ interface TransferItem {
 }
 
 const linkedTableIds = computed(() => {
-  return tableList.value.map(t => t.id);
+  return tableList.value.map((t) => t.id);
 });
 
 const transferData = computed<TransferItem[]>(() => {
-  return availableTables.value.map(table => ({
+  return availableTables.value.map((table) => ({
     key: table.table_id,
     label: table.table_name,
     description: table.description,
@@ -182,7 +187,7 @@ const handleRemoveTable = async (table: TableInfoVO) => {
         confirmButtonText: t("common.confirm"),
         cancelButtonText: t("common.cancel"),
         type: "warning",
-      }
+      },
     );
     await removeTableFromSubject(props.subjectId, table.id);
     ElMessage.success(t("subject.removeTableSuccess"));
@@ -201,7 +206,9 @@ onMounted(() => {
 
 <template>
   <div class="py-4">
-    <div class="toolbar toolbar--compact mb-4 flex items-center justify-between gap-2 max-md:items-stretch max-md:flex-col">
+    <div
+      class="toolbar toolbar--compact mb-4 flex items-center justify-between gap-2 max-md:items-stretch max-md:flex-col"
+    >
       <div class="toolbar-fields">
         <el-input
           v-model="searchKeyword"
@@ -242,7 +249,11 @@ onMounted(() => {
           <template #default="{ row }">
             <div class="group inline-flex items-center gap-1.5 max-w-full">
               <span class="font-medium truncate">{{ row.name }}</span>
-              <el-tooltip :content="t('common.copy')" placement="top" :show-after="300">
+              <el-tooltip
+                :content="t('common.copy')"
+                placement="top"
+                :show-after="300"
+              >
                 <el-button
                   link
                   :icon="CopyDocument"
@@ -259,6 +270,23 @@ onMounted(() => {
           :label="t('common.schema')"
           min-width="120"
         />
+        <el-table-column :label="t('common.aliases')" min-width="160">
+          <template #default="{ row }">
+            <template v-if="row.aliases && row.aliases.length > 0">
+              <el-tag
+                v-for="alias in row.aliases"
+                :key="alias"
+                size="small"
+                class="mr-1"
+              >
+                {{ alias }}
+              </el-tag>
+            </template>
+            <span v-else class="text-[var(--ep-text-color-placeholder)]"
+              >-</span
+            >
+          </template>
+        </el-table-column>
         <el-table-column
           prop="description"
           :label="t('common.description')"
@@ -315,18 +343,20 @@ onMounted(() => {
             filterable
             :filter-method="filterTableMethod"
             :filter-placeholder="t('tableInfo.searchPlaceholder')"
-            :titles="[t('tableInfo.availableTables'), t('tableInfo.selectedTables')]"
+            :titles="[
+              t('tableInfo.availableTables'),
+              t('tableInfo.selectedTables'),
+            ]"
             :button-texts="['', '']"
           >
             <template #default="{ option }">
-              <el-tooltip
-                placement="top"
-                :show-after="200"
-                :enterable="false"
-              >
+              <el-tooltip placement="top" :show-after="200" :enterable="false">
                 <template #content>
                   <div class="font-mono text-xs">{{ option.label }}</div>
-                  <div v-if="option.description" class="text-xs text-[var(--ep-text-color-secondary)] opacity-85 mt-0.5 max-w-xs break-words">
+                  <div
+                    v-if="option.description"
+                    class="text-xs text-[var(--ep-text-color-secondary)] opacity-85 mt-0.5 max-w-xs break-words"
+                  >
                     {{ option.description }}
                   </div>
                 </template>
@@ -334,10 +364,10 @@ onMounted(() => {
               </el-tooltip>
             </template>
             <template #left-empty>
-              <span>{{ t('tableInfo.emptyList') }}</span>
+              <span>{{ t("tableInfo.emptyList") }}</span>
             </template>
             <template #right-empty>
-              <span>{{ t('tableInfo.emptySelected') }}</span>
+              <span>{{ t("tableInfo.emptySelected") }}</span>
             </template>
           </el-transfer>
         </el-form-item>
@@ -359,5 +389,3 @@ onMounted(() => {
     </el-dialog>
   </div>
 </template>
-
-

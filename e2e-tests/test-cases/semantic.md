@@ -164,10 +164,13 @@
 ## TC-SEM-008 主题和术语列表分页与搜索
 **级别：** P2
 **前置：** 已登录，种子数据源已就绪
-**数据：** `chinook.e2e.semantic.search_keyword`
+**数据：** `chinook.e2e.semantic.{search_keyword, search_alias, search_underscore}`
 
 1. 查找种子数据源 → 创建主题
-2. 创建 3 个主题（一个 name 含 `search_keyword`），page=1/size=2 查列表
-3. 验证 data≤2，total≥3，total_pages 正确；keyword 搜只返回 1 条
-4. 创建 3 个术语（一个 name 含 `search_keyword`），同样验证分页+搜索
-5. 删术语、删主题（不删数据源）
+2. 创建 3 个主题：一个 name 含 `search_keyword`，一个 aliases 含 `search_alias`，一个 name 含 `search_underscore`；page=1/size=2 查列表
+3. 验证 data≤2，total≥3，total_pages 正确
+4. **按 name 搜索**：keyword=`search_keyword` 只返回 1 条
+5. **按 aliases 搜索**：keyword=`search_alias` 只返回 aliases 命中的主题（验证列表搜索匹配 aliases）
+6. **通配符按字面匹配**：keyword=`%25`（即 `%`）返回 total=0；keyword=`_` 只返回 name/aliases 中真正含下划线的主题（即 `search_underscore`），不得返回全量
+7. 创建 3 个术语：一个 name 含 `search_keyword`，一个 aliases 含 `search_alias`，一个 name 含 `search_underscore`；同样验证分页 + name/aliases/`%`/`_` 搜索行为
+8. 删术语、删主题（不删数据源）

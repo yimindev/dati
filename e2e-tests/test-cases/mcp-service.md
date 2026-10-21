@@ -99,7 +99,8 @@
 1. 创建 2 个 MCP 服务（不同 name）
 2. 用 status=DRAFT 筛选，验证返回的记录 status 全为 DRAFT
 3. 用 status=PUBLISHED 筛选，验证返回空或全为 PUBLISHED
-4. 删服务（清理）
+4. **keyword 通配符按字面匹配**：keyword=`%25`（即 `%`）→ 返回 0 条（不得返回全量）；keyword=`_` → 只返回 name/code 中真正含下划线的服务
+5. 删服务（清理）
 
 ---
 

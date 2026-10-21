@@ -7,15 +7,15 @@ import com.dati.base.exception.ErrorCode;
 import com.dati.base.pojo.BasePO;
 import com.dati.base.pojo.PageReq;
 import com.dati.common.StringUtils;
-import com.dati.db.Column;
 import com.dati.datasource.domain.model.ColumnInfo;
 import com.dati.datasource.domain.model.TableInfo;
-import com.dati.datasource.repository.mapper.TableMapper;
 import com.dati.datasource.repository.dao.ColumnInfoDAO;
 import com.dati.datasource.repository.dao.TableInfoDAO;
 import com.dati.datasource.repository.mapper.ColumnMapper;
+import com.dati.datasource.repository.mapper.TableMapper;
 import com.dati.datasource.repository.po.ColumnInfoPO;
 import com.dati.datasource.repository.po.TableInfoPO;
+import com.dati.db.Column;
 import com.dati.permission.domain.model.Permission;
 import com.dati.permission.domain.service.PermissionService;
 import com.dati.semantic.domain.SemanticEntityType;
@@ -63,7 +63,7 @@ public class ColumnService {
         if (StringUtils.isEmpty(keyword)) {
             return columnInfoDAO.findByTableId(tableId, pageReq.toPageRequest().withSort(sortBy)).map(ColumnMapper::toColumnInfo);
         }
-        return columnInfoDAO.findByTableIdAndNameContaining(tableId, keyword, pageReq.toPageRequest().withSort(sortBy)).map(ColumnMapper::toColumnInfo);
+        return columnInfoDAO.findByTableIdAndKeyword(tableId, keyword, pageReq.toPageRequest().withSort(sortBy)).map(ColumnMapper::toColumnInfo);
     }
 
     public void updateColumn(String id, ColumnInfo columnInfo) {
