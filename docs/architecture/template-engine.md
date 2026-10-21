@@ -9,11 +9,11 @@
 ```
 com.dati.common.template/
 ├── TemplateParser.java          // 解析接口（public）
-├── TextRenderer.java            // 文本渲染接口（public）
-├── SqlRenderer.java             // SQL 渲染接口（public）
+├── TextRenderer.java            // 文本渲染器（public @Component）
+├── SqlRenderer.java             // SQL 渲染器（public @Component）
 ├── CompiledTemplate.java        // 编译结果接口，getVariables()（public）
-├── PreparedSql.java             // 参数化 SQL 产物（public record）
-├── ParamBinding.java            // 单个参数绑定（public record）
+├── PreparedSql.java             // 参数化 SQL 产物（public record：sql + bindings）
+├── ParamBinding.java            // 单个参数绑定（public record：name + value）
 ├── ParsedTemplate.java          // CompiledTemplate 实现（package-private）
 │
 ├── Node.java                    // AST 根类型（sealed interface）
@@ -23,8 +23,6 @@ com.dati.common.template/
 ├── WhereNode.java               // 智能 WHERE 块节点
 │
 ├── HandlebarsStyleParser.java   // 解析器实现（@Component）
-├── TextRendererImpl.java        // 文本渲染实现（@Component）
-├── SqlRendererImpl.java         // SQL 渲染实现（@Component）
 │
 ├── TemplateParseException.java  // 解析异常
 └── TemplateRenderException.java // 渲染异常
@@ -60,15 +58,18 @@ CompiledTemplate (AST: List<Node>)
 
 ## 渲染行为对比
 
-| 场景 | TextRenderer | SqlRenderer |
+| 场景 | TextRenderer | SqlRenderer.render()（执行） |
 |------|-------------|-------------|
 | `{{var}}` 值存在 | `value.toString()` 替换 | `?` 占位，值加入 bindings |
 | `{{var}}` 值为 null | 输出空字符串 | `?` 占位，绑定 null |
 | `{{var:default}}` 值为 null | 替换为 default 字符串 | `?` 占位，绑定 default |
+| `{{{var}}}` | `value.toString()` 替换 | 原样内联，无 binding（数组拒绝） |
 | `{{#if var}}` 值为 null | 内容丢弃 | 内容丢弃 |
 | `{{#where}}` 全部跳过 | block 消失 | block 消失（无 WHERE） |
 | `{{#where}}` 有内容 | 原样输出 body | `WHERE` + body（首个 AND/OR 裁剪） |
 | Array 值 | `.toString()` | 展开为 `?, ?, ...` |
+
+> SQL 预览使用 `SqlRenderer.renderDisplay()`：同一 AST、同一绑定顺序，仅把绑定值内联为字面量用于展示，不执行。展示 SQL 与执行 SQL 的差别只在值的位置，不存在占位符错位。
 
 ## 关键设计决策
 
@@ -79,7 +80,7 @@ CompiledTemplate (AST: List<Node>)
 5. **不缓存 CompiledTemplate**：模板规模小，解析耗时远低于 DB IO。
 6. **PreparedSql 不碰 JDBC**：消费方自行 `prepareStatement()` + 遍历 bindings 绑定。
 7. **`{{#where}}` 智能行为仅限 SQL 模式**：Text 模式下只输出 body 内容，不处理 WHERE 前缀和 AND/OR 裁剪。
-8. **预览展示 SQL 与执行 SQL 同源**：`render()` 内部用哨兵 `\u0000` 标记绑定占位符，收尾时替换为 `?`；`renderDisplay()` 在收尾前按绑定顺序内联格式化值。模板文本中的字面 `?`（`LIKE '%?%'`、PostgreSQL JSONB `?` 运算符）不会被误当作占位符，展示结果与真实执行语句一致。
+8. **预览展示 SQL 与执行 SQL 同源**：`render()` 内部用哨兵 `\u0000` 标记绑定占位符，收尾时替换为 `?`；`renderDisplay()` 在收尾前按绑定顺序内联格式化值，格式化规则由预览层传入，不影响执行链路。模板文本中的字面 `?`（`LIKE '%?%'`、PostgreSQL JSONB `?` 运算符）不会被误当作占位符。
 
 ## 错误处理
 

@@ -299,7 +299,7 @@ com.dati.semantic.domain.model/
 | `McpToolTestService` | 测试编排（极简，无分支）：前置强校验当前用户对服务的 `MCP_SERVICE (EDIT)` 权限（草稿态调试与测试需编辑权限） → `resolve()` → 查 scope → `ToolParameterBinder.bind()` 绑定参数 → `execute()` → 计时 → 组装响应。`ToolExecuteException` 在此层 catch 并转为 `ToolTestResponse(success=false, error=...)` |
 | `ExecuteSqlExecutor` | EXECUTE_SQL 执行器。`ctx.args(ExecuteSqlArgs.class)` 取参，dsId + sql 从 record 取，通过 `DataSourceService.getDataSourceInternal(dsId)` 内部通道加载数据源（解耦直属数据源用户权限），`Statement.execute()` 执行，`SqlExecutorHelper.collect()` 收集多语句结果。每条语句独立 policy 校验和 try-catch。执行成功后若存在 `createdTables`，调用 `TableAutoRegistrationService` 自动纳管；纳管失败只记 WARN，不影响 SQL 结果 |
 | `TableAutoRegistrationService` | 建表后自动纳管：按 created table 的 effectiveSchema 读取 JDBC 物理表/列元数据，写入 `table_info` / `column_info`，并 best-effort 写 TABLE/FIELD 语义索引。已注册表跳过，不覆盖人工描述/别名；物理表缺失、列元数据为空、JDBC/ES 失败均降级，不阻塞 SQL 执行 |
-| `ParameterizedSqlExecutor` | PARAMETERIZED_SQL 执行器。dsId 从 config 取，通过 `DataSourceService.getDataSourceInternal(dsId)` 内部通道加载数据源，合并客户端参数与系统内置参数（`SystemVariableResolver.resolve()`，含 `_user.id` / `_user.name` / `_user.display_name` / `_now` / `_date`，系统参数强制覆盖以防伪造）→ 模板渲染 → SQL，`PreparedStatement.execute()` 执行。支持 DateTime 类型参数转换（`DateTimeUtils.parseDateTime()`）。`bindings` 回传前端 |
+| `ParameterizedSqlExecutor` | PARAMETERIZED_SQL 执行器。dsId 从 config 取，通过 `DataSourceService.getDataSourceInternal(dsId)` 内部通道加载数据源，合并客户端参数与系统内置参数（`SystemVariableResolver.resolve()`，含 `_user.id` / `_user.name` / `_user.display_name` / `_now` / `_date`，系统参数强制覆盖以防伪造），按 `config.parameters` 校验必填（缺失 → `PARAM_MISSING`）并回填 `default_value`（按 Type 转换） → 模板渲染 → SQL，`PreparedStatement.execute()` 执行。支持 DateTime 类型参数转换（`DateTimeUtils.parseDateTime()`）。`bindings` 回传前端 |
 | `SystemVariableResolver` | 系统变量解析器。从 `RequestContext.getUser()` 和系统时钟解析 `_user.*` 与 `_now` / `_date`，提供 `isSystemVariable()` 供模板参数扫描与抽取时过滤 |
 | `GetTableInfoExecutor` | GET_TABLE_INFO 执行器。`ctx.args(GetTableInfoArgs.class)` 取参，逐条 `tables[]` 项做数据源级 scope 校验（每项自带 data_source_id），先查平台元数据；未注册且 `effectiveSchema` 在 `SCHEMA_SCOPE` 授权范围内时，回退到 JDBC 物理列。不存在的表静默跳过 |
 | `ListTablesExecutor` | LIST_TABLES 执行器（`list_tables_and_terms`）。无参数（`ListTablesArgs` 空 record），通过 `McpServiceDataScopeService.getResolvedDataSourceIds()` 解析 scope 数据源 → 已导入表 + `SCHEMA_SCOPE` 授权 Schema 的物理表合并（已导入元数据优先、按 schema+name 去重、JDBC 失败降级）；物理表合并受 `dati.mcp.list-tables.max-physical-tables-per-datasource`（默认 1000）限制，已导入表不计入上限，超限记录 WARN。同时解析 scope 中的 SUBJECT 范围 → 查全部业务术语 `TermService.getTermsBySubjectIds()` 组装术语清单。空 scope 返回空结果。不查 ES/列 |
@@ -511,7 +511,7 @@ SemanticSearchService.search(keywords, dsIds, subjectIds)
 | `TemplateRenderMode` | 枚举：`TEXT` / `SQL` |
 | `TemplatePreviewController` | 2 端点：`POST /v1/template/preview` 渲染、`POST /v1/template/extract` 提取变量 |
 | `TemplatePreviewRequest` | `mode`（TEXT/SQL）+ `template` + `values: Map<String,Object>` |
-| `TemplatePreviewResponse` | `{ rendered: String }` |
+| `TemplatePreviewResponse` | `{ rendered: String }`（TEXT：渲染文本；SQL：展示用 SQL，不执行） |
 | `TemplateExtractRequest` | `{ template: String }` |
 | `TemplateExtractResponse` | `{ variables: String[] }` |
 
@@ -522,20 +522,19 @@ SemanticSearchService.search(keywords, dsIds, subjectIds)
 | `TemplateParser` | 接口：`parse(template) → CompiledTemplate` |
 | `HandlebarsStyleParser` | 实现：解析 Handlebars 风格模板（`{{var}}`、`{{{var}}}`、`{{#if}}` / `{{/if}}`、`{{#where}}` / `{{/where}}`、默认值 `{{var:default}}`、转义 `\\{{}}`） |
 | `CompiledTemplate` | 接口：`getVariables() → Set<String>` |
-| `TextRenderer` | 接口：`render(compiled, values) → String` |
-| `TextRendererImpl` | 实现：TEXT 模式渲染，直接替换变量值为字符串 |
-| `SqlRenderer` | 接口：`render(compiled, values) → PreparedSql` |
-| `SqlRendererImpl` | 实现：SQL 模式渲染，按值类型格式化（字符串加引号、数值/布尔值不加、null→NULL、数组展开），返回 `PreparedSql` |
-| `PreparedSql` | Record：`{ sql: String, bindings: List<ParamBinding> }` |
-| `ParamBinding` | Record：`{ index, value, type }` |
+| `TextRenderer` | TEXT 模式渲染：直接替换变量值为字符串 |
+| `SqlRenderer` | SQL 模式渲染。`render()` → `PreparedSql`（执行用，`?` + bindings）；`renderDisplay()` → String（预览展示用，内联字面量，绝不执行） |
+| `PreparedSql` | Record：`{ sql: String, bindings: List<ParamBinding> }`，bindings 与 sql 中的 `?` 按顺序 1:1 |
+| `ParamBinding` | Record：`{ name: String, value: Object }`（模板变量名 + 待绑定值） |
 | `Node` / `TextNode` / `VarNode` / `IfNode` / `WhereNode` | AST 节点 |
 
-**SQL 模式渲染特性：**
-- `{{var}}`：值按类型格式化（字符串 `'value'`、数值 `42`、布尔 `true`、null `NULL`、数组 `(1, 2, 3)`）
-- `{{{var}}}`：原始变量直接内联（用于表名、列名等标识符），数组类型拒绝
-- `{{var:default}}`：无值时使用默认值
-- `{{#if var}}...{{/if}}`：条件块（值不为 null/false/空列表时渲染）
-- `{{#where}}...{{/where}}`：WHERE 子句自动拼接（添加 `WHERE` 前缀、`AND` 连接非空条件）
+**SQL 模式渲染行为：**
+- **执行链路（`render()`）**：`{{var}}` → `?` + 一条 binding；数组 → 多个 `?` + 多条 binding；null → `?` + null binding；`{{{var}}}` → 原样内联（标识符用途，数组拒绝）。值永不拼入 SQL 文本，由 `PreparedStatement.setObject()` 绑定，转义交给 JDBC 驱动。
+- **预览链路（`renderDisplay()`）**：按同一 AST/绑定顺序把值内联为 SQL 字面量，仅用于展示与复制，不执行。`TemplatePreviewController.formatValue` 的规则：字符串 `'value'`（内部 `'` → `''`）、纯数字字符串裸输出、布尔值 `toString`、null → `NULL`、数组逐元素展开。该链路不感知数据库方言，展示 SQL 不保证跨方言可直接执行。
+- **字面 `?` 安全**：渲染期间占位符用内部哨兵 `\u0000` 标记，收尾才转为 `?`；模板文本中的 `LIKE '%?%'`、PostgreSQL JSONB `?` 运算符不会被误替换。
+- **引号内变量拒绝**：`{{var}}` 若落在字符串字面量/注释/dollar-quote 中，渲染出的 `?` 不会被 pgjdbc 计入参数，工具创建阶段由 `SqlValidator.findQuotedVariables()` 返回 `MS020` 拒绝；`{{{var}}}` 不受此限制（作者显式内联，仅用于标识符）。
+- `{{var:default}}`：无值时使用默认值（执行链路绑定 default，预览链路内联 default）。
+- `{{#if var}}...{{/if}}`：值不为 null 时渲染；`{{#where}}...{{/where}}`：全部跳过时整块消失，否则添加 `WHERE` 前缀并裁剪首个 `AND`/`OR`。
 
 ### 2.4 数据模型
 
@@ -688,7 +687,7 @@ StatementResult.writeFailure(errorMessage)           // WRITE 失败
 
 | 方法 | 路径 | 说明 |
 |---|---|---|
-| `POST` | `/v1/template/preview` | 渲染模板（TEXT 或 SQL 模式），需指定 `mode` + `template` + `values` |
+| `POST` | `/v1/template/preview` | 渲染模板（TEXT 或 SQL 模式）。TEXT 返回文本；SQL 返回展示用 SQL（`rendered`，值为内联字面量，仅展示/复制，绝不执行） |
 | `POST` | `/v1/template/extract` | 提取模板中的所有变量名，返回 `{ variables: [...] }` |
 
 #### MCP Endpoint（协议入口）
@@ -868,7 +867,7 @@ StatementResult.writeFailure(errorMessage)           // WRITE 失败
 #### 模板引擎独立于 MCP 模块
 
 - `com.dati.common.template` 包是通用模板引擎，不依赖 MCP 模块。
-- 支持 TEXT 和 SQL 两种渲染模式，SQL 模式下对参数值按类型做安全格式化。
+- 支持 TEXT 和 SQL 两种渲染模式。SQL 模式执行链路只生成 `?` + bindings（值不进入 SQL 文本）；预览链路 `renderDisplay()` 才按格式化器内联字面量，仅展示不执行。
 
 #### MCP Endpoint 设计决策
 
@@ -962,7 +961,7 @@ src/
 | `PromptList` | 搜索栏 + 列表。每个条目显示 name、description、参数计数、开关、编辑/删除图标。 |
 | `PromptDialog` | 创建/编辑弹窗。**基本信息**（name/description）。**模板内容**：使用 `PromptTemplateEditor`（CodeMirror）。**参数列表**：el-table 编辑（name/required/description）+ 「提取参数」按钮调用 `/v1/template/extract` 自动填充。底部「测试渲染」按钮打开预览。 |
 | `UsageStatsTab` | **用量统计 Tab**（US-09）。顶部 4 张 KPI 指标卡片（总调用量、今日调用、成功率、平均耗时）；中栏展示「近 15 天每日调用趋势」卡片（表格展示日期、总调用、成功数、失败数、成功率与平均耗时）及「工具调用分布」卡片（展示各工具调用次数、占比百分比及调用成功率）；底部调用日志明细表格（支持工具类型下拉筛选、成功/失败状态筛选、分页切换与手动刷新按钮）。采用紧凑表格布局，独立滚动，适配暗色模式。 |
-| `TemplatePreviewDialog` | 通用模板预览弹窗。显示原始模板 → 参数输入 → 渲染结果。支持 TEXT 和 SQL 双模式。Copy 按钮复制结果。 |
+| `TemplatePreviewDialog` | 通用模板预览弹窗。显示原始模板 → 参数输入 → 渲染结果。支持 TEXT 和 SQL 双模式；SQL 模式结果为展示用 SQL（值已内联，不执行）。Copy 按钮复制结果。 |
 | `ToolTestDialog` | **工具测试弹窗薄壳**（左右分栏布局）：左侧参数表单、右侧结果区，按工具类型/结果类型动态加载 `tool-test/params/*` 与 `tool-test/results/*` 子组件。打开时 `resetTablePickerCache()` 清空表/列缓存；提交前 `stripEmpty()` 剔除空字段（写工具未填字段保持原值）。 |
 | `ParameterInput` | **共享参数输入组件**。按 `ToolParameter.type` 渲染：String → el-input，Number → el-input type="number"，Boolean → el-switch，DateTime → el-date-picker type="datetime"，Array → el-input-tag，default → el-input。被 ToolTestDialog 和 TemplatePreviewDialog 共用。 |
 | `DebugPublishTab` | **版本管理 Tab**（原「调试发布」）。展示当前版本 Tag + MCP Endpoint 复制 + 版本历史表格（Live Tag / Release Note / 回滚按钮）。纯展示 + 回滚：发布/停用/启用已移至详情页右上角。回滚确认弹窗明示「未发布的草稿修改将被覆盖」。 |
@@ -1031,7 +1030,7 @@ PromptsTab → PromptList → PromptDialog
 
 TemplatePreviewDialog
     ├─ POST /v1/template/extract { template } → { variables }（提取参数名列表）
-    └─ POST /v1/template/preview { mode, template, values } → { rendered }
+    └─ POST /v1/template/preview { mode, template, values } → { rendered }（SQL 模式为展示用 SQL）
 
 ToolTestDialog
     ├─ EXECUTE_SQL:      GET /data-scope → 数据源下拉选项

@@ -27,7 +27,10 @@ SELECT * FROM users WHERE id = ?
 | DateTime | Date-time (ISO 8601) | `2026-08-14T10:00:00` |
 | Array | Array value | `[1, 2, 3]` |
 
-In SQL mode, values are formatted by type: strings are quoted, numbers/booleans are not, null renders as `NULL`, and arrays expand into multiple placeholders.
+In SQL mode, parameter values are bound through JDBC and never concatenated into the SQL text:
+
+- **Execution**: `{{var}}` becomes a `?` placeholder plus one binding; arrays expand into multiple `?`; quotes, backslashes and other characters are handled by the JDBC driver (no manual escaping needed).
+- **Preview (Test Render)**: values are inlined as SQL literals for readability and copying (strings quoted with `'` escaped as `''`, numeric-looking strings left bare, null → `NULL`, arrays expanded element-wise). Preview SQL is display-only; it is never executed and is not guaranteed to run verbatim across database dialects.
 
 ## Variable Syntax
 
@@ -43,6 +46,9 @@ Inlined directly into the output text without parameter binding. Use only for SQ
 ```sql
 SELECT * FROM {{{tableName}}}
 ```
+
+> [!WARNING]
+> `{{{var}}}` is inlined into the SQL text in both preview and execution, bypassing parameter binding. Use it only for trusted identifiers such as table/column names, never for user-supplied values.
 
 ### Default Value `{{var:default}}`
 
