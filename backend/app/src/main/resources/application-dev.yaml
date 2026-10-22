@@ -18,6 +18,11 @@ spring:
     connection-timeout: 5s
     socket-timeout: 30s
 
+auth:
+  jwt:
+    # Local-only default so dev tokens survive restarts; never used by other profiles.
+    secret: ${JWT_SECRET:this-is-a-32-char-long-default-secret-key}
+
 dati:
   mcp:
     endpoint-base-url: http://localhost:${server.port}

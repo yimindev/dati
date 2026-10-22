@@ -59,4 +59,30 @@ class RegistrationServiceTest {
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.AUTH_USER_EXISTS);
     }
 
+    @Test
+    @DisplayName("Should store username trimmed and lowercased")
+    void register_mixedCaseName_shouldStoreNormalized() {
+        RegisterRequest request = new RegisterRequest("  QA-E2E-Tester ", "Password123!", "QA Tester");
+        when(userRepository.existsByName("qa-e2e-tester")).thenReturn(false);
+        when(userRepository.save(any(UserPO.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        registrationService.register(request);
+
+        ArgumentCaptor<UserPO> poCaptor = ArgumentCaptor.forClass(UserPO.class);
+        verify(userRepository).save(poCaptor.capture());
+        assertThat(poCaptor.getValue().getName()).isEqualTo("qa-e2e-tester");
+        assertThat(poCaptor.getValue().getDisplayName()).isEqualTo("QA Tester");
+    }
+
+    @Test
+    @DisplayName("Should treat an existing username with different casing as a duplicate")
+    void register_existingNameDifferentCase_shouldThrowUserExists() {
+        RegisterRequest request = new RegisterRequest("QA-E2E-TESTER", "Password123!", null);
+        when(userRepository.existsByName("qa-e2e-tester")).thenReturn(true);
+
+        assertThatThrownBy(() -> registrationService.register(request))
+                .isInstanceOf(DatiException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.AUTH_USER_EXISTS);
+    }
+
 }

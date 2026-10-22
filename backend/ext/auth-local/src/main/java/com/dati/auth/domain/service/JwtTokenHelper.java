@@ -22,7 +22,7 @@ public class JwtTokenHelper {
     private final long expirationSeconds;
 
     public JwtTokenHelper(
-            @Value("${auth.jwt.secret:change-me-in-production}") String secret,
+            @Value("${auth.jwt.secret}") String secret,
             @Value("${auth.jwt.expiration-seconds:604800}") long expirationSeconds) {
         this.secretKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
         this.expirationSeconds = expirationSeconds;

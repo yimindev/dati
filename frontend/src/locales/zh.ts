@@ -47,6 +47,7 @@ export default {
     toLogin: "去登录",
     inputUsernamePassword: "请输入用户名和密码",
     passwordMismatch: "两次输入的密码不一致",
+    passwordLengthInvalid: "密码长度需为 8–72 位",
     passwordPlaceholder: "请输入密码",
     confirmPasswordPlaceholder: "请再次输入密码",
     loginFailed: "登录失败",

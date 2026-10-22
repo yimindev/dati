@@ -41,3 +41,8 @@ management:
       show-details: never
       probes:
         enabled: true
+
+auth:
+  jwt:
+    # Explicit test secret: production/dev defaults must not leak into tests.
+    secret: test-jwt-secret-0123456789abcdefghijklmnop

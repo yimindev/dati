@@ -47,6 +47,7 @@ export default {
     toLogin: "Sign In",
     inputUsernamePassword: "Username and password are required",
     passwordMismatch: "Passwords do not match",
+    passwordLengthInvalid: "Password must be 8–72 characters",
     passwordPlaceholder: "Enter password",
     confirmPasswordPlaceholder: "Confirm password",
     loginFailed: "Sign in failed",

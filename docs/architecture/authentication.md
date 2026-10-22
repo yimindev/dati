@@ -73,7 +73,7 @@ AuthInterceptor.preHandle()
             LocalAuthenticationProvider.authenticate(request)
                     │
                     ├── 验证 JWT（签名、过期）
-                    │   失败 → 返回 Optional.empty()（认领但认证失败，直接 401）
+                    │   失败 → 返回 Optional.empty()（认领但认证失败：401 + AUTH002）
                     │
                     └── 返回 User
                             │
@@ -90,6 +90,20 @@ AuthInterceptor.preHandle()
 |------|------|--------------------------------|--------------------------------|
 | `canAuthenticate(request)` | 快速形式匹配（看 Header、Cookie 等） | **认领该请求**，接下来调用 `authenticate` | 不匹配，跳过本 Provider |
 | `authenticate(request)` | 执行实际验证 | 认证成功，放行 | **认领了但认证失败**（如 Token 过期），`AuthInterceptor` 立即返回 401，不再尝试其他 Provider |
+
+**认证失败响应**：`AuthInterceptor` 不再手写空响应，而是抛出 `DatiException`，由 `GlobalExceptionHandler` 统一序列化：
+
+| 场景 | HTTP | `code` | 响应头 |
+|------|------|--------|--------|
+| 未携带 `Authorization`（匿名访问） | 401 | `AUTH009` | `WWW-Authenticate: Bearer` |
+| Token 非法 / 过期 / API Key 校验失败 | 401 | `AUTH002` | `WWW-Authenticate: Bearer` |
+
+响应体固定为 `{"code","message","timestamp"}` 并强制 `application/json`——即使客户端只接受 `text/event-stream`（MCP 客户端常见），也能拿到可解析的错误体，而不是空 body 或 406。
+
+### 登录名与密码规则
+
+- **登录名（`users.name`）大小写不敏感**：注册时统一 `trim()` + `toLowerCase(Locale.ROOT)` 落库，`existsByName` / `findByName` 均使用规范化后的值，展示大小写交给 `display_name`。因此 `QA-User` 与 `qa-user` 是同一账号：重复注册返回 409 `AUTH003`，登录可用任意大小写并自动忽略前后空格，`/v1/auth/me` 返回规范化后的 `name`。
+- **密码长度 8–72**：`RegisterRequest` 使用 `@Size(min = 8, max = 72)`（上限来自 BCrypt 只取前 72 字节），前端注册页同步校验并提示；登录接口不做长度校验，避免既有弱口令账户无法登录。`name` / `display_name` 另外限制 ≤64 字符，超长返回 400 而不是 500。
 
 ### API Key 认证
 
@@ -150,7 +164,7 @@ auth:
   enabled: true                    # 是否启用认证拦截
   admin-users: ${ADMIN_USERS:admin}  # 全局管理员（按登录名，逗号分隔；授权判定使用，见 permission.md）
   jwt:
-    secret: ${JWT_SECRET}          # JWT 签名密钥（≥256位）
+    secret: ${JWT_SECRET}          # JWT 签名密钥（≥256位）；仅 dev profile 内置本地默认值，其余 profile 缺失即启动失败
     expiration-seconds: 604800     # Token 有效期，默认 7 天
 ```
 
@@ -171,13 +185,14 @@ auth:
 | 错误码 | HTTP | 说明 |
 |--------|------|------|
 | `AUTH001` | 401 | 认证失败（用户名或密码错误） |
-| `AUTH002` | 401 | Token 无效或过期 |
+| `AUTH002` | 401 | Token 无效或过期（携带凭证但校验失败） |
 | `AUTH003` | 409 | 用户名已存在 |
 | `AUTH004` | 400 | 不支持的认证类型 |
 | `AUTH005` | 403 | 不能操作其他用户的 API Key |
 | `AUTH006` | 400 | expiresInDays 必须是 7/30/90/180/365 |
 | `AUTH007` | 403 | 游客访问已关闭（`auth.guest.enabled=false`） |
 | `AUTH008` | 403 | 仅注册用户可创建 API Key（游客身份无 users 记录） |
+| `AUTH009` | 401 | 未携带认证凭证（匿名访问受保护端点） |
 
 ## 前端架构
 

@@ -1,5 +1,6 @@
 package com.dati.auth.authentication;
 
+import com.dati.auth.domain.model.LoginName;
 import com.dati.auth.domain.service.JwtTokenHelper;
 import com.dati.auth.repository.dao.UserRepository;
 import com.dati.auth.repository.mapper.UserMapper;
@@ -49,7 +50,7 @@ public class LocalAuthenticationProvider implements AuthenticationProvider {
 
     @Override
     public String login(LoginRequest request) {
-        UserPO userPO = userRepository.findByName(request.name())
+        UserPO userPO = userRepository.findByName(LoginName.normalize(request.name()))
                 .orElseThrow(() -> new DatiException(ErrorCode.AUTH_LOGIN_FAILED));
 
         if (!passwordEncoder.matches(request.password(), userPO.getPassword())) {

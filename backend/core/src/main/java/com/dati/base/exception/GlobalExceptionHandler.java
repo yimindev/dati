@@ -4,6 +4,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatusCode;
+import org.springframework.http.MediaType;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindException;
@@ -26,6 +27,10 @@ import java.util.stream.Collectors;
  * {@link ResponseEntityExceptionHandler}; their response bodies are normalized to
  * {@link ErrorResponse} in {@link #handleExceptionInternal}. {@link DatiException},
  * {@link BindException} and unexpected exceptions are handled directly.
+ * <p>
+ * Error bodies always preset {@code application/json}: error responses (401/403 in
+ * particular) must be machine-readable even when the request only accepts a stream
+ * (e.g. an unauthenticated MCP {@code text/event-stream} client).
  */
 @Slf4j
 @RestControllerAdvice
@@ -36,12 +41,16 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         ErrorResponse response = e.getArgs().length > 0
                 ? ErrorResponse.of(e.getCode(), e.getArgs())
                 : ErrorResponse.ofResolved(e.getCode(), e.getMessage());
-        return ResponseEntity.status(e.getStatus()).body(response);
+        return ResponseEntity.status(e.getStatus())
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(response);
     }
 
     @ExceptionHandler(BindException.class)
     public ResponseEntity<ErrorResponse> handleBindException(BindException e) {
-        return ResponseEntity.badRequest().body(ErrorResponse.of(ErrorCode.INVALID_PARAMETER, formatFieldErrors(e.getBindingResult())));
+        return ResponseEntity.badRequest()
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(ErrorResponse.of(ErrorCode.INVALID_PARAMETER, formatFieldErrors(e.getBindingResult())));
     }
 
     @Override
@@ -53,6 +62,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
             default -> extractMessage(body, ex);
         };
         return ResponseEntity.status(status).headers(headers)
+                .contentType(MediaType.APPLICATION_JSON)
                 .body(ErrorResponse.of(codeFor(status), message));
     }
 
@@ -113,7 +123,9 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     public ResponseEntity<ErrorResponse> handleGenericException(Exception e) {
         log.error("Unexpected error occurred", e);
         ErrorResponse response = ErrorResponse.of(ErrorCode.INTERNAL_ERROR);
-        return ResponseEntity.status(500).body(response);
+        return ResponseEntity.status(500)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(response);
     }
 
     /** Map an HTTP status to the closest generic error code. */

@@ -8,6 +8,10 @@ import { useAuthStore } from "~/stores/auth";
 const { t } = useI18n();
 const authStore = useAuthStore();
 
+// Keep in sync with backend RegisterRequest (@Size(min = 8, max = 72)).
+const PASSWORD_MIN_LENGTH = 8;
+const PASSWORD_MAX_LENGTH = 72;
+
 const form = ref({
   name: "",
   password: "",
@@ -18,6 +22,13 @@ const form = ref({
 async function handleRegister() {
   if (!form.value.name || !form.value.password) {
     ElMessage.warning(t("auth.inputUsernamePassword"));
+    return;
+  }
+  if (
+    form.value.password.length < PASSWORD_MIN_LENGTH ||
+    form.value.password.length > PASSWORD_MAX_LENGTH
+  ) {
+    ElMessage.warning(t("auth.passwordLengthInvalid"));
     return;
   }
   if (form.value.password !== form.value.confirmPassword) {
@@ -67,6 +78,8 @@ async function handleRegister() {
             type="password"
             :placeholder="t('auth.passwordPlaceholder')"
             :prefix-icon="Lock"
+            :minlength="PASSWORD_MIN_LENGTH"
+            :maxlength="PASSWORD_MAX_LENGTH"
             show-password
           />
         </el-form-item>

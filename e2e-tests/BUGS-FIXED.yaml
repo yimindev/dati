@@ -2,6 +2,56 @@
 # 问题修复后从 BUGS.yaml 移入此处。
 # 若已修复的问题再次复现，必须从本文件移回 BUGS.yaml 并标记 REGRESSION。
 bugs:
+  - id: BUG-20261022-001
+    title: 注册接口无密码强度校验，1 字符密码即可注册成功
+    module: 认证
+    severity: medium
+    found_at: 2026-10-22
+    fixed_at: 2026-10-22
+    description: |
+      RegisterRequest.password 改为 @Size(min = 8, max = 72)（上限对应 BCrypt 只取前 72 字节），
+      超界返回 400 CM001「password: must be between 8 and 72 characters」；前端注册页同步校验并提示
+      「密码长度至少 8 位」。同时为 name/display_name 增加 @Size 约束，超长由 500 改为 400。
+      覆盖测试：RegisterControllerTest（1 位/7 位/8 位边界）、app AuthenticationErrorResponseTest。
+
+  - id: BUG-20261022-002
+    title: 用户名唯一性区分大小写，可注册视觉上无法区分的重复账户
+    module: 认证
+    severity: low
+    found_at: 2026-10-22
+    fixed_at: 2026-10-22
+    description: |
+      登录名统一规范化（trim + toLowerCase(Locale.ROOT)，见 core LoginName）：注册落库、existsByName 查重、
+      login 的 findByName 全部使用规范化值，display_name 承担展示大小写。因此 QA 与 qa 是同一账号：
+      重复注册返回 409 AUTH003，登录可用任意大小写并忽略前后空格，/v1/auth/me 返回规范化后的 name。
+      并发注册的 DataIntegrityViolationException 同样映射为 AUTH003 而非 500。
+      说明：这是显式规范化，不再依赖数据库 collation（H2 区分大小写、MySQL 默认 utf8mb4_0900_ai_ci 不区分）。
+
+  - id: BUG-20261022-003
+    title: 无效/过期 token 的 401 响应无响应体，错误码 AUTH002 从未被抛出
+    module: 认证
+    severity: low
+    found_at: 2026-10-22
+    fixed_at: 2026-10-22
+    description: |
+      AuthInterceptor 改为抛出 DatiException（AUTH002 Token invalid or expired），并保留
+      WWW-Authenticate: Bearer；新增 AUTH009 Authentication token is required 区分「未携带凭证」。
+      GlobalExceptionHandler 的错误响应统一预设 application/json，保证 Accept: text/event-stream
+      的 MCP 客户端也能拿到 {code,message,timestamp}（此前会因内容协商失败变成空 body/406）。
+      覆盖测试：AuthInterceptorTest、app AuthenticationErrorResponseTest（含 /{code}/mcp + SSE Accept）。
+
+  - id: BUG-20261022-004
+    title: 未设置 JWT_SECRET 时静默使用仓库内硬编码默认密钥，可伪造任意身份（含 admin）
+    module: 认证
+    severity: medium
+    found_at: 2026-10-22
+    fixed_at: 2026-10-22
+    description: |
+      主配置 application.yaml 不再提供默认值：auth.jwt.secret: ${JWT_SECRET}，JwtTokenHelper 的
+      @Value 默认值一并移除。默认密钥只保留在 application-dev.yaml（本地 token 重启后仍有效，行为可复现）；
+      其他 profile 缺失 JWT_SECRET 时启动直接失败（实测 prod profile → Could not resolve placeholder 'JWT_SECRET'）。
+      测试 profile 在 application-test.yaml 显式注入独立密钥。实测：用旧的硬编码默认密钥自签 admin token → 401 AUTH002。
+
   - id: BUG-20260821-001
     title: 表不存在错误使用 DS002(Data source not found) 错误码，语义误导
     module: 数据源管理

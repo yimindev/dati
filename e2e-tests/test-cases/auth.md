@@ -4,7 +4,7 @@
 **级别：** P0
 **前置：** 无
 
-1. 用 qa-e2e-tester 用户信息（见 test-data.yaml `users.qa_user`）注册新用户
+1. 用 qa-e2e-tester 用户信息（见 test-data.yaml `users.qa_user`）注册新用户（密码需 8–72 位）
 2. 用同样的 name 和 password 登录，登录时必须传 `type: "local"`
 3. 预期登录返回 200，响应包含 token 字段且非空
 4. 用该 token 访问数据源列表接口（GET /v1/data-sources）
@@ -30,12 +30,16 @@
 
 ---
 
-## TC-AUTH-004 重复注册
+## TC-AUTH-004 重复注册（登录名大小写不敏感）
 **级别：** P2
 **前置：** 已注册的用户存在
 
 1. 用已存在的 name 再次注册
-2. 预期返回 400 错误（AUTH003: Username already exists）
+2. 预期返回 400 或 409 错误（AUTH003: Username already exists）
+3. 把 name 改成全大写（如 `qa-e2e-tester` → `QA-E2E-TESTER`）再次注册
+4. 预期同样返回 400 或 409（AUTH003），不得新建第二个账号
+5. 用全大写 name + 正确密码登录，预期 200 且返回 token
+6. 用该 token 请求 GET /v1/auth/me，预期 `name` 为注册时规范化后的小写值
 
 ---
 
@@ -88,3 +92,27 @@
 5. 清理：游客1删除数据源 DS_G1
 
 
+---
+
+## TC-AUTH-009 注册密码强度校验
+**级别：** P1
+**前置：** 无
+
+1. POST /v1/auth/register 传 `password: "x"`（1 位）与合法 name
+2. 预期返回 400（CM001），`message` 中包含 `password`
+3. 传 7 位密码再次注册，预期仍为 400（CM001）
+4. 传 8 位密码（如 `12345678`）注册新 name，预期 200 并返回 id
+5. 前端校验：注册页输入 7 位或 73 位密码提交，预期出现「密码长度需为 8–72 位」提示且不发请求
+
+---
+
+## TC-AUTH-010 未认证 / 无效 token 的统一错误响应
+**级别：** P1
+**前置：** 无
+
+1. GET /v1/auth/me 不带 Authorization
+2. 预期 401，响应头含 `WWW-Authenticate: Bearer`，响应体为 JSON：`{"code":"AUTH009","message":"Authentication token is required","timestamp":...}`
+3. 带 `Authorization: Bearer not.a.jwt` 请求 /v1/auth/me
+4. 预期 401，响应体 `{"code":"AUTH002","message":"Token invalid or expired",...}`
+5. 带 `Accept: text/event-stream` 且无 token 请求 POST /{code}/mcp
+6. 预期仍为 401 + 同上 JSON 错误体（不得返回空 body 或 406）

@@ -48,7 +48,7 @@ The development environment activates `spring.profiles.active=dev` by default, o
 - **Embedded H2 Database**: Uses a local file database at `${user.dir}/db/dati` with automatic schema updates (`ddl-auto: update`). **No MySQL installation required.**
 - **H2 Web Console**: Enabled by default at `http://localhost:8085/h2-console/dati` (JDBC URL: `jdbc:h2:file:./db/dati`, Username: `sa`, Password: leave blank; click "Connect" directly).
 - **API Documentation (Swagger)**: Available at `http://localhost:8085/swagger-ui.html`.
-- **Security & Admin**: Preconfigured local `JWT_SECRET`; default admin identifier is `admin` (`ADMIN_USERS=admin`).
+- **Security & Admin**: `application-dev.yaml` ships a local-only `JWT_SECRET` default (so dev tokens survive restarts; unset `JWT_SECRET` in any other profile makes startup fail). Default admin identifier is `admin` (`ADMIN_USERS=admin`).
 - **MCP Endpoint**: `dati.mcp.endpoint-base-url` automatically resolves to `http://localhost:8085`.
 
 ### Key Configurations to Review (`application-dev.yaml`)

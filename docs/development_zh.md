@@ -48,7 +48,7 @@
 - **嵌入式 H2 数据库**：默认使用本地文件数据库（路径 `${user.dir}/db/dati`），启动自动维护表结构（`ddl-auto: update`），**无需在本地安装 MySQL**。
 - **H2 Web 控制台**：默认开启，访问路径 `http://localhost:8085/h2-console/dati`（JDBC URL: `jdbc:h2:file:./db/dati`，账号 `sa`，密码留空，直接点击「Connect」即可进入）。
 - **接口文档（Swagger）**：默认开启，访问地址 `http://localhost:8085/swagger-ui.html`。
-- **安全与管理员**：`JWT_SECRET` 内置本地默认密钥，无需配置；管理员标识 `ADMIN_USERS` 默认为 `admin`。
+- **安全与管理员**：`JWT_SECRET` 的默认值只存在于 `application-dev.yaml`（本地 token 重启后仍有效）；其他 profile 未注入 `JWT_SECRET` 会启动失败。管理员标识 `ADMIN_USERS` 默认为 `admin`。
 - **MCP 端点**：`dati.mcp.endpoint-base-url` 自动推导为 `http://localhost:8085`。
 
 ### 启动前关键需要修改/确认的配置（`application-dev.yaml`）

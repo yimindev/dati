@@ -43,7 +43,8 @@ auth:
   guest:
     enabled: ${AUTH_GUEST_ENABLED:true}
   jwt:
-    secret: ${JWT_SECRET:this-is-a-32-char-long-default-secret-key}
+    # JWT_SECRET is mandatory outside the dev profile (no committed default).
+    secret: ${JWT_SECRET}
     expiration-seconds: 604800
 
 dati:
