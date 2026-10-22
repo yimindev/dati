@@ -2,3 +2,107 @@
 # Agent 跑完 E2E 测试后自动维护此文件
 
 bugs:
+  - id: BUG-20261022-001
+    title: 注册接口无密码强度校验，1 字符密码即可注册成功
+    module: 认证
+    severity: medium
+    found_at: 2026-10-22
+    description: |
+      TC-AUTH-001 探索：POST /v1/auth/register {"name":"qa-pw1-xxx","password":"x"} 返回 200 并建号成功。RegisterRequest 仅对 password 做 @NotBlank(minLength=1)，无最小长度/复杂度约束；配合登录无失败次数限制，弱口令账户可被轻易爆破。建议增加最小长度（如 8 位）与复杂度校验，或在注册时返回可读的强度提示。实测：password="x" → 200 {"id":"299b08f7-..."}。
+  - id: BUG-20261022-002
+    title: 用户名唯一性区分大小写，可注册视觉上无法区分的重复账户
+    module: 认证
+    severity: low
+    found_at: 2026-10-22
+    description: |
+      TC-AUTH-004 探索：已存在 qa-e2e-tester 时，注册 QA-E2E-TESTER 仍返回 200 成功建号（两个独立 UUID），登录也各自按大小写区分。风险：仿冒/钓鱼账户（如 Admin vs admin 虽不获得全局管理员，但列表/审计中难以分辨），且用户用错大小写会被判为「用户名不存在」(AUTH001 同一文案，无法自助排查)。建议唯一性按 lower(name) 校验，登录时提示保持原有大小写或大小写不敏感匹配。
+  - id: BUG-20261022-003
+    title: 无效/过期 token 的 401 响应无响应体，错误码 AUTH002 从未被抛出
+    module: 认证
+    severity: low
+    found_at: 2026-10-22
+    description: |
+      TC-AUTH-003/005 探索：携带非法 token（Bearer not.a.jwt）或无 token 访问 /v1/data-sources、/v1/auth/me 返回 HTTP 401 + 'WWW-Authenticate: Bearer'，Content-Length: 0，无 JSON 错误体；而登录失败会返回 {code:AUTH001,...}。ErrorCode.AUTH_TOKEN_INVALID(AUTH002) 在全项目中无任何抛出点（grep 仅剩枚举定义）。影响：客户端（frontend/src/api/http.ts normalizeError 读取 response.data.code/message）拿不到 code 与可读 message，只能按 status 处理；无法区分「未登录」「token 过期」「token 非法」，也无法据此做 token 刷新。建议认证失败统一返回 {code,message}（AUTH002）响应体。
+  - id: BUG-20261022-004
+    title: 未设置 JWT_SECRET 时静默使用仓库内硬编码默认密钥，可伪造任意身份（含 admin）
+    module: 认证
+    severity: medium
+    found_at: 2026-10-22
+    description: |
+      application.yaml auth.jwt.secret 默认值 this-is-a-32-char-long-default-secret-key 已提交到仓库；只要环境未注入 JWT_SECRET（dev 起步/演示环境）就用它签名。实测：用该默认密钥本地 HS256 自签 {"name":"admin","sub":<任意UUID>} 的 token → GET /v1/auth/me 200，GET /v1/data-sources 返回全量他人数据源（PermissionService.isAdmin 按 name=admin 短路放行）。过期 token（exp 在过去）正确返回 401，说明签名校验本身正常，问题仅在于密钥默认值。建议：非 dev profile 缺失 JWT_SECRET 时启动失败，或至少在启动日志中告警；dev 默认值改为启动时随机生成。
+  - id: BUG-20261022-005
+    title: 游客 token TTL 与正式用户相同（7 天），且游客身份不落库、资源无管理入口
+    module: 认证
+    severity: low
+    found_at: 2026-10-22
+    description: |
+      TC-AUTH-005/006/007 探索：guest 与 qa_user 的 JWT exp-iat 均为 604800s（7 天，来自 auth.jwt.expiration-seconds 单一配置，无 guest 专属 TTL），与用例中「临时沙箱身份」语义不符；GuestService 只签发 JWT（guest-xxxxxxxxxxxx）不写 users 表，因此：①游客创建的 data source/subject 等资源 created_by 指向不存在的用户，created_user_name 永远靠 BaseAssembler 的 startsWith("guest") 硬编码回退为 "Guest"；②这些资源不会过期回收，也没有任何管理端接口可枚举/清理（openapi 无用户/资源管理端点），长期会累积不可追溯的孤儿数据。建议：为 guest 设独立较短 TTL（如 24h），并对游客资源做定期清理或在游客过期时级联删除。
+  - id: BUG-20261022-006
+    title: 批量添加表未做去重校验，同一张表可被重复添加并产生重复 ES 文档
+    module: 数据源管理-表管理
+    severity: medium
+    found_at: 2026-10-22
+    description: |
+      TC-DS-010/TC-DS-011 探索：POST /v1/data-sources/{id}/tables/batch 对同一 (datasourceId, schema, name) 无任何存在性校验，TableService.batchAddTables() 直接 tableInfoDAO.save() 插入新行。实测：对同一数据源连续两次添加 artist → added-names 返回 ["artist","artist"]；GET tables 返回 2 条同名 artist（UUID 分别为 f947168c.../dc399030...）；ES 出现 2 条 TABLE 文档 + 4 条 FIELD 文档（artistid/name 各两份）。影响：语义检索重复命中、主题添加表时出现重名歧义、MCP 工具元数据被污染、删除其中一条后另一条仍残留。建议 batchAddTables 先按 (datasourceId, schema, name) 查重，已存在则跳过或返回明确的已存在错误（参考 DS007 风格）。附带观察：该接口响应体为 {"id":"<新增条数>"}，把数量塞进 id 字段，语义混乱，建议改为返回新增表 ID 列表或 {added: n, skipped: n}。
+  - id: BUG-20261022-007
+    title: 非法/不支持的 jdbc_url 创建数据源返回 500 CM003，而非 400 可读错误
+    module: 数据源管理
+    severity: medium
+    found_at: 2026-10-22
+    description: |
+      TC-DS-007 探索：POST /v1/data-sources 传 jdbc_url="not-a-url" 或 "jdbc:oracle:thin:@localhost:1521:xe"（未引入驱动）→ HTTP 500 {"code":"CM003","message":"Internal server error"}。根因：DataSourceService.detectDefaultSchema() 只 catch SQLException，而 HikariPoolManager 中 new HikariDataSource(config) 在 HikariConfig.validate() 阶段对无法解析的 URL/缺失驱动抛的是 RuntimeException("Failed to get driver instance for jdbcUrl=...")，穿透到 GlobalExceptionHandler 的 Exception 兜底分支。对比：同一 URL 走 POST /test-connection 返回 false+200，两个接口行为不一致。另注：jdbc_url="jdbc:postgresql://"（无 host）可成功创建（DefaultHost 兜底连到 localhost:5432），URL 校验形同虚设。建议在 addDataSource/updateDataSource 前置校验驱动可加载，把 HikariConfig 的 IllegalArgumentException/RuntimeException 一并转 DS_CONNECTION_FAILED(400) 或 DS_UNSUPPORTED_TYPE(400)。
+  - id: BUG-20261022-008
+    title: 数据源 name/description 缺少非空与长度校验：空 name 可创建成功，超长直接 500
+    module: 数据源管理
+    severity: medium
+    found_at: 2026-10-22
+    description: |
+      TC-DS-001 探索：①POST /v1/data-sources 传 name=""（其余字段合法）→ 200 建号成功，列表中 name 为空白，UI 出现无法识别的条目；②name 长度 64 成功、65 字符 → 500 CM003；③description 2000 字符（列长 1024）→ 500 CM003。根因：BaseResource.name/description 与 DataSource 模型只有 @NotNull/@NotBlank 于 type/jdbcUrl/username，name 无 @NotBlank、无 @Size，description 无 @Size；超长时由 Hibernate 抛 DataIntegrityViolationException 落到 GlobalExceptionHandler 的 Exception 兜底 → CM003 500。对比：缺 jdbc_url/type 时能正确返回 400 CM001 带字段名。建议为 name 加 @NotBlank + @Size(max=64)，description 加 @Size(max=1024)，并把 DataIntegrityViolationException 映射为 400 INVALID_PARAMETER。
+  - id: BUG-20261022-009
+    title: 表删除/更新接口忽略路径中的 datasourceId，可用错误的数据源路径操作任意表
+    module: 数据源管理-表管理
+    severity: low
+    found_at: 2026-10-22
+    description: |
+      TC-DS-010 探索：TableController.deleteTable(datasourceId, tableId)/updateTable(datasourceId, tableId) 只把 datasourceId 用于占位，Service 内部一律用 tableId 反查真实 datasourceId 再做权限校验，未校验 tableId 是否属于该 datasourceId。实测：表 d8d7c17f-... 属于数据源 78cc22bb-...，用另一个数据源 19637970-... 作为路径删除该表 → 200 删除成功。当前不构成越权（权限仍按真实 datasourceId 校验），但 API 契约误导：客户端传错 datasourceId 不会报错而是静默作用于别的数据源；若未来权限校验改成基于路径参数，就会演变为越权漏洞。建议在 Service 入口断言 po.getDataSourceId().equals(datasourceId)，不一致返回 404 DS007。
+  - id: BUG-20261022-010
+    title: PUT /v1/subjects/{id} 允许把 name 置为空字符串，主题名被清空且列表/ES 搜索失效
+    module: 语义层-主题管理
+    severity: medium
+    found_at: 2026-10-22
+    description: |
+      TC-SEM-001 探索：POST /v1/subjects 对 name 有 @NotBlank（空白 → 400 CM001），但 PUT /v1/subjects/{id} 的 UpdateSubjectRequest.name 无任何约束，传 {"name":""} 返回 200 并把名称写成空串：①GET 详情 name 为 ''；②主题列表按原名称搜索 total=0（不可再被搜到）；③ES 文档 keywords 变成 ['', 'probe-alias']，语义检索索引被空关键词污染。对比 PUT /v1/terms/{id} 同样传 {"name":""} 返回 400（UpdateTermRequest @NotBlank），主题/术语更新行为不一致。建议 UpdateSubjectRequest 对 name 增加 @NotBlank 或 Pattern(.*\\S.*)，并在服务层拒绝空串（保留 null 的部分更新语义）。实测：创建 probe-blank-xxx → PUT {"name":""} → 200，详情 name=''。
+  - id: BUG-20261022-011
+    title: 从主题移除表后，术语对该表的关联关系未清理，残留指向主题外表的脏关联
+    module: 语义层-主题管理
+    severity: medium
+    found_at: 2026-10-22
+    description: |
+      TC-SEM-002 探索：主题加入 genre 表 → 创建术语并建立 FIELD(genre.name) 关联 → DELETE /v1/subjects/{id}/tables/{tableId} 返回 200，主题表列表变为空，但术语详情/列表仍返回 entity_type=FIELD / table_name=genre / field_name=name 的关联。SubjectService.removeTableFromSubject 仅删除 subject_table 行，未处理 term_relation（新增关联时 TermService 会校验表属于主题 SM003，移除表时却不反向校验）。影响：主体作用域与术语关联数据自相矛盾，MCP 侧按 term 展开的元数据可能展示主题范围外的表，前端术语详情会显示已移除的表。建议移除表时级联删除该主题下所有术语指向该表的关联（或拒绝移除仍被引用的表并提示）。
+  - id: BUG-20261022-012
+    title: POST /v1/terms/{id}/relations 返回 termId 而非新建 relation 的 id
+    module: 语义层-术语管理
+    severity: low
+    found_at: 2026-10-22
+    description: |
+      TC-SEM-004 探索：POST /v1/terms/{termId}/relations 返回 IdResponse{id=termId}（TermController.linkTermRelation 直接 new IdResponse(id)），而 DELETE /v1/terms/{id}/relations/{relationId} 返回的是 relationId。同名 IdResponse 语义不一致：调用方无法从创建响应拿到 relationId，必须先 GET /v1/terms/{id} 再按 table/field 匹配。建议 link 后返回真实 relation id（TermService.linkEntity 返回关系实体）。
+  - id: BUG-20261022-013
+    title: 术语关联不存在/主题外表的 tableId 统一报 SM003「does not belong to subject」，与「表不存在」混淆
+    module: 语义层-术语管理
+    severity: low
+    found_at: 2026-10-22
+    description: |
+      TC-SEM-004/007 探索：POST /v1/terms/{id}/relations 传随机 UUID 作为 table_id → 400 SM003 'Table {tableId} does not belong to subject {subjectId}'；同一 UUID 作为 add-table 的 table_id 则返回 404 DS007 'Table not found'。表根本不存在时返回「不属于该主题」会误导排查方向（此前 BUG-20261019-009 已修正 add-table 路径的同类问题）。建议关联路径先查表存在性 → SM/DS 的 Table not found，再校验是否属于主题。
+  - id: BUG-20261022-014
+    title: PUT /v1/mcp-services/{serviceId}/tools/{toolId} 部分更新语义失效：tool_type 强制必填、缺省 enabled 被重置为 true、预置工具缺省 config 被重置为默认值
+    module: MCP 服务管理
+    severity: medium
+    found_at: 2026-10-22
+    description: |
+      TC-MCP-004 步骤5（部分更新：仅改 description）复现：PUT /v1/mcp-services/{id}/tools/{toolId} 仅传 {"description":"..."} → 400 CM001 'toolType: 不得为 null'，部分更新不可用（用例与 CustomToolRequest 的 null 容忍实现相矛盾）。
+      另发现同类静默数据丢失（改传 tool_type 后可复现）：
+      ① 自定义工具缺省 enabled：创建 enabled=false 的工具后，PUT {"tool_type":"PARAMETERIZED_SQL","description":"d2"} → 200，但 enabled 被静默改回 true（McpToolAssembler.toModel 用 enabled==null||enabled 赋 true，McpToolService.updateCustomTool 又无条件 po.setEnabled），停用的工具被悄悄重新开启。
+      ② 预置工具缺省 config：先把 EXECUTE_SQL 配置为 {timeout:60,max_rows:500,allow_update:true}，再 PUT {"tool_type":"EXECUTE_SQL","enabled":false}（只改开关）→ 200，但 config 被重置为代码默认值 timeout=30/max_rows=1000/allow_update=false，用户自定义策略与限额无声丢失；缺省 enabled 同样被强制为 true。
+      与已修复的 BUG-20260820-001（UPDATE_COLUMN_INFO/列同步静默重置配置）及 prompt 部分更新（BUGS-FIXED 记录：po.setEnabled 无条件覆盖）同源。
+      修复方向：CustomToolRequest.toolType 去掉 @NotNull（或改用独立的 Update 请求模型）；Assembler/McpToolService 对 enabled/config 仅在请求显式携带时更新，缺省时保留 DB 现有值（预置工具 config 缺省时保留已存配置而非回落 type.getDefaultConfig()）。
+      复现脚本：e2e-tests/test-cases/mcp-service.md TC-MCP-004 步骤5/6；报告 e2e-tests/reports/mcp-service-2026-10-22.md
