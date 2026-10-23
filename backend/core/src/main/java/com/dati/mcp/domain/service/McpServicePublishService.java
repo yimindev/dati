@@ -3,6 +3,7 @@ package com.dati.mcp.domain.service;
 import com.dati.base.exception.DatiException;
 import com.dati.base.exception.ErrorCode;
 import com.dati.common.JsonUtils;
+import com.dati.mcp.domain.model.McpPrebuiltToolConfig;
 import com.dati.mcp.domain.model.McpServiceSnapshot;
 import com.dati.mcp.domain.model.McpServiceStatus;
 import com.dati.mcp.repository.dao.McpServiceDAO;
@@ -294,8 +295,10 @@ public class McpServicePublishService {
                 content.getCustomTools() == null ? List.of()
                         : content.getCustomTools().stream().map(McpServiceSnapshotMapper::toCustomTool).toList());
         if (content.getPrebuiltTools() != null) {
-            content.getPrebuiltTools().forEach(cfg ->
-                    toolService.updatePrebuiltTool(serviceId, cfg.toolType(), McpServiceSnapshotMapper.toPrebuiltTool(cfg)));
+            content.getPrebuiltTools().forEach(cfg -> {
+                McpPrebuiltToolConfig tool = McpServiceSnapshotMapper.toPrebuiltTool(cfg);
+                toolService.updatePrebuiltTool(serviceId, cfg.toolType(), tool.getConfig(), tool.isEnabled());
+            });
         }
 
         // 4. Prompts 写回草稿

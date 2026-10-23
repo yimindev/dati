@@ -631,3 +631,12 @@ bugs:
     description: |
       TC-SEM-004/007 探索：POST /v1/terms/{id}/relations 传随机 UUID 作为 table_id → 400 SM003 'Table {tableId} does not belong to subject {subjectId}'；同一 UUID 作为 add-table 的 table_id 则返回 404 DS007 'Table not found'。表根本不存在时返回「不属于该主题」会误导排查方向（此前 BUG-20261019-009 已修正 add-table 路径的同类问题）。建议关联路径先查表存在性 → SM/DS 的 Table not found，再校验是否属于主题。
       修复：TermService.linkEntity 在主题归属校验前先 tableInfoDAO.findById(tableId) → 404 DS007 'Table not found: {tableId}'。TermServiceTest 覆盖未知表且断言不落库；真实后端 curl 验证随机 UUID 作为 table_id 返回 404 DS007（不再 SM003）。
+  - id: BUG-20261022-014
+    title: PUT /v1/mcp-services/{serviceId}/tools/{toolId} 部分更新语义失效：tool_type 强制必填、缺省 enabled 被重置为 true、预置工具缺省 config 被重置为默认值
+    module: MCP 服务管理
+    severity: medium
+    found_at: 2026-10-22
+    fixed_at: 2026-10-23
+    description: |
+      TC-MCP-004 步骤5（部分更新：仅改 description）复现：PUT /v1/mcp-services/{id}/tools/{toolId} 仅传 {"description":"..."} → 400 CM001 'toolType: 不得为 null'，部分更新不可用。同类静默数据丢失（改传 tool_type 后可复现）：① 自定义工具缺省 enabled：创建 enabled=false 的工具后 PUT {"tool_type":"PARAMETERIZED_SQL","description":"d2"} → 200，但 enabled 被静默改回 true；② 预置工具缺省 config：EXECUTE_SQL 配置自定义 config 后 PUT {"tool_type":"EXECUTE_SQL","enabled":false} → 200，但 config 被重置为代码默认值（timeout=30/max_rows=1000），缺省 enabled 同样被强制为 true。
+      修复：更新请求拆为独立的 UpdateToolRequest（全部字段可选，部分更新生效），创建仍用 CreateCustomToolRequest（tool_type/description 必填）；PUT 以 path 的 toolId 判定目标（预置工具 id 即类型名，自定义工具为 UUID），请求携带 tool_type 时必须与 path 一致，否则 400 CM001；McpToolAssembler 新增 toUpdateModel（未提供字段保持 null）与 parsePrebuiltConfig（空 config 返回 null）；McpToolService.updateCustomTool(tool, Boolean enabled) / updatePrebuiltTool(serviceId, toolType, ToolConfig config, Boolean enabled) 仅在请求显式携带时覆盖 enabled/config，预置工具首次落库仍以类型默认开关兜底，发布回滚的全量恢复显式传 config+enabled。覆盖测试：McpToolServiceTest（缺省 config 保留、缺省 enabled 保留、description-only 保留 enabled/type/config）、McpToolControllerTest（无 tool_type 的预置/自定义部分更新 200、tool_type 与 path 冲突 400）、McpToolAssemblerTest。

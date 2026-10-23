@@ -67,15 +67,18 @@
 **数据：** `chinook.e2e.{seeded_datasource_name, mcp.tool}`
 
 1. 搜索 `seeded_datasource_name` 获取 datasourceId，创建 MCP 服务（携带 `data_scopes` 绑定该数据源）
-2. **创建 Tool**：type=`mcp.tool.type`
+2. **创建 Tool**：type=`mcp.tool.type`，`enabled=false`
    - config 中包含 data_source_id（填种子 datasourceId）、sql_template、parameters（参考 `mcp.tool.config`）
    - 注意：请求 body 使用 snake_case（`tool_type`、`data_source_id`、`sql_template`）
 3. 验证返回 200
-4. 查 Tool 列表（custom 列表），确认 type/name/title 正确
-5. **部分更新**：改 description
-6. 查列表验证已更新
-7. **删除 Tool**，查列表确认
-8. 删除服务（清理）
+4. 查 Tool 列表（custom 列表），确认 type/name/title 正确、enabled=false
+5. **部分更新**：仅传 `description`（不带 `tool_type`/`enabled`/`config`）→ 200，不得返回 400 CM001（tool_type 非必填）
+6. 查列表验证 description 已更新，`enabled` 仍为 false、`tool_type` 与 config 未被重置（BUG-20261022-014）
+7. **预置工具部分更新**：先 PUT `EXECUTE_SQL` 配置自定义 config（如 timeout=60、max_rows=500）；再仅传 `{"enabled":false}`（不带 config）→ 200
+   - 查列表确认 `EXECUTE_SQL` 的 config 仍为自定义值（未回落到代码默认 timeout=30/max_rows=1000），enabled=false
+   - 再仅传 config（不带 enabled）→ enabled 保持 false
+8. **删除 Tool**，查列表确认
+9. 删除服务（清理）
 
 ---
 
@@ -256,7 +259,8 @@
 2. **懒初始化默认配置**：GET `/v1/mcp-services/{id}/tools` → prebuilt **7 个**：SEARCH_METADATA / GET_TABLE_INFO / LIST_TABLES / EXECUTE_SQL `enabled`=**true**；**UPDATE_TABLE_INFO / UPDATE_COLUMN_INFO / UPSERT_TERM `enabled`=false（写工具默认关闭，需显式启用）**；SEARCH_METADATA / GET_TABLE_INFO 的 config 为 `{"timeout": 30}`；LIST_TABLES 的 config 为 `{}`（无 per-service 配置）；EXECUTE_SQL config 含 `sql_policy.allow_select`=true（其余 false）、`timeout`=30、`max_rows`=1000；UPDATE_TABLE_INFO / UPDATE_COLUMN_INFO / UPSERT_TERM 的 config 为 `{}`（无 per-service 配置，无 DB 记录时使用代码默认值）
 3. **更新 EXECUTE_SQL 配置**：PUT `/v1/mcp-services/{id}/tools/EXECUTE_SQL`，body：`{"tool_type": "EXECUTE_SQL", "enabled": true, "config": "{\"sql_policy\":{\"allow_select\":true,\"allow_update\":true,\"allow_multi\":true},\"timeout\":60,\"max_rows\":500}"}`（config 为 JSON 字符串）→ 200
    - GET `/tools` 回读：EXECUTE_SQL config 与提交一致（`allow_update`=true、`allow_multi`=true、`timeout`=60、`max_rows`=500）
-4. **预置工具开关**：PUT `/tools/SEARCH_METADATA`，body：`{"tool_type": "SEARCH_METADATA", "enabled": false}` → 200；GET `/tools` 回读 SEARCH_METADATA `enabled`=false
+4. **预置工具开关（部分更新）**：PUT `/tools/SEARCH_METADATA`，body：`{"tool_type": "SEARCH_METADATA", "enabled": false}`（不带 config）→ 200；GET `/tools` 回读 SEARCH_METADATA `enabled`=false，config 仍为 `{"timeout": 30}`
+   - 对 EXECUTE_SQL 同样验证：PUT `/tools/EXECUTE_SQL` 仅传 `{"enabled": false}`（不带 config）→ 200，config 仍为步骤3 的自定义值（timeout=60、max_rows=500）；不带 tool_type 也应成功（BUG-20261022-014）
 5. **disabled 工具测试被拦**：POST `/tools/SEARCH_METADATA/test`，args `{"keywords": ["Rock"]}` → HTTP 200（工具测试错误走 200 + error 结构，非 HTTP 错误码），`success`=false，`error.error_category`=PARAM_ERROR（TOOL_DISABLED）
 6. 删除服务（清理）
 

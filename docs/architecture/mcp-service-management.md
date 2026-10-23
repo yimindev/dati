@@ -148,7 +148,7 @@ com.dati.mcp/
     ├── pojo/                 # VO / Request / Response
     │   ├── McpServiceVO.java, DataScopeItemVO.java, DataScopeRequest.java, DataScopeResponse.java
     │   ├── McpServiceDiffVO.java, McpServiceSnapshotVO.java, PublishRequest.java, RollbackRequest.java
-    │   ├── McpToolVO.java, ToolsResponse.java, CustomToolRequest.java
+    │   ├── McpToolVO.java, ToolsResponse.java, CreateCustomToolRequest.java, UpdateToolRequest.java
     │   ├── McpPromptVO.java, McpPromptRequest.java
     │   ├── McpUsageStatsVO.java, McpInvocationLogVO.java   # 用量统计总览（含趋势、分布）与调用明细 VO
     │   ├── ToolTestRequest.java, ToolTestResponse.java, ToolTestError.java, ToolTestData.java
@@ -254,7 +254,8 @@ com.dati.semantic.domain.model/
 | `McpToolAssembler` | Model ↔ VO / Request 转换，config JSON 解析，预置 VO 填充 title |
 | `McpToolVO` | 响应：`id`、`tool_type`、`name`、`title`、`description`、`enabled`、`config` |
 | `ToolsResponse` | `{ prebuilt, custom }` |
-| `CustomToolRequest` | 创建/更新请求体。`toolType: @NotNull McpToolType`，`config: String`（JSON） |
+| `CreateCustomToolRequest` | 创建请求体：`toolType: @NotNull McpToolType`、`description: @NotBlank`，`config: String`（JSON） |
+| `UpdateToolRequest` | 更新请求体（预置/自定义工具通用，全部字段可选，缺省保留 DB 现值）。`config: String`（JSON） |
 
 #### 结构化参数校验（Parameter Records）
 

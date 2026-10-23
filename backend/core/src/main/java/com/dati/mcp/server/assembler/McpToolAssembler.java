@@ -5,7 +5,8 @@ import com.dati.mcp.domain.model.McpCustomTool;
 import com.dati.mcp.domain.model.McpPrebuiltToolConfig;
 import com.dati.mcp.domain.model.McpToolType;
 import com.dati.mcp.domain.model.ToolConfig;
-import com.dati.mcp.server.pojo.CustomToolRequest;
+import com.dati.mcp.server.pojo.CreateCustomToolRequest;
+import com.dati.mcp.server.pojo.UpdateToolRequest;
 import com.dati.mcp.server.pojo.McpToolVO;
 import org.springframework.stereotype.Component;
 
@@ -48,42 +49,49 @@ public class McpToolAssembler {
         return tools.stream().map(this::toVO).toList();
     }
 
-    /** 预置工具：从 Controller request 构造 Domain Model */
-    public McpPrebuiltToolConfig toModel(McpToolType type, String configJson, boolean enabled) {
-        McpPrebuiltToolConfig cfg = new McpPrebuiltToolConfig();
-        cfg.setToolType(type);
-        cfg.setEnabled(enabled);
-        if (configJson != null && !configJson.isBlank()) {
-            cfg.setConfig(parsePrebuiltConfig(configJson, type));
-        } else {
-            cfg.setConfig(type.getDefaultConfig());
+    /** Prebuilt tool config from request: null/blank means "keep the stored config". */
+    public ToolConfig parsePrebuiltConfig(McpToolType type, String configJson) {
+        if (configJson == null || configJson.isBlank()) {
+            return null;
         }
-        return cfg;
-    }
-
-    /** 自定义工具：从 request 构造 Domain Model */
-    public McpCustomTool toModel(CustomToolRequest request) {
-        McpCustomTool tool = new McpCustomTool();
-        if (request.getToolType() != null) {
-            tool.setToolType(request.getToolType());
-        }
-        tool.setName(request.getName());
-        tool.setTitle(request.getTitle());
-        tool.setDescription(request.getDescription());
-        tool.setEnabled(request.getEnabled() == null || request.getEnabled());
-        if (request.getConfig() != null && !request.getConfig().isBlank()) {
-            tool.setConfig(JsonUtils.fromJson(request.getConfig(), ToolConfig.ParamSqlConfig.class));
-        }
-        return tool;
-    }
-
-    private ToolConfig parsePrebuiltConfig(String json, McpToolType type) {
         return switch (type) {
-            case SEARCH_METADATA -> JsonUtils.fromJson(json, ToolConfig.SearchMetadataConfig.class);
-            case GET_TABLE_INFO  -> JsonUtils.fromJson(json, ToolConfig.GetTableInfoConfig.class);
-            case EXECUTE_SQL     -> JsonUtils.fromJson(json, ToolConfig.ExecuteSqlConfig.class);
+            case SEARCH_METADATA -> JsonUtils.fromJson(configJson, ToolConfig.SearchMetadataConfig.class);
+            case GET_TABLE_INFO  -> JsonUtils.fromJson(configJson, ToolConfig.GetTableInfoConfig.class);
+            case EXECUTE_SQL     -> JsonUtils.fromJson(configJson, ToolConfig.ExecuteSqlConfig.class);
             default -> type.getDefaultConfig();
         };
     }
 
+    /** Custom tool create: omitted optional fields fall back to defaults. */
+    public McpCustomTool toModel(CreateCustomToolRequest request) {
+        McpCustomTool tool = buildCustomTool(request.getToolType(), request.getName(), request.getTitle(),
+            request.getDescription(), request.getConfig());
+        if (tool.getToolType() == null) {
+            tool.setToolType(McpToolType.PARAMETERIZED_SQL);
+        }
+        tool.setEnabled(request.getEnabled() == null || request.getEnabled());
+        return tool;
+    }
+
+    /**
+     * Custom tool partial update: omitted fields stay null so the service keeps the stored
+     * values. {@code enabled} is applied from the request by the service, not from the model.
+     */
+    public McpCustomTool toUpdateModel(UpdateToolRequest request) {
+        return buildCustomTool(request.getToolType(), request.getName(), request.getTitle(),
+            request.getDescription(), request.getConfig());
+    }
+
+    private McpCustomTool buildCustomTool(McpToolType toolType, String name, String title,
+                                          String description, String config) {
+        McpCustomTool tool = new McpCustomTool();
+        tool.setToolType(toolType); // explicit null = keep the stored type
+        tool.setName(name);
+        tool.setTitle(title);
+        tool.setDescription(description);
+        if (config != null && !config.isBlank()) {
+            tool.setConfig(JsonUtils.fromJson(config, ToolConfig.ParamSqlConfig.class));
+        }
+        return tool;
+    }
 }

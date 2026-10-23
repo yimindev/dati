@@ -1,15 +1,18 @@
 package com.dati.mcp.server.controller;
 
+import com.dati.base.exception.DatiException;
+import com.dati.base.exception.ErrorCode;
 import com.dati.base.pojo.IdResponse;
 import com.dati.mcp.domain.model.DetectedAnnotations;
 import com.dati.mcp.domain.model.McpCustomTool;
-import com.dati.mcp.domain.model.McpPrebuiltToolConfig;
+import com.dati.mcp.domain.model.McpToolType;
+import com.dati.mcp.domain.model.ToolConfig;
 import com.dati.mcp.domain.service.McpToolService;
 import com.dati.mcp.domain.service.McpToolTestService;
 import com.dati.mcp.domain.service.ToolsResult;
 import com.dati.mcp.server.assembler.McpToolAssembler;
 import com.dati.mcp.server.pojo.CreateCustomToolRequest;
-import com.dati.mcp.server.pojo.CustomToolRequest;
+import com.dati.mcp.server.pojo.UpdateToolRequest;
 import com.dati.mcp.server.pojo.DetectAnnotationsRequest;
 import com.dati.mcp.server.pojo.DetectAnnotationsResponse;
 import com.dati.mcp.server.pojo.ToolTestRequest;
@@ -54,18 +57,41 @@ public class McpToolController {
     @PutMapping("/{toolId}")
     public IdResponse updateTool(@PathVariable String serviceId,
                                   @PathVariable String toolId,
-                                  @RequestBody @Valid CustomToolRequest request) {
-        if (request.getToolType().isPrebuilt()) {
-            McpPrebuiltToolConfig input = mcpToolAssembler.toModel(request.getToolType(), request.getConfig(),
-                    request.getEnabled() == null || request.getEnabled());
-            mcpToolService.updatePrebuiltTool(serviceId, request.getToolType(), input);
+                                  @RequestBody @Valid UpdateToolRequest request) {
+        McpToolType prebuiltType = resolvePrebuiltType(toolId, request.getToolType());
+        if (prebuiltType != null) {
+            ToolConfig config = mcpToolAssembler.parsePrebuiltConfig(prebuiltType, request.getConfig());
+            mcpToolService.updatePrebuiltTool(serviceId, prebuiltType, config, request.getEnabled());
         } else {
-            McpCustomTool tool = mcpToolAssembler.toModel(request);
+            McpCustomTool tool = mcpToolAssembler.toUpdateModel(request);
             tool.setId(toolId);
             tool.setServiceId(serviceId);
-            mcpToolService.updateCustomTool(tool);
+            mcpToolService.updateCustomTool(tool, request.getEnabled());
         }
         return new IdResponse(toolId);
+    }
+
+    /**
+     * The path id identifies the target: prebuilt tools use their tool type name as id, custom
+     * tools use a UUID. When tool_type is also supplied it must agree with the path id.
+     */
+    private McpToolType resolvePrebuiltType(String toolId, McpToolType requested) {
+        McpToolType pathType = parseToolType(toolId);
+        boolean pathIsPrebuilt = pathType != null && pathType.isPrebuilt();
+        if (requested != null && (requested.isPrebuilt() != pathIsPrebuilt
+                || (pathIsPrebuilt && requested != pathType))) {
+            throw new DatiException(ErrorCode.INVALID_PARAMETER,
+                "tool_type '" + requested + "' does not match tool id '" + toolId + "'");
+        }
+        return pathIsPrebuilt ? pathType : null;
+    }
+
+    private McpToolType parseToolType(String toolId) {
+        try {
+            return McpToolType.valueOf(toolId);
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
     }
 
     @PostMapping

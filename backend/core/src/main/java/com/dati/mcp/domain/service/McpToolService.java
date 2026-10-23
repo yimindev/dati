@@ -104,8 +104,12 @@ public class McpToolService {
 
     // ── 预置工具 ──
 
+    /**
+     * Partial update of a prebuilt tool: null {@code enabled} / {@code config} keeps the stored
+     * value (a row created on first write falls back to the tool type defaults).
+     */
     @Transactional
-    public void updatePrebuiltTool(String serviceId, McpToolType toolType, McpPrebuiltToolConfig input) {
+    public void updatePrebuiltTool(String serviceId, McpToolType toolType, ToolConfig config, Boolean enabled) {
         permissionService.requireMcpService(serviceId, Permission.EDIT);
         McpPrebuiltToolConfigPO po = prebuiltDAO.findByServiceIdAndToolType(serviceId, toolType)
             .orElseGet(() -> {
@@ -115,9 +119,11 @@ public class McpToolService {
                 newPO.setEnabled(toolType.isDefaultEnabled());
                 return newPO;
             });
-        po.setEnabled(input.isEnabled());
-        if (input.getConfig() != null) {
-            po.setConfig(JsonUtils.toJson(input.getConfig()));
+        if (enabled != null) {
+            po.setEnabled(enabled);
+        }
+        if (config != null) {
+            po.setConfig(JsonUtils.toJson(config));
         }
         prebuiltDAO.save(po);
     }
@@ -141,8 +147,12 @@ public class McpToolService {
         return po.getId();
     }
 
+    /**
+     * Partial update of a custom tool: every null field keeps the stored value and
+     * {@code enabled} is only touched when the request carries it explicitly.
+     */
     @Transactional
-    public void updateCustomTool(McpCustomTool tool) {
+    public void updateCustomTool(McpCustomTool tool, Boolean enabled) {
         permissionService.requireMcpService(tool.getServiceId(), Permission.EDIT);
         McpCustomToolPO po = customToolDAO.findByServiceIdAndId(tool.getServiceId(), tool.getId())
             .orElseThrow(() -> new DatiException(ErrorCode.MS_TOOL_NOT_FOUND, tool.getId()));
@@ -163,7 +173,9 @@ public class McpToolService {
         if (tool.getToolType() != null) {
             po.setToolType(tool.getToolType());
         }
-        po.setEnabled(tool.isEnabled());
+        if (enabled != null) {
+            po.setEnabled(enabled);
+        }
         if (tool.getConfig() != null) {
             validateSqlTemplate(tool);
             po.setConfig(JsonUtils.toJson(tool.getConfig()));

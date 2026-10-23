@@ -29,7 +29,9 @@ import java.util.Map;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -102,7 +104,7 @@ class McpToolControllerTest {
     @Test
     @DisplayName("PUT /tools/{toolId} - update prebuilt tool (enabled flag)")
     void updateTool_togglePrebuilt() throws Exception {
-        doNothing().when(mcpToolService).updatePrebuiltTool(eq(TestFixtures.TEST_MCP_SERVICE_ID), any(), any());
+        doNothing().when(mcpToolService).updatePrebuiltTool(eq(TestFixtures.TEST_MCP_SERVICE_ID), eq(McpToolType.SEARCH_METADATA), any(), any());
 
         mockMvc.perform(put("/v1/mcp-services/{serviceId}/tools/{toolId}", TestFixtures.TEST_MCP_SERVICE_ID, "SEARCH_METADATA")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -112,16 +114,55 @@ class McpToolControllerTest {
     }
 
     @Test
+    @DisplayName("PUT /tools/{toolId} - prebuilt partial update without tool_type does not touch config (BUG-20261022-014)")
+    void updateTool_togglePrebuilt_withoutToolType_keepsConfig() throws Exception {
+        doNothing().when(mcpToolService).updatePrebuiltTool(eq(TestFixtures.TEST_MCP_SERVICE_ID), eq(McpToolType.EXECUTE_SQL), any(), any());
+
+        mockMvc.perform(put("/v1/mcp-services/{serviceId}/tools/{toolId}", TestFixtures.TEST_MCP_SERVICE_ID, "EXECUTE_SQL")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"enabled\":false}"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.id").value("EXECUTE_SQL"));
+
+        verify(mcpToolService).updatePrebuiltTool(eq(TestFixtures.TEST_MCP_SERVICE_ID), eq(McpToolType.EXECUTE_SQL),
+            isNull(), eq(false));
+    }
+
+    @Test
+    @DisplayName("PUT /tools/{toolId} - tool_type conflicting with path id is rejected")
+    void updateTool_toolTypeMismatch_shouldReturn400() throws Exception {
+        mockMvc.perform(put("/v1/mcp-services/{serviceId}/tools/{toolId}", TestFixtures.TEST_MCP_SERVICE_ID, "EXECUTE_SQL")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"tool_type\":\"SEARCH_METADATA\",\"enabled\":false}"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.code").value("CM001"));
+    }
+
+    @Test
     @DisplayName("PUT /tools/{toolId} - update custom tool")
     void updateTool_custom() throws Exception {
-        when(mcpToolAssembler.toModel(any(com.dati.mcp.server.pojo.CustomToolRequest.class))).thenReturn(new McpCustomTool());
-        doNothing().when(mcpToolService).updateCustomTool(any());
+        when(mcpToolAssembler.toUpdateModel(any(com.dati.mcp.server.pojo.UpdateToolRequest.class))).thenReturn(new McpCustomTool());
+        doNothing().when(mcpToolService).updateCustomTool(any(), any());
 
         mockMvc.perform(put("/v1/mcp-services/{serviceId}/tools/{toolId}", TestFixtures.TEST_MCP_SERVICE_ID, TestFixtures.TEST_MCP_CUSTOM_TOOL_ID)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"tool_type\":\"PARAMETERIZED_SQL\",\"name\":\"list_tasks\",\"enabled\":false}"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.id").value(TestFixtures.TEST_MCP_CUSTOM_TOOL_ID));
+    }
+
+    @Test
+    @DisplayName("PUT /tools/{toolId} - custom description-only partial update is accepted (BUG-20261022-014)")
+    void updateTool_customDescriptionOnly_shouldReturn200() throws Exception {
+        when(mcpToolAssembler.toUpdateModel(any(com.dati.mcp.server.pojo.UpdateToolRequest.class))).thenReturn(new McpCustomTool());
+
+        mockMvc.perform(put("/v1/mcp-services/{serviceId}/tools/{toolId}", TestFixtures.TEST_MCP_SERVICE_ID, TestFixtures.TEST_MCP_CUSTOM_TOOL_ID)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"description\":\"d2\"}"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.id").value(TestFixtures.TEST_MCP_CUSTOM_TOOL_ID));
+
+        verify(mcpToolService).updateCustomTool(any(), isNull());
     }
 
     @Test
@@ -143,6 +184,16 @@ class McpToolControllerTest {
         mockMvc.perform(post("/v1/mcp-services/{serviceId}/tools", TestFixtures.TEST_MCP_SERVICE_ID)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"tool_type\":\"PARAMETERIZED_SQL\",\"name\":\"list_tasks\"}"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.code").value("CM001"));
+    }
+
+    @Test
+    @DisplayName("POST /tools - create still requires tool_type")
+    void createTool_missingToolType_shouldReturn400() throws Exception {
+        mockMvc.perform(post("/v1/mcp-services/{serviceId}/tools", TestFixtures.TEST_MCP_SERVICE_ID)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":\"list_tasks\",\"description\":\"list tasks\"}"))
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.code").value("CM001"));
     }

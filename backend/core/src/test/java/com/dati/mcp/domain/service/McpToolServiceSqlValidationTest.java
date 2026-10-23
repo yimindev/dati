@@ -107,7 +107,7 @@ class McpToolServiceSqlValidationTest {
         McpCustomTool tool = toolWithTemplate("SELECT * FROM genre WHERE name = '{{genre_name}}'");
         tool.setId("tool-1");
 
-        assertThatThrownBy(() -> mcpToolService.updateCustomTool(tool))
+        assertThatThrownBy(() -> mcpToolService.updateCustomTool(tool, null))
                 .isInstanceOf(DatiException.class)
                 .satisfies(e -> assertThat(((DatiException) e).getCode())
                         .isEqualTo(ErrorCode.MS_TEMPLATE_QUOTED_VAR));

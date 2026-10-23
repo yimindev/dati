@@ -149,11 +149,7 @@ class McpToolServiceTest {
         execCfg.setTimeout(60);
         execCfg.setMaxRows(500);
 
-        McpPrebuiltToolConfig input = new McpPrebuiltToolConfig();
-        input.setEnabled(false);
-        input.setConfig(execCfg);
-
-        mcpToolService.updatePrebuiltTool(TestFixtures.TEST_MCP_SERVICE_ID, McpToolType.EXECUTE_SQL, input);
+        mcpToolService.updatePrebuiltTool(TestFixtures.TEST_MCP_SERVICE_ID, McpToolType.EXECUTE_SQL, execCfg, false);
 
         ArgumentCaptor<McpPrebuiltToolConfigPO> captor = ArgumentCaptor.forClass(McpPrebuiltToolConfigPO.class);
         verify(prebuiltDAO).save(captor.capture());
@@ -161,6 +157,7 @@ class McpToolServiceTest {
         assertThat(saved.getServiceId()).isEqualTo(TestFixtures.TEST_MCP_SERVICE_ID);
         assertThat(saved.getToolType()).isEqualTo(McpToolType.EXECUTE_SQL);
         assertThat(saved.getEnabled()).isFalse();
+        assertThat(saved.getConfig()).contains("\"timeout\":60");
     }
 
     @Test
@@ -174,12 +171,52 @@ class McpToolServiceTest {
         when(prebuiltDAO.findByServiceIdAndToolType(TestFixtures.TEST_MCP_SERVICE_ID, McpToolType.EXECUTE_SQL))
             .thenReturn(Optional.of(existing));
 
-        McpPrebuiltToolConfig input = new McpPrebuiltToolConfig();
-        input.setEnabled(false);
-        mcpToolService.updatePrebuiltTool(TestFixtures.TEST_MCP_SERVICE_ID, McpToolType.EXECUTE_SQL, input);
+        mcpToolService.updatePrebuiltTool(TestFixtures.TEST_MCP_SERVICE_ID, McpToolType.EXECUTE_SQL, null, false);
 
         verify(prebuiltDAO).save(existing);
         assertThat(existing.getEnabled()).isFalse();
+    }
+
+    @Test
+    @DisplayName("Update prebuilt tool - omitted config keeps stored config (BUG-20261022-014)")
+    void updatePrebuiltTool_configOmitted_keepsStoredConfig() {
+        String storedConfig = "{\"timeout\":60,\"max_rows\":500,\"confirm_required\":true,"
+            + "\"sql_policy\":{\"allow_select\":true,\"allow_insert\":false,\"allow_update\":true,"
+            + "\"allow_delete\":false,\"allow_ddl\":false,\"allow_multi\":false}}";
+        McpPrebuiltToolConfigPO existing = new McpPrebuiltToolConfigPO();
+        existing.setId("pre-cfg-001");
+        existing.setServiceId(TestFixtures.TEST_MCP_SERVICE_ID);
+        existing.setToolType(McpToolType.EXECUTE_SQL);
+        existing.setEnabled(true);
+        existing.setConfig(storedConfig);
+        when(prebuiltDAO.findByServiceIdAndToolType(TestFixtures.TEST_MCP_SERVICE_ID, McpToolType.EXECUTE_SQL))
+            .thenReturn(Optional.of(existing));
+
+        mcpToolService.updatePrebuiltTool(TestFixtures.TEST_MCP_SERVICE_ID, McpToolType.EXECUTE_SQL, null, false);
+
+        assertThat(existing.getEnabled()).isFalse();
+        assertThat(existing.getConfig()).isEqualTo(storedConfig);
+    }
+
+    @Test
+    @DisplayName("Update prebuilt tool - omitted enabled keeps stored enabled (BUG-20261022-014)")
+    void updatePrebuiltTool_enabledOmitted_keepsStoredEnabled() {
+        McpPrebuiltToolConfigPO existing = new McpPrebuiltToolConfigPO();
+        existing.setId("pre-cfg-001");
+        existing.setServiceId(TestFixtures.TEST_MCP_SERVICE_ID);
+        existing.setToolType(McpToolType.EXECUTE_SQL);
+        existing.setEnabled(false);
+        when(prebuiltDAO.findByServiceIdAndToolType(TestFixtures.TEST_MCP_SERVICE_ID, McpToolType.EXECUTE_SQL))
+            .thenReturn(Optional.of(existing));
+
+        ToolConfig.ExecuteSqlConfig execCfg = new ToolConfig.ExecuteSqlConfig();
+        execCfg.setTimeout(60);
+        execCfg.setMaxRows(500);
+
+        mcpToolService.updatePrebuiltTool(TestFixtures.TEST_MCP_SERVICE_ID, McpToolType.EXECUTE_SQL, execCfg, null);
+
+        assertThat(existing.getEnabled()).isFalse();
+        assertThat(existing.getConfig()).contains("\"timeout\":60");
     }
 
     // ── 创建自定义工具 ──
@@ -349,11 +386,37 @@ class McpToolServiceTest {
 
         testCustomTool.setEnabled(false);
         testCustomTool.setTitle("新标题");
-        mcpToolService.updateCustomTool(testCustomTool);
+        mcpToolService.updateCustomTool(testCustomTool, false);
 
         verify(customToolDAO).save(testCustomToolPO);
         assertThat(testCustomToolPO.getEnabled()).isFalse();
         assertThat(testCustomToolPO.getTitle()).isEqualTo("新标题");
+    }
+
+    @Test
+    @DisplayName("Update custom tool - description-only update keeps enabled, type and config (BUG-20261022-014)")
+    void updateCustomTool_partialUpdate_keepsStoredFields() {
+        String storedConfig = "{\"data_source_id\":\"ds-1\",\"sql_template\":\"SELECT 1\",\"parameters\":[]}";
+        testCustomToolPO.setEnabled(false);
+        testCustomToolPO.setToolType(McpToolType.PARAMETERIZED_SQL);
+        testCustomToolPO.setConfig(storedConfig);
+        when(customToolDAO.findByServiceIdAndId(TestFixtures.TEST_MCP_SERVICE_ID, TestFixtures.TEST_MCP_CUSTOM_TOOL_ID))
+            .thenReturn(Optional.of(testCustomToolPO));
+
+        McpCustomTool partial = new McpCustomTool();
+        partial.setId(TestFixtures.TEST_MCP_CUSTOM_TOOL_ID);
+        partial.setServiceId(TestFixtures.TEST_MCP_SERVICE_ID);
+        partial.setToolType(null); // not provided by the request
+        partial.setDescription("d2");
+
+        mcpToolService.updateCustomTool(partial, null);
+
+        verify(customToolDAO).save(testCustomToolPO);
+        assertThat(testCustomToolPO.getDescription()).isEqualTo("d2");
+        assertThat(testCustomToolPO.getEnabled()).isFalse();
+        assertThat(testCustomToolPO.getToolType()).isEqualTo(McpToolType.PARAMETERIZED_SQL);
+        assertThat(testCustomToolPO.getConfig()).isEqualTo(storedConfig);
+        assertThat(testCustomToolPO.getName()).isEqualTo("list_tasks");
     }
 
     @Test
@@ -363,7 +426,7 @@ class McpToolServiceTest {
             .thenReturn(Optional.empty());
 
         DatiException ex = assertThrows(DatiException.class, () ->
-            mcpToolService.updateCustomTool(testCustomTool)
+            mcpToolService.updateCustomTool(testCustomTool, null)
         );
         assertThat(ex.getCode()).isEqualTo(ErrorCode.MS_TOOL_NOT_FOUND);
     }

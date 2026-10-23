@@ -10,16 +10,3 @@ bugs:
     description: |
       【2026-10-22 决策】维持现状（暂不修复）：游客 TTL/资源回收属产品策略调整，留待后续版本。
       TC-AUTH-005/006/007 探索：guest 与 qa_user 的 JWT exp-iat 均为 604800s（7 天，来自 auth.jwt.expiration-seconds 单一配置，无 guest 专属 TTL），与用例中「临时沙箱身份」语义不符；GuestService 只签发 JWT（guest-xxxxxxxxxxxx）不写 users 表，因此：①游客创建的 data source/subject 等资源 created_by 指向不存在的用户，created_user_name 永远靠 BaseAssembler 的 startsWith("guest") 硬编码回退为 "Guest"；②这些资源不会过期回收，也没有任何管理端接口可枚举/清理（openapi 无用户/资源管理端点），长期会累积不可追溯的孤儿数据。建议：为 guest 设独立较短 TTL（如 24h），并对游客资源做定期清理或在游客过期时级联删除。
-  - id: BUG-20261022-014
-    title: PUT /v1/mcp-services/{serviceId}/tools/{toolId} 部分更新语义失效：tool_type 强制必填、缺省 enabled 被重置为 true、预置工具缺省 config 被重置为默认值
-    module: MCP 服务管理
-    severity: medium
-    found_at: 2026-10-22
-    description: |
-      TC-MCP-004 步骤5（部分更新：仅改 description）复现：PUT /v1/mcp-services/{id}/tools/{toolId} 仅传 {"description":"..."} → 400 CM001 'toolType: 不得为 null'，部分更新不可用（用例与 CustomToolRequest 的 null 容忍实现相矛盾）。
-      另发现同类静默数据丢失（改传 tool_type 后可复现）：
-      ① 自定义工具缺省 enabled：创建 enabled=false 的工具后，PUT {"tool_type":"PARAMETERIZED_SQL","description":"d2"} → 200，但 enabled 被静默改回 true（McpToolAssembler.toModel 用 enabled==null||enabled 赋 true，McpToolService.updateCustomTool 又无条件 po.setEnabled），停用的工具被悄悄重新开启。
-      ② 预置工具缺省 config：先把 EXECUTE_SQL 配置为 {timeout:60,max_rows:500,allow_update:true}，再 PUT {"tool_type":"EXECUTE_SQL","enabled":false}（只改开关）→ 200，但 config 被重置为代码默认值 timeout=30/max_rows=1000/allow_update=false，用户自定义策略与限额无声丢失；缺省 enabled 同样被强制为 true。
-      与已修复的 BUG-20260820-001（UPDATE_COLUMN_INFO/列同步静默重置配置）及 prompt 部分更新（BUGS-FIXED 记录：po.setEnabled 无条件覆盖）同源。
-      修复方向：CustomToolRequest.toolType 去掉 @NotNull（或改用独立的 Update 请求模型）；Assembler/McpToolService 对 enabled/config 仅在请求显式携带时更新，缺省时保留 DB 现有值（预置工具 config 缺省时保留已存配置而非回落 type.getDefaultConfig()）。
-      复现脚本：e2e-tests/test-cases/mcp-service.md TC-MCP-004 步骤5/6；报告 e2e-tests/reports/mcp-service-2026-10-22.md
