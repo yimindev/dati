@@ -4,6 +4,7 @@ import com.dati.base.pojo.IdResponse;
 import com.dati.base.pojo.PageReq;
 import com.dati.base.pojo.PageResponse;
 import com.dati.semantic.domain.model.Term;
+import com.dati.semantic.domain.model.TermRelation;
 import com.dati.semantic.domain.service.TermService;
 import com.dati.semantic.server.assembler.TermAssembler;
 import com.dati.semantic.server.pojo.request.CreateTermRequest;
@@ -69,8 +70,9 @@ public class TermController {
 
     @PostMapping("/terms/{id}/relations")
     public IdResponse linkTermRelation(@PathVariable String id, @Valid @RequestBody LinkTermRelationRequest request) {
-        termService.linkEntity(id, request.getEntityType(), request.getTableId(), request.getFieldName());
-        return new IdResponse(id);
+        TermRelation relation = termService.linkEntity(
+                id, request.getEntityType(), request.getTableId(), request.getFieldName());
+        return new IdResponse(relation.getId());
     }
 
     @DeleteMapping("/terms/{id}/relations/{relationId}")

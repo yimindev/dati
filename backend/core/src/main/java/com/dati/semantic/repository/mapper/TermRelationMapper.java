@@ -1,6 +1,7 @@
 package com.dati.semantic.repository.mapper;
 
 import com.dati.semantic.domain.TermRelationType;
+import com.dati.semantic.domain.model.TermRelation;
 import com.dati.semantic.repository.po.TermRelationPO;
 
 public class TermRelationMapper {
@@ -13,5 +14,15 @@ public class TermRelationMapper {
         po.setTableId(tableId);
         po.setFieldName(fieldName);
         return po;
+    }
+
+    public static TermRelation toRelation(TermRelationPO po) {
+        return TermRelation.builder()
+                .id(po.getId())
+                .termId(po.getTermId())
+                .entityType(po.getEntityType())
+                .tableId(po.getTableId())
+                .fieldName(po.getFieldName())
+                .build();
     }
 }

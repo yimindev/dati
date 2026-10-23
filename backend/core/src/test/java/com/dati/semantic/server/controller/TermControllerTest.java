@@ -182,20 +182,27 @@ class TermControllerTest {
     }
 
     @Test
-    @DisplayName("Link Term relation - returns 200")
+    @DisplayName("Link Term relation - returns the new relation id")
     void linkTermRelation_shouldReturn200() throws Exception {
         com.dati.semantic.server.pojo.request.LinkTermRelationRequest request = new com.dati.semantic.server.pojo.request.LinkTermRelationRequest();
         request.setEntityType(com.dati.semantic.domain.TermRelationType.FIELD);
         request.setTableId("table-001");
         request.setFieldName("field-001");
 
-        doNothing().when(termService).linkEntity(anyString(), any(), anyString(), anyString());
+        TermRelation relation = TermRelation.builder()
+                .id("relation-001")
+                .termId("term-001")
+                .entityType(com.dati.semantic.domain.TermRelationType.FIELD)
+                .tableId("table-001")
+                .fieldName("field-001")
+                .build();
+        when(termService.linkEntity(anyString(), any(), anyString(), anyString())).thenReturn(relation);
 
         mockMvc.perform(post("/v1/terms/term-001/relations")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.id").value("term-001"));
+            .andExpect(jsonPath("$.id").value("relation-001"));
     }
 
     @Test

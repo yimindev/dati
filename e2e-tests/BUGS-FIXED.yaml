@@ -595,3 +595,39 @@ bugs:
     description: |
       TC-DS-010 步骤 13 / TC-DS-011 步骤 11 复现：更新表别名与描述后，ES 文档 table:{tableId} 的 createdTime 由 2026-10-19T22:53:23.092 变为 2026-10-19T22:53:33.471（等于 updatedTime）；列更新同样现象。根因：TableService.updateTable/ColumnService 重建 SemanticSearchDocument 时未回填原有 createdTime，SemanticIndexService.save 只在 createdTime 为 null 时才赋值为 now，故每次更新都会把创建时间覆盖为更新时刻。影响：语义检索侧无法区分创建与更新时间，审计信息失真。修复方向：更新时先按 id 取出既有文档并沿用其 createdTime。
       修复：SemanticIndexService.save/saveBatch 在 createdTime 为空时先按 id 读取既有 ES 文档并沿用其 createdTime（批量用 findAllById 一次 mget），仅刷新 updatedTime；ColumnService.syncColumns 在删除重建 FIELD 文档前先读取旧文档的 createdTime 并回填。验证：SemanticIndexServiceTest 覆盖单条/批量保留；ColumnServiceTest 覆盖同步重建保留；真实后端 curl 更新 table/column 及 columns/sync 后，ES createdTime 保持不变、updatedTime 刷新。
+  - id: BUG-20261022-010
+    title: PUT /v1/subjects/{id} 允许把 name 置为空字符串，主题名被清空且列表/ES 搜索失效
+    module: 语义层-主题管理
+    severity: medium
+    found_at: 2026-10-22
+    fixed_at: 2026-10-23
+    description: |
+      TC-SEM-001 探索：POST /v1/subjects 对 name 有 @NotBlank（空白 → 400 CM001），但 PUT /v1/subjects/{id} 的 UpdateSubjectRequest.name 无任何约束，传 {"name":""} 返回 200 并把名称写成空串：①GET 详情 name 为 ''；②主题列表按原名称搜索 total=0（不可再被搜到）；③ES 文档 keywords 变成 ['', 'probe-alias']，语义检索索引被空关键词污染。对比 PUT /v1/terms/{id} 同样传 {"name":""} 返回 400（UpdateTermRequest @NotBlank），主题/术语更新行为不一致。建议 UpdateSubjectRequest 对 name 增加 @NotBlank 或 Pattern(.*\\S.*)，并在服务层拒绝空串（保留 null 的部分更新语义）。实测：创建 probe-blank-xxx → PUT {"name":""} → 200，详情 name=''。
+      修复：UpdateSubjectRequest.name 增加 @Pattern(regexp="(?s).*\\S.*")（null 仍表示不更新），空串/纯空白 → 400 CM001；SubjectControllerTest 覆盖空白 name。真实后端 curl 验证：PUT {"name":""}/{"name":"   "} 均 400 CM001，name 保持原值；仅传 description 的 PUT 200 且 name 不变。
+  - id: BUG-20261022-011
+    title: 从主题移除表后，术语对该表的关联关系未清理，残留指向主题外表的脏关联
+    module: 语义层-主题管理
+    severity: medium
+    found_at: 2026-10-22
+    fixed_at: 2026-10-23
+    description: |
+      TC-SEM-002 探索：主题加入 genre 表 → 创建术语并建立 FIELD(genre.name) 关联 → DELETE /v1/subjects/{id}/tables/{tableId} 返回 200，主题表列表变为空，但术语详情/列表仍返回 entity_type=FIELD / table_name=genre / field_name=name 的关联。SubjectService.removeTableFromSubject 仅删除 subject_table 行，未处理 term_relation（新增关联时 TermService 会校验表属于主题 SM003，移除表时却不反向校验）。影响：主体作用域与术语关联数据自相矛盾，MCP 侧按 term 展开的元数据可能展示主题范围外的表，前端术语详情会显示已移除的表。建议移除表时级联删除该主题下所有术语指向该表的关联（或拒绝移除仍被引用的表并提示）。
+      修复：SubjectService.removeTableFromSubject 在删除 subject_table 前，按 subject 取出术语 ID 并调用新增的 TermRelationDAO.deleteByTermIdInAndTableId 级联删除指向该表的关联，其余表的关联保留。SubjectServiceTest 覆盖有/无术语场景，TermRepositoryTest 覆盖只删目标表关系；真实后端 curl 验证移除 genre 后 FIELD(genre.name) 关系消失、artist 关系保留。
+  - id: BUG-20261022-012
+    title: POST /v1/terms/{id}/relations 返回 termId 而非新建 relation 的 id
+    module: 语义层-术语管理
+    severity: low
+    found_at: 2026-10-22
+    fixed_at: 2026-10-23
+    description: |
+      TC-SEM-004 探索：POST /v1/terms/{termId}/relations 返回 IdResponse{id=termId}（TermController.linkTermRelation 直接 new IdResponse(id)），而 DELETE /v1/terms/{id}/relations/{relationId} 返回的是 relationId。同名 IdResponse 语义不一致：调用方无法从创建响应拿到 relationId，必须先 GET /v1/terms/{id} 再按 table/field 匹配。建议 link 后返回真实 relation id（TermService.linkEntity 返回关系实体）。
+      修复：TermService.linkEntity 返回 TermRelation（新增 TermRelationMapper.toRelation），TermController 用新建 relation 的 id 构造 IdResponse。TermControllerTest/TermServiceTest 断言响应 id 与详情 relation id 一致且可直接用于 DELETE；真实后端 curl 验证 POST 返回 relationId、按该 id 删除 200。
+  - id: BUG-20261022-013
+    title: 术语关联不存在/主题外表的 tableId 统一报 SM003「does not belong to subject」，与「表不存在」混淆
+    module: 语义层-术语管理
+    severity: low
+    found_at: 2026-10-22
+    fixed_at: 2026-10-23
+    description: |
+      TC-SEM-004/007 探索：POST /v1/terms/{id}/relations 传随机 UUID 作为 table_id → 400 SM003 'Table {tableId} does not belong to subject {subjectId}'；同一 UUID 作为 add-table 的 table_id 则返回 404 DS007 'Table not found'。表根本不存在时返回「不属于该主题」会误导排查方向（此前 BUG-20261019-009 已修正 add-table 路径的同类问题）。建议关联路径先查表存在性 → SM/DS 的 Table not found，再校验是否属于主题。
+      修复：TermService.linkEntity 在主题归属校验前先 tableInfoDAO.findById(tableId) → 404 DS007 'Table not found: {tableId}'。TermServiceTest 覆盖未知表且断言不落库；真实后端 curl 验证随机 UUID 作为 table_id 返回 404 DS007（不再 SM003）。

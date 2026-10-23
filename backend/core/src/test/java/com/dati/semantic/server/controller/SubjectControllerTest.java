@@ -9,6 +9,7 @@ import com.dati.semantic.domain.service.SubjectService;
 import com.dati.semantic.server.assembler.SubjectAssembler;
 import com.dati.semantic.server.pojo.request.AddTableToSubjectRequest;
 import com.dati.semantic.server.pojo.request.CreateSubjectRequest;
+import com.dati.semantic.server.pojo.request.UpdateSubjectRequest;
 import com.dati.semantic.server.pojo.vo.SubjectVO;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.DisplayName;
@@ -28,12 +29,15 @@ import java.time.Instant;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -154,6 +158,21 @@ class SubjectControllerTest {
                 .andExpect(jsonPath("$.size").value(10));
 
         verify(tableAssembler).toPageResponse(any());
+    }
+
+    @Test
+    @DisplayName("Update Subject - blank name returns 400")
+    void updateSubject_withBlankName_shouldReturn400() throws Exception {
+        UpdateSubjectRequest request = new UpdateSubjectRequest();
+        request.setName("   ");
+
+        mockMvc.perform(put("/v1/subjects/subject-001")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.code").value("CM001"));
+
+        verify(subjectService, never()).updateSubject(anyString(), any());
     }
 
     @Test

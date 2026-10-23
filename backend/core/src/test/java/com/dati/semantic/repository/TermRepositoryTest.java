@@ -108,4 +108,37 @@ class TermRepositoryTest {
         assertThat(foundList).isEmpty();
     }
 
+    @Test
+    @DisplayName("Delete TermRelationPO by termIds and tableId - success")
+    void deleteByTermIdInAndTableId_shouldRemoveOnlyRelationsOfTheTable() {
+        TermRelationPO target = new TermRelationPO();
+        target.setTermId("term-1");
+        target.setEntityType(TermRelationType.FIELD);
+        target.setTableId("table-a");
+        target.setFieldName("a_col");
+        termRelationDAO.save(target);
+
+        TermRelationPO otherTable = new TermRelationPO();
+        otherTable.setTermId("term-1");
+        otherTable.setEntityType(TermRelationType.FIELD);
+        otherTable.setTableId("table-b");
+        otherTable.setFieldName("b_col");
+        termRelationDAO.save(otherTable);
+
+        TermRelationPO otherTerm = new TermRelationPO();
+        otherTerm.setTermId("term-2");
+        otherTerm.setEntityType(TermRelationType.FIELD);
+        otherTerm.setTableId("table-a");
+        otherTerm.setFieldName("a_col");
+        termRelationDAO.save(otherTerm);
+
+        int deleted = termRelationDAO.deleteByTermIdInAndTableId(List.of("term-1"), "table-a");
+
+        assertThat(deleted).isEqualTo(1);
+        assertThat(termRelationDAO.findByTermId("term-1"))
+                .singleElement()
+                .satisfies(po -> assertThat(po.getTableId()).isEqualTo("table-b"));
+        assertThat(termRelationDAO.findByTermId("term-2")).hasSize(1);
+    }
+
 }

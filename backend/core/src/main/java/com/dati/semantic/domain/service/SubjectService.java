@@ -17,11 +17,14 @@ import com.dati.semantic.domain.SemanticEntityType;
 import com.dati.semantic.domain.model.Subject;
 import com.dati.semantic.repository.dao.SubjectDAO;
 import com.dati.semantic.repository.dao.SubjectTableDAO;
+import com.dati.semantic.repository.dao.TermDAO;
+import com.dati.semantic.repository.dao.TermRelationDAO;
 import com.dati.semantic.repository.mapper.SubjectMapper;
 import com.dati.semantic.repository.po.EntityReference;
 import com.dati.semantic.repository.po.SemanticSearchDocument;
 import com.dati.semantic.repository.po.SubjectPO;
 import com.dati.semantic.repository.po.SubjectTablePO;
+import com.dati.semantic.repository.po.TermPO;
 import com.dati.semantic.server.pojo.vo.SubjectAvailableTableVO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -41,17 +44,22 @@ public class SubjectService {
 
     private final SubjectDAO subjectDAO;
     private final SubjectTableDAO subjectTableDAO;
+    private final TermDAO termDAO;
+    private final TermRelationDAO termRelationDAO;
     private final TableInfoDAO tableInfoDAO;
     private final SemanticIndexService semanticIndexService;
     private final PermissionService permissionService;
     private final UserGroupService userGroupService;
 
     public SubjectService(SubjectDAO subjectDAO, SubjectTableDAO subjectTableDAO,
+                          TermDAO termDAO, TermRelationDAO termRelationDAO,
                           TableInfoDAO tableInfoDAO,
                           SemanticIndexService semanticIndexService,
                           PermissionService permissionService, UserGroupService userGroupService) {
         this.subjectDAO = subjectDAO;
         this.subjectTableDAO = subjectTableDAO;
+        this.termDAO = termDAO;
+        this.termRelationDAO = termRelationDAO;
         this.tableInfoDAO = tableInfoDAO;
         this.semanticIndexService = semanticIndexService;
         this.permissionService = permissionService;
@@ -168,6 +176,18 @@ public class SubjectService {
         permissionService.requireCurrentUser(ResourceType.SUBJECT, subjectId, Permission.EDIT, subjectPO.getCreatedBy());
         subjectTableDAO.findBySubjectIdAndTableId(subjectId, tableId)
                 .orElseThrow(() -> new DatiException(ErrorCode.SM_ASSOCIATION_NOT_FOUND, subjectId, tableId));
+
+        // Terms may only reference tables inside the subject, so their relations
+        // to the removed table would otherwise become dangling.
+        List<String> termIds = termDAO.findBySubjectId(subjectId).stream()
+                .map(TermPO::getId)
+                .toList();
+        if (!termIds.isEmpty()) {
+            int removed = termRelationDAO.deleteByTermIdInAndTableId(termIds, tableId);
+            if (removed > 0) {
+                log.info("Removed {} term relation(s) of table {} from subject {}", removed, tableId, subjectId);
+            }
+        }
 
         subjectTableDAO.deleteBySubjectIdAndTableId(subjectId, tableId);
     }

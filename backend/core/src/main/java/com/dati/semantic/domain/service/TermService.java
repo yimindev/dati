@@ -143,7 +143,7 @@ public class TermService {
     }
 
     @Transactional
-    public void linkEntity(String termId, TermRelationType entityType, String tableId, String fieldName) {
+    public TermRelation linkEntity(String termId, TermRelationType entityType, String tableId, String fieldName) {
         TermPO termPO = termDAO.findById(termId)
                 .orElseThrow(() -> new DatiException(ErrorCode.SM_TERM_NOT_FOUND, termId));
         permissionService.requireSubject(termPO.getSubjectId(), Permission.EDIT);
@@ -155,6 +155,9 @@ public class TermService {
         if (entityType == TermRelationType.FIELD && fieldName == null) {
             throw new DatiException(ErrorCode.INVALID_PARAMETER, "fieldName is required");
         }
+
+        tableInfoDAO.findById(tableId)
+                .orElseThrow(() -> new DatiException(ErrorCode.DS_TABLE_NOT_FOUND, tableId));
 
         if (!subjectTableDAO.existsBySubjectIdAndTableId(termPO.getSubjectId(), tableId)) {
             throw new DatiException(ErrorCode.SM_TABLE_NOT_IN_SUBJECT, tableId, termPO.getSubjectId());
@@ -175,6 +178,7 @@ public class TermService {
 
         TermRelationPO relationPO = TermRelationMapper.toPO(termId, entityType, tableId, fieldName);
         termRelationDAO.save(relationPO);
+        return TermRelationMapper.toRelation(relationPO);
     }
 
     /** Delete exactly one relation addressed by its own id. */

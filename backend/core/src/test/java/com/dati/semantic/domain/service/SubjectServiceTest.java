@@ -13,9 +13,12 @@ import com.dati.semantic.domain.model.Subject;
 import com.dati.datasource.domain.model.TableInfo;
 import com.dati.semantic.repository.dao.SubjectDAO;
 import com.dati.semantic.repository.dao.SubjectTableDAO;
+import com.dati.semantic.repository.dao.TermDAO;
+import com.dati.semantic.repository.dao.TermRelationDAO;
 import com.dati.semantic.repository.po.SemanticSearchDocument;
 import com.dati.semantic.repository.po.SubjectPO;
 import com.dati.semantic.repository.po.SubjectTablePO;
+import com.dati.semantic.repository.po.TermPO;
 import com.dati.permission.domain.model.PrincipalType;
 import com.dati.permission.domain.model.ResourceType;
 import com.dati.permission.domain.service.PermissionService;
@@ -63,6 +66,12 @@ class SubjectServiceTest {
 
     @Mock
     private TableInfoDAO tableInfoDAO;
+
+    @Mock
+    private TermDAO termDAO;
+
+    @Mock
+    private TermRelationDAO termRelationDAO;
 
     @Mock
     private DataSourceDAO dataSourceDAO;
@@ -380,6 +389,55 @@ class SubjectServiceTest {
 
         subjectService.removeTableFromSubject(subjectId, tableId);
 
+        verify(subjectTableDAO).deleteBySubjectIdAndTableId(subjectId, tableId);
+    }
+
+    @Test
+    @DisplayName("removeTableFromSubject - cascades term relations pointing at the table")
+    void removeTableFromSubject_shouldDeleteTermRelationsOfTheTable() {
+        String subjectId = "subject-001";
+        String tableId = "table-001";
+
+        SubjectTablePO subjectTablePO = new SubjectTablePO();
+        subjectTablePO.setId("st-001");
+        subjectTablePO.setSubjectId(subjectId);
+        subjectTablePO.setTableId(tableId);
+
+        TermPO termPO = new TermPO();
+        termPO.setId("term-001");
+        termPO.setSubjectId(subjectId);
+
+        when(subjectDAO.findById(subjectId)).thenReturn(Optional.of(sampleSubjectPO));
+        when(subjectTableDAO.findBySubjectIdAndTableId(subjectId, tableId))
+                .thenReturn(Optional.of(subjectTablePO));
+        when(termDAO.findBySubjectId(subjectId)).thenReturn(List.of(termPO));
+        when(termRelationDAO.deleteByTermIdInAndTableId(List.of("term-001"), tableId)).thenReturn(2);
+
+        subjectService.removeTableFromSubject(subjectId, tableId);
+
+        verify(termRelationDAO).deleteByTermIdInAndTableId(List.of("term-001"), tableId);
+        verify(subjectTableDAO).deleteBySubjectIdAndTableId(subjectId, tableId);
+    }
+
+    @Test
+    @DisplayName("removeTableFromSubject - skips relation cleanup when subject has no terms")
+    void removeTableFromSubject_noTerms_shouldSkipRelationCleanup() {
+        String subjectId = "subject-001";
+        String tableId = "table-001";
+
+        SubjectTablePO subjectTablePO = new SubjectTablePO();
+        subjectTablePO.setId("st-001");
+        subjectTablePO.setSubjectId(subjectId);
+        subjectTablePO.setTableId(tableId);
+
+        when(subjectDAO.findById(subjectId)).thenReturn(Optional.of(sampleSubjectPO));
+        when(subjectTableDAO.findBySubjectIdAndTableId(subjectId, tableId))
+                .thenReturn(Optional.of(subjectTablePO));
+        when(termDAO.findBySubjectId(subjectId)).thenReturn(List.of());
+
+        subjectService.removeTableFromSubject(subjectId, tableId);
+
+        verify(termRelationDAO, never()).deleteByTermIdInAndTableId(any(), any());
         verify(subjectTableDAO).deleteBySubjectIdAndTableId(subjectId, tableId);
     }
 

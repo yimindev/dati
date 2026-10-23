@@ -50,9 +50,11 @@
 5. **ES 验证**：`type=SUBJECT, entity.subjectId=subjectId` 有 1 条，keywords 含 name+aliases
 6. 查主题详情，与列表一致
 7. **更新主题**：改 name、description、aliases
-8. 查详情验证更新生效，`updated_at > created_at`；ES 验证 keywords/description 已更新
-9. **删除主题**，查列表确认已删；ES 验证 `subject:{id}` 已清理
-10. **注意：不删数据源**
+8. **空名称被拒**：`PUT` 仅传 `{"name":""}` → 400（CM001）；`{"name":"   "}` → 400；查详情确认 name 未被清空
+9. **部分更新**：仅传 `{"description":"..."}` → 200，name 保持原值
+10. 查详情验证更新生效，`updated_at > created_at`；ES 验证 keywords/description 已更新
+11. **删除主题**，查列表确认已删；ES 验证 `subject:{id}` 已清理
+12. **注意：不删数据源**
 
 ---
 
@@ -67,8 +69,10 @@
 4. 从 available-tables 选第一张表添加到主题
 5. 查主题表列表，确认已添加；每条 `created_user_name` / `updated_user_name` 不为 null
 6. 将其余表也添加，确认全部在列表中
-7. 移除最后添加的表，确认已不在、其余仍存
-8. 删除主题（不删数据源）
+7. **建立术语关联**：在该主题下创建术语，并关联第一张表的某一列（FIELD）
+8. 移除第一张表，确认已不在、其余仍存
+9. **级联清理验证**：查术语详情，指向被移除表的 relation 已被清理（其余表的 relation 保留）
+10. 删除术语、删除主题（不删数据源）
 
 ---
 
@@ -104,13 +108,14 @@
 3. 创建主题（绑定 datasourceId），将该表添加到主题
 4. **创建术语**，记下 termId
 5. **添加 FIELD 关系**：entityType=`FIELD`，tableId，fieldName=`term_relation.field`
-6. 验证返回 200
-7. **非法类型被拒**：entityType=`FIELD_VALUE`，tableId，fieldName=`term_relation.field` → 预期 **400**（非法枚举值，Jackson 拦截，不落库）
-8. 查术语详情，验证 relations 有 1 条，entity_type=FIELD，table_name/field_name 正确
-9. **删 FIELD 关系（按关系 ID）**：取步骤 8 返回的 relation id → `DELETE /v1/terms/{termId}/relations/{relationId}` → 200，响应 id 为该 relation id
+6. 验证返回 200，且响应 `id` 为**新建 relation 的 id**（不能是 termId）；用该 id 能直接 `DELETE /v1/terms/{termId}/relations/{relationId}`
+7. **未知 tableId**：随机 UUID 作为 tableId → **404**（错误码 `DS007` Table not found），不得报 SM003
+8. **非法类型被拒**：entityType=`FIELD_VALUE`，tableId，fieldName=`term_relation.field` → 预期 **400**（非法枚举值，Jackson 拦截，不落库）
+9. 查术语详情，验证 relations 有 1 条，entity_type=FIELD，table_name/field_name 正确
+10. **删 FIELD 关系（按关系 ID）**：取步骤 9 返回的 relation id → `DELETE /v1/terms/{termId}/relations/{relationId}` → 200，响应 id 为该 relation id
    - 旧复合键路由 `DELETE /v1/terms/{termId}/relations/{tableId}/{fieldName}` 已移除 → 404（beta 不保留兼容）
-10. 查术语详情，验证 relations 为空
-11. 删除术语，删除主题（不删数据源）
+11. 查术语详情，验证 relations 为空
+12. 删除术语，删除主题（不删数据源）
 
 ---
 
@@ -156,6 +161,7 @@
    - **TABLE 级**：`entity_type=TABLE`、不传 `field_name` 添加一次 → 200；再次 POST 相同 body → 400/409，术语详情仍只有 1 条 TABLE 关系
    - **TABLE + FIELD 共存**：同一表先建 TABLE 关系再建 FIELD 关系 → 均 200，术语详情 2 条关系（TABLE 查重不得误伤 FIELD）
    - **不存在的列**：`entity_type=FIELD` + `fieldName=ghost_col_xyz`（真实表、表中无此列）→ 预期 **400**（错误码 `SM004`），术语详情不含该关系
+   - **不存在的表**：`entity_type=TABLE` + 随机 UUID 作为 `table_id` → 预期 **404**（错误码 `DS007` Table not found），不得报 SM003
    - **TABLE 不允许 fieldName**：`entity_type=TABLE` + `field_name=name` → 预期 **400**（错误码 `SM004`），不落库
    - **删除 TABLE 关系（按关系 ID）**：GET 术语详情取 TABLE 关系的 `id` → `DELETE /v1/terms/{termId}/relations/{relationId}` → 200；再次查详情只剩 FIELD 关系（TABLE 级不再需要 `_` 占位）
 5. 删不存在的 relation → 应 404（不能 200）；旧复合键路由已移除 → 404

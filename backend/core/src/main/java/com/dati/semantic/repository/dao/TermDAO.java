@@ -18,6 +18,8 @@ public interface TermDAO extends JpaRepository<TermPO, String> {
 
     Page<TermPO> findBySubjectId(String subjectId, Pageable pageable);
 
+    List<TermPO> findBySubjectId(String subjectId);
+
     List<TermPO> findBySubjectIdIn(java.util.Collection<String> subjectIds);
 
     @Query("""

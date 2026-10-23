@@ -10,34 +10,6 @@ bugs:
     description: |
       【2026-10-22 决策】维持现状（暂不修复）：游客 TTL/资源回收属产品策略调整，留待后续版本。
       TC-AUTH-005/006/007 探索：guest 与 qa_user 的 JWT exp-iat 均为 604800s（7 天，来自 auth.jwt.expiration-seconds 单一配置，无 guest 专属 TTL），与用例中「临时沙箱身份」语义不符；GuestService 只签发 JWT（guest-xxxxxxxxxxxx）不写 users 表，因此：①游客创建的 data source/subject 等资源 created_by 指向不存在的用户，created_user_name 永远靠 BaseAssembler 的 startsWith("guest") 硬编码回退为 "Guest"；②这些资源不会过期回收，也没有任何管理端接口可枚举/清理（openapi 无用户/资源管理端点），长期会累积不可追溯的孤儿数据。建议：为 guest 设独立较短 TTL（如 24h），并对游客资源做定期清理或在游客过期时级联删除。
-  - id: BUG-20261022-010
-    title: PUT /v1/subjects/{id} 允许把 name 置为空字符串，主题名被清空且列表/ES 搜索失效
-    module: 语义层-主题管理
-    severity: medium
-    found_at: 2026-10-22
-    description: |
-      TC-SEM-001 探索：POST /v1/subjects 对 name 有 @NotBlank（空白 → 400 CM001），但 PUT /v1/subjects/{id} 的 UpdateSubjectRequest.name 无任何约束，传 {"name":""} 返回 200 并把名称写成空串：①GET 详情 name 为 ''；②主题列表按原名称搜索 total=0（不可再被搜到）；③ES 文档 keywords 变成 ['', 'probe-alias']，语义检索索引被空关键词污染。对比 PUT /v1/terms/{id} 同样传 {"name":""} 返回 400（UpdateTermRequest @NotBlank），主题/术语更新行为不一致。建议 UpdateSubjectRequest 对 name 增加 @NotBlank 或 Pattern(.*\\S.*)，并在服务层拒绝空串（保留 null 的部分更新语义）。实测：创建 probe-blank-xxx → PUT {"name":""} → 200，详情 name=''。
-  - id: BUG-20261022-011
-    title: 从主题移除表后，术语对该表的关联关系未清理，残留指向主题外表的脏关联
-    module: 语义层-主题管理
-    severity: medium
-    found_at: 2026-10-22
-    description: |
-      TC-SEM-002 探索：主题加入 genre 表 → 创建术语并建立 FIELD(genre.name) 关联 → DELETE /v1/subjects/{id}/tables/{tableId} 返回 200，主题表列表变为空，但术语详情/列表仍返回 entity_type=FIELD / table_name=genre / field_name=name 的关联。SubjectService.removeTableFromSubject 仅删除 subject_table 行，未处理 term_relation（新增关联时 TermService 会校验表属于主题 SM003，移除表时却不反向校验）。影响：主体作用域与术语关联数据自相矛盾，MCP 侧按 term 展开的元数据可能展示主题范围外的表，前端术语详情会显示已移除的表。建议移除表时级联删除该主题下所有术语指向该表的关联（或拒绝移除仍被引用的表并提示）。
-  - id: BUG-20261022-012
-    title: POST /v1/terms/{id}/relations 返回 termId 而非新建 relation 的 id
-    module: 语义层-术语管理
-    severity: low
-    found_at: 2026-10-22
-    description: |
-      TC-SEM-004 探索：POST /v1/terms/{termId}/relations 返回 IdResponse{id=termId}（TermController.linkTermRelation 直接 new IdResponse(id)），而 DELETE /v1/terms/{id}/relations/{relationId} 返回的是 relationId。同名 IdResponse 语义不一致：调用方无法从创建响应拿到 relationId，必须先 GET /v1/terms/{id} 再按 table/field 匹配。建议 link 后返回真实 relation id（TermService.linkEntity 返回关系实体）。
-  - id: BUG-20261022-013
-    title: 术语关联不存在/主题外表的 tableId 统一报 SM003「does not belong to subject」，与「表不存在」混淆
-    module: 语义层-术语管理
-    severity: low
-    found_at: 2026-10-22
-    description: |
-      TC-SEM-004/007 探索：POST /v1/terms/{id}/relations 传随机 UUID 作为 table_id → 400 SM003 'Table {tableId} does not belong to subject {subjectId}'；同一 UUID 作为 add-table 的 table_id 则返回 404 DS007 'Table not found'。表根本不存在时返回「不属于该主题」会误导排查方向（此前 BUG-20261019-009 已修正 add-table 路径的同类问题）。建议关联路径先查表存在性 → SM/DS 的 Table not found，再校验是否属于主题。
   - id: BUG-20261022-014
     title: PUT /v1/mcp-services/{serviceId}/tools/{toolId} 部分更新语义失效：tool_type 强制必填、缺省 enabled 被重置为 true、预置工具缺省 config 被重置为默认值
     module: MCP 服务管理

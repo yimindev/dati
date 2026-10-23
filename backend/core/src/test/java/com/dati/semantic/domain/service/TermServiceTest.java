@@ -16,6 +16,7 @@ import com.dati.semantic.repository.dao.TermRelationDAO;
 import com.dati.semantic.repository.po.SemanticSearchDocument;
 import com.dati.semantic.repository.po.TermPO;
 import com.dati.semantic.repository.po.TermRelationPO;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -36,7 +37,9 @@ import java.util.Set;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -71,6 +74,12 @@ class TermServiceTest {
 
     @InjectMocks
     private TermService termService;
+
+    @BeforeEach
+    void stubExistingTables() {
+        // linkEntity validates table existence before subject membership; default to an existing table
+        lenient().when(tableInfoDAO.findById(anyString())).thenReturn(Optional.of(new TableInfoPO()));
+    }
 
     @Test
     @DisplayName("createTerm - saves Term to DB and indexes to ES")
@@ -119,6 +128,28 @@ class TermServiceTest {
 
         assertThatThrownBy(() -> termService.linkEntity(termId, TermRelationType.FIELD, tableId, null))
                 .isInstanceOf(DatiException.class);
+    }
+
+    @Test
+    @DisplayName("linkEntity - unknown table throws DS_TABLE_NOT_FOUND")
+    void linkEntity_tableNotFound_throwsTableNotFound() {
+        String termId = "term-001";
+        String tableId = "table-missing";
+
+        TermPO term = new TermPO();
+        term.setId(termId);
+        term.setSubjectId("subject-001");
+        term.setName("客户");
+
+        when(termDAO.findById(termId)).thenReturn(Optional.of(term));
+        when(tableInfoDAO.findById(tableId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> termService.linkEntity(termId, TermRelationType.TABLE, tableId, null))
+                .isInstanceOf(DatiException.class)
+                .satisfies(e -> assertThat(((DatiException) e).getCode())
+                        .isEqualTo(ErrorCode.DS_TABLE_NOT_FOUND));
+        verify(subjectTableDAO, never()).existsBySubjectIdAndTableId(any(), any());
+        verify(termRelationDAO, never()).save(any());
     }
 
     @Test
@@ -185,12 +216,15 @@ class TermServiceTest {
         when(termRelationDAO.findByTermIdAndTableIdAndFieldName(termId, tableId, fieldName))
                 .thenReturn(Optional.empty());
 
-        termService.linkEntity(termId, TermRelationType.FIELD, tableId, fieldName);
+        TermRelation relation = termService.linkEntity(termId, TermRelationType.FIELD, tableId, fieldName);
 
         ArgumentCaptor<TermRelationPO> captor = ArgumentCaptor.forClass(TermRelationPO.class);
         verify(termRelationDAO).save(captor.capture());
         assertThat(captor.getValue().getEntityType()).isEqualTo(TermRelationType.FIELD);
         assertThat(captor.getValue().getFieldName()).isEqualTo(fieldName);
+        assertThat(relation.getTermId()).isEqualTo(termId);
+        assertThat(relation.getTableId()).isEqualTo(tableId);
+        assertThat(relation.getFieldName()).isEqualTo(fieldName);
     }
 
     @Test
