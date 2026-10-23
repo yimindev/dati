@@ -46,7 +46,7 @@ const rules: FormRules = {
     },
     {
       min: 1,
-      max: 100,
+      max: 64,
       message: t("common.nameLengthError"),
       trigger: ["blur", "change"],
     },
@@ -95,7 +95,7 @@ defineExpose({
       <el-input
         v-model="modelValue.name"
         :placeholder="t('common.placeholder.name')"
-        maxlength="100"
+        maxlength="64"
         show-word-limit
       />
     </el-form-item>

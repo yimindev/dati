@@ -11,6 +11,7 @@ import {
 } from "~/api/datasource";
 import { Plus, Search, Refresh } from "@element-plus/icons-vue";
 import AuthDialog from "~/components/common/AuthDialog.vue";
+import { notifyError } from "~/api/http";
 
 const { t } = useI18n();
 const router = useRouter();
@@ -50,7 +51,7 @@ const loadDatasources = async () => {
     total.value = response.total ?? 0;
   } catch (error) {
     console.error("Failed to load data source:", error);
-    ElMessage.error(t("common.loadFailed"));
+    notifyError(error, t("common.loadFailed"));
   } finally {
     loading.value = false;
   }
@@ -126,7 +127,7 @@ const handleTestConnection = async (datasource: DatasourceVO) => {
     }
   } catch (error) {
     console.error("Failed to test connection:", error);
-    ElMessage.error(t("datasource.testFailed"));
+    notifyError(error, t("datasource.testFailed"));
   } finally {
     loading.value = false;
   }
@@ -151,7 +152,7 @@ const handleDelete = async (datasource: DatasourceVO) => {
   } catch (error) {
     if (error !== "cancel") {
       console.error("Failed to delete:", error);
-      ElMessage.error(t("common.operationFailed"));
+      notifyError(error, t("common.operationFailed"));
     }
   }
 };

@@ -4,6 +4,7 @@ import { ElMessage } from 'element-plus'
 import { useI18n } from 'vue-i18n'
 import type { DatasourceVO, DataSourcePayload } from '~/api/datasource'
 import { addDataSource, updateDataSource, testConnection } from '~/api/datasource'
+import { notifyError } from '~/api/http'
 
 // i18n
 const { t } = useI18n()
@@ -104,7 +105,7 @@ const handleTestConnection = async () => {
   } catch (error) {
     console.error('Failed to test connection:', error)
     testPassed.value = false
-    ElMessage.error(t('datasource.testFailed'))
+    notifyError(error, t('datasource.testFailed'))
   } finally {
     testing.value = false
   }
@@ -128,7 +129,7 @@ const handleSubmit = async () => {
     emit('success')
   } catch (error) {
     console.error('Failed to submit:', error)
-    ElMessage.error(t('common.operationFailed'))
+    notifyError(error, t('common.operationFailed'))
   } finally {
     submitting.value = false
   }

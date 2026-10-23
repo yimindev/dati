@@ -46,7 +46,7 @@ public class TableController {
 
     @DeleteMapping("/tables/{tableId}")
     public IdResponse deleteTable(@PathVariable String datasourceId, @PathVariable String tableId) {
-        tableService.deleteTable(tableId);
+        tableService.deleteTable(datasourceId, tableId);
         return new IdResponse(tableId);
     }
 
@@ -55,7 +55,7 @@ public class TableController {
             @PathVariable String datasourceId,
             @PathVariable String tableId,
             @RequestBody TableInfoVO tableInfoVO) {
-        tableService.updateTable(tableId, tableAssembler.toTableInfo(tableInfoVO));
+        tableService.updateTable(datasourceId, tableId, tableAssembler.toTableInfo(tableInfoVO));
         return new IdResponse(tableId);
     }
 

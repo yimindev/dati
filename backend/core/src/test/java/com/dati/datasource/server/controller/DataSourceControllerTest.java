@@ -1,11 +1,14 @@
 package com.dati.datasource.server.controller;
 
 import com.dati.TestFixtures;
+import com.dati.base.exception.DatiException;
+import com.dati.base.exception.ErrorCode;
 import com.dati.base.pojo.PageResponse;
 import com.dati.datasource.domain.model.DataSource;
 import com.dati.datasource.domain.service.DataSourceService;
 import com.dati.datasource.server.assembler.DSAssembler;
 import com.dati.datasource.server.pojo.DatasourceVO;
+import com.dati.datasource.server.pojo.request.UpdateDataSourceRequest;
 import com.dati.db.Table;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -24,6 +27,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.util.List;
 import java.util.Optional;
 
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasSize;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -77,17 +81,35 @@ class DataSourceControllerTest {
     }
 
     @Test
-    @DisplayName("Test connection - failure")
-    void testConnection_shouldReturnFalse() throws Exception {
+    @DisplayName("Test connection - connection failure returns 400 DS001")
+    void testConnection_shouldReturnConnectionError() throws Exception {
         // given
-        when(dataSourceService.testConnection(any())).thenReturn(false);
+        when(dataSourceService.testConnection(any()))
+            .thenThrow(new DatiException(ErrorCode.DS_CONNECTION_FAILED, "connection refused"));
 
         // when & then
         mockMvc.perform(post("/v1/data-sources/test-connection")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(testDataSource)))
-            .andExpect(status().isOk())
-            .andExpect(content().string("false"));
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.code").value("DS001"))
+            .andExpect(jsonPath("$.message", containsString("connection refused")));
+    }
+
+    @Test
+    @DisplayName("Test connection - unavailable default schema returns 400 DS006")
+    void testConnection_shouldReturnSchemaError() throws Exception {
+        // given
+        when(dataSourceService.testConnection(any()))
+            .thenThrow(new DatiException(ErrorCode.DS_SCHEMA_DETECTION_FAILED));
+
+        // when & then
+        mockMvc.perform(post("/v1/data-sources/test-connection")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(testDataSource)))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.code").value("DS006"))
+            .andExpect(jsonPath("$.message", containsString("no usable default schema")));
     }
 
     @Test
@@ -133,6 +155,104 @@ class DataSourceControllerTest {
                 .content("{\"name\":\"renamed\"}"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.id").exists());
+    }
+
+    @Test
+    @DisplayName("Add data source - blank name returns 400")
+    void addDataSource_blankName_shouldReturnBadRequest() throws Exception {
+        DataSource payload = TestFixtures.createTestDataSource();
+        payload.setName("   ");
+
+        mockMvc.perform(post("/v1/data-sources")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(payload)))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.code").value("CM001"))
+            .andExpect(jsonPath("$.message", containsString("name")));
+    }
+
+    @Test
+    @DisplayName("Add data source - name longer than 64 characters returns 400")
+    void addDataSource_tooLongName_shouldReturnBadRequest() throws Exception {
+        DataSource payload = TestFixtures.createTestDataSource();
+        payload.setName("a".repeat(65));
+
+        mockMvc.perform(post("/v1/data-sources")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(payload)))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.code").value("CM001"))
+            .andExpect(jsonPath("$.message", containsString("name")));
+    }
+
+    @Test
+    @DisplayName("Add data source - description longer than 1024 characters returns 400")
+    void addDataSource_tooLongDescription_shouldReturnBadRequest() throws Exception {
+        DataSource payload = TestFixtures.createTestDataSource();
+        payload.setDescription("d".repeat(1025));
+
+        mockMvc.perform(post("/v1/data-sources")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(payload)))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.code").value("CM001"))
+            .andExpect(jsonPath("$.message", containsString("description")));
+    }
+
+    @Test
+    @DisplayName("Update data source - blank name returns 400")
+    void updateDataSource_blankName_shouldReturnBadRequest() throws Exception {
+        UpdateDataSourceRequest request = new UpdateDataSourceRequest();
+        request.setName("");
+
+        mockMvc.perform(put("/v1/data-sources/{id}", TestFixtures.TEST_DATASOURCE_ID)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.code").value("CM001"))
+            .andExpect(jsonPath("$.message", containsString("name")));
+    }
+
+    @Test
+    @DisplayName("Update data source - whitespace-only name returns 400")
+    void updateDataSource_whitespaceName_shouldReturnBadRequest() throws Exception {
+        UpdateDataSourceRequest request = new UpdateDataSourceRequest();
+        request.setName("   ");
+
+        mockMvc.perform(put("/v1/data-sources/{id}", TestFixtures.TEST_DATASOURCE_ID)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.code").value("CM001"))
+            .andExpect(jsonPath("$.message", containsString("name")));
+    }
+
+    @Test
+    @DisplayName("Update data source - name longer than 64 characters returns 400")
+    void updateDataSource_tooLongName_shouldReturnBadRequest() throws Exception {
+        UpdateDataSourceRequest request = new UpdateDataSourceRequest();
+        request.setName("a".repeat(65));
+
+        mockMvc.perform(put("/v1/data-sources/{id}", TestFixtures.TEST_DATASOURCE_ID)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.code").value("CM001"))
+            .andExpect(jsonPath("$.message", containsString("name")));
+    }
+
+    @Test
+    @DisplayName("Update data source - description longer than 1024 characters returns 400")
+    void updateDataSource_tooLongDescription_shouldReturnBadRequest() throws Exception {
+        UpdateDataSourceRequest request = new UpdateDataSourceRequest();
+        request.setDescription("d".repeat(1025));
+
+        mockMvc.perform(put("/v1/data-sources/{id}", TestFixtures.TEST_DATASOURCE_ID)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.code").value("CM001"))
+            .andExpect(jsonPath("$.message", containsString("description")));
     }
 
     @Test

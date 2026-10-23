@@ -33,8 +33,11 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -80,6 +83,11 @@ public class TableService {
             return Collections.emptyList();
         }
 
+        List<AddTableRequest> tablesToAdd = filterNewTables(datasourceId, tables);
+        if (tablesToAdd.isEmpty()) {
+            return Collections.emptyList();
+        }
+
         List<String> tableIds = new ArrayList<>();
         List<SemanticSearchDocument> docsToSave = new ArrayList<>();
 
@@ -87,7 +95,7 @@ public class TableService {
         Map<String, Map<String, String>> tableCommentsBySchema = new HashMap<>();
         Map<String, Set<String>> validNamesBySchema = new HashMap<>();
         try {
-            for (AddTableRequest request : tables) {
+            for (AddTableRequest request : tablesToAdd) {
                 String schema = request.getSchema();
                 if (!validNamesBySchema.containsKey(schema)) {
                     List<Table> dbTables = jdbcMetaService.getTables(datasourceId, schema);
@@ -103,7 +111,7 @@ public class TableService {
             throw new DatiException(ErrorCode.DS_SYNC_FAILED, e.getMessage());
         }
 
-        for (AddTableRequest request : tables) {
+        for (AddTableRequest request : tablesToAdd) {
             String schema = request.getSchema();
             Map<String, String> tableCommentMap = tableCommentsBySchema.get(schema);
             Set<String> validTableNames = validNamesBySchema.get(schema);
@@ -182,6 +190,33 @@ public class TableService {
         return tableIds;
     }
 
+    /**
+     * Drops tables that are already registered for this data source and duplicates inside
+     * the request itself. Comparison is case-insensitive on (schema, name) and treats the
+     * same table name in different schemas as distinct.
+     */
+    private List<AddTableRequest> filterNewTables(String datasourceId, List<AddTableRequest> tables) {
+        Map<String, Set<String>> existingNamesBySchema = new HashMap<>();
+        Set<String> seen = new HashSet<>();
+        List<AddTableRequest> result = new ArrayList<>();
+        for (AddTableRequest request : tables) {
+            String schema = request.getSchema();
+            String normalizedName = request.getName().toLowerCase(Locale.ROOT);
+            String key = schema + '\u0000' + normalizedName;
+            if (!seen.add(key)) {
+                continue;
+            }
+            Set<String> existingNames = existingNamesBySchema.computeIfAbsent(schema,
+                    s -> tableInfoDAO.findByDataSourceIdAndSchema(datasourceId, s).stream()
+                            .map(table -> table.getName().toLowerCase(Locale.ROOT))
+                            .collect(Collectors.toSet()));
+            if (!existingNames.contains(normalizedName)) {
+                result.add(request);
+            }
+        }
+        return result;
+    }
+
     @Transactional
     public void deleteTables(List<String> tableIds) {
         columnInfoDAO.deleteByTableIdIn(tableIds);
@@ -190,17 +225,15 @@ public class TableService {
     }
 
     @Transactional
-    public void deleteTable(String tableId) {
-        TableInfoPO po = tableInfoDAO.findById(tableId)
-                .orElseThrow(() -> new DatiException(ErrorCode.DS_TABLE_NOT_FOUND, tableId));
+    public void deleteTable(String datasourceId, String tableId) {
+        TableInfoPO po = requireTableInDatasource(datasourceId, tableId);
         permissionService.requireDataSource(po.getDataSourceId(), Permission.EDIT);
         deleteTables(List.of(tableId));
     }
 
     @Transactional
-    public void updateTable(String tableId, TableInfo tableInfo) {
-        TableInfoPO existingPO = tableInfoDAO.findById(tableId)
-                .orElseThrow(() -> new DatiException(ErrorCode.DS_TABLE_NOT_FOUND, tableId));
+    public void updateTable(String datasourceId, String tableId, TableInfo tableInfo) {
+        TableInfoPO existingPO = requireTableInDatasource(datasourceId, tableId);
         permissionService.requireDataSource(existingPO.getDataSourceId(), Permission.EDIT);
 
         existingPO.setAliases(tableInfo.getAliases());
@@ -228,5 +261,19 @@ public class TableService {
                 .build();
 
         semanticIndexService.save(doc);
+    }
+
+    /**
+     * Loads the table and verifies it actually belongs to the datasource in the request path.
+     * A mismatched pair is reported as "table not found" so the API never silently operates
+     * on a table from another datasource.
+     */
+    private TableInfoPO requireTableInDatasource(String datasourceId, String tableId) {
+        TableInfoPO po = tableInfoDAO.findById(tableId)
+                .orElseThrow(() -> new DatiException(ErrorCode.DS_TABLE_NOT_FOUND, tableId));
+        if (!Objects.equals(po.getDataSourceId(), datasourceId)) {
+            throw new DatiException(ErrorCode.DS_TABLE_NOT_FOUND, tableId);
+        }
+        return po;
     }
 }

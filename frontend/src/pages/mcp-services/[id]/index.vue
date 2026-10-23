@@ -395,7 +395,7 @@ const handleSave = async () => {
               <el-input
                 v-model="formData.name"
                 :placeholder="t('common.placeholder.name')"
-                maxlength="100"
+                maxlength="64"
                 show-word-limit
               />
             </el-form-item>

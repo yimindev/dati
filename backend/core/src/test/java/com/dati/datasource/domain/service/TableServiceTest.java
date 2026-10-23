@@ -37,10 +37,12 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -259,13 +261,114 @@ class TableServiceTest {
     }
 
     @Test
+    @DisplayName("Batch add tables - skips tables already added to the datasource")
+    void batchAddTables_shouldSkipTablesAlreadyAdded() throws SQLException {
+        // given
+        AddTableRequest existing = addTableRequest("artist");
+        AddTableRequest fresh = addTableRequest("album");
+        TableInfoPO existingPO = TestFixtures.createTestTableInfoPO();
+        existingPO.setName("artist");
+
+        when(tableInfoDAO.findByDataSourceIdAndSchema(TestFixtures.TEST_DATASOURCE_ID, "public"))
+                .thenReturn(List.of(existingPO));
+        when(jdbcMetaService.getTables(TestFixtures.TEST_DATASOURCE_ID, "public"))
+                .thenReturn(List.of(new Table("artist", ""), new Table("album", "")));
+        when(jdbcMetaService.getColumns(TestFixtures.TEST_DATASOURCE_ID, "public", "album"))
+                .thenReturn(List.of());
+        when(tableInfoDAO.save(any(TableInfoPO.class))).thenReturn(testTableInfoPO);
+
+        User mockUser = mock(User.class);
+        when(mockUser.getId()).thenReturn(TestFixtures.TEST_USER_ID);
+
+        try (MockedStatic<RequestContext> mocked = mockStatic(RequestContext.class)) {
+            mocked.when(RequestContext::getUser).thenReturn(mockUser);
+
+            // when
+            List<String> result = tableService.batchAddTables(
+                    TestFixtures.TEST_DATASOURCE_ID, List.of(existing, fresh));
+
+            // then
+            assertThat(result).hasSize(1);
+        }
+        verify(tableInfoDAO, times(1)).save(any(TableInfoPO.class));
+        verify(jdbcMetaService).getColumns(TestFixtures.TEST_DATASOURCE_ID, "public", "album");
+        verify(jdbcMetaService, never()).getColumns(TestFixtures.TEST_DATASOURCE_ID, "public", "artist");
+    }
+
+    @Test
+    @DisplayName("Batch add tables - deduplicates names within one request")
+    void batchAddTables_shouldDeduplicateWithinRequest() throws SQLException {
+        // given
+        AddTableRequest lower = addTableRequest("artist");
+        AddTableRequest upper = addTableRequest("ARTIST");
+
+        when(jdbcMetaService.getTables(TestFixtures.TEST_DATASOURCE_ID, "public"))
+                .thenReturn(List.of(new Table("artist", "")));
+        when(jdbcMetaService.getColumns(TestFixtures.TEST_DATASOURCE_ID, "public", "artist"))
+                .thenReturn(List.of());
+        when(tableInfoDAO.save(any(TableInfoPO.class))).thenReturn(testTableInfoPO);
+
+        User mockUser = mock(User.class);
+        when(mockUser.getId()).thenReturn(TestFixtures.TEST_USER_ID);
+
+        try (MockedStatic<RequestContext> mocked = mockStatic(RequestContext.class)) {
+            mocked.when(RequestContext::getUser).thenReturn(mockUser);
+
+            // when
+            List<String> result = tableService.batchAddTables(
+                    TestFixtures.TEST_DATASOURCE_ID, List.of(lower, upper));
+
+            // then
+            assertThat(result).hasSize(1);
+        }
+        verify(tableInfoDAO, times(1)).save(any(TableInfoPO.class));
+    }
+
+    @Test
+    @DisplayName("Batch add tables - returns empty when every table is already added")
+    void batchAddTables_shouldReturnEmptyWhenAllTablesAlreadyAdded() throws SQLException {
+        // given
+        TableInfoPO existingPO = TestFixtures.createTestTableInfoPO();
+        existingPO.setName("artist");
+        when(tableInfoDAO.findByDataSourceIdAndSchema(TestFixtures.TEST_DATASOURCE_ID, "public"))
+                .thenReturn(List.of(existingPO));
+
+        // when
+        List<String> result = tableService.batchAddTables(
+                TestFixtures.TEST_DATASOURCE_ID, List.of(addTableRequest("artist")));
+
+        // then
+        assertThat(result).isEmpty();
+        verify(jdbcMetaService, never()).getTables(TestFixtures.TEST_DATASOURCE_ID, "public");
+        verify(tableInfoDAO, never()).save(any());
+        verify(semanticIndexService, never()).saveBatch(anyList());
+    }
+
+    @Test
     @DisplayName("Delete table - table not found throws DS_TABLE_NOT_FOUND")
     void deleteTable_tableNotFound_throwsTableNotFound() {
         when(tableInfoDAO.findById("ghost-id")).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> tableService.deleteTable("ghost-id"))
+        assertThatThrownBy(() -> tableService.deleteTable(TestFixtures.TEST_DATASOURCE_ID, "ghost-id"))
                 .isInstanceOf(DatiException.class)
                 .satisfies(e -> assertThat(((DatiException) e).getCode()).isEqualTo(ErrorCode.DS_TABLE_NOT_FOUND));
+    }
+
+    @Test
+    @DisplayName("Delete table - rejects a table that belongs to another datasource")
+    void deleteTable_shouldRejectTableFromAnotherDatasource() {
+        // given
+        when(tableInfoDAO.findById(TestFixtures.TEST_TABLE_ID)).thenReturn(Optional.of(testTableInfoPO));
+
+        // when & then
+        assertThatThrownBy(() -> tableService.deleteTable("other-datasource", TestFixtures.TEST_TABLE_ID))
+                .isInstanceOf(DatiException.class)
+                .satisfies(e -> assertThat(((DatiException) e).getCode()).isEqualTo(ErrorCode.DS_TABLE_NOT_FOUND));
+
+        verify(permissionService, never()).requireDataSource(anyString(), any());
+        verify(columnInfoDAO, never()).deleteByTableIdIn(anyList());
+        verify(tableInfoDAO, never()).deleteAllById(any());
+        verify(semanticIndexService, never()).deleteByEntityTableIds(any());
     }
 
     @Test
@@ -275,12 +378,49 @@ class TableServiceTest {
         when(tableInfoDAO.findById(TestFixtures.TEST_TABLE_ID)).thenReturn(Optional.of(testTableInfoPO));
 
         // when
-        tableService.deleteTable(TestFixtures.TEST_TABLE_ID);
+        tableService.deleteTable(TestFixtures.TEST_DATASOURCE_ID, TestFixtures.TEST_TABLE_ID);
 
         // then
         verify(columnInfoDAO).deleteByTableIdIn(List.of(TestFixtures.TEST_TABLE_ID));
         verify(tableInfoDAO).deleteAllById(List.of(TestFixtures.TEST_TABLE_ID));
         verify(semanticIndexService).deleteByEntityTableIds(List.of(TestFixtures.TEST_TABLE_ID));
+    }
+
+    @Test
+    @DisplayName("Update table - rejects a table that belongs to another datasource")
+    void updateTable_shouldRejectTableFromAnotherDatasource() {
+        // given
+        when(tableInfoDAO.findById(TestFixtures.TEST_TABLE_ID)).thenReturn(Optional.of(testTableInfoPO));
+        TableInfo update = TestFixtures.createTestTableInfo();
+
+        // when & then
+        assertThatThrownBy(() -> tableService.updateTable(
+                "other-datasource", TestFixtures.TEST_TABLE_ID, update))
+                .isInstanceOf(DatiException.class)
+                .satisfies(e -> assertThat(((DatiException) e).getCode()).isEqualTo(ErrorCode.DS_TABLE_NOT_FOUND));
+
+        verify(tableInfoDAO, never()).save(any());
+        verify(semanticIndexService, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Update table - success updates aliases/description and ES when datasource matches")
+    void updateTable_shouldUpdateWhenDatasourceMatches() {
+        // given
+        when(tableInfoDAO.findById(TestFixtures.TEST_TABLE_ID)).thenReturn(Optional.of(testTableInfoPO));
+        when(tableInfoDAO.save(any(TableInfoPO.class))).thenReturn(testTableInfoPO);
+        TableInfo update = new TableInfo();
+        update.setAliases(List.of("orders"));
+        update.setDescription("Order facts");
+
+        // when
+        tableService.updateTable(TestFixtures.TEST_DATASOURCE_ID, TestFixtures.TEST_TABLE_ID, update);
+
+        // then
+        assertThat(testTableInfoPO.getAliases()).containsExactly("orders");
+        assertThat(testTableInfoPO.getDescription()).isEqualTo("Order facts");
+        verify(tableInfoDAO).save(testTableInfoPO);
+        verify(semanticIndexService).save(any());
     }
 
     @Test
@@ -308,5 +448,12 @@ class TableServiceTest {
         verify(columnInfoDAO).deleteByTableIdIn(Collections.emptyList());
         verify(tableInfoDAO).deleteAllById(Collections.emptyList());
         verify(semanticIndexService).deleteByEntityTableIds(Collections.emptyList());
+    }
+
+    private static AddTableRequest addTableRequest(String name) {
+        AddTableRequest request = new AddTableRequest();
+        request.setName(name);
+        request.setSchema("public");
+        return request;
     }
 }

@@ -15,7 +15,6 @@ import com.dati.datasource.repository.po.TableInfoPO;
 import com.dati.db.DbType;
 import com.dati.db.HikariPoolManager;
 import com.dati.db.JdbcConnector;
-import com.dati.db.JdbcUtils;
 import com.dati.permission.domain.model.PrincipalType;
 import com.dati.permission.domain.model.ResourceType;
 import com.dati.permission.domain.service.PermissionService;
@@ -43,6 +42,7 @@ import java.util.Optional;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
@@ -159,14 +159,16 @@ class DataSourceServiceTest {
     }
 
     @Test
-    @DisplayName("Add data source - Hikari init failure path converts to DatiException, not saved")
+    @DisplayName("Add data source - Hikari init failure path converts to DS_CONNECTION_FAILED, not saved")
     void addDataSource_shouldThrowDatiException_whenConnectionInitializationFails() throws SQLException {
-        // given：等价于 HikariPoolManager 将连接池初始化失败转换后的 SQLException
+        // given：HikariPoolManager 将无法解析的 URL/驱动加载失败转换为 SQLException
         when(jdbcMetaService.resolveCurrentSchema(any(JdbcConnector.class), eq(DbType.MYSQL)))
-            .thenThrow(new SQLException("Failed to initialize connection pool: Connection is not available"));
+            .thenThrow(new SQLException("Failed to initialize connection pool: Failed to get driver instance"));
 
         // when & then
-        assertThrows(DatiException.class, () -> dataSourceService.addDataSource(testDataSource));
+        assertThatThrownBy(() -> dataSourceService.addDataSource(testDataSource))
+            .isInstanceOf(DatiException.class)
+            .satisfies(e -> assertThat(((DatiException) e).getCode()).isEqualTo(ErrorCode.DS_CONNECTION_FAILED));
         verify(dataSourceDAO, never()).save(any());
     }
 
@@ -178,7 +180,9 @@ class DataSourceServiceTest {
             .thenThrow(new DatiException(com.dati.base.exception.ErrorCode.DS_UNSUPPORTED_TYPE, DbType.MYSQL));
 
         // when & then
-        assertThrows(DatiException.class, () -> dataSourceService.addDataSource(testDataSource));
+        assertThatThrownBy(() -> dataSourceService.addDataSource(testDataSource))
+            .isInstanceOf(DatiException.class)
+            .satisfies(e -> assertThat(((DatiException) e).getCode()).isEqualTo(ErrorCode.DS_UNSUPPORTED_TYPE));
         verify(dataSourceDAO, never()).save(any());
     }
 
@@ -411,20 +415,44 @@ class DataSourceServiceTest {
     }
 
     @Test
-    @DisplayName("Test connection - success")
-    void testConnection_shouldReturnTrue() {
+    @DisplayName("Test connection - success probes the same default schema as save")
+    void testConnection_shouldReturnTrue_whenSchemaIsDetected() throws SQLException {
         // given
-        JdbcConnector connector = new JdbcConnector(testDataSource);
-        try (MockedStatic<JdbcUtils> mockedJdbc = mockStatic(JdbcUtils.class)) {
-            mockedJdbc.when(() -> JdbcUtils.testConnection(any(), any(), any())).thenReturn(true);
+        when(jdbcMetaService.resolveCurrentSchema(any(JdbcConnector.class), eq(DbType.MYSQL)))
+            .thenReturn("public");
 
-            // when
-            boolean result = dataSourceService.testConnection(connector);
+        // when
+        boolean result = dataSourceService.testConnection(testDataSource);
 
-            // then
-            assertThat(result).isTrue();
-            mockedJdbc.verify(() -> JdbcUtils.testConnection(eq(testDataSource.getJdbcUrl()), eq(testDataSource.getUsername()), eq(testDataSource.getPassword())));
-        }
+        // then
+        assertThat(result).isTrue();
+        verify(jdbcMetaService).resolveCurrentSchema(any(JdbcConnector.class), eq(DbType.MYSQL));
+    }
+
+    @Test
+    @DisplayName("Test connection - connection failure throws DS_CONNECTION_FAILED")
+    void testConnection_shouldThrowConnectionFailed_whenSQLException() throws SQLException {
+        // given
+        when(jdbcMetaService.resolveCurrentSchema(any(JdbcConnector.class), eq(DbType.MYSQL)))
+            .thenThrow(new SQLException("connection refused"));
+
+        // when & then
+        assertThatThrownBy(() -> dataSourceService.testConnection(testDataSource))
+            .isInstanceOf(DatiException.class)
+            .satisfies(e -> assertThat(((DatiException) e).getCode()).isEqualTo(ErrorCode.DS_CONNECTION_FAILED));
+    }
+
+    @Test
+    @DisplayName("Test connection - missing default schema throws DS_SCHEMA_DETECTION_FAILED")
+    void testConnection_shouldThrowSchemaDetectionFailed_whenSchemaIsNull() throws SQLException {
+        // given
+        when(jdbcMetaService.resolveCurrentSchema(any(JdbcConnector.class), eq(DbType.MYSQL)))
+            .thenReturn(null);
+
+        // when & then
+        assertThatThrownBy(() -> dataSourceService.testConnection(testDataSource))
+            .isInstanceOf(DatiException.class)
+            .satisfies(e -> assertThat(((DatiException) e).getCode()).isEqualTo(ErrorCode.DS_SCHEMA_DETECTION_FAILED));
     }
 
     @Test
@@ -524,8 +552,10 @@ class DataSourceServiceTest {
         when(jdbcMetaService.resolveCurrentSchema(any(JdbcConnector.class), eq(DbType.MYSQL)))
             .thenThrow(new SQLException("connection refused"));
 
-        assertThrows(DatiException.class, () ->
-            dataSourceService.updateDataSource(TestFixtures.TEST_DATASOURCE_ID, testDataSource));
+        assertThatThrownBy(() -> dataSourceService.updateDataSource(
+                TestFixtures.TEST_DATASOURCE_ID, testDataSource))
+            .isInstanceOf(DatiException.class)
+            .satisfies(e -> assertThat(((DatiException) e).getCode()).isEqualTo(ErrorCode.DS_CONNECTION_FAILED));
 
         assertThat(testDataSourcePO.getJdbcUrl()).isEqualTo(originalJdbcUrl);
         verify(dataSourceDAO, never()).save(any());

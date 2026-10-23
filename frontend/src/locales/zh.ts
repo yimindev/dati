@@ -127,7 +127,7 @@ export default {
     // 校验规则
     required: "请输入{name}",
     selectRequired: "请选择{name}",
-    nameLengthError: "长度在 1 到 100 个字符",
+    nameLengthError: "长度在 1 到 64 个字符",
 
     // 无障碍
     skipToContent: "跳到主内容",

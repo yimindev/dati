@@ -4,7 +4,6 @@ import com.dati.base.BaseAssembler;
 import com.dati.base.pojo.PageResponse;
 import com.dati.datasource.domain.model.DataSource;
 import com.dati.datasource.server.pojo.DatasourceVO;
-import com.dati.db.JdbcConnector;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.stereotype.Component;
@@ -14,10 +13,6 @@ import java.util.stream.Collectors;
 
 @Component
 public class DSAssembler extends BaseAssembler {
-
-    public static JdbcConnector toJdbcConnector(DataSource dataSource) {
-        return new JdbcConnector(dataSource.getJdbcUrl(), dataSource.getUsername(), dataSource.getPassword());
-    }
 
     public DatasourceVO toDatasourceVO(DataSource dataSource) {
         DatasourceVO vo = mapFields(dataSource);

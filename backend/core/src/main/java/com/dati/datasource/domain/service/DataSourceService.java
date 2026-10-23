@@ -17,7 +17,6 @@ import com.dati.datasource.repository.po.TableInfoPO;
 import com.dati.db.DbType;
 import com.dati.db.HikariPoolManager;
 import com.dati.db.JdbcConnector;
-import com.dati.db.JdbcUtils;
 import com.dati.db.Table;
 import com.dati.permission.domain.model.Permission;
 import com.dati.permission.domain.model.ResourceType;
@@ -61,8 +60,13 @@ public class DataSourceService {
         this.userGroupService = userGroupService;
     }
 
-    public boolean testConnection(JdbcConnector jdbcConnector) {
-        return JdbcUtils.testConnection(jdbcConnector.jdbcUrl(), jdbcConnector.username(), jdbcConnector.password());
+    /**
+     * Runs the same validation used when saving: connect and detect a usable default schema.
+     * A successful result means the data source can actually be created.
+     */
+    public boolean testConnection(DataSource dataSource) {
+        detectDefaultSchema(dataSource);
+        return true;
     }
 
     /**
@@ -154,7 +158,7 @@ public class DataSourceService {
             throw new DatiException(ErrorCode.DS_CONNECTION_FAILED, e.getMessage());
         }
         if (schema == null || schema.isBlank()) {
-            throw new DatiException(ErrorCode.DS_SCHEMA_DETECTION_FAILED, dataSource.getJdbcUrl());
+            throw new DatiException(ErrorCode.DS_SCHEMA_DETECTION_FAILED);
         }
         return schema;
     }

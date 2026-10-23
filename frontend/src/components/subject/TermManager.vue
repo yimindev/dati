@@ -81,7 +81,7 @@ const rules: FormRules = {
       message: t("common.required", { name: t("common.name") }),
       trigger: "blur",
     },
-    { min: 1, max: 100, message: t("common.nameLengthError"), trigger: "blur" },
+    { min: 1, max: 64, message: t("common.nameLengthError"), trigger: "blur" },
   ],
 };
 
@@ -815,7 +815,7 @@ onMounted(() => {
           <el-input
             v-model="termFormData.name"
             :placeholder="t('common.placeholder.name')"
-            maxlength="100"
+            maxlength="64"
             show-word-limit
           />
         </el-form-item>

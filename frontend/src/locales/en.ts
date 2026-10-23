@@ -127,7 +127,7 @@ export default {
     // Validation Rules
     required: "Please enter {name}",
     selectRequired: "Please select {name}",
-    nameLengthError: "Length must be between 1 and 100 characters",
+    nameLengthError: "Length must be between 1 and 64 characters",
 
     // Accessibility
     skipToContent: "Skip to main content",

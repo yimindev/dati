@@ -20,7 +20,7 @@ public enum ErrorCode {
     DS_SQL_ERROR("DS003", 400, "SQL execution error: {0}"),
     DS_SYNC_FAILED("DS004", 500, "Failed to sync metadata for data source: {0}"),
     DS_UNSUPPORTED_TYPE("DS005", 400, "Unsupported database type: {0}"),
-    DS_SCHEMA_DETECTION_FAILED("DS006", 400, "Failed to detect default schema: {0}"),
+    DS_SCHEMA_DETECTION_FAILED("DS006", 400, "Database connected, but no usable default schema/database was found. Check the JDBC URL's currentSchema/search_path or database name, and ensure the target schema exists."),
     DS_TABLE_NOT_FOUND("DS007", 404, "Table not found: {0}"),
 
     // ── Semantic module (SM) ─────────────────────────────

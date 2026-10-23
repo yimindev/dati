@@ -32,8 +32,9 @@
 **数据：** test-data.yaml `datasources.bad_connection`
 
 1. 使用 bad_connection 测试数据源连接
-2. 预期返回 `false`，不应返回 `true`
-3. 预期 HTTP 状态码为 200（接口本身正常，只是连接失败）
+2. 预期 HTTP 状态码为 400（测试连接失败是业务结果，通过统一错误响应返回）
+3. 预期响应 body 包含 `code=DS001`，`message` 非空且能说明连接失败原因（如超时、主机不可达、拒绝连接）
+4. 不应再返回 HTTP 200 + `false` 的旧契约
 
 ---
 
@@ -256,3 +257,18 @@
 5. **通配符按字面匹配**：keyword=`%25`（即 `%`）→ total=0（不得返回全量）；keyword=`_` → 只返回名称中真正含下划线的数据源
 6. 用 page=1, size=1 查询，验证只返回 1 条，`total_pages` 根据 total 计算正确
 7. 依次删除 3 个数据源（清理）
+
+---
+
+## TC-DS-014 测试连接 - 默认 schema 不可用
+**级别：** P1
+**前置：** 已登录
+**数据：** test-data.yaml `datasources.postgres_local`
+**注意：** 需要真实 PostgreSQL 连接
+
+1. 将 postgres_local 的 jdbc_url 追加/替换 `currentSchema` 为不存在的 schema（如 `missing_schema_<timestamp>`）
+2. 调用 `POST /v1/data-sources/test-connection`
+3. 预期 HTTP 状态码为 400，`code=DS006`，`message` 说明「连接成功但没有可用的默认 schema」，并提示检查 `currentSchema`/`search_path`
+4. 使用同一 URL 调用 `POST /v1/data-sources`
+5. 预期同样返回 400 `DS006`，且数据源未落库
+6. 清理：按名称搜索确认没有创建成功

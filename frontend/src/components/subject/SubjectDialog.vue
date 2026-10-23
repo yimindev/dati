@@ -45,7 +45,7 @@ const isEdit = computed(() => !!props.subject)
 const rules: FormRules = {
   name: [
     { required: true, message: t('common.required', { name: t('common.name') }), trigger: 'blur' },
-    { min: 1, max: 100, message: t('common.nameLengthError'), trigger: 'blur' }
+    { min: 1, max: 64, message: t('common.nameLengthError'), trigger: 'blur' }
   ]
 }
 
@@ -197,7 +197,7 @@ const handleCancel = () => {
         <el-input
           v-model="formData.name"
           :placeholder="t('common.placeholder.name')"
-          maxlength="100"
+          maxlength="64"
           show-word-limit
         />
       </el-form-item>

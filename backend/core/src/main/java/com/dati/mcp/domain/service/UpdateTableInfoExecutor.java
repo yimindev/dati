@@ -86,7 +86,7 @@ public class UpdateTableInfoExecutor implements ToolExecutor {
             TableInfo update = new TableInfo();
             update.setDescription(item.description() != null ? item.description() : target.description());
             update.setAliases(item.aliases() != null ? item.aliases() : target.aliases());
-            tableService.updateTable(target.tableId(), update);
+            tableService.updateTable(item.dataSourceId(), target.tableId(), update);
             Map<String, Object> neu = valueMap(update.getDescription(), update.getAliases());
 
             saveAudit(ctx, "TABLE", target.tableId(), item.table(), "UPDATE", old, neu);

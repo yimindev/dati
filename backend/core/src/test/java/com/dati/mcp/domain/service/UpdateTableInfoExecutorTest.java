@@ -73,7 +73,7 @@ class UpdateTableInfoExecutorTest {
             new UpdateTableInfoArgs(List.of(item("ds-1", "orders", "new desc", List.of("a", "b"))))));
 
         ArgumentCaptor<TableInfo> tableCaptor = ArgumentCaptor.forClass(TableInfo.class);
-        verify(tableService).updateTable(eq("t1"), tableCaptor.capture());
+        verify(tableService).updateTable(eq("ds-1"), eq("t1"), tableCaptor.capture());
         assertThat(tableCaptor.getValue().getDescription()).isEqualTo("new desc");
         assertThat(tableCaptor.getValue().getAliases()).containsExactly("a", "b");
 
@@ -125,7 +125,7 @@ class UpdateTableInfoExecutorTest {
             item("ds-1", "orders", null, null)))));
 
         ArgumentCaptor<TableInfo> tableCaptor = ArgumentCaptor.forClass(TableInfo.class);
-        verify(tableService).updateTable(eq("t1"), tableCaptor.capture());
+        verify(tableService).updateTable(eq("ds-1"), eq("t1"), tableCaptor.capture());
         assertThat(tableCaptor.getValue().getDescription()).isEqualTo("old desc");
         assertThat(tableCaptor.getValue().getAliases()).containsExactly("keep");
     }
@@ -142,7 +142,7 @@ class UpdateTableInfoExecutorTest {
         assertThat(result.success()).isFalse();
         assertThat(result.error().errorCategory()).isEqualTo("PARAM_ERROR");
         assertThat(result.error().message()).contains("ghost");
-        verify(tableService, never()).updateTable(any(), any());
+        verify(tableService, never()).updateTable(any(), any(), any());
         verify(auditLogDAO, never()).save(any());
     }
 
@@ -172,7 +172,7 @@ class UpdateTableInfoExecutorTest {
                 item("ds-1", "orders", "d1", null),
                 item("ds-1", "orders", "d2", null)))));
 
-        verify(tableService, org.mockito.Mockito.times(1)).updateTable(any(), any());
+        verify(tableService, org.mockito.Mockito.times(1)).updateTable(any(), any(), any());
         assertThat(data.results()).hasSize(1);
     }
 
@@ -191,6 +191,6 @@ class UpdateTableInfoExecutorTest {
         assertThat(data.results()).hasSize(2);
         assertThat(data.results().get(0).success()).isTrue();
         assertThat(data.results().get(1).success()).isFalse();
-        verify(tableService, org.mockito.Mockito.times(1)).updateTable(any(), any());
+        verify(tableService, org.mockito.Mockito.times(1)).updateTable(any(), any(), any());
     }
 }

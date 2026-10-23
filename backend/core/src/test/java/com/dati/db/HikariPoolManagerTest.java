@@ -15,9 +15,14 @@ class HikariPoolManagerTest {
     private static final JdbcConnector UNREACHABLE_CONNECTOR =
         new JdbcConnector("jdbc:mysql://127.0.0.1:1/test_db", "root", "wrong-password");
 
+    // Hikari validates the URL/driver before pool initialization and throws a RuntimeException
+    private static final JdbcConnector INVALID_URL_CONNECTOR =
+        new JdbcConnector("not-a-url", "root", "wrong-password");
+
     @AfterEach
     void cleanup() {
         HikariPoolManager.close(UNREACHABLE_CONNECTOR);
+        HikariPoolManager.close(INVALID_URL_CONNECTOR);
     }
 
     @Test
@@ -30,5 +35,11 @@ class HikariPoolManagerTest {
     @DisplayName("getConnection - converts pool init failure to SQLException")
     void getConnection_shouldWrapPoolInitializationExceptionAsSQLException() {
         assertThrows(SQLException.class, () -> HikariPoolManager.getConnection(UNREACHABLE_CONNECTOR));
+    }
+
+    @Test
+    @DisplayName("getDataSource - converts driver/URL validation failure to SQLException")
+    void getDataSource_shouldWrapDriverLoadFailureAsSQLException() {
+        assertThrows(SQLException.class, () -> HikariPoolManager.getDataSource(INVALID_URL_CONNECTOR));
     }
 }

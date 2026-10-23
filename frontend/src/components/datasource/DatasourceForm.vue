@@ -47,7 +47,7 @@ onMounted(() => {
 const rules: FormRules = {
   name: [
     { required: true, message: t("common.required", { name: t("datasource.connectionName") }), trigger: "blur" },
-    { min: 1, max: 100, message: t("common.nameLengthError"), trigger: "blur" },
+    { min: 1, max: 64, message: t("common.nameLengthError"), trigger: "blur" },
   ],
   type: [{ required: true, message: t("common.selectRequired", { name: t("datasource.databaseType") }), trigger: "change" }],
   jdbc_url: [
@@ -91,7 +91,7 @@ defineExpose({
       <el-input
         v-model="modelValue.name"
         :placeholder="t('common.placeholder.name')"
-        maxlength="100"
+        maxlength="64"
       />
     </el-form-item>
 

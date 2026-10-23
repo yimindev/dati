@@ -43,7 +43,7 @@ public class DataSourceController {
 
     @PostMapping("/test-connection")
     public boolean testConnection(@RequestBody DataSource dataSource) {
-        return dataSourceService.testConnection(DSAssembler.toJdbcConnector(dataSource));
+        return dataSourceService.testConnection(dataSource);
     }
 
     @PostMapping

@@ -158,7 +158,8 @@ class TableControllerTest {
     @DisplayName("Delete table - success")
     void deleteTable_shouldReturnOk() throws Exception {
         // given
-        doNothing().when(tableService).deleteTable(TestFixtures.TEST_TABLE_ID);
+        doNothing().when(tableService).deleteTable(
+                TestFixtures.TEST_DATASOURCE_ID, TestFixtures.TEST_TABLE_ID);
 
         // when & then
         mockMvc.perform(delete("/v1/data-sources/{datasourceId}/tables/{tableId}", 
@@ -166,14 +167,16 @@ class TableControllerTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.id").value(TestFixtures.TEST_TABLE_ID));
         
-        verify(tableService).deleteTable(TestFixtures.TEST_TABLE_ID);
+        verify(tableService).deleteTable(
+                TestFixtures.TEST_DATASOURCE_ID, TestFixtures.TEST_TABLE_ID);
     }
 
     @Test
-    @DisplayName("Delete table - datasourceId param passed but does not affect deletion")
-    void deleteTable_shouldIgnoreDatasourceId() throws Exception {
+    @DisplayName("Delete table - passes path datasourceId to service")
+    void deleteTable_shouldPassDatasourceIdToService() throws Exception {
         // given
-        doNothing().when(tableService).deleteTable(TestFixtures.TEST_TABLE_ID);
+        doNothing().when(tableService).deleteTable(
+                "any-datasource-id", TestFixtures.TEST_TABLE_ID);
 
         // when & then
         mockMvc.perform(delete("/v1/data-sources/{datasourceId}/tables/{tableId}", 
@@ -181,9 +184,31 @@ class TableControllerTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.id").value(TestFixtures.TEST_TABLE_ID));
         
-        // Verify that only tableId is used for deletion
-        verify(tableService).deleteTable(TestFixtures.TEST_TABLE_ID);
-        verify(tableService, never()).getAddedTableNames(any());
+        verify(tableService).deleteTable("any-datasource-id", TestFixtures.TEST_TABLE_ID);
+    }
+
+    @Test
+    @DisplayName("Update table - passes path datasourceId to service")
+    void updateTable_shouldPassDatasourceIdToService() throws Exception {
+        // given
+        TableInfoVO vo = new TableInfoVO();
+        vo.setAliases(List.of("orders"));
+        vo.setDescription("Order facts");
+        TableInfo mapped = TestFixtures.createTestTableInfo();
+        when(tableAssembler.toTableInfo(vo)).thenReturn(mapped);
+        doNothing().when(tableService).updateTable(
+                TestFixtures.TEST_DATASOURCE_ID, TestFixtures.TEST_TABLE_ID, mapped);
+
+        // when & then
+        mockMvc.perform(put("/v1/data-sources/{datasourceId}/tables/{tableId}",
+                    TestFixtures.TEST_DATASOURCE_ID, TestFixtures.TEST_TABLE_ID)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(vo)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.id").value(TestFixtures.TEST_TABLE_ID));
+
+        verify(tableService).updateTable(
+                TestFixtures.TEST_DATASOURCE_ID, TestFixtures.TEST_TABLE_ID, mapped);
     }
 
     private AddTableRequest createAddTableRequest(String name) {

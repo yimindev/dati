@@ -1,5 +1,7 @@
 package com.dati.base.pojo;
 
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 import java.time.Instant;
@@ -9,8 +11,11 @@ public class BaseResource {
 
     private String id;
 
+    @NotBlank
+    @Size(max = 64)
     private String name;
 
+    @Size(max = 1024)
     private String description;
 
     private String createdBy;
