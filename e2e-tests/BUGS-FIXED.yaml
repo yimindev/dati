@@ -52,6 +52,51 @@ bugs:
       其他 profile 缺失 JWT_SECRET 时启动直接失败（实测 prod profile → Could not resolve placeholder 'JWT_SECRET'）。
       测试 profile 在 application-test.yaml 显式注入独立密钥。实测：用旧的硬编码默认密钥自签 admin token → 401 AUTH002。
 
+  - id: BUG-20261022-006
+    title: 批量添加表未做去重校验，同一张表可被重复添加并产生重复 ES 文档
+    module: 数据源管理-表管理
+    severity: medium
+    found_at: 2026-10-22
+    fixed_at: 2026-10-23
+    description: |
+      TC-DS-010/TC-DS-011 探索：POST /v1/data-sources/{id}/tables/batch 对同一 (datasourceId, schema, name) 无任何存在性校验，TableService.batchAddTables() 直接 tableInfoDAO.save() 插入新行。实测：对同一数据源连续两次添加 artist → added-names 返回 ["artist","artist"]；GET tables 返回 2 条同名 artist（UUID 分别为 f947168c.../dc399030...）；ES 出现 2 条 TABLE 文档 + 4 条 FIELD 文档（artistid/name 各两份）。影响：语义检索重复命中、主题添加表时出现重名歧义、MCP 工具元数据被污染、删除其中一条后另一条仍残留。建议 batchAddTables 先按 (datasourceId, schema, name) 查重，已存在则跳过或返回明确的已存在错误（参考 DS007 风格）。附带观察：该接口响应体为 {"id":"<新增条数>"}，把数量塞进 id 字段，语义混乱，建议改为返回新增表 ID 列表或 {added: n, skipped: n}。
+      修复：TableService.batchAddTables 新增 filterNewTables，按 (schema, name) 不区分大小写去重：请求内重复与已入库记录均跳过，不同 schema 同名表保留；全部重复时直接返回空且不再写表/ES。返回体仍为 {"id":"<新增条数>"}（响应语义调整留作后续）。
+      验证：TableServiceTest 覆盖已存在表跳过、同一请求内重复、全部重复三种场景；批量添加后 added-names/GET tables/ES 不再出现重复。
+
+  - id: BUG-20261022-007
+    title: 非法/不支持的 jdbc_url 创建数据源返回 500 CM003，而非 400 可读错误
+    module: 数据源管理
+    severity: medium
+    found_at: 2026-10-22
+    fixed_at: 2026-10-23
+    description: |
+      TC-DS-007 探索：POST /v1/data-sources 传 jdbc_url="not-a-url" 或 "jdbc:oracle:thin:@localhost:1521:xe"（未引入驱动）→ HTTP 500 {"code":"CM003","message":"Internal server error"}。根因：DataSourceService.detectDefaultSchema() 只 catch SQLException，而 HikariPoolManager 中 new HikariDataSource(config) 在 HikariConfig.validate() 阶段对无法解析的 URL/缺失驱动抛的是 RuntimeException("Failed to get driver instance for jdbcUrl=...")，穿透到 GlobalExceptionHandler 的 Exception 兜底分支。对比：同一 URL 走 POST /test-connection 返回 false+200，两个接口行为不一致。另注：jdbc_url="jdbc:postgresql://"（无 host）可成功创建（DefaultHost 兜底连到 localhost:5432），URL 校验形同虚设。建议在 addDataSource/updateDataSource 前置校验驱动可加载，把 HikariConfig 的 IllegalArgumentException/RuntimeException 一并转 DS_CONNECTION_FAILED(400) 或 DS_UNSUPPORTED_TYPE(400)。
+      修复：HikariPoolManager.getDataSource 将 HikariConfig.validate()/驱动加载阶段抛出的 RuntimeException 统一包装为 SQLException，DataSourceService 再映射为 DS001(400)；非法 jdbc_url 不再返回 500 CM003。同时 test-connection 改为复用 detectDefaultSchema（连接 + 默认 schema 探测），失败返回 400 DS001/DS006 而非 200 false，与创建行为一致。
+      说明：严格 URL 正则校验（如 jdbc:postgresql:// 回退 localhost）未纳入本次修复。
+      验证：HikariPoolManagerTest（非法 URL、不可达地址）、DataSourceServiceTest（DS001/DS006）、DataSourceControllerTest（400 响应体）；E2E TC-DS-002/TC-DS-014 已更新契约。
+
+  - id: BUG-20261022-008
+    title: 数据源 name/description 缺少非空与长度校验：空 name 可创建成功，超长直接 500
+    module: 数据源管理
+    severity: medium
+    found_at: 2026-10-22
+    fixed_at: 2026-10-23
+    description: |
+      TC-DS-001 探索：①POST /v1/data-sources 传 name=""（其余字段合法）→ 200 建号成功，列表中 name 为空白，UI 出现无法识别的条目；②name 长度 64 成功、65 字符 → 500 CM003；③description 2000 字符（列长 1024）→ 500 CM003。根因：BaseResource.name/description 与 DataSource 模型只有 @NotNull/@NotBlank 于 type/jdbcUrl/username，name 无 @NotBlank、无 @Size，description 无 @Size；超长时由 Hibernate 抛 DataIntegrityViolationException 落到 GlobalExceptionHandler 的 Exception 兜底 → CM003 500。对比：缺 jdbc_url/type 时能正确返回 400 CM001 带字段名。建议为 name 加 @NotBlank + @Size(max=64)，description 加 @Size(max=1024)，并把 DataIntegrityViolationException 映射为 400 INVALID_PARAMETER。
+      修复：BaseResource.name 增加 @NotBlank + @Size(max=64)，description 增加 @Size(max=1024)；UpdateDataSourceRequest.name 增加 @Size(max=64) + 非空白 Pattern，description 增加 @Size(max=1024)。POST/PUT 空 name、纯空白 name、超长 name/description 均返回 400 CM001，不再落库或抛 500。前端数据源/主题/术语/MCP 服务的 name 上限统一从 100 对齐到 64，避免 UI 正常输入 65~100 字符触发 DB 列超长 500。
+      验证：DataSourceControllerTest 覆盖 POST/PUT 的空、纯空白、超长 name 与超长 description。未引入全局 DataIntegrityViolationException→400 映射，长度对齐后不再需要。
+
+  - id: BUG-20261022-009
+    title: 表删除/更新接口忽略路径中的 datasourceId，可用错误的数据源路径操作任意表
+    module: 数据源管理-表管理
+    severity: low
+    found_at: 2026-10-22
+    fixed_at: 2026-10-23
+    description: |
+      TC-DS-010 探索：TableController.deleteTable(datasourceId, tableId)/updateTable(datasourceId, tableId) 只把 datasourceId 用于占位，Service 内部一律用 tableId 反查真实 datasourceId 再做权限校验，未校验 tableId 是否属于该 datasourceId。实测：表 d8d7c17f-... 属于数据源 78cc22bb-...，用另一个数据源 19637970-... 作为路径删除该表 → 200 删除成功。当前不构成越权（权限仍按真实 datasourceId 校验），但 API 契约误导：客户端传错 datasourceId 不会报错而是静默作用于别的数据源；若未来权限校验改成基于路径参数，就会演变为越权漏洞。建议在 Service 入口断言 po.getDataSourceId().equals(datasourceId)，不一致返回 404 DS007。
+      修复：按方案 A 保留嵌套路由并强校验归属。TableService.deleteTable/updateTable 改为接收 datasourceId，内部 requireTableInDatasource 校验表属于路径数据源，不一致返回 404 DS007；TableController 透传路径参数，MCP UpdateTableInfoExecutor 同步传入 item.dataSourceId。用错误数据源路径删除/更新表不再静默生效。
+      验证：TableServiceTest 覆盖越级删除/更新拒绝；TableControllerTest 覆盖 datasourceId 透传；UpdateTableInfoExecutorTest 更新为新签名。列相关端点（getColumns/updateColumn/sync 等）的同类校验留作后续。
+
   - id: BUG-20260821-001
     title: 表不存在错误使用 DS002(Data source not found) 错误码，语义误导
     module: 数据源管理
