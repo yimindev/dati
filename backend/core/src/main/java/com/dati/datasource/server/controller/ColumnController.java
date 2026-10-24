@@ -50,8 +50,8 @@ public class ColumnController {
             @PathVariable String tableId,
             @Valid PageReq pageReq,
             @RequestParam(name = "keyword", required = false) String keyword) {
-        columnService.requireTableInPath(datasourceId, tableId);
-        return columnAssembler.toPageResponse(columnService.getColumns(pageReq, tableId, keyword));
+        return columnAssembler.toPageResponse(
+                columnService.getColumns(pageReq, datasourceId, tableId, keyword));
     }
 
     @PutMapping("/{id}")
@@ -60,10 +60,9 @@ public class ColumnController {
             @PathVariable String tableId,
             @PathVariable String id,
             @Valid @RequestBody UpdateColumnRequest request) {
-        columnService.requireColumnInPath(datasourceId, tableId, id);
         ColumnInfo columnInfo = columnAssembler.toColumnInfo(request);
         columnAssembler.fillUpdateUserFromRequest(columnInfo);
-        columnService.updateColumn(id, columnInfo);
+        columnService.updateColumn(datasourceId, tableId, id, columnInfo);
         return new IdResponse(id);
     }
 
@@ -87,9 +86,8 @@ public class ColumnController {
             @PathVariable String tableId,
             @PathVariable String columnId,
             @RequestParam(defaultValue = "false") boolean overwrite) {
-        columnService.requireColumnInPath(datasourceId, tableId, columnId);
         try {
-            columnValueService.extractValues(datasourceId, columnId, overwrite);
+            columnValueService.extractValues(datasourceId, tableId, columnId, overwrite);
             return new IdResponse(columnId);
         } catch (SQLException e) {
             log.error("Failed to extract values for column {}", columnId, e);
@@ -104,9 +102,8 @@ public class ColumnController {
             @PathVariable String columnId,
             @Valid PageReq pageReq,
             @RequestParam(required = false) String keyword) {
-        columnService.requireColumnInPath(datasourceId, tableId, columnId);
         return PageResponse.of(
-                columnValueService.getValues(columnId, pageReq, keyword)
+                columnValueService.getValues(datasourceId, tableId, columnId, pageReq, keyword)
                         .map(item -> {
                             ColumnValueVO vo = new ColumnValueVO();
                             vo.setId(item.getId());
@@ -123,7 +120,6 @@ public class ColumnController {
             @PathVariable String tableId,
             @PathVariable String columnId,
             @RequestBody ColumnValueListRequest request) {
-        columnService.requireColumnInPath(datasourceId, tableId, columnId);
         List<ColumnValueService.ValueItem> items = request.getValues().stream().map(vo -> {
             ColumnValueService.ValueItem item = new ColumnValueService.ValueItem();
             item.setId(vo.getId());
@@ -131,7 +127,7 @@ public class ColumnController {
             item.setSynonyms(vo.getSynonyms());
             return item;
         }).toList();
-        columnValueService.saveValues(columnId, items, request.getDeletedIds());
+        columnValueService.saveValues(datasourceId, tableId, columnId, items, request.getDeletedIds());
         return new IdResponse(columnId);
     }
 

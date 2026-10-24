@@ -12,6 +12,7 @@ import org.mockito.Captor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -25,6 +26,7 @@ import java.util.TimeZone;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.anyList;
 import static org.mockito.Mockito.doThrow;
@@ -69,7 +71,8 @@ class SemanticIndexServiceTest {
     @Test
     @DisplayName("Save document - index failure is logged and does not escape")
     void save_shouldNotFailWhenIndexIsUnavailable() {
-        doThrow(new RuntimeException("ES down")).when(semanticSearchDAO).save(any());
+        doThrow(new DataAccessResourceFailureException("ES down"))
+                .when(semanticSearchDAO).save(any());
         SemanticSearchDocument doc = SemanticSearchDocument.builder()
                 .id("field:down")
                 .type(SemanticEntityType.FIELD)
@@ -81,11 +84,25 @@ class SemanticIndexServiceTest {
     @Test
     @DisplayName("Delete by subject - index failure is logged and does not escape")
     void deleteByEntity_SubjectId_shouldNotFailWhenIndexIsUnavailable() {
-        doThrow(new RuntimeException("conflict"))
+        doThrow(new DataAccessResourceFailureException("conflict"))
                 .when(semanticSearchDAO).deleteByEntity_SubjectId("subject-001");
 
         assertThatCode(() -> semanticIndexService.deleteByEntity_SubjectId("subject-001"))
                 .doesNotThrowAnyException();
+    }
+
+    @Test
+    @DisplayName("Save document - programming errors still propagate")
+    void save_shouldPropagateNonIndexFailures() {
+        doThrow(new IllegalStateException("programming bug")).when(semanticSearchDAO).save(any());
+        SemanticSearchDocument doc = SemanticSearchDocument.builder()
+                .id("field:bug")
+                .type(SemanticEntityType.FIELD)
+                .build();
+
+        assertThatThrownBy(() -> semanticIndexService.save(doc))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("programming bug");
     }
 
     @Test

@@ -88,7 +88,7 @@ public class UpdateColumnInfoExecutor implements ToolExecutor {
             update.setDescription(item.description());
             update.setAliases(item.aliases());
             update.setUpdatedBy(RequestContext.currentUserId());
-            columnService.updateColumn(target.columnId(), update);
+            columnService.updateColumn(item.dataSourceId(), target.tableId(), target.columnId(), update);
             Map<String, Object> neu = valueMap(
                 item.description() != null ? item.description() : target.description(),
                 item.aliases() != null ? item.aliases() : target.aliases());

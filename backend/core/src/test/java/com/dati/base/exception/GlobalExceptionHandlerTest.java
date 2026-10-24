@@ -118,7 +118,10 @@ class GlobalExceptionHandlerTest {
                 .content("{\"type\":\"H2\"}"))
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.code").value(ErrorCode.INVALID_PARAMETER.getCode()))
-            .andExpect(jsonPath("$.message").value(containsString("type: must be one of [MYSQL, POSTGRESQL]")));
+            .andExpect(jsonPath("$.message").value(containsString("type:")))
+            .andExpect(jsonPath("$.message").value(containsString("not one of the values accepted for Enum class")))
+            .andExpect(jsonPath("$.message").value(containsString("MYSQL")))
+            .andExpect(jsonPath("$.message").value(containsString("POSTGRESQL")));
     }
 
     @Test

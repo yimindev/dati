@@ -1,10 +1,7 @@
 package com.dati.base.exception;
 
 import com.fasterxml.jackson.databind.JsonMappingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.PropertyNamingStrategy;
-import com.fasterxml.jackson.databind.exc.InvalidFormatException;
-import com.fasterxml.jackson.databind.exc.MismatchedInputException;
+import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
 import org.springframework.http.HttpHeaders;
@@ -44,12 +41,6 @@ import java.util.stream.Collectors;
 @RestControllerAdvice
 public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
-    private final ObjectMapper objectMapper;
-
-    public GlobalExceptionHandler(ObjectMapper objectMapper) {
-        this.objectMapper = objectMapper;
-    }
-
     @ExceptionHandler(DatiException.class)
     public ResponseEntity<ErrorResponse> handleDatiException(DatiException e) {
         ErrorResponse response = e.getArgs().length > 0
@@ -86,7 +77,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     }
 
     /** Field-level details for @Valid @RequestBody objects, e.g. "jdbc_url: must not be blank". */
-    private String formatFieldErrors(BindingResult bindingResult) {
+    private static String formatFieldErrors(BindingResult bindingResult) {
         return bindingResult.getFieldErrors().stream()
                 .map(err -> jsonFieldName(err.getField()) + ": "
                         + (err.getDefaultMessage() != null ? err.getDefaultMessage() : err.toString()))
@@ -94,7 +85,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     }
 
     /** Field-level details for container/method parameter validation, e.g. "tables[0]: must not be blank". */
-    private String formatParameterErrors(HandlerMethodValidationException ex) {
+    private static String formatParameterErrors(HandlerMethodValidationException ex) {
         return ex.getParameterValidationResults().stream()
                 .flatMap(result -> {
                     String paramName = result.getMethodParameter().getParameterName();
@@ -108,27 +99,19 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     }
 
     /**
-     * Reports the failing field and the received value space instead of Jackson's raw
-     * "Failed to read request". Enum mismatches list the accepted constants so callers can
-     * correct the request without guessing.
+     * Reports the failing field and Jackson's specific reason instead of the generic
+     * "Failed to read request". Jackson's enum error already lists the accepted constants.
      */
     private static String deserializationMessage(HttpMessageNotReadableException ex) {
         Throwable cause = ex.getMostSpecificCause();
-        if (cause instanceof InvalidFormatException invalidFormat) {
-            String field = jsonPath(invalidFormat);
-            Class<?> targetType = invalidFormat.getTargetType();
-            if (targetType != null && targetType.isEnum()) {
-                String allowed = Arrays.stream(targetType.getEnumConstants())
-                        .map(String::valueOf)
-                        .collect(Collectors.joining(", "));
-                return withField(field, "must be one of [" + allowed + "]");
+        String message = concise(cause.getMessage());
+        if (cause instanceof JsonMappingException mapping && !mapping.getPath().isEmpty()) {
+            String field = jsonPath(mapping);
+            if (!field.isBlank()) {
+                return field + ": " + message;
             }
-            return withField(field, concise(invalidFormat.getOriginalMessage()));
         }
-        if (cause instanceof MismatchedInputException mismatched) {
-            return withField(jsonPath(mismatched), concise(mismatched.getOriginalMessage()));
-        }
-        return concise(cause.getMessage());
+        return message;
     }
 
     private static String jsonPath(JsonMappingException ex) {
@@ -136,11 +119,6 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
                 .map(JsonMappingException.Reference::getFieldName)
                 .filter(Objects::nonNull)
                 .collect(Collectors.joining("."));
-    }
-
-    private static String withField(String field, String message) {
-        String detail = concise(message);
-        return field == null || field.isBlank() ? detail : field + ": " + detail;
     }
 
     private static String concise(String message) {
@@ -155,25 +133,21 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return value.length() <= 300 ? value : value.substring(0, 300) + "...";
     }
 
-    /** Translates a Java property path into the JSON field name configured for the API. */
-    private String jsonFieldName(String path) {
+    /** Translates a Java property path into the SNAKE_CASE JSON field names used by the API. */
+    private static String jsonFieldName(String path) {
         if (path == null || path.isBlank()) {
             return path;
         }
-        PropertyNamingStrategy strategy = objectMapper.getSerializationConfig().getPropertyNamingStrategy();
-        if (strategy == null) {
-            return path;
-        }
         return Arrays.stream(path.split("\\."))
-                .map(segment -> translateSegment(segment, strategy))
+                .map(GlobalExceptionHandler::jsonFieldSegment)
                 .collect(Collectors.joining("."));
     }
 
-    private static String translateSegment(String segment, PropertyNamingStrategy strategy) {
+    private static String jsonFieldSegment(String segment) {
         int bracket = segment.indexOf('[');
         String field = bracket < 0 ? segment : segment.substring(0, bracket);
         String suffix = bracket < 0 ? "" : segment.substring(bracket);
-        String translated = strategy.nameForField(null, null, field);
+        String translated = PropertyNamingStrategies.SNAKE_CASE.nameForField(null, null, field);
         return (translated != null ? translated : field) + suffix;
     }
 

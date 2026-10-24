@@ -92,6 +92,7 @@ public class TableAutoRegistrationService {
         }
 
         if (!registeredTableIds.isEmpty()) {
+            // Flush auto-registered tables before writing their derived index documents.
             tableInfoDAO.flush();
         }
         saveIndexDocs(docs);

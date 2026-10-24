@@ -40,7 +40,7 @@ class TemplatePreviewControllerTest {
                 new SystemVariableResolver()
         );
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
-                .setControllerAdvice(new GlobalExceptionHandler(new ObjectMapper()))
+                .setControllerAdvice(new GlobalExceptionHandler())
                 .build();
         objectMapper = new ObjectMapper();
     }

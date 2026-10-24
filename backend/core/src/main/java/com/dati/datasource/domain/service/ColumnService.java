@@ -59,9 +59,8 @@ public class ColumnService {
         this.termRelationDAO = termRelationDAO;
     }
 
-    public Page<ColumnInfo> getColumns(PageReq pageReq, String tableId, String keyword) {
-        TableInfoPO tablePO = tableInfoDAO.findById(tableId)
-                .orElseThrow(() -> new DatiException(ErrorCode.DS_TABLE_NOT_FOUND, tableId));
+    public Page<ColumnInfo> getColumns(PageReq pageReq, String datasourceId, String tableId, String keyword) {
+        TableInfoPO tablePO = requireTableInPath(datasourceId, tableId);
         permissionService.requireDataSource(tablePO.getDataSourceId(), Permission.VIEW);
 
         Sort sortBy = Sort.by(Sort.Direction.ASC, BasePO.Fields.createdAt);
@@ -72,11 +71,13 @@ public class ColumnService {
     }
 
     @Transactional
-    public void updateColumn(String id, ColumnInfo columnInfo) {
+    public void updateColumn(String datasourceId, String tableId, String id, ColumnInfo columnInfo) {
         ColumnInfoPO columnInfoPO = columnInfoDAO.findById(id)
                 .orElseThrow(() -> new DatiException(ErrorCode.DS_COLUMN_NOT_FOUND, id));
-        TableInfoPO tablePO = tableInfoDAO.findById(columnInfoPO.getTableId())
-                .orElseThrow(() -> new DatiException(ErrorCode.DS_TABLE_NOT_FOUND, columnInfoPO.getTableId()));
+        if (!Objects.equals(columnInfoPO.getTableId(), tableId)) {
+            throw new DatiException(ErrorCode.DS_COLUMN_NOT_FOUND, id);
+        }
+        TableInfoPO tablePO = requireTableInPath(datasourceId, tableId);
         permissionService.requireDataSource(tablePO.getDataSourceId(), Permission.EDIT);
 
         boolean wasEnabled = columnInfoPO.isExtractValueEnabled();
@@ -97,6 +98,7 @@ public class ColumnService {
             columnInfoPO.setUpdatedBy(columnInfo.getUpdatedBy());
         }
         boolean nowEnabled = columnInfoPO.isExtractValueEnabled();
+        // Flush before updating the derived field document.
         columnInfoDAO.saveAndFlush(columnInfoPO);
 
         // 从开启变为禁用，清理该列的值数据
@@ -108,7 +110,7 @@ public class ColumnService {
             );
         }
 
-        TableInfo tableInfo = TableMapper.toTableInfo(tableInfoDAO.findById(columnInfoPO.getTableId()).orElseThrow());
+        TableInfo tableInfo = TableMapper.toTableInfo(tablePO);
         EntityReference entity = EntityReference.builder()
                 .datasourceId(tableInfo.getDatasourceId())
                 .tableId(tableInfo.getId())
@@ -132,10 +134,9 @@ public class ColumnService {
 
     @Transactional
     public void syncColumns(String datasourceId, String tableId, boolean overwriteExisting) throws SQLException {
-        permissionService.requireDataSource(datasourceId, Permission.EDIT);
-        TableInfo tableInfo = TableMapper.toTableInfo(tableInfoDAO.findById(tableId)
-                .filter(table -> Objects.equals(table.getDataSourceId(), datasourceId))
-                .orElseThrow(() -> new DatiException(ErrorCode.DS_TABLE_NOT_FOUND, tableId)));
+        TableInfoPO tablePO = requireTableInPath(datasourceId, tableId);
+        permissionService.requireDataSource(tablePO.getDataSourceId(), Permission.EDIT);
+        TableInfo tableInfo = TableMapper.toTableInfo(tablePO);
         
         Map<String, ColumnInfoPO> existingColumns = columnInfoDAO.findByTableId(tableId)
                 .stream()
@@ -188,6 +189,7 @@ public class ColumnService {
         }).toList();
         
         List<ColumnInfoPO> savedList = columnInfoDAO.saveAll(columnInfoPOList);
+        // Flush column changes before rebuilding the derived field documents.
         columnInfoDAO.flush();
         
         // FIELD 结构索引整表重建；重建前保留既有文档的 createdTime（删除后无法再从索引读回）
@@ -231,27 +233,17 @@ public class ColumnService {
     }
 
     /**
-     * Verifies that the table exists under the data source in the request path. A mismatch is
-     * reported as "table not found" so a path from another data source never operates on it.
+     * Loads the table and verifies it belongs to the data source in the request path. A
+     * mismatch is reported as "table not found" so a path from another data source never
+     * operates on it.
      */
-    public void requireTableInPath(String datasourceId, String tableId) {
+    private TableInfoPO requireTableInPath(String datasourceId, String tableId) {
         TableInfoPO table = tableInfoDAO.findById(tableId)
                 .orElseThrow(() -> new DatiException(ErrorCode.DS_TABLE_NOT_FOUND, tableId));
         if (!Objects.equals(table.getDataSourceId(), datasourceId)) {
             throw new DatiException(ErrorCode.DS_TABLE_NOT_FOUND, tableId);
         }
-    }
-
-    /**
-     * Verifies the full (data source, table, column) ownership chain of a column sub-resource.
-     */
-    public void requireColumnInPath(String datasourceId, String tableId, String columnId) {
-        ColumnInfoPO column = columnInfoDAO.findById(columnId)
-                .orElseThrow(() -> new DatiException(ErrorCode.DS_COLUMN_NOT_FOUND, columnId));
-        if (!Objects.equals(column.getTableId(), tableId)) {
-            throw new DatiException(ErrorCode.DS_COLUMN_NOT_FOUND, columnId);
-        }
-        requireTableInPath(datasourceId, tableId);
+        return table;
     }
 
 }

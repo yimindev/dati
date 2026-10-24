@@ -95,7 +95,7 @@ class ColumnServiceTest {
             .thenReturn(page);
 
         // when
-        Page<ColumnInfo> result = columnService.getColumns(pageReq, TestFixtures.TEST_TABLE_ID, null);
+        Page<ColumnInfo> result = columnService.getColumns(pageReq, TestFixtures.TEST_DATASOURCE_ID, TestFixtures.TEST_TABLE_ID, null);
 
         // then
         assertThat(result.getContent()).hasSize(1);
@@ -115,7 +115,7 @@ class ColumnServiceTest {
             .thenReturn(page);
 
         // when
-        Page<ColumnInfo> result = columnService.getColumns(pageReq, TestFixtures.TEST_TABLE_ID, "test");
+        Page<ColumnInfo> result = columnService.getColumns(pageReq, TestFixtures.TEST_DATASOURCE_ID, TestFixtures.TEST_TABLE_ID, "test");
 
         // then
         assertThat(result.getContent()).hasSize(1);
@@ -138,7 +138,7 @@ class ColumnServiceTest {
         updateInfo.setUpdatedBy("user-2");
 
         // when
-        columnService.updateColumn(TestFixtures.TEST_COLUMN_ID, updateInfo);
+        columnService.updateColumn(TestFixtures.TEST_DATASOURCE_ID, TestFixtures.TEST_TABLE_ID, TestFixtures.TEST_COLUMN_ID, updateInfo);
 
         // then
         verify(columnInfoDAO).findById(TestFixtures.TEST_COLUMN_ID);
@@ -178,7 +178,7 @@ class ColumnServiceTest {
         updateInfo.setExtractValueEnabled(false);
 
         // when
-        columnService.updateColumn(TestFixtures.TEST_COLUMN_ID, updateInfo);
+        columnService.updateColumn(TestFixtures.TEST_DATASOURCE_ID, TestFixtures.TEST_TABLE_ID, TestFixtures.TEST_COLUMN_ID, updateInfo);
 
         // then
         verify(columnInfoDAO).saveAndFlush(argThat(po -> !po.isExtractValueEnabled()));
@@ -201,7 +201,7 @@ class ColumnServiceTest {
         updateInfo.setExtractValueEnabled(false);
 
         // when
-        columnService.updateColumn(TestFixtures.TEST_COLUMN_ID, updateInfo);
+        columnService.updateColumn(TestFixtures.TEST_DATASOURCE_ID, TestFixtures.TEST_TABLE_ID, TestFixtures.TEST_COLUMN_ID, updateInfo);
 
         // then
         verify(columnInfoDAO).saveAndFlush(any());
@@ -224,7 +224,7 @@ class ColumnServiceTest {
         // extractValueEnabled is left null (omitted)
 
         // when
-        columnService.updateColumn(TestFixtures.TEST_COLUMN_ID, updateInfo);
+        columnService.updateColumn(TestFixtures.TEST_DATASOURCE_ID, TestFixtures.TEST_TABLE_ID, TestFixtures.TEST_COLUMN_ID, updateInfo);
 
         // then
         verify(columnInfoDAO).saveAndFlush(argThat(ColumnInfoPO::isExtractValueEnabled));
@@ -246,7 +246,7 @@ class ColumnServiceTest {
         // description is left null
 
         // when
-        columnService.updateColumn(TestFixtures.TEST_COLUMN_ID, updateInfo);
+        columnService.updateColumn(TestFixtures.TEST_DATASOURCE_ID, TestFixtures.TEST_TABLE_ID, TestFixtures.TEST_COLUMN_ID, updateInfo);
 
         // then
         ArgumentCaptor<SemanticSearchDocument> docCaptor = ArgumentCaptor.forClass(SemanticSearchDocument.class);
@@ -270,7 +270,7 @@ class ColumnServiceTest {
         // aliases is left null (omitted)
 
         // when
-        columnService.updateColumn(TestFixtures.TEST_COLUMN_ID, updateInfo);
+        columnService.updateColumn(TestFixtures.TEST_DATASOURCE_ID, TestFixtures.TEST_TABLE_ID, TestFixtures.TEST_COLUMN_ID, updateInfo);
 
         // then
         verify(columnInfoDAO).saveAndFlush(argThat(po -> po.getAliases() != null
@@ -285,28 +285,29 @@ class ColumnServiceTest {
 
         // when & then
         assertThrows(Exception.class, () ->
-            columnService.updateColumn(TestFixtures.TEST_COLUMN_ID, testColumnInfo)
+            columnService.updateColumn(TestFixtures.TEST_DATASOURCE_ID, TestFixtures.TEST_TABLE_ID, TestFixtures.TEST_COLUMN_ID, testColumnInfo)
         );
         verify(columnInfoDAO, never()).save(any());
     }
 
     @Test
-    @DisplayName("Path validation - rejects a table that does not belong to the path datasource")
-    void requireTableInPath_shouldRejectMismatchedDatasource() {
+    @DisplayName("Paged query columns - rejects a table from another datasource")
+    void getColumns_shouldRejectTableFromAnotherDatasource() {
         when(tableInfoDAO.findById(TestFixtures.TEST_TABLE_ID)).thenReturn(Optional.of(testTableInfoPO));
 
-        assertThatThrownBy(() -> columnService.requireTableInPath("ds-other", TestFixtures.TEST_TABLE_ID))
+        assertThatThrownBy(() -> columnService.getColumns(
+                new PageReq(), "ds-other", TestFixtures.TEST_TABLE_ID, null))
             .isInstanceOf(DatiException.class)
             .satisfies(e -> assertThat(((DatiException) e).getCode()).isEqualTo(ErrorCode.DS_TABLE_NOT_FOUND));
     }
 
     @Test
-    @DisplayName("Path validation - rejects a column that does not belong to the path table")
-    void requireColumnInPath_shouldRejectMismatchedTable() {
+    @DisplayName("Update column - rejects a column from another table")
+    void updateColumn_shouldRejectColumnFromAnotherTable() {
         when(columnInfoDAO.findById(TestFixtures.TEST_COLUMN_ID)).thenReturn(Optional.of(testColumnInfoPO));
 
-        assertThatThrownBy(() -> columnService.requireColumnInPath(
-                TestFixtures.TEST_DATASOURCE_ID, "table-other", TestFixtures.TEST_COLUMN_ID))
+        assertThatThrownBy(() -> columnService.updateColumn(
+                TestFixtures.TEST_DATASOURCE_ID, "table-other", TestFixtures.TEST_COLUMN_ID, testColumnInfo))
             .isInstanceOf(DatiException.class)
             .satisfies(e -> assertThat(((DatiException) e).getCode()).isEqualTo(ErrorCode.DS_COLUMN_NOT_FOUND));
     }

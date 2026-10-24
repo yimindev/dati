@@ -77,7 +77,8 @@ class ColumnControllerTest {
     void getColumns_shouldReturnPagedResults() throws Exception {
         // given
         Page<ColumnInfo> page = new PageImpl<>(List.of(testColumnInfo));
-        when(columnService.getColumns(any(), eq(TestFixtures.TEST_TABLE_ID), any()))
+        when(columnService.getColumns(any(), eq(TestFixtures.TEST_DATASOURCE_ID),
+                eq(TestFixtures.TEST_TABLE_ID), any()))
             .thenReturn(page);
 
         ColumnInfoVO vo = new ColumnInfoVO();
@@ -106,7 +107,8 @@ class ColumnControllerTest {
     void getColumns_withKeyword_shouldReturnFilteredResults() throws Exception {
         // given
         Page<ColumnInfo> page = new PageImpl<>(List.of(testColumnInfo));
-        when(columnService.getColumns(any(), eq(TestFixtures.TEST_TABLE_ID), eq("id")))
+        when(columnService.getColumns(any(), eq(TestFixtures.TEST_DATASOURCE_ID),
+                eq(TestFixtures.TEST_TABLE_ID), eq("id")))
             .thenReturn(page);
 
         ColumnInfoVO vo = new ColumnInfoVO();
@@ -136,7 +138,8 @@ class ColumnControllerTest {
         ColumnInfo columnInfo = TestFixtures.createTestColumnInfo();
 
         when(columnAssembler.toColumnInfo(any())).thenReturn(columnInfo);
-        doNothing().when(columnService).updateColumn(eq(TestFixtures.TEST_COLUMN_ID), any());
+        doNothing().when(columnService).updateColumn(eq(TestFixtures.TEST_DATASOURCE_ID),
+                eq(TestFixtures.TEST_TABLE_ID), eq(TestFixtures.TEST_COLUMN_ID), any());
 
         // when & then
         mockMvc.perform(put("/v1/data-sources/{datasourceId}/tables/{tableId}/columns/{id}",
@@ -146,14 +149,16 @@ class ColumnControllerTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.id").value(TestFixtures.TEST_COLUMN_ID));
 
-        verify(columnService).updateColumn(eq(TestFixtures.TEST_COLUMN_ID), any());
+        verify(columnService).updateColumn(eq(TestFixtures.TEST_DATASOURCE_ID),
+                eq(TestFixtures.TEST_TABLE_ID), eq(TestFixtures.TEST_COLUMN_ID), any());
     }
 
     @Test
     @DisplayName("Get columns - rejects a table outside the path datasource")
     void getColumns_whenTableOutsidePath_returns404() throws Exception {
         doThrow(new DatiException(ErrorCode.DS_TABLE_NOT_FOUND, TestFixtures.TEST_TABLE_ID))
-            .when(columnService).requireTableInPath("ds-other", TestFixtures.TEST_TABLE_ID);
+            .when(columnService).getColumns(any(), eq("ds-other"),
+                eq(TestFixtures.TEST_TABLE_ID), any());
 
         mockMvc.perform(get("/v1/data-sources/{datasourceId}/tables/{tableId}/columns",
                     "ds-other", TestFixtures.TEST_TABLE_ID)
@@ -162,7 +167,8 @@ class ColumnControllerTest {
             .andExpect(status().isNotFound())
             .andExpect(jsonPath("$.code").value("DS007"));
 
-        verify(columnService, never()).getColumns(any(), anyString(), any());
+        verify(columnService).getColumns(any(), eq("ds-other"),
+            eq(TestFixtures.TEST_TABLE_ID), any());
     }
 
     @Test
@@ -170,7 +176,8 @@ class ColumnControllerTest {
     void updateColumn_whenColumnOutsidePath_returns404() throws Exception {
         UpdateColumnRequest request = new UpdateColumnRequest();
         doThrow(new DatiException(ErrorCode.DS_COLUMN_NOT_FOUND, TestFixtures.TEST_COLUMN_ID))
-            .when(columnService).requireColumnInPath("ds-other", TestFixtures.TEST_TABLE_ID, TestFixtures.TEST_COLUMN_ID);
+            .when(columnService).updateColumn(eq("ds-other"), eq(TestFixtures.TEST_TABLE_ID),
+                eq(TestFixtures.TEST_COLUMN_ID), any());
 
         mockMvc.perform(put("/v1/data-sources/{datasourceId}/tables/{tableId}/columns/{id}",
                     "ds-other", TestFixtures.TEST_TABLE_ID, TestFixtures.TEST_COLUMN_ID)
@@ -178,15 +185,14 @@ class ColumnControllerTest {
                 .content(objectMapper.writeValueAsString(request)))
             .andExpect(status().isNotFound())
             .andExpect(jsonPath("$.code").value("DS008"));
-
-        verify(columnService, never()).updateColumn(anyString(), any());
     }
 
     @Test
     @DisplayName("Extract values - rejects a column outside the path table")
     void extractValues_whenColumnOutsidePath_returns404() throws Exception {
         doThrow(new DatiException(ErrorCode.DS_COLUMN_NOT_FOUND, TestFixtures.TEST_COLUMN_ID))
-            .when(columnService).requireColumnInPath("ds-other", TestFixtures.TEST_TABLE_ID, TestFixtures.TEST_COLUMN_ID);
+            .when(columnValueService).extractValues(eq("ds-other"), eq(TestFixtures.TEST_TABLE_ID),
+                eq(TestFixtures.TEST_COLUMN_ID), eq(false));
 
         mockMvc.perform(post("/v1/data-sources/{datasourceId}/tables/{tableId}/columns/{columnId}/values/extract",
                     "ds-other", TestFixtures.TEST_TABLE_ID, TestFixtures.TEST_COLUMN_ID))
@@ -232,7 +238,7 @@ class ColumnControllerTest {
         UpdateColumnRequest request = new UpdateColumnRequest();
 
         when(columnAssembler.toColumnInfo(any())).thenReturn(testColumnInfo);
-        doNothing().when(columnService).updateColumn(anyString(), any());
+        doNothing().when(columnService).updateColumn(anyString(), anyString(), anyString(), any());
 
         // when & then
         mockMvc.perform(put("/v1/data-sources/{datasourceId}/tables/{tableId}/columns/{id}",
@@ -242,7 +248,8 @@ class ColumnControllerTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.id").value("specific-column-id"));
 
-        verify(columnService).updateColumn(eq("specific-column-id"), any());
+        verify(columnService).updateColumn(eq(TestFixtures.TEST_DATASOURCE_ID),
+            eq(TestFixtures.TEST_TABLE_ID), eq("specific-column-id"), any());
     }
 
     @Test
@@ -250,7 +257,8 @@ class ColumnControllerTest {
     void getColumns_shouldPassCorrectPathParams() throws Exception {
         // given
         Page<ColumnInfo> page = new PageImpl<>(List.of());
-        when(columnService.getColumns(any(), eq(TestFixtures.TEST_TABLE_ID), isNull()))
+        when(columnService.getColumns(any(), eq(TestFixtures.TEST_DATASOURCE_ID),
+                eq(TestFixtures.TEST_TABLE_ID), isNull()))
             .thenReturn(page);
 
         // when & then
@@ -260,7 +268,8 @@ class ColumnControllerTest {
                 .param("page_size", "10"))
             .andExpect(status().isOk());
 
-        verify(columnService).getColumns(any(), eq(TestFixtures.TEST_TABLE_ID), isNull());
+        verify(columnService).getColumns(any(), eq(TestFixtures.TEST_DATASOURCE_ID),
+            eq(TestFixtures.TEST_TABLE_ID), isNull());
     }
 
     @Test
@@ -277,7 +286,8 @@ class ColumnControllerTest {
                 PageRequest.of(0, 10),
                 1
         );
-        when(columnValueService.getValues(anyString(), any(PageReq.class), isNull())).thenReturn(page);
+        when(columnValueService.getValues(anyString(), anyString(), anyString(),
+                any(PageReq.class), isNull())).thenReturn(page);
 
         // when & then
         mockMvc.perform(get("/v1/data-sources/{dsId}/tables/{tableId}/columns/{columnId}/values",

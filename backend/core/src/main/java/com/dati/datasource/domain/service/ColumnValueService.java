@@ -23,6 +23,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -52,18 +53,13 @@ public class ColumnValueService {
         this.permissionService = permissionService;
     }
 
-    public void extractValues(String datasourceId, String columnId, boolean overwrite) throws SQLException {
-        ColumnInfoPO columnPO = columnInfoDAO.findById(columnId)
-                .orElseThrow(() -> new DatiException(ErrorCode.DS_COLUMN_NOT_FOUND, columnId));
-        TableInfoPO tablePO = tableInfoDAO.findById(columnPO.getTableId())
-                .orElseThrow(() -> new DatiException(ErrorCode.DS_TABLE_NOT_FOUND, columnPO.getTableId()));
-
-        if (datasourceId != null && !datasourceId.equals(tablePO.getDataSourceId())) {
-            throw new DatiException(ErrorCode.DS_TABLE_NOT_FOUND, tablePO.getId());
-        }
+    public void extractValues(String datasourceId, String tableId, String columnId, boolean overwrite)
+            throws SQLException {
+        ColumnPath path = requireColumnInPath(datasourceId, tableId, columnId);
+        ColumnInfoPO columnPO = path.column();
+        TableInfoPO tablePO = path.table();
         permissionService.requireDataSource(tablePO.getDataSourceId(), Permission.EDIT);
 
-        String tableId = columnPO.getTableId();
         String columnName = columnPO.getName();
 
         if (overwrite) {
@@ -135,13 +131,12 @@ public class ColumnValueService {
         return item;
     }
 
-    public void saveValues(String columnId, List<ValueItem> values, List<String> deletedIds) {
-        ColumnInfoPO columnPO = columnInfoDAO.findById(columnId)
-                .orElseThrow(() -> new DatiException(ErrorCode.DS_COLUMN_NOT_FOUND, columnId));
-        TableInfoPO tablePO = tableInfoDAO.findById(columnPO.getTableId())
-                .orElseThrow(() -> new DatiException(ErrorCode.DS_TABLE_NOT_FOUND, columnPO.getTableId()));
-        String datasourceId = tablePO.getDataSourceId();
-        permissionService.requireDataSource(datasourceId, Permission.EDIT);
+    public void saveValues(String datasourceId, String tableId, String columnId,
+                           List<ValueItem> values, List<String> deletedIds) {
+        ColumnPath path = requireColumnInPath(datasourceId, tableId, columnId);
+        ColumnInfoPO columnPO = path.column();
+        String actualDatasourceId = path.table().getDataSourceId();
+        permissionService.requireDataSource(actualDatasourceId, Permission.EDIT);
 
         if (deletedIds != null && !deletedIds.isEmpty()) {
             for (String id : deletedIds) {
@@ -153,7 +148,7 @@ public class ColumnValueService {
             List<SemanticSearchDocument> docs = new ArrayList<>();
             for (ValueItem item : values) {
                 EntityReference entity = EntityReference.builder()
-                        .datasourceId(datasourceId)
+                        .datasourceId(actualDatasourceId)
                         .tableId(columnPO.getTableId())
                         .field(columnPO.getName())
                         .build();
@@ -180,12 +175,11 @@ public class ColumnValueService {
         }
     }
 
-    public Page<ValueItem> getValues(String columnId, PageReq pageReq, String keyword) {
-        ColumnInfoPO columnPO = columnInfoDAO.findById(columnId)
-                .orElseThrow(() -> new DatiException(ErrorCode.DS_COLUMN_NOT_FOUND, columnId));
-        TableInfoPO tablePO = tableInfoDAO.findById(columnPO.getTableId())
-                .orElseThrow(() -> new DatiException(ErrorCode.DS_TABLE_NOT_FOUND, columnPO.getTableId()));
-        permissionService.requireDataSource(tablePO.getDataSourceId(), Permission.VIEW);
+    public Page<ValueItem> getValues(String datasourceId, String tableId, String columnId,
+                                     PageReq pageReq, String keyword) {
+        ColumnPath path = requireColumnInPath(datasourceId, tableId, columnId);
+        ColumnInfoPO columnPO = path.column();
+        permissionService.requireDataSource(path.table().getDataSourceId(), Permission.VIEW);
 
         Page<SemanticSearchDocument> docsPage = semanticIndexService.findByTableFieldAndTypePaginated(
                 columnPO.getTableId(),
@@ -196,6 +190,24 @@ public class ColumnValueService {
         );
 
         return docsPage.map(ColumnValueService::toValueItem);
+    }
+
+    private ColumnPath requireColumnInPath(String datasourceId, String tableId, String columnId) {
+        ColumnInfoPO column = columnInfoDAO.findById(columnId)
+                .orElseThrow(() -> new DatiException(ErrorCode.DS_COLUMN_NOT_FOUND, columnId));
+        if (!Objects.equals(column.getTableId(), tableId)) {
+            throw new DatiException(ErrorCode.DS_COLUMN_NOT_FOUND, columnId);
+        }
+
+        TableInfoPO table = tableInfoDAO.findById(tableId)
+                .orElseThrow(() -> new DatiException(ErrorCode.DS_TABLE_NOT_FOUND, tableId));
+        if (!Objects.equals(table.getDataSourceId(), datasourceId)) {
+            throw new DatiException(ErrorCode.DS_TABLE_NOT_FOUND, tableId);
+        }
+        return new ColumnPath(column, table);
+    }
+
+    private record ColumnPath(ColumnInfoPO column, TableInfoPO table) {
     }
 
     @Data

@@ -188,6 +188,7 @@ public class TableService {
             }
         }
 
+        // Flush tables/columns before writing their derived index documents.
         tableInfoDAO.flush();
         semanticIndexService.saveBatch(docsToSave);
         return tableIds;
@@ -228,6 +229,7 @@ public class TableService {
         termRelationDAO.deleteByTableIdIn(tableIds);
         columnInfoDAO.deleteByTableIdIn(tableIds);
         tableInfoDAO.deleteAllById(tableIds);
+        // Flush the deletes before removing their derived index documents.
         tableInfoDAO.flush();
         semanticIndexService.deleteByEntityTableIds(tableIds);
     }
@@ -249,6 +251,7 @@ public class TableService {
         if (tableInfo.getUpdatedBy() != null) {
             existingPO.setUpdatedBy(tableInfo.getUpdatedBy());
         }
+        // Flush before updating the derived table document.
         tableInfoDAO.saveAndFlush(existingPO);
 
         EntityReference entity = EntityReference.builder()

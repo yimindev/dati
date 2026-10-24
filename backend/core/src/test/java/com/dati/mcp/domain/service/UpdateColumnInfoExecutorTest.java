@@ -82,7 +82,7 @@ class UpdateColumnInfoExecutorTest {
         MetadataUpdateData data = (MetadataUpdateData) executor.execute(ctx(args));
 
         ArgumentCaptor<ColumnInfo> colCaptor = ArgumentCaptor.forClass(ColumnInfo.class);
-        verify(columnService).updateColumn(eq("c1"), colCaptor.capture());
+        verify(columnService).updateColumn(eq("ds-1"), eq("t1"), eq("c1"), colCaptor.capture());
         assertThat(colCaptor.getValue().getDescription()).isEqualTo("order status");
         assertThat(colCaptor.getValue().getAliases()).containsExactly("stat");
         assertThat(colCaptor.getValue().getExtractValueEnabled()).isNull();
@@ -137,7 +137,7 @@ class UpdateColumnInfoExecutorTest {
         assertThat(result.success()).isFalse();
         assertThat(result.error().errorCategory()).isEqualTo("PARAM_ERROR");
         assertThat(result.error().message()).contains("ghost");
-        verify(columnService, never()).updateColumn(any(), any());
+        verify(columnService, never()).updateColumn(any(), any(), any(), any());
         verify(auditLogDAO, never()).save(any());
     }
 
@@ -168,7 +168,8 @@ class UpdateColumnInfoExecutorTest {
             new UpdateColumnInfoArgs.UpdateColumnItem("ds-1", "public", "orders", "status", "d2", null)));
         MetadataUpdateData data = (MetadataUpdateData) executor.execute(ctx(args));
 
-        verify(columnService, org.mockito.Mockito.times(1)).updateColumn(any(), any());
+        verify(columnService, org.mockito.Mockito.times(1))
+            .updateColumn(any(), any(), any(), any());
         assertThat(data.results()).hasSize(1);
     }
 }

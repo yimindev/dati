@@ -72,6 +72,7 @@ public class SubjectService {
             permissionService.requireDataSource(subject.getDatasourceId(), Permission.VIEW);
         }
         SubjectPO subjectPO = SubjectMapper.toPO(subject);
+        // Flush before indexing so DB errors surface before the derived document is written.
         subjectDAO.saveAndFlush(subjectPO);
 
         String id = subjectPO.getId();
@@ -115,6 +116,7 @@ public class SubjectService {
         if (subject.getUpdatedBy() != null) {
             subjectPO.setUpdatedBy(subject.getUpdatedBy());
         }
+        // Flush before re-indexing for the same reason as create.
         subjectDAO.saveAndFlush(subjectPO);
 
         List<String> keywords = new ArrayList<>();
@@ -151,6 +153,7 @@ public class SubjectService {
         termDAO.deleteBySubjectId(id);
         subjectTableDAO.deleteBySubjectId(id);
         subjectDAO.deleteById(id);
+        // Flush the cascade before removing the derived subject/term documents.
         subjectDAO.flush();
         permissionService.onResourceDeleted(ResourceType.SUBJECT, id);
         semanticIndexService.deleteByEntity_SubjectId(id);

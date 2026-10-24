@@ -4,6 +4,7 @@ import com.dati.semantic.domain.SemanticEntityType;
 import com.dati.semantic.repository.dao.SemanticSearchDAO;
 import com.dati.semantic.repository.po.SemanticSearchDocument;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataAccessException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -21,9 +22,10 @@ import java.util.Optional;
  * Maintains the semantic search index.
  *
  * <p>The relational database is the source of truth; this index is derived data. Index
- * writes and deletes are therefore best-effort: failures are logged and never propagated,
- * because the business transaction has already succeeded and the index can be rebuilt by
- * re-syncing metadata. Search queries still fail normally when Elasticsearch is unavailable.
+ * writes and deletes are therefore best-effort: Elasticsearch failures are logged and never
+ * propagated, because the business transaction has already succeeded and the index is derived
+ * data that can be rebuilt from the relational store. Programming errors still propagate.
+ * Search queries still fail normally when Elasticsearch is unavailable.
  *
  * <p>Callers persist and flush business data before invoking the write methods, so database
  * constraint violations surface before the index is touched.
@@ -161,12 +163,13 @@ public class SemanticIndexService {
 
     /**
      * Runs an index update without letting an Elasticsearch failure escape into the caller's
-     * business transaction. The error is logged with enough context to identify the entity.
+     * business transaction. Other runtime errors still propagate so programming mistakes are
+     * not hidden. The error is logged with enough context to identify the entity.
      */
     private void runIndexUpdate(String operation, Runnable action) {
         try {
             action.run();
-        } catch (RuntimeException e) {
+        } catch (DataAccessException e) {
             log.error("Semantic index update failed: {}", operation, e);
         }
     }

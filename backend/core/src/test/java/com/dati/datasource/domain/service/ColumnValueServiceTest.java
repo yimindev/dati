@@ -116,7 +116,7 @@ class ColumnValueServiceTest {
                             Map.of("status", "inactive")
                     ));
 
-            columnValueService.extractValues("ds1", "col1", false);
+            columnValueService.extractValues("ds1", "table1", "col1", false);
 
             verify(semanticIndexService).saveBatch(captor.capture());
             List<SemanticSearchDocument> saved = captor.getValue();
@@ -138,7 +138,7 @@ class ColumnValueServiceTest {
             when(jdbcMetaService.executeSql(eq("ds1"), anyString()))
                     .thenReturn(List.of(row1, row2));
 
-            columnValueService.extractValues("ds1", "col1", false);
+            columnValueService.extractValues("ds1", "table1", "col1", false);
 
             verify(semanticIndexService).saveBatch(captor.capture());
             assertThat(captor.getValue()).hasSize(1);
@@ -153,7 +153,7 @@ class ColumnValueServiceTest {
             when(jdbcMetaService.executeSql(eq("ds1"), anyString()))
                     .thenReturn(List.of(Map.of("status", longValue)));
 
-            columnValueService.extractValues("ds1", "col1", false);
+            columnValueService.extractValues("ds1", "table1", "col1", false);
 
             verify(semanticIndexService).saveBatch(captor.capture());
             assertThat(captor.getValue().getFirst().getKeywords().getFirst()).hasSize(256);
@@ -170,7 +170,7 @@ class ColumnValueServiceTest {
             when(jdbcMetaService.executeSql(eq("ds1"), anyString()))
                     .thenReturn(List.of(Map.of("status", "new_value")));
 
-            columnValueService.extractValues("ds1", "col1", true);
+            columnValueService.extractValues("ds1", "table1", "col1", true);
 
             verify(semanticIndexService).deleteById("existing_id");
             verify(semanticIndexService).saveBatch(anyList());
@@ -183,7 +183,7 @@ class ColumnValueServiceTest {
             when(tableInfoDAO.findById("table1")).thenReturn(Optional.of(testTablePO)); // testTablePO has datasourceId="ds1"
 
             DatiException ex = assertThrows(DatiException.class, () ->
-                    columnValueService.extractValues("ds_wrong", "col1", false)
+                    columnValueService.extractValues("ds_wrong", "table1", "col1", false)
             );
             assertThat(ex.getCode()).isEqualTo(com.dati.base.exception.ErrorCode.DS_TABLE_NOT_FOUND);
         }
@@ -194,7 +194,7 @@ class ColumnValueServiceTest {
             when(columnInfoDAO.findById("invalid")).thenReturn(Optional.empty());
 
             DatiException ex = assertThrows(DatiException.class, () ->
-                    columnValueService.extractValues("ds1", "invalid", false)
+                    columnValueService.extractValues("ds1", "table1", "invalid", false)
             );
             assertThat(ex.getCode()).isEqualTo(com.dati.base.exception.ErrorCode.DS_COLUMN_NOT_FOUND);
         }
@@ -215,7 +215,7 @@ class ColumnValueServiceTest {
             newItem.setValue("北京");
             newItem.setSynonyms(List.of("帝都", "北漂之城"));
 
-            columnValueService.saveValues("col1", List.of(newItem), null);
+            columnValueService.saveValues("ds1", "table1", "col1", List.of(newItem), null);
 
             verify(semanticIndexService).saveBatch(captor.capture());
             List<SemanticSearchDocument> saved = captor.getValue();
@@ -227,7 +227,7 @@ class ColumnValueServiceTest {
         @Test
         @DisplayName("delete values: calls deleteById with deletedIds")
         void saveValues_deleteValues() {
-            columnValueService.saveValues("col1", null, List.of("id1", "id2"));
+            columnValueService.saveValues("ds1", "table1", "col1", null, List.of("id1", "id2"));
 
             verify(semanticIndexService).deleteById("id1");
             verify(semanticIndexService).deleteById("id2");
@@ -245,7 +245,7 @@ class ColumnValueServiceTest {
             newItem.setValue("广州");
             newItem.setSynonyms(List.of());
 
-            columnValueService.saveValues("col1", List.of(newItem), List.of("id_to_delete"));
+            columnValueService.saveValues("ds1", "table1", "col1", List.of(newItem), List.of("id_to_delete"));
 
             verify(semanticIndexService).deleteById("id_to_delete");
             verify(semanticIndexService).saveBatch(anyList());
@@ -254,7 +254,7 @@ class ColumnValueServiceTest {
         @Test
         @DisplayName("no-op: values and deletedIds both empty, nothing happens")
         void saveValues_emptyInput() {
-            columnValueService.saveValues("col1", null, null);
+            columnValueService.saveValues("ds1", "table1", "col1", null, null);
 
             verify(semanticIndexService, never()).saveBatch(anyList());
             verify(semanticIndexService, never()).deleteById(anyString());
@@ -266,7 +266,7 @@ class ColumnValueServiceTest {
             when(columnInfoDAO.findById("invalid")).thenReturn(Optional.empty());
 
             DatiException ex = assertThrows(DatiException.class, () ->
-                    columnValueService.saveValues("invalid", null, null)
+                    columnValueService.saveValues("ds1", "table1", "invalid", null, null)
             );
             assertThat(ex.getCode()).isEqualTo(com.dati.base.exception.ErrorCode.DS_COLUMN_NOT_FOUND);
         }
@@ -287,7 +287,7 @@ class ColumnValueServiceTest {
                     .thenReturn(new PageImpl<>(List.of(doc1, doc2), PageRequest.of(0, 10), 2));
             when(columnInfoDAO.findById("col1")).thenReturn(Optional.of(testColumnPO));
 
-            Page<ColumnValueService.ValueItem> result = columnValueService.getValues("col1", new PageReq(), null);
+            Page<ColumnValueService.ValueItem> result = columnValueService.getValues("ds1", "table1", "col1", new PageReq(), null);
 
             assertThat(result.getTotalElements()).isEqualTo(2);
             assertThat(result.getContent()).hasSize(2);
@@ -309,7 +309,7 @@ class ColumnValueServiceTest {
             when(columnInfoDAO.findById("invalid")).thenReturn(Optional.empty());
 
             DatiException ex = assertThrows(DatiException.class, () ->
-                    columnValueService.getValues("invalid", new PageReq(), null)
+                    columnValueService.getValues("ds1", "table1", "invalid", new PageReq(), null)
             );
             assertThat(ex.getCode()).isEqualTo(com.dati.base.exception.ErrorCode.DS_COLUMN_NOT_FOUND);
         }
@@ -326,7 +326,7 @@ class ColumnValueServiceTest {
                     .thenReturn(new PageImpl<>(List.of(), PageRequest.of(1, 20), 0));
             when(columnInfoDAO.findById("col1")).thenReturn(Optional.of(testColumnPO));
 
-            columnValueService.getValues("col1", pageReq, "北京");
+            columnValueService.getValues("ds1", "table1", "col1", pageReq, "北京");
 
             verify(semanticIndexService).findByTableFieldAndTypePaginated(
                     eq("table1"), eq("status"), eq(SemanticEntityType.FIELD_VALUE), eq("北京"),

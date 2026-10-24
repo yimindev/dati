@@ -69,6 +69,7 @@ public class TermService {
     public Term createTerm(Term term) {
         permissionService.requireSubject(term.getSubjectId(), Permission.EDIT);
         TermPO termPO = TermMapper.toPO(term);
+        // Flush before indexing so DB errors surface before the derived document is written.
         termDAO.saveAndFlush(termPO);
 
         String id = termPO.getId();
@@ -112,6 +113,7 @@ public class TermService {
         if (term.getUpdatedBy() != null) {
             termPO.setUpdatedBy(term.getUpdatedBy());
         }
+        // Flush before re-indexing for the same reason as create.
         termDAO.saveAndFlush(termPO);
 
         List<String> keywords = new java.util.ArrayList<>();
@@ -140,6 +142,7 @@ public class TermService {
         permissionService.requireSubject(termPO.getSubjectId(), Permission.EDIT);
         termRelationDAO.deleteByTermId(id);
         termDAO.deleteById(id);
+        // Flush the delete before removing the derived term document.
         termDAO.flush();
         semanticIndexService.deleteById("term:" + id);
     }
