@@ -26,6 +26,7 @@ import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -179,6 +180,37 @@ class TermControllerTest {
                 .content(objectMapper.writeValueAsString(request)))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.id").value("term-001"));
+    }
+
+    @Test
+    @DisplayName("Update Term - description-only partial update keeps name")
+    void updateTerm_shouldAllowDescriptionOnly() throws Exception {
+        Term term = new Term();
+        term.setId("term-001");
+        term.setSubjectId("subject-001");
+        term.setDescription("Updated Description");
+
+        doNothing().when(termAssembler).fillUpdateUserFromRequest(any());
+        when(termService.updateTerm(anyString(), any(Term.class))).thenReturn(term);
+
+        mockMvc.perform(put("/v1/terms/term-001")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"description\":\"Updated Description\"}"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.id").value("term-001"));
+
+        verify(termService).updateTerm(eq("term-001"), org.mockito.ArgumentMatchers.argThat(t ->
+                t.getName() == null && "Updated Description".equals(t.getDescription())));
+    }
+
+    @Test
+    @DisplayName("Update Term - blank name is rejected")
+    void updateTerm_blankName_shouldReturn400() throws Exception {
+        mockMvc.perform(put("/v1/terms/term-001")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":\"   \"}"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.code").value("CM001"));
     }
 
     @Test

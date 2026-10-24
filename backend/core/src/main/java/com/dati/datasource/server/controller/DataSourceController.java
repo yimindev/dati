@@ -10,6 +10,8 @@ import com.dati.datasource.domain.model.DataSource;
 import com.dati.datasource.domain.service.DataSourceService;
 import com.dati.datasource.server.assembler.DSAssembler;
 import com.dati.datasource.server.pojo.DatasourceVO;
+import com.dati.datasource.server.pojo.request.CreateDataSourceRequest;
+import com.dati.datasource.server.pojo.request.TestConnectionRequest;
 import com.dati.datasource.server.pojo.request.UpdateDataSourceRequest;
 import com.dati.db.Table;
 import jakarta.validation.Valid;
@@ -42,14 +44,37 @@ public class DataSourceController {
     }
 
     @PostMapping("/test-connection")
-    public boolean testConnection(@RequestBody DataSource dataSource) {
-        return dataSourceService.testConnection(dataSource);
+    public boolean testConnection(@RequestBody TestConnectionRequest request) {
+        return dataSourceService.testConnection(toDataSource(request));
     }
 
     @PostMapping
-    public IdResponse addDataSource(@Valid @RequestBody DataSource dataSource) {
+    public IdResponse addDataSource(@Valid @RequestBody CreateDataSourceRequest request) {
+        DataSource dataSource = toDataSource(request);
         dsAssembler.fillUsersFromRequest(dataSource);
         return new IdResponse(dataSourceService.addDataSource(dataSource));
+    }
+
+    private DataSource toDataSource(TestConnectionRequest request) {
+        DataSource dataSource = new DataSource();
+        dataSource.setType(request.getType());
+        dataSource.setJdbcUrl(request.getJdbcUrl());
+        dataSource.setUsername(request.getUsername());
+        dataSource.setPassword(request.getPassword());
+        dataSource.setDefaultSchema(request.getDefaultSchema());
+        return dataSource;
+    }
+
+    private DataSource toDataSource(CreateDataSourceRequest request) {
+        DataSource dataSource = new DataSource();
+        dataSource.setName(request.getName());
+        dataSource.setDescription(request.getDescription());
+        dataSource.setType(request.getType());
+        dataSource.setJdbcUrl(request.getJdbcUrl());
+        dataSource.setUsername(request.getUsername());
+        dataSource.setPassword(request.getPassword());
+        dataSource.setDefaultSchema(request.getDefaultSchema());
+        return dataSource;
     }
 
     @PutMapping("/{id}")

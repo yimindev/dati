@@ -191,7 +191,8 @@ class TableControllerTest {
     @DisplayName("Update table - passes path datasourceId to service")
     void updateTable_shouldPassDatasourceIdToService() throws Exception {
         // given
-        TableInfoVO vo = new TableInfoVO();
+        com.dati.datasource.server.pojo.request.UpdateTableRequest vo =
+                new com.dati.datasource.server.pojo.request.UpdateTableRequest();
         vo.setAliases(List.of("orders"));
         vo.setDescription("Order facts");
         TableInfo mapped = TestFixtures.createTestTableInfo();

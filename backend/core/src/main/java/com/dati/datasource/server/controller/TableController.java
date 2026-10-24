@@ -8,6 +8,7 @@ import com.dati.datasource.domain.service.TableService;
 import com.dati.datasource.server.assembler.TableAssembler;
 import com.dati.datasource.server.pojo.AddTableRequest;
 import com.dati.datasource.server.pojo.TableInfoVO;
+import com.dati.datasource.server.pojo.request.UpdateTableRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
@@ -54,8 +55,8 @@ public class TableController {
     public IdResponse updateTable(
             @PathVariable String datasourceId,
             @PathVariable String tableId,
-            @RequestBody TableInfoVO tableInfoVO) {
-        tableService.updateTable(datasourceId, tableId, tableAssembler.toTableInfo(tableInfoVO));
+            @Valid @RequestBody UpdateTableRequest request) {
+        tableService.updateTable(datasourceId, tableId, tableAssembler.toTableInfo(request));
         return new IdResponse(tableId);
     }
 

@@ -18,8 +18,16 @@ public class UpdateDataSourceRequest {
     @Size(max = 1024)
     private String description;
     private DbType type;
+
+    @Size(max = 256)
     private String jdbcUrl;
+
+    @Size(max = 64)
     private String username;
+
+    @Size(max = 512)
     private String password;
+
+    @Size(max = 256)
     private String defaultSchema;
 }

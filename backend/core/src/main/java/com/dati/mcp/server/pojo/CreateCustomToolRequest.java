@@ -3,6 +3,7 @@ package com.dati.mcp.server.pojo;
 import com.dati.mcp.domain.model.McpToolType;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 /**
@@ -15,6 +16,7 @@ import lombok.Data;
 public class CreateCustomToolRequest {
     @NotNull
     private McpToolType toolType;
+    @Size(max = 128)
     private String name;
     private String title;
     @NotBlank(message = "description is required")

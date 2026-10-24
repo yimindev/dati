@@ -2,6 +2,7 @@ package com.dati.datasource.server.assembler;
 
 import com.dati.datasource.domain.model.ColumnInfo;
 import com.dati.datasource.server.pojo.ColumnInfoVO;
+import com.dati.datasource.server.pojo.request.UpdateColumnRequest;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -22,9 +23,9 @@ class ColumnAssemblerTest {
     }
 
     @Test
-    @DisplayName("extractValueEnabled field conversion - VO to Model")
+    @DisplayName("extractValueEnabled field conversion - request to Model")
     void testAssemblerWithExtractValueFieldsReverse() {
-        ColumnInfoVO vo = new ColumnInfoVO();
+        UpdateColumnRequest vo = new UpdateColumnRequest();
         vo.setExtractValueEnabled(true);
 
         ColumnInfo info = columnAssembler.toColumnInfo(vo);

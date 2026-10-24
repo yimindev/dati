@@ -22,6 +22,7 @@ import com.dati.mcp.server.pojo.McpInvocationLogVO;
 import com.dati.mcp.server.pojo.McpServiceCreateRequest;
 import com.dati.mcp.server.pojo.McpServiceDiffVO;
 import com.dati.mcp.server.pojo.McpServiceSnapshotVO;
+import com.dati.mcp.server.pojo.McpServiceUpdateRequest;
 import com.dati.mcp.server.pojo.McpServiceVO;
 import com.dati.mcp.server.pojo.McpUsageStatsVO;
 import com.dati.mcp.server.pojo.PublishRequest;
@@ -99,7 +100,10 @@ public class McpServiceController {
     }
 
     @PutMapping("/{id}")
-    public IdResponse updateMcpService(@PathVariable String id, @Valid @RequestBody McpService service) {
+    public IdResponse updateMcpService(@PathVariable String id, @Valid @RequestBody McpServiceUpdateRequest request) {
+        McpService service = new McpService();
+        service.setName(request.getName());
+        service.setDescription(request.getDescription());
         mcpServiceAssembler.fillUpdateUserFromRequest(service);
         mcpServiceService.updateMcpService(id, service);
         return new IdResponse(id);
@@ -191,8 +195,8 @@ public class McpServiceController {
 
     @GetMapping("/{id}/invocation-logs")
     public PageResponse<McpInvocationLogVO> listInvocationLogs(@PathVariable String id,
-                                                               @RequestParam(required = false) String toolName,
-                                                               @RequestParam(required = false) Boolean success,
+                                                               @RequestParam(name = "tool_name", required = false) String toolName,
+                                                               @RequestParam(name = "success", required = false) Boolean success,
                                                                @Valid PageReq pageReq) {
         Pageable pageable = PageRequest.of(Math.max(0, pageReq.getPage() - 1), pageReq.getSize(), Sort.by(Sort.Direction.DESC, "createdAt"));
         Page<McpInvocationLogPO> page = mcpUsageService.listLogs(id, toolName, success, pageable);

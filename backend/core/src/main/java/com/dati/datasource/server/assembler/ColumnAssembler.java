@@ -4,6 +4,7 @@ import com.dati.base.BaseAssembler;
 import com.dati.base.pojo.PageResponse;
 import com.dati.datasource.domain.model.ColumnInfo;
 import com.dati.datasource.server.pojo.ColumnInfoVO;
+import com.dati.datasource.server.pojo.request.UpdateColumnRequest;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.stereotype.Component;
@@ -37,13 +38,13 @@ public class ColumnAssembler extends BaseAssembler {
         return PageResponse.of(new PageImpl<>(vos, page.getPageable(), page.getTotalElements()));
     }
 
-    public ColumnInfo toColumnInfo(ColumnInfoVO columnInfoVO) {
+    public ColumnInfo toColumnInfo(UpdateColumnRequest request) {
         ColumnInfo columnInfo = new ColumnInfo();
-        super.copyBaseInfo(columnInfoVO, columnInfo);
-        columnInfo.setTableId(columnInfoVO.getTableId());
-        columnInfo.setColumnType(columnInfoVO.getColumnType());
-        columnInfo.setAliases(columnInfoVO.getAliases());
-        columnInfo.setExtractValueEnabled(columnInfoVO.getExtractValueEnabled());
+        columnInfo.setName(request.getName());
+        columnInfo.setDescription(request.getDescription());
+        columnInfo.setColumnType(request.getColumnType());
+        columnInfo.setAliases(request.getAliases());
+        columnInfo.setExtractValueEnabled(request.getExtractValueEnabled());
         return columnInfo;
     }
 

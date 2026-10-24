@@ -262,6 +262,53 @@ class McpServiceControllerTest {
     }
 
     @Test
+    @DisplayName("Update MCP service - description-only partial update keeps name")
+    void updateMcpService_shouldAllowDescriptionOnly() throws Exception {
+        // given
+        doNothing().when(mcpServiceAssembler).fillUpdateUserFromRequest(any());
+        doNothing().when(mcpServiceService).updateMcpService(anyString(), any());
+
+        // when & then
+        mockMvc.perform(put("/v1/mcp-services/{id}", TestFixtures.TEST_MCP_SERVICE_ID)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                { "description": "Updated description" }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(TestFixtures.TEST_MCP_SERVICE_ID));
+
+        verify(mcpServiceService).updateMcpService(eq(TestFixtures.TEST_MCP_SERVICE_ID),
+                argThat(service -> service.getName() == null
+                        && "Updated description".equals(service.getDescription())));
+    }
+
+    @Test
+    @DisplayName("Update MCP service - blank name is rejected")
+    void updateMcpService_blankName_shouldReturn400() throws Exception {
+        mockMvc.perform(put("/v1/mcp-services/{id}", TestFixtures.TEST_MCP_SERVICE_ID)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                { "name": "   " }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("CM001"));
+    }
+
+    @Test
+    @DisplayName("List invocation logs - filters by tool_name query parameter")
+    void listInvocationLogs_shouldFilterByToolName() throws Exception {
+        when(mcpUsageService.listLogs(anyString(), any(), any(), any()))
+            .thenReturn(new PageImpl<>(List.of()));
+
+        mockMvc.perform(get("/v1/mcp-services/{id}/invocation-logs", TestFixtures.TEST_MCP_SERVICE_ID)
+                .param("tool_name", "execute_sql"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.total").value(0));
+
+        verify(mcpUsageService).listLogs(eq(TestFixtures.TEST_MCP_SERVICE_ID), eq("execute_sql"), any(), any());
+    }
+
+    @Test
     @DisplayName("Query MCP service detail - success")
     void getMcpService_shouldReturnDetail() throws Exception {
         // given

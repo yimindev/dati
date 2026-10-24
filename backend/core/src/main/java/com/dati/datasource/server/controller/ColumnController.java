@@ -13,6 +13,7 @@ import com.dati.datasource.server.assembler.ColumnAssembler;
 import com.dati.datasource.server.pojo.ColumnInfoVO;
 import com.dati.datasource.server.pojo.ColumnValueListRequest;
 import com.dati.datasource.server.pojo.ColumnValueVO;
+import com.dati.datasource.server.pojo.request.UpdateColumnRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -52,8 +53,8 @@ public class ColumnController {
     }
 
     @PutMapping("/{id}")
-    public IdResponse updateColumn(@PathVariable String id, @RequestBody ColumnInfoVO columnInfoVO) {
-        ColumnInfo columnInfo = columnAssembler.toColumnInfo(columnInfoVO);
+    public IdResponse updateColumn(@PathVariable String id, @Valid @RequestBody UpdateColumnRequest request) {
+        ColumnInfo columnInfo = columnAssembler.toColumnInfo(request);
         columnService.updateColumn(id, columnInfo);
         return new IdResponse(id);
     }

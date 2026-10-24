@@ -4,6 +4,7 @@ import com.dati.base.BaseAssembler;
 import com.dati.base.pojo.PageResponse;
 import com.dati.datasource.domain.model.TableInfo;
 import com.dati.datasource.server.pojo.TableInfoVO;
+import com.dati.datasource.server.pojo.request.UpdateTableRequest;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.stereotype.Component;
@@ -35,13 +36,10 @@ public class TableAssembler extends BaseAssembler {
         return PageResponse.of(new PageImpl<>(vos, page.getPageable(), page.getTotalElements()));
     }
 
-    public TableInfo toTableInfo(TableInfoVO vo) {
+    public TableInfo toTableInfo(UpdateTableRequest request) {
         TableInfo tableInfo = new TableInfo();
-        super.copyBaseInfo(vo, tableInfo);
-        tableInfo.setDatasourceId(vo.getDatasourceId());
-        tableInfo.setSchema(vo.getSchema());
-        tableInfo.setAliases(vo.getAliases());
-        tableInfo.setDescription(vo.getDescription());
+        tableInfo.setAliases(request.getAliases());
+        tableInfo.setDescription(request.getDescription());
         return tableInfo;
     }
 
