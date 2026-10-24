@@ -15,6 +15,9 @@ This file guides agentic coding assistants working on the DatI repository.
 3. **Stage new files to git before running tests.** Uncommitted changes make it harder to verify what was added or modified.
 4. **English in code, Chinese in docs.** Log messages, test `@DisplayName`, console output, and comments use English; Chinese is reserved for user-facing text (i18n) and PRD docs.
 5. **No backward compatibility during beta.** Unless explicitly required, do not support historical data, legacy APIs/fields, or old behavior; no migrations or compatibility shims. Prefer the cleanest design.
+6. **Comments describe the code, not the change behind it.** A comment states what a class, method, or field *is* or guarantees, in the present tense, for a reader who never saw the diff. Change notes — what broke, what was rejected, which bug it fixed — belong in the commit message, the PR, or `e2e-tests/BUGS*.yaml`. Do not define code by absence ("intentionally unvalidated", "deliberately free of X") or by history ("used to be", "before the fix"), and never cite bug IDs in code: a negative or historical remark rots the moment someone legitimately changes the code, and it makes a global class look like it exists to fight one past decision. When a reason must outlive the change, promote it to a rule here or in `.agents/rules/` and let a test enforce it.
+   - Good: `/** Every field is optional: omitted fields keep their stored value. */`
+   - Bad: `/** Deliberately no @NotBlank here — it broke partial updates in BUG-20261023-008. */`
 
 ## Commands
 
