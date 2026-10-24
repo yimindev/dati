@@ -35,6 +35,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anySet;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
@@ -42,6 +43,7 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -108,11 +110,9 @@ class ParameterizedSqlExecutorTest {
     }
 
     @Test
-    @DisplayName("execute - out-of-scope data source is rejected before the existence lookup")
-    void execute_outOfScopeDataSource_failsBeforeLookup() {
-        doThrow(new ToolExecuteException(ToolError.SCOPE_VIOLATION,
-                "Data source ghost not in service scope"))
-            .when(scopeValidator).validateScopeCoverage(anyList(), eq("ds-1"));
+    @DisplayName("execute - missing data source is reported as DATA_SOURCE_NOT_FOUND")
+    void execute_missingDataSource_usesDataSourceNotFound() {
+        when(dataSourceService.getDataSourceInternal("ds-1")).thenReturn(Optional.empty());
 
         ToolExecutionContext ctx = new ToolExecutionContext(
             "svc-1", McpToolType.PARAMETERIZED_SQL,
@@ -121,9 +121,11 @@ class ParameterizedSqlExecutorTest {
 
         assertThatThrownBy(() -> executor.execute(ctx))
             .isInstanceOf(ToolExecuteException.class)
-            .hasMessageContaining("not in service scope");
+            .hasMessage("Data source not found: ds-1")
+            .satisfies(e -> assertThat(((ToolExecuteException) e).getErrorCategory())
+                .isEqualTo("PARAM_ERROR"));
 
-        verifyNoInteractions(dataSourceService);
+        verifyNoInteractions(scopeValidator);
     }
 
     @Test
@@ -150,8 +152,8 @@ class ParameterizedSqlExecutorTest {
             assertThat(exec.results()).isEmpty();
         }
 
-        // table-level scope check still runs against the rendered SQL
-        verify(scopeValidator).validate(eq(List.of()), eq("ds-1"),
+        // the validator is the single entry point; table checks run against the rendered SQL
+        verify(scopeValidator, times(1)).validate(eq(List.of()), eq("ds-1"),
             argThat(tables -> tables.contains(new TableRef(null, "tasks"))),
             eq(Set.of()), eq("public"));
     }
@@ -160,7 +162,7 @@ class ParameterizedSqlExecutorTest {
     @DisplayName("execute - scope violation still enforced")
     void execute_scopeViolation_stillEnforced() {
         when(dataSourceService.getDataSourceInternal("ds-1")).thenReturn(Optional.of(dataSource()));
-        doThrow(new ToolExecuteException(ToolError.SCOPE_VIOLATION, "table 'tasks' not in scope"))
+        doThrow(new ToolExecuteException(ToolError.SCOPE_VIOLATION, "Table tasks not in service scope"))
             .when(scopeValidator).validate(any(), any(), any(), any(), any());
 
         ToolExecutionContext ctx = new ToolExecutionContext(

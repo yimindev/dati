@@ -57,8 +57,6 @@ public class ExecuteSqlExecutor implements ToolExecutor {
 
         policy.validate(analysis);
 
-        scopeValidator.validateScopeCoverage(ctx.scopeItems(), dsId);
-
         DataSource dataSource = dataSourceService.getDataSourceInternal(dsId)
             .orElseThrow(() -> new ToolExecuteException(ToolError.DATA_SOURCE_NOT_FOUND, dsId));
 

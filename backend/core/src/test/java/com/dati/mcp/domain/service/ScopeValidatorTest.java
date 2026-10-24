@@ -78,6 +78,13 @@ class ScopeValidatorTest {
         return po;
     }
 
+    /** Calls the production entry point with the given default schema. */
+    private void validate(List<McpServiceDataScope> scopeItems, String dsId,
+                          Set<TableRef> referencedTables, Set<TableRef> createdTables,
+                          String defaultSchema) {
+        validator.validate(scopeItems, dsId, referencedTables, createdTables, defaultSchema);
+    }
+
     private static SubjectPO subject() {
         SubjectPO po = new SubjectPO();
         po.setId("sub-1");
@@ -90,6 +97,18 @@ class ScopeValidatorTest {
     void shouldRejectEmptyScope() {
         assertThatThrownBy(() -> validator.validate(List.of(), DS_ID, Set.of(), Set.of(), null))
             .isInstanceOf(ToolExecuteException.class)
+            .hasMessage("No data scope configured")
+            .extracting(e -> ((ToolExecuteException) e).getToolError())
+            .isEqualTo(ToolError.SCOPE_VIOLATION);
+    }
+
+    @Test
+    @DisplayName("Data source outside scope is rejected")
+    void shouldRejectOutOfScopeDataSource() {
+        assertThatThrownBy(() -> validator.validate(
+            List.of(dataSourceScope("ds-other")), DS_ID, Set.of(), Set.of(), null))
+            .isInstanceOf(ToolExecuteException.class)
+            .hasMessage("Data source ds-1 not in service scope")
             .extracting(e -> ((ToolExecuteException) e).getToolError())
             .isEqualTo(ToolError.SCOPE_VIOLATION);
     }
@@ -98,7 +117,7 @@ class ScopeValidatorTest {
     @DisplayName("DATA_SOURCE covers dsId → passes (no table-level check)")
     void shouldPassWhenDataSourceScopeCovers() {
         assertThatCode(() ->
-            validator.validate(List.of(dataSourceScope(DS_ID)), DS_ID, Set.of(), Set.of(), null))
+            validate(List.of(dataSourceScope(DS_ID)), DS_ID, Set.of(), Set.of(), null))
             .doesNotThrowAnyException();
     }
 
@@ -109,16 +128,20 @@ class ScopeValidatorTest {
         when(subjectTableDAO.findTablesBySubjectId(anyString(), any(Pageable.class))).thenReturn(page);
 
         assertThatCode(() ->
-            validator.validate(List.of(subjectScope()), DS_ID, Set.of(), Set.of(), null))
+            validate(List.of(subjectScope()), DS_ID, Set.of(), Set.of(), null))
             .doesNotThrowAnyException();
     }
 
     @Test
-    @DisplayName("dsId not covered by any scope → throws ToolExecuteException")
-    void shouldRejectWhenDsNotInScope() {
-        assertThatThrownBy(() ->
-            validator.validate(List.of(dataSourceScope("ds-other")), DS_ID, Set.of(), Set.of(), null))
+    @DisplayName("Table outside scope → concise table-level message")
+    void shouldRejectTableNotInScopeWithConciseMessage() {
+        when(tableInfoDAO.findByDataSourceId(DS_ID)).thenReturn(List.of());
+
+        assertThatThrownBy(() -> validator.validate(
+            List.of(dataSourceScope(DS_ID)), DS_ID,
+            Set.of(new TableRef("public", "orders")), Set.of(), "public"))
             .isInstanceOf(ToolExecuteException.class)
+            .hasMessage("Table public.orders not in service scope")
             .extracting(e -> ((ToolExecuteException) e).getToolError())
             .isEqualTo(ToolError.SCOPE_VIOLATION);
     }
@@ -130,7 +153,7 @@ class ScopeValidatorTest {
             .thenReturn(List.of(table()));
 
         assertThatCode(() ->
-            validator.validate(
+            validate(
                 List.of(dataSourceScope(DS_ID)), DS_ID,
                 Set.of(new TableRef(null, "users")), Set.of(), "public"))
             .doesNotThrowAnyException();
@@ -143,7 +166,7 @@ class ScopeValidatorTest {
             .thenReturn(List.of(table()));
 
         assertThatThrownBy(() ->
-            validator.validate(
+            validate(
                 List.of(dataSourceScope(DS_ID)), DS_ID,
                 Set.of(new TableRef(null, "users")), Set.of(), null))
             .isInstanceOf(ToolExecuteException.class)
@@ -217,6 +240,7 @@ class ScopeValidatorTest {
 
         assertThatThrownBy(() -> validator.resolveSubjectInScope(List.of(subjectScope()), "财务"))
             .isInstanceOf(ToolExecuteException.class)
+            .hasMessage("Subject 财务 not in service scope")
             .satisfies(e -> assertThat(((ToolExecuteException) e).getToolError())
                 .isEqualTo(ToolError.SCOPE_VIOLATION));
     }
@@ -226,7 +250,7 @@ class ScopeValidatorTest {
     @Test
     @DisplayName("SCHEMA_SCOPE allows referenced table in authorized schema without import")
     void schemaScopeReferencedTableInSchema_shouldPass() {
-        assertThatCode(() -> validator.validate(
+        assertThatCode(() -> validate(
             List.of(dataSourceScopeWithSchemas(DS_ID, "sandbox")), DS_ID,
             Set.of(new TableRef("sandbox", "orders")), Set.of(),
             "public"))
@@ -238,7 +262,7 @@ class ScopeValidatorTest {
     void schemaScopeReferencedTableOutsideSchema_shouldReject() {
         when(tableInfoDAO.findByDataSourceId(DS_ID)).thenReturn(List.of());
 
-        assertThatThrownBy(() -> validator.validate(
+        assertThatThrownBy(() -> validate(
             List.of(dataSourceScopeWithSchemas(DS_ID, "sandbox")), DS_ID,
             Set.of(new TableRef("public", "orders")), Set.of(),
             "public"))
@@ -252,7 +276,7 @@ class ScopeValidatorTest {
     void schemaScopeKeepsImportedTablesOutsideSchema() {
         when(tableInfoDAO.findByDataSourceId(DS_ID)).thenReturn(List.of(table()));
 
-        assertThatCode(() -> validator.validate(
+        assertThatCode(() -> validate(
             List.of(dataSourceScopeWithSchemas(DS_ID, "sandbox")), DS_ID,
             Set.of(new TableRef(null, "users")), Set.of(),
             "public"))
@@ -262,7 +286,7 @@ class ScopeValidatorTest {
     @Test
     @DisplayName("SCHEMA_SCOPE allows created table in authorized schema")
     void schemaScopeCreatedTable_shouldPass() {
-        assertThatCode(() -> validator.validate(
+        assertThatCode(() -> validate(
             List.of(dataSourceScopeWithSchemas(DS_ID, "sandbox")), DS_ID,
             Set.of(), Set.of(new TableRef("sandbox", "tmp")),
             "public"))
@@ -272,7 +296,7 @@ class ScopeValidatorTest {
     @Test
     @DisplayName("SCHEMA_SCOPE rejects created table outside authorized schema")
     void schemaScopeCreatedTableOutsideSchema_shouldReject() {
-        assertThatThrownBy(() -> validator.validate(
+        assertThatThrownBy(() -> validate(
             List.of(dataSourceScopeWithSchemas(DS_ID, "sandbox")), DS_ID,
             Set.of(), Set.of(new TableRef("public", "tmp")),
             "public"))
@@ -284,7 +308,7 @@ class ScopeValidatorTest {
     @Test
     @DisplayName("IMPORTED_TABLES rejects CREATE TABLE without schema scope")
     void importedTablesCreatedTable_shouldReject() {
-        assertThatThrownBy(() -> validator.validate(
+        assertThatThrownBy(() -> validate(
             List.of(dataSourceScope(DS_ID)), DS_ID,
             Set.of(), Set.of(new TableRef("public", "tmp")),
             "public"))
@@ -296,7 +320,7 @@ class ScopeValidatorTest {
     @Test
     @DisplayName("SCHEMA_SCOPE resolves unqualified created table using default schema")
     void schemaScopeCreatedTableWithoutSchema_shouldUseDefaultSchema() {
-        assertThatCode(() -> validator.validate(
+        assertThatCode(() -> validate(
             List.of(dataSourceScopeWithSchemas(DS_ID, "sandbox")), DS_ID,
             Set.of(), Set.of(TableRef.of("tmp")),
             "sandbox"))
@@ -306,7 +330,7 @@ class ScopeValidatorTest {
     @Test
     @DisplayName("SCHEMA_SCOPE rejects unqualified created table when default schema is null")
     void schemaScopeCreatedTableWithoutSchemaAndDefaultSchema_shouldReject() {
-        assertThatThrownBy(() -> validator.validate(
+        assertThatThrownBy(() -> validate(
             List.of(dataSourceScopeWithSchemas(DS_ID, "sandbox")), DS_ID,
             Set.of(), Set.of(TableRef.of("tmp")),
             null))
@@ -318,7 +342,7 @@ class ScopeValidatorTest {
     @Test
     @DisplayName("SCHEMA_SCOPE rejects unqualified created table when default schema is not in schema scope")
     void schemaScopeCreatedTableDefaultSchemaNotInScope_shouldReject() {
-        assertThatThrownBy(() -> validator.validate(
+        assertThatThrownBy(() -> validate(
             List.of(dataSourceScopeWithSchemas(DS_ID, "sandbox")), DS_ID,
             Set.of(), Set.of(TableRef.of("tmp")),
             "public"))
@@ -330,7 +354,7 @@ class ScopeValidatorTest {
     @Test
     @DisplayName("System schemas are allowed when explicitly in schema scope")
     void systemSchemaExplicitlyInSchemaScope_shouldPass() {
-        assertThatCode(() -> validator.validate(
+        assertThatCode(() -> validate(
             List.of(dataSourceScopeWithSchemas(DS_ID, "information_schema")), DS_ID,
             Set.of(new TableRef("information_schema", "tables")), Set.of(),
             null))
@@ -346,7 +370,7 @@ class ScopeValidatorTest {
         systemTable.setName("tables");
         when(tableInfoDAO.findByDataSourceId(DS_ID)).thenReturn(List.of(systemTable));
 
-        assertThatCode(() -> validator.validate(
+        assertThatCode(() -> validate(
             List.of(dataSourceScope(DS_ID)), DS_ID,
             Set.of(new TableRef("information_schema", "tables")), Set.of(), null))
             .doesNotThrowAnyException();
@@ -355,7 +379,7 @@ class ScopeValidatorTest {
     @Test
     @DisplayName("SCHEMA_SCOPE allows created table in explicitly listed system schema")
     void systemSchemaCreatedTable_shouldPassWhenInSchemaScope() {
-        assertThatCode(() -> validator.validate(
+        assertThatCode(() -> validate(
             List.of(dataSourceScopeWithSchemas(DS_ID, "information_schema")), DS_ID,
             Set.of(), Set.of(new TableRef("information_schema", "tmp")),
             null))
@@ -367,7 +391,7 @@ class ScopeValidatorTest {
     void schemaScopeSameCallCreateAndInsert_shouldPass() {
         TableRef ref = new TableRef("sandbox", "tmp");
 
-        assertThatCode(() -> validator.validate(
+        assertThatCode(() -> validate(
             List.of(dataSourceScopeWithSchemas(DS_ID, "sandbox")), DS_ID,
             Set.of(ref), Set.of(ref),
             "public"))
@@ -379,7 +403,7 @@ class ScopeValidatorTest {
     void schemaScopeSameCallOutsideReference_shouldReject() {
         when(tableInfoDAO.findByDataSourceId(DS_ID)).thenReturn(List.of());
 
-        assertThatThrownBy(() -> validator.validate(
+        assertThatThrownBy(() -> validate(
             List.of(dataSourceScopeWithSchemas(DS_ID, "sandbox")), DS_ID,
             Set.of(new TableRef("public", "sensitive")),
             Set.of(new TableRef("sandbox", "tmp")),
@@ -392,7 +416,7 @@ class ScopeValidatorTest {
     @Test
     @DisplayName("validate honors schema scope for referenced tables")
     void validateHonorsSchemaScope() {
-        assertThatCode(() -> validator.validate(
+        assertThatCode(() -> validate(
             List.of(dataSourceScopeWithSchemas(DS_ID, "sandbox")), DS_ID,
             Set.of(new TableRef("sandbox", "orders")), Set.of(),
             "public"))

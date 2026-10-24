@@ -10,3 +10,15 @@ bugs:
     description: |
       【2026-10-22 决策】维持现状（暂不修复）：游客 TTL/资源回收属产品策略调整，留待后续版本。
       TC-AUTH-005/006/007 探索：guest 与 qa_user 的 JWT exp-iat 均为 604800s（7 天，来自 auth.jwt.expiration-seconds 单一配置，无 guest 专属 TTL），与用例中「临时沙箱身份」语义不符；GuestService 只签发 JWT（guest-xxxxxxxxxxxx）不写 users 表，因此：①游客创建的 data source/subject 等资源 created_by 指向不存在的用户，created_user_name 永远靠 BaseAssembler 的 startsWith("guest") 硬编码回退为 "Guest"；②这些资源不会过期回收，也没有任何管理端接口可枚举/清理（openapi 无用户/资源管理端点），长期会累积不可追溯的孤儿数据。建议：为 guest 设独立较短 TTL（如 24h），并对游客资源做定期清理或在游客过期时级联删除。
+  - id: BUG-20261023-007
+    status: suspended
+    title: MCP tools/call 区分「数据源不存在」与「数据源不在服务范围」，未授权用户可探测数据源存在性
+    module: MCP Endpoint
+    severity: low
+    found_at: 2026-10-23
+    description: |
+      TC-END-003 探索（站在 MCP Client / 多租户视角核对错误语义，用例只要求 isError=true）：tools/call execute_sql 传一个不属于该服务 scope 的 data_source_id 时，返回的错误取决于该数据源是否存在于平台：
+      ① data_source_id=00000000-0000-0000-0000-000000000000（不存在） → 200 {isError:true, content[0].text:'数据源不存在'}（ToolError.DATA_SOURCE_NOT_FOUND，PARAM_ERROR）；
+      ② data_source_id=9d05fd88-3fde-458f-82e6-94a37e3260ac（存在，但未绑定到 e2e-end-main 服务） → 200 {isError:true, content[0].text:'数据源或表不在服务范围内：Data source 9d05fd88-… not in service scope'}（ToolError.SCOPE_VIOLATION）。
+      两条文案可区分，等于给出「该 UUID 是平台内真实数据源」的存在性预言机（同一现象也影响自定义 PARAMETERIZED_SQL 工具，ParameterizedSqlExecutor 同结构）。根因：ExecuteSqlExecutor.execute()/ParameterizedSqlExecutor.execute() 先 dataSourceService.getDataSourceInternal(dsId) 再 scopeValidator.validate(...)，即先做全局存在性查询、后做 scope 校验；正确顺序应先 validateScopeCoverage 再加载数据源，或对外统一返回 SCOPE_VIOLATION 文案。附带：①'数据源不存在' 为纯中文且无 dsId/英文尾缀，与相邻 'not in service scope' 中英混排并存，与「面向 LLM 的协议消息应确定性可解析」的约定不一致；②该分支下 error_category 为 PARAM_ERROR，与 scope 违规的 SCOPE_ERROR 不同，LLM 可能据此判断为参数拼写错误而反复重试同一 uuid。建议：scope 校验前移，并让两条分支对外文案与 error_category 一致（或统一为 Data source not found or not in service scope）。
+      2026-10-24 重新评估：存在性预言机属于低危信息最小化建议，接受风险，暂不修复。代码回退到原始加载顺序（先加载数据源，再校验 scope），仅保留 SCOPE_VIOLATION 去重前缀与英文文案修复。

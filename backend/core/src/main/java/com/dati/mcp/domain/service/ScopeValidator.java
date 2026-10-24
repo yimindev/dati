@@ -31,7 +31,9 @@ public class ScopeValidator {
     }
 
     /**
-     * Validates that referencing and creating the given tables stays within the service data scope.
+     * Validates that the data source is covered by the service scope and that referenced or
+     * created tables stay within it. Callers load the data source first and pass its default
+     * schema.
      * Operation-type permissions (including DDL allowance) are enforced by SqlPolicy before this call.
      */
     public void validate(List<McpServiceDataScope> scopeItems, String dsId,
@@ -42,7 +44,7 @@ public class ScopeValidator {
         validateReferencedTables(scopeItems, dsId, referencedTables, defaultSchema);
     }
 
-    public void validateScopeCoverage(List<McpServiceDataScope> scopeItems, String dsId) {
+    private void validateScopeCoverage(List<McpServiceDataScope> scopeItems, String dsId) {
         if (scopeItems == null || scopeItems.isEmpty()) {
             throw new ToolExecuteException(ToolError.SCOPE_VIOLATION, "No data scope configured");
         }
@@ -69,7 +71,7 @@ public class ScopeValidator {
             if (allowed.contains(ref)) continue;
             if (tryResolve(ref, defaultSchema, allowed)) continue;
             throw new ToolExecuteException(ToolError.SCOPE_VIOLATION,
-                "Table " + ref.qualifiedName() + " not in scope");
+                "Table " + ref.qualifiedName() + " not in service scope");
         }
     }
 

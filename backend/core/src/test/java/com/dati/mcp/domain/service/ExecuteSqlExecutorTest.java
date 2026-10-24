@@ -81,31 +81,18 @@ class ExecuteSqlExecutorTest {
     }
 
     @Test
-    @DisplayName("out-of-scope data source is rejected before the existence lookup")
-    void outOfScopeDataSource_shouldFailBeforeLookup() {
-        doThrow(new ToolExecuteException(ToolError.SCOPE_VIOLATION,
-                "Data source ghost not in service scope"))
-            .when(scopeValidator).validateScopeCoverage(anyList(), eq("ghost"));
-
-        ExecuteSqlArgs args = new ExecuteSqlArgs("ghost", "SELECT * FROM orders");
-
-        assertThatThrownBy(() -> executor.execute(ctx(args)))
-            .isInstanceOf(ToolExecuteException.class)
-            .hasMessageContaining("not in service scope");
-
-        verifyNoInteractions(dataSourceService);
-    }
-
-    @Test
-    @DisplayName("missing data source still reported as DATA_SOURCE_NOT_FOUND")
-    void missingDataSource() {
+    @DisplayName("missing data source is reported as DATA_SOURCE_NOT_FOUND")
+    void missingDataSource_shouldReportDataSourceNotFound() {
         when(dataSourceService.getDataSourceInternal("ghost")).thenReturn(Optional.empty());
         ExecuteSqlArgs args = new ExecuteSqlArgs("ghost", "SELECT * FROM orders");
 
         assertThatThrownBy(() -> executor.execute(ctx(args)))
             .isInstanceOf(ToolExecuteException.class)
+            .hasMessage("Data source not found: ghost")
             .satisfies(e -> assertThat(((ToolExecuteException) e).getErrorCategory())
                 .isEqualTo("PARAM_ERROR"));
+
+        verifyNoInteractions(scopeValidator);
     }
 
     @Test
@@ -113,13 +100,15 @@ class ExecuteSqlExecutorTest {
     void scopeStillEnforced() {
         when(dataSourceService.getDataSourceInternal("ds-1"))
             .thenReturn(Optional.of(TestFixtures.createTestDataSource()));
-        doThrow(new ToolExecuteException(ToolError.SCOPE_VIOLATION, "orders not in scope"))
+        doThrow(new ToolExecuteException(ToolError.SCOPE_VIOLATION, "orders not in service scope"))
             .when(scopeValidator).validate(anyList(), eq("ds-1"), anySet(), anySet(), eq("public"));
         ExecuteSqlArgs args = new ExecuteSqlArgs("ds-1", "SELECT * FROM orders");
 
         assertThatThrownBy(() -> executor.execute(ctx(args)))
             .isInstanceOf(ToolExecuteException.class)
-            .hasMessageContaining("not in scope");
+            .hasMessageContaining("not in service scope");
+
+        verify(scopeValidator, times(1)).validate(anyList(), eq("ds-1"), anySet(), anySet(), eq("public"));
     }
 
     @Test
@@ -137,7 +126,7 @@ class ExecuteSqlExecutorTest {
 
         assertThatThrownBy(() -> executor.execute(ctx)).hasMessageContaining("stop");
 
-        verify(scopeValidator).validate(anyList(), eq("ds-1"), eq(Set.of()),
+        verify(scopeValidator, times(1)).validate(anyList(), eq("ds-1"), eq(Set.of()),
             argThat(created -> created.contains(TableRef.of("tmp"))), eq("public"));
     }
 

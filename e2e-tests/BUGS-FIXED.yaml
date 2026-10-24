@@ -706,16 +706,6 @@ bugs:
     fixed_at: 2026-10-24
     description: |
       TC-AUTH-001 前置登录探索：POST /v1/auth/login {"name":"admin","password":"admin123","type":"local"} → 401 AUTH001 invalid credentials，而 username=admin 已被占用（POST /v1/auth/register name=admin → 409 AUTH003），说明账户存在但密码与文档不符。application.yaml auth.admin-users 默认 admin，permission / mcp-service 等模块用例依赖此全局管理员账户，凭据不可用会导致管理员路径无法验证。2026-10-22 报告已记为 WARN-7，2026-10-23 复测仍失效。建议：修正 test-data.yaml 与预置密码（或提供管理员预置脚本）。
-  - id: BUG-20261023-007
-    title: MCP tools/call 区分「数据源不存在」与「数据源不在服务范围」，未授权用户可探测数据源存在性
-    module: MCP Endpoint
-    severity: low
-    fixed_at: 2026-10-24
-    description: |
-      TC-END-003 探索（站在 MCP Client / 多租户视角核对错误语义，用例只要求 isError=true）：tools/call execute_sql 传一个不属于该服务 scope 的 data_source_id 时，返回的错误取决于该数据源是否存在于平台：
-      ① data_source_id=00000000-0000-0000-0000-000000000000（不存在） → 200 {isError:true, content[0].text:'数据源不存在'}（ToolError.DATA_SOURCE_NOT_FOUND，PARAM_ERROR）；
-      ② data_source_id=9d05fd88-3fde-458f-82e6-94a37e3260ac（存在，但未绑定到 e2e-end-main 服务） → 200 {isError:true, content[0].text:'数据源或表不在服务范围内：Data source 9d05fd88-… not in service scope'}（ToolError.SCOPE_VIOLATION）。
-      两条文案可区分，等于给出「该 UUID 是平台内真实数据源」的存在性预言机（同一现象也影响自定义 PARAMETERIZED_SQL 工具，ParameterizedSqlExecutor 同结构）。根因：ExecuteSqlExecutor.execute()/ParameterizedSqlExecutor.execute() 先 dataSourceService.getDataSourceInternal(dsId) 再 scopeValidator.validate(...)，即先做全局存在性查询、后做 scope 校验；正确顺序应先 validateScopeCoverage 再加载数据源，或对外统一返回 SCOPE_VIOLATION 文案。附带：①'数据源不存在' 为纯中文且无 dsId/英文尾缀，与相邻 'not in service scope' 中英混排并存，与「面向 LLM 的协议消息应确定性可解析」的约定不一致；②该分支下 error_category 为 PARAM_ERROR，与 scope 违规的 SCOPE_ERROR 不同，LLM 可能据此判断为参数拼写错误而反复重试同一 uuid。建议：scope 校验前移，并让两条分支对外文案与 error_category 一致（或统一为 Data source not found or not in service scope）。
   - id: BUG-20261023-010
     title: JWT 校验不校验必需声明：缺 exp 的合法签名 token 永久有效，缺 sub 时 /me 返回 id:null
     module: 认证
