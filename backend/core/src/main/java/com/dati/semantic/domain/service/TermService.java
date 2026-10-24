@@ -20,6 +20,7 @@ import com.dati.semantic.repository.mapper.TermMapper;
 import com.dati.semantic.repository.mapper.TermRelationMapper;
 import com.dati.semantic.repository.po.EntityReference;
 import com.dati.semantic.repository.po.SemanticSearchDocument;
+import com.dati.semantic.repository.po.SubjectPO;
 import com.dati.semantic.repository.po.TermPO;
 import com.dati.semantic.repository.po.TermRelationPO;
 import lombok.extern.slf4j.Slf4j;
@@ -68,7 +69,7 @@ public class TermService {
     public Term createTerm(Term term) {
         permissionService.requireSubject(term.getSubjectId(), Permission.EDIT);
         TermPO termPO = TermMapper.toPO(term);
-        termDAO.save(termPO);
+        termDAO.saveAndFlush(termPO);
 
         String id = termPO.getId();
         String name = term.getName();
@@ -111,7 +112,7 @@ public class TermService {
         if (term.getUpdatedBy() != null) {
             termPO.setUpdatedBy(term.getUpdatedBy());
         }
-        termDAO.save(termPO);
+        termDAO.saveAndFlush(termPO);
 
         List<String> keywords = new java.util.ArrayList<>();
         keywords.add(termPO.getName());
@@ -139,6 +140,7 @@ public class TermService {
         permissionService.requireSubject(termPO.getSubjectId(), Permission.EDIT);
         termRelationDAO.deleteByTermId(id);
         termDAO.deleteById(id);
+        termDAO.flush();
         semanticIndexService.deleteById("term:" + id);
     }
 
@@ -225,6 +227,8 @@ public class TermService {
         List<TermRelationPO> relationPOList = termRelationDAO.findByTermIdIn(termIds);
         Map<String, TableInfoPO> tableInfoMap = getTableInfoMap(relationPOList);
         return relationPOList.stream()
+                .filter(relation -> relation.getTableId() != null
+                        && tableInfoMap.containsKey(relation.getTableId()))
                 .map(relation -> toTermRelation(relation, tableInfoMap))
                 .collect(Collectors.groupingBy(TermRelation::getTermId));
     }
@@ -233,7 +237,9 @@ public class TermService {
     public Term getTermById(String id) {
         TermPO termPO = termDAO.findById(id)
                 .orElseThrow(() -> new DatiException(ErrorCode.SM_TERM_NOT_FOUND, id));
-        permissionService.requireSubject(termPO.getSubjectId(), Permission.VIEW);
+        SubjectPO subjectPO = subjectDAO.findById(termPO.getSubjectId())
+                .orElseThrow(() -> new DatiException(ErrorCode.SM_TERM_NOT_FOUND, id));
+        permissionService.requireSubject(subjectPO, Permission.VIEW);
         return TermMapper.toTerm(termPO);
     }
 

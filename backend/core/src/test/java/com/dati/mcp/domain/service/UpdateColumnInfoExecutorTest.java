@@ -1,5 +1,7 @@
 package com.dati.mcp.domain.service;
 
+import com.dati.auth.authentication.User;
+import com.dati.base.RequestContext;
 import com.dati.datasource.domain.model.ColumnInfo;
 import com.dati.datasource.domain.service.ColumnService;
 import com.dati.mcp.domain.model.McpToolType;
@@ -10,6 +12,7 @@ import com.dati.mcp.repository.dao.McpMetadataAuditLogDAO;
 import com.dati.mcp.repository.po.McpMetadataAuditLogPO;
 import com.dati.mcp.server.pojo.MetadataUpdateData;
 import com.dati.mcp.server.pojo.MetadataUpdateResult;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -49,7 +52,16 @@ class UpdateColumnInfoExecutorTest {
 
     @BeforeEach
     void setUp() {
+        User user = new User();
+        user.setId("user-1");
+        user.setName("qa-e2e-tester");
+        RequestContext.setUser(user);
         executor = new UpdateColumnInfoExecutor(scopeValidator, resolver, columnService, auditLogDAO);
+    }
+
+    @AfterEach
+    void tearDown() {
+        RequestContext.clear();
     }
 
     private ToolExecutionContext ctx(UpdateColumnInfoArgs args) {
@@ -74,6 +86,7 @@ class UpdateColumnInfoExecutorTest {
         assertThat(colCaptor.getValue().getDescription()).isEqualTo("order status");
         assertThat(colCaptor.getValue().getAliases()).containsExactly("stat");
         assertThat(colCaptor.getValue().getExtractValueEnabled()).isNull();
+        assertThat(colCaptor.getValue().getUpdatedBy()).isEqualTo("user-1");
 
         ArgumentCaptor<McpMetadataAuditLogPO> auditCaptor = ArgumentCaptor.forClass(McpMetadataAuditLogPO.class);
         verify(auditLogDAO).save(auditCaptor.capture());

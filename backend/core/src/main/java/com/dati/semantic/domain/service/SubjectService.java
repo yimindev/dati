@@ -72,7 +72,7 @@ public class SubjectService {
             permissionService.requireDataSource(subject.getDatasourceId(), Permission.VIEW);
         }
         SubjectPO subjectPO = SubjectMapper.toPO(subject);
-        subjectDAO.save(subjectPO);
+        subjectDAO.saveAndFlush(subjectPO);
 
         String id = subjectPO.getId();
         String name = subject.getName();
@@ -115,7 +115,7 @@ public class SubjectService {
         if (subject.getUpdatedBy() != null) {
             subjectPO.setUpdatedBy(subject.getUpdatedBy());
         }
-        subjectDAO.save(subjectPO);
+        subjectDAO.saveAndFlush(subjectPO);
 
         List<String> keywords = new ArrayList<>();
         keywords.add(subjectPO.getName());
@@ -141,9 +141,19 @@ public class SubjectService {
         SubjectPO subjectPO = subjectDAO.findById(id)
                 .orElseThrow(() -> new DatiException(ErrorCode.SM_SUBJECT_NOT_FOUND, id));
         permissionService.requireCurrentUser(ResourceType.SUBJECT, id, Permission.EDIT, subjectPO.getCreatedBy());
+
+        List<String> termIds = termDAO.findBySubjectId(id).stream()
+                .map(TermPO::getId)
+                .toList();
+        if (!termIds.isEmpty()) {
+            termRelationDAO.deleteByTermIdIn(termIds);
+        }
+        termDAO.deleteBySubjectId(id);
+        subjectTableDAO.deleteBySubjectId(id);
         subjectDAO.deleteById(id);
-        semanticIndexService.deleteByEntity_SubjectId(id);
+        subjectDAO.flush();
         permissionService.onResourceDeleted(ResourceType.SUBJECT, id);
+        semanticIndexService.deleteByEntity_SubjectId(id);
     }
 
     @Transactional

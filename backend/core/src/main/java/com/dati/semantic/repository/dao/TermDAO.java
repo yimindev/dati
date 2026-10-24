@@ -22,6 +22,8 @@ public interface TermDAO extends JpaRepository<TermPO, String> {
 
     List<TermPO> findBySubjectIdIn(java.util.Collection<String> subjectIds);
 
+    void deleteBySubjectId(String subjectId);
+
     @Query("""
             SELECT t FROM TermPO t
             WHERE t.subjectId = :subjectId

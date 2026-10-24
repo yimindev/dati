@@ -285,24 +285,6 @@ class TableAutoRegistrationServiceTest {
     }
 
     @Test
-    @DisplayName("semantic index failure does not fail registration")
-    void semanticIndexFailureDoesNotFailRegistration() throws Exception {
-        stubPhysicalTable("orders", "orders table");
-        stubColumns("orders", column("id", "INT", null));
-        stubNewTable("orders");
-        stubSavedTable("tbl-1");
-        stubSavedColumns("col-1");
-        doThrow(new RuntimeException("es down")).when(semanticIndexService).saveBatch(anyList());
-
-        assertThatCode(() -> service.registerCreatedTables(
-                DS_ID, Set.of(new TableRef(SCHEMA, "orders")), SCHEMA, SERVICE_ID))
-                .doesNotThrowAnyException();
-
-        verify(tableInfoDAO).save(any(TableInfoPO.class));
-        verify(columnInfoDAO).save(any(ColumnInfoPO.class));
-    }
-
-    @Test
     @DisplayName("uses the MCP service as actor when no request user is present")
     void usesServiceActorWithoutRequestUser() throws Exception {
         RequestContext.clear();

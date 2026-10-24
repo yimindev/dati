@@ -11,7 +11,7 @@ import lombok.Data;
 public class McpServiceUpdateRequest {
 
     @Size(max = 64)
-    @Pattern(regexp = "(?s).*\\S.*", message = "must not be blank")
+    @Pattern(regexp = "(?s).*\\S.*", message = "{validation.notBlank}")
     private String name;
 
     @Size(max = 1024)

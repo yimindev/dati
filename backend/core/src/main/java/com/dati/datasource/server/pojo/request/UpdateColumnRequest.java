@@ -13,7 +13,7 @@ import java.util.List;
 public class UpdateColumnRequest {
 
     @Size(max = 64)
-    @Pattern(regexp = "(?s).*\\S.*", message = "must not be blank")
+    @Pattern(regexp = "(?s).*\\S.*", message = "{validation.notBlank}")
     private String name;
 
     @Size(max = 1024)

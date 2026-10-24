@@ -71,10 +71,12 @@ public class SemanticSearchDocument {
     @Field(type = FieldType.Nested)
     private EntityReference entity;
     
+    /** UTC wall-clock time; the index mapping stores it without a timezone. */
     @Field(type = FieldType.Date, format = DateFormat.date_hour_minute_second_millis)
     @JsonProperty("createdTime")
     private LocalDateTime createdTime;
-    
+
+    /** UTC wall-clock time; the index mapping stores it without a timezone. */
     @Field(type = FieldType.Date, format = DateFormat.date_hour_minute_second_millis)
     @JsonProperty("updatedTime")
     private LocalDateTime updatedTime;

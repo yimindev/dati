@@ -22,6 +22,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -81,7 +82,7 @@ public class TemplatePreviewController {
             CompiledTemplate compiled = parser.parse(request.getTemplate());
             Set<String> variables = compiled.getVariables().stream()
                     .filter(v -> !SystemVariableResolver.isSystemVariable(v))
-                    .collect(Collectors.toSet());
+                    .collect(Collectors.toCollection(LinkedHashSet::new));
             return ResponseEntity.ok(new TemplateExtractResponse(variables));
         } catch (TemplateParseException e) {
             throw new DatiException(ErrorCode.INVALID_PARAMETER, e.getMessage());

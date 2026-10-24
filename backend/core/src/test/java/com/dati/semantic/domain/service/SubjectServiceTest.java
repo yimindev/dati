@@ -150,7 +150,7 @@ class SubjectServiceTest {
         String description = "New Description";
         String datasourceId = "datasource-001";
 
-        when(subjectDAO.save(any(SubjectPO.class))).thenAnswer(invocation -> {
+        when(subjectDAO.saveAndFlush(any(SubjectPO.class))).thenAnswer(invocation -> {
             SubjectPO po = invocation.getArgument(0);
             if (po.getId() == null) {
                 po.setId("generated-subject-id");
@@ -172,7 +172,7 @@ class SubjectServiceTest {
         assertThat(result.getDescription()).isEqualTo(description);
         assertThat(result.getDatasourceId()).isEqualTo(datasourceId);
 
-        verify(subjectDAO).save(any(SubjectPO.class));
+        verify(subjectDAO).saveAndFlush(any(SubjectPO.class));
 
         ArgumentCaptor<SemanticSearchDocument> docCaptor = ArgumentCaptor.forClass(SemanticSearchDocument.class);
         verify(semanticIndexService).save(docCaptor.capture());
@@ -192,7 +192,7 @@ class SubjectServiceTest {
         String newDescription = "Updated Description";
 
         when(subjectDAO.findById(id)).thenReturn(Optional.of(sampleSubjectPO));
-        when(subjectDAO.save(any(SubjectPO.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(subjectDAO.saveAndFlush(any(SubjectPO.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         Subject model = new Subject();
         model.setName(newName);
@@ -204,7 +204,7 @@ class SubjectServiceTest {
         assertThat(result.getName()).isEqualTo(newName);
         assertThat(result.getDescription()).isEqualTo(newDescription);
 
-        verify(subjectDAO).save(any(SubjectPO.class));
+        verify(subjectDAO).saveAndFlush(any(SubjectPO.class));
 
         ArgumentCaptor<SemanticSearchDocument> docCaptor = ArgumentCaptor.forClass(SemanticSearchDocument.class);
         verify(semanticIndexService).save(docCaptor.capture());
@@ -236,9 +236,28 @@ class SubjectServiceTest {
 
         subjectService.deleteSubject(id);
 
+        verify(termDAO).deleteBySubjectId(id);
+        verify(subjectTableDAO).deleteBySubjectId(id);
         verify(subjectDAO).deleteById(id);
+        verify(subjectDAO).flush();
         verify(semanticIndexService).deleteByEntity_SubjectId(id);
         verify(permissionService).onResourceDeleted(ResourceType.SUBJECT, id);
+    }
+
+    @Test
+    @DisplayName("deleteSubject - deletes term relations and terms of the subject")
+    void deleteSubject_shouldCascadeTermsAndRelations() {
+        String id = "subject-001";
+        when(subjectDAO.findById(id)).thenReturn(Optional.of(sampleSubjectPO));
+        TermPO term = new TermPO();
+        term.setId("term-001");
+        when(termDAO.findBySubjectId(id)).thenReturn(List.of(term));
+
+        subjectService.deleteSubject(id);
+
+        verify(termRelationDAO).deleteByTermIdIn(List.of("term-001"));
+        verify(termDAO).deleteBySubjectId(id);
+        verify(subjectTableDAO).deleteBySubjectId(id);
     }
 
     @Test

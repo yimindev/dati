@@ -9,7 +9,7 @@ import java.util.List;
 @Data
 public class UpdateTermRequest {
     /** Null keeps the current name (partial update); blank is rejected. */
-    @Pattern(regexp = "(?s).*\\S.*", message = "must not be blank")
+    @Pattern(regexp = "(?s).*\\S.*", message = "{validation.notBlank}")
     @Size(max = 64)
     private String name;
 

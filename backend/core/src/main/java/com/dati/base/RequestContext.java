@@ -24,6 +24,12 @@ public class RequestContext {
         return (User) getContext().get("user");
     }
 
+    /** Returns the current user's id, or null when the call has no authenticated user. */
+    public static String currentUserId() {
+        User user = getUser();
+        return user != null ? user.getId() : null;
+    }
+
     /** Clears the thread-local context (must be called after request handling). */
     public static void clear() {
         context.remove();

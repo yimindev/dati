@@ -54,12 +54,12 @@ public class ColumnValueService {
 
     public void extractValues(String datasourceId, String columnId, boolean overwrite) throws SQLException {
         ColumnInfoPO columnPO = columnInfoDAO.findById(columnId)
-                .orElseThrow(() -> new DatiException(ErrorCode.NOT_FOUND, "Column not found: " + columnId));
+                .orElseThrow(() -> new DatiException(ErrorCode.DS_COLUMN_NOT_FOUND, columnId));
         TableInfoPO tablePO = tableInfoDAO.findById(columnPO.getTableId())
-                .orElseThrow(() -> new DatiException(ErrorCode.DS_TABLE_NOT_FOUND, "Table not found: " + columnPO.getTableId()));
+                .orElseThrow(() -> new DatiException(ErrorCode.DS_TABLE_NOT_FOUND, columnPO.getTableId()));
 
         if (datasourceId != null && !datasourceId.equals(tablePO.getDataSourceId())) {
-            throw new DatiException(ErrorCode.INVALID_PARAMETER, "Column does not belong to data source: " + datasourceId);
+            throw new DatiException(ErrorCode.DS_TABLE_NOT_FOUND, tablePO.getId());
         }
         permissionService.requireDataSource(tablePO.getDataSourceId(), Permission.EDIT);
 
@@ -137,9 +137,9 @@ public class ColumnValueService {
 
     public void saveValues(String columnId, List<ValueItem> values, List<String> deletedIds) {
         ColumnInfoPO columnPO = columnInfoDAO.findById(columnId)
-                .orElseThrow(() -> new DatiException("Column not found: " + columnId));
+                .orElseThrow(() -> new DatiException(ErrorCode.DS_COLUMN_NOT_FOUND, columnId));
         TableInfoPO tablePO = tableInfoDAO.findById(columnPO.getTableId())
-                .orElseThrow(() -> new DatiException("Table not found: " + columnPO.getTableId()));
+                .orElseThrow(() -> new DatiException(ErrorCode.DS_TABLE_NOT_FOUND, columnPO.getTableId()));
         String datasourceId = tablePO.getDataSourceId();
         permissionService.requireDataSource(datasourceId, Permission.EDIT);
 
@@ -182,9 +182,9 @@ public class ColumnValueService {
 
     public Page<ValueItem> getValues(String columnId, PageReq pageReq, String keyword) {
         ColumnInfoPO columnPO = columnInfoDAO.findById(columnId)
-                .orElseThrow(() -> new DatiException("Column not found: " + columnId));
+                .orElseThrow(() -> new DatiException(ErrorCode.DS_COLUMN_NOT_FOUND, columnId));
         TableInfoPO tablePO = tableInfoDAO.findById(columnPO.getTableId())
-                .orElseThrow(() -> new DatiException("Table not found: " + columnPO.getTableId()));
+                .orElseThrow(() -> new DatiException(ErrorCode.DS_TABLE_NOT_FOUND, columnPO.getTableId()));
         permissionService.requireDataSource(tablePO.getDataSourceId(), Permission.VIEW);
 
         Page<SemanticSearchDocument> docsPage = semanticIndexService.findByTableFieldAndTypePaginated(

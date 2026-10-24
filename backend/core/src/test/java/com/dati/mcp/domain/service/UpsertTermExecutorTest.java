@@ -1,5 +1,7 @@
 package com.dati.mcp.domain.service;
 
+import com.dati.auth.authentication.User;
+import com.dati.base.RequestContext;
 import com.dati.mcp.domain.model.McpToolType;
 import com.dati.mcp.domain.model.ToolConfig;
 import com.dati.mcp.domain.model.ToolError;
@@ -12,6 +14,7 @@ import com.dati.semantic.domain.model.Term;
 import com.dati.semantic.domain.service.TermService;
 import com.dati.semantic.repository.dao.TermDAO;
 import com.dati.semantic.repository.po.TermPO;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -51,7 +54,16 @@ class UpsertTermExecutorTest {
 
     @BeforeEach
     void setUp() {
+        User user = new User();
+        user.setId("user-1");
+        user.setName("qa-e2e-tester");
+        RequestContext.setUser(user);
         executor = new UpsertTermExecutor(scopeValidator, termDAO, termService, auditLogDAO);
+    }
+
+    @AfterEach
+    void tearDown() {
+        RequestContext.clear();
     }
 
     private ToolExecutionContext ctx(UpsertTermArgs args) {
@@ -83,6 +95,8 @@ class UpsertTermExecutorTest {
         assertThat(createCaptor.getValue().getSubjectId()).isEqualTo("sub-1");
         assertThat(createCaptor.getValue().getName()).isEqualTo("退货单");
         assertThat(createCaptor.getValue().getDescription()).isEqualTo("return order");
+        assertThat(createCaptor.getValue().getCreatedBy()).isEqualTo("user-1");
+        assertThat(createCaptor.getValue().getUpdatedBy()).isEqualTo("user-1");
 
         ArgumentCaptor<McpMetadataAuditLogPO> auditCaptor = ArgumentCaptor.forClass(McpMetadataAuditLogPO.class);
         verify(auditLogDAO).save(auditCaptor.capture());
@@ -121,6 +135,7 @@ class UpsertTermExecutorTest {
         verify(termService).updateTerm(eq("term-1"), updateCaptor.capture());
         assertThat(updateCaptor.getValue().getDescription()).isEqualTo("new desc");
         assertThat(updateCaptor.getValue().getAliases()).containsExactly("返单", "r");
+        assertThat(updateCaptor.getValue().getUpdatedBy()).isEqualTo("user-1");
 
         ArgumentCaptor<McpMetadataAuditLogPO> auditCaptor = ArgumentCaptor.forClass(McpMetadataAuditLogPO.class);
         verify(auditLogDAO).save(auditCaptor.capture());

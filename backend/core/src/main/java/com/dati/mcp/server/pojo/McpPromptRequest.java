@@ -10,7 +10,7 @@ import java.util.List;
 @Data
 public class McpPromptRequest {
     @Size(max = 128)
-    @Pattern(regexp = "(?s).*\\S.*", message = "must not be blank")
+    @Pattern(regexp = "(?s).*\\S.*", message = "{validation.notBlank}")
     private String name;
     private String description;
     private Boolean enabled;

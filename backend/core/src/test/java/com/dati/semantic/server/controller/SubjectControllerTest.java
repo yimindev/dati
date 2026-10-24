@@ -27,6 +27,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Locale;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -173,6 +174,27 @@ class SubjectControllerTest {
             .andExpect(jsonPath("$.code").value("CM001"));
 
         verify(subjectService, never()).updateSubject(anyString(), any());
+    }
+
+    @Test
+    @DisplayName("Update Subject - blank name message follows the request locale")
+    void updateSubject_withBlankName_shouldUseLocalizedMessage() throws Exception {
+        UpdateSubjectRequest request = new UpdateSubjectRequest();
+        request.setName("   ");
+
+        mockMvc.perform(put("/v1/subjects/subject-001")
+                .locale(Locale.SIMPLIFIED_CHINESE)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.message").value("Request parameter error: name: 不得为空白"));
+
+        mockMvc.perform(put("/v1/subjects/subject-001")
+                .locale(Locale.ENGLISH)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.message").value("Request parameter error: name: must not be blank"));
     }
 
     @Test

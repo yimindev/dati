@@ -34,6 +34,7 @@ import java.util.Set;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
@@ -104,6 +105,25 @@ class ParameterizedSqlExecutorTest {
         when(stmt.getUpdateCount()).thenReturn(-1);
         when(stmt.getMoreResults()).thenReturn(false);
         return stmt;
+    }
+
+    @Test
+    @DisplayName("execute - out-of-scope data source is rejected before the existence lookup")
+    void execute_outOfScopeDataSource_failsBeforeLookup() {
+        doThrow(new ToolExecuteException(ToolError.SCOPE_VIOLATION,
+                "Data source ghost not in service scope"))
+            .when(scopeValidator).validateScopeCoverage(anyList(), eq("ds-1"));
+
+        ToolExecutionContext ctx = new ToolExecutionContext(
+            "svc-1", McpToolType.PARAMETERIZED_SQL,
+            paramSqlConfig("SELECT * FROM tasks"),
+            Map.of(), List.of());
+
+        assertThatThrownBy(() -> executor.execute(ctx))
+            .isInstanceOf(ToolExecuteException.class)
+            .hasMessageContaining("not in service scope");
+
+        verifyNoInteractions(dataSourceService);
     }
 
     @Test

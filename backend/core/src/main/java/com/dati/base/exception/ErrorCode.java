@@ -22,6 +22,7 @@ public enum ErrorCode {
     DS_UNSUPPORTED_TYPE("DS005", 400, "Unsupported database type: {0}"),
     DS_SCHEMA_DETECTION_FAILED("DS006", 400, "Database connected, but no usable default schema/database was found. Check the JDBC URL's currentSchema/search_path or database name, and ensure the target schema exists."),
     DS_TABLE_NOT_FOUND("DS007", 404, "Table not found: {0}"),
+    DS_COLUMN_NOT_FOUND("DS008", 404, "Column not found: {0}"),
 
     // ── Semantic module (SM) ─────────────────────────────
 
@@ -72,7 +73,9 @@ public enum ErrorCode {
 
     // ── Permission module (PM) ───────────────────────────
 
-    PERMISSION_DENIED("PM001", 403, "No permission to access this resource");
+    PERMISSION_DENIED("PM001", 403, "No permission to access this resource"),
+    ACL_SELF_GRANT("PM002", 400, "Cannot grant permissions to yourself"),
+    ACL_OWNER_GRANT("PM003", 400, "The resource owner already has full access");
 
     private final String code;
     private final int status;

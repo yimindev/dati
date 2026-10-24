@@ -21,6 +21,8 @@ public interface SubjectTableDAO extends JpaRepository<SubjectTablePO, String> {
 
     void deleteBySubjectIdAndTableId(String subjectId, String tableId);
 
+    void deleteBySubjectId(String subjectId);
+
     boolean existsBySubjectIdAndTableId(String subjectId, String tableId);
 
     @Query("""

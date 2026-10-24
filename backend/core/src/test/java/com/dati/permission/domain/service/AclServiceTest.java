@@ -92,6 +92,26 @@ class AclServiceTest {
     }
 
     @Test
+    void grantRejectsSelfGrant() {
+        when(dataSourceDAO.findById("ds-1")).thenReturn(Optional.of(dsPo()));
+        allowAcl();
+
+        DatiException ex = assertThrows(DatiException.class,
+                () -> service.grant(ResourceType.DATA_SOURCE, "ds-1", PrincipalType.USER, "u-1", Permission.VIEW));
+        assertThat(ex.getCode()).isEqualTo(ErrorCode.ACL_SELF_GRANT);
+    }
+
+    @Test
+    void grantRejectsOwnerGrant() {
+        when(dataSourceDAO.findById("ds-1")).thenReturn(Optional.of(dsPo()));
+        allowAcl();
+
+        DatiException ex = assertThrows(DatiException.class,
+                () -> service.grant(ResourceType.DATA_SOURCE, "ds-1", PrincipalType.USER, "u2", Permission.VIEW));
+        assertThat(ex.getCode()).isEqualTo(ErrorCode.ACL_OWNER_GRANT);
+    }
+
+    @Test
     void grantInsertsNewRow() {
         when(dataSourceDAO.findById("ds-1")).thenReturn(Optional.of(dsPo()));
         allowAcl();

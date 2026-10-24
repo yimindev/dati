@@ -81,6 +81,22 @@ class ExecuteSqlExecutorTest {
     }
 
     @Test
+    @DisplayName("out-of-scope data source is rejected before the existence lookup")
+    void outOfScopeDataSource_shouldFailBeforeLookup() {
+        doThrow(new ToolExecuteException(ToolError.SCOPE_VIOLATION,
+                "Data source ghost not in service scope"))
+            .when(scopeValidator).validateScopeCoverage(anyList(), eq("ghost"));
+
+        ExecuteSqlArgs args = new ExecuteSqlArgs("ghost", "SELECT * FROM orders");
+
+        assertThatThrownBy(() -> executor.execute(ctx(args)))
+            .isInstanceOf(ToolExecuteException.class)
+            .hasMessageContaining("not in service scope");
+
+        verifyNoInteractions(dataSourceService);
+    }
+
+    @Test
     @DisplayName("missing data source still reported as DATA_SOURCE_NOT_FOUND")
     void missingDataSource() {
         when(dataSourceService.getDataSourceInternal("ghost")).thenReturn(Optional.empty());

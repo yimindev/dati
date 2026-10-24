@@ -8,7 +8,6 @@ import com.dati.base.exception.DatiException;
 import com.dati.base.exception.ErrorCode;
 import com.dati.common.StringUtils;
 import com.dati.datasource.domain.model.DataSource;
-import com.dati.datasource.repository.dao.ColumnInfoDAO;
 import com.dati.datasource.repository.dao.DataSourceDAO;
 import com.dati.datasource.repository.dao.TableInfoDAO;
 import com.dati.datasource.repository.mapper.DSMapper;
@@ -21,7 +20,6 @@ import com.dati.db.Table;
 import com.dati.permission.domain.model.Permission;
 import com.dati.permission.domain.model.ResourceType;
 import com.dati.permission.domain.service.PermissionService;
-import com.dati.semantic.domain.service.SemanticIndexService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -41,23 +39,20 @@ public class DataSourceService {
 
     private final DataSourceDAO dataSourceDAO;
     private final TableInfoDAO tableInfoDAO;
-    private final ColumnInfoDAO columnInfoDAO;
-    private final SemanticIndexService semanticIndexService;
     private final JdbcMetaService jdbcMetaService;
     private final PermissionService permissionService;
     private final UserGroupService userGroupService;
+    private final TableService tableService;
 
     public DataSourceService(DataSourceDAO dataSourceDAO, TableInfoDAO tableInfoDAO,
-                             ColumnInfoDAO columnInfoDAO, SemanticIndexService semanticIndexService,
                              JdbcMetaService jdbcMetaService, PermissionService permissionService,
-                             UserGroupService userGroupService) {
+                             UserGroupService userGroupService, TableService tableService) {
         this.dataSourceDAO = dataSourceDAO;
         this.tableInfoDAO = tableInfoDAO;
-        this.columnInfoDAO = columnInfoDAO;
-        this.semanticIndexService = semanticIndexService;
         this.jdbcMetaService = jdbcMetaService;
         this.permissionService = permissionService;
         this.userGroupService = userGroupService;
+        this.tableService = tableService;
     }
 
     /**
@@ -176,9 +171,7 @@ public class DataSourceService {
 
         List<String> tableIds = tableInfoDAO.findByDataSourceId(id)
                 .stream().map(TableInfoPO::getId).toList();
-        columnInfoDAO.deleteByTableIdIn(tableIds);
-        tableInfoDAO.deleteAllById(tableIds);
-        semanticIndexService.deleteByEntityTableIds(tableIds);
+        tableService.deleteTables(tableIds);
 
         dataSourceDAO.deleteById(id);
         permissionService.onResourceDeleted(ResourceType.DATA_SOURCE, id);

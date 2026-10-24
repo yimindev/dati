@@ -240,7 +240,7 @@
 1. **准备隔离 Schema**：用 psql 执行 `schema_scope.setup_sql`，创建 `e2e_schema_scope`、`imported_table`、`unimported_table` 及种子行。
 2. **创建专用数据源**：使用 `datasources.postgres_local` 创建数据源，name 唯一（如 `e2e-schema-scope-{timestamp}`），记录 datasourceId。
 3. **仅导入一张表**：`POST /v1/data-sources/{datasourceId}/tables/batch`，body `[{"name":"<imported_table>","schema":"<schema>"}]`。
-   - GET `/tables/added-names` 确认只包含 `imported_table`，不包含 `unimported_table`。
+   - GET `/tables/added-names` 返回的列表中存在 `name` = `imported_table` 的条目，且不存在 `name` = `unimported_table` 的条目。
 4. **创建 MCP 服务并配置 SCHEMA_SCOPE**：
    - 创建服务，`data_scopes` 先绑定该数据源（默认 `IMPORTED_TABLES`）；
    - PUT `/v1/mcp-services/{id}/data-scope`，body：
@@ -264,7 +264,7 @@
    - INSERT `INSERT INTO <schema>.<created_table> VALUES (1, 'a')` → `isError`=false；
    - SELECT `SELECT * FROM <schema>.<created_table>` → `isError`=false，`structuredContent.results[0].rows` 长度为 1，列包含 `id`/`name`。
 10. **自动纳管验证**：
-    - GET `/v1/data-sources/{datasourceId}/tables/added-names` 包含 `<created_table>`；
+    - GET `/v1/data-sources/{datasourceId}/tables/added-names` 返回的列表中存在 `name` = `<created_table>` 的条目；
     - 再次 MCP `get_table_schema` 查 `<created_table>`，`columns` 列名集合等于 `created_table_columns`。
 11. **边界验证（非授权 Schema）**：MCP `execute_sql` 执行 `SELECT * FROM public.genre`
     - `result.isError`=true，错误信息含 `SCOPE_ERROR` / `not in scope`（`public` 未在 `allowed_schemas` 且未导入）。

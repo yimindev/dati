@@ -40,7 +40,7 @@ class TemplatePreviewControllerTest {
                 new SystemVariableResolver()
         );
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
-                .setControllerAdvice(new GlobalExceptionHandler())
+                .setControllerAdvice(new GlobalExceptionHandler(new ObjectMapper()))
                 .build();
         objectMapper = new ObjectMapper();
     }
@@ -406,6 +406,23 @@ class TemplatePreviewControllerTest {
                 .andExpect(jsonPath("$.variables[?(@ == 'table')]").exists())
                 .andExpect(jsonPath("$.variables[?(@ == 'id')]").exists())
                 .andExpect(jsonPath("$.variables[?(@ == 'name')]").exists());
+    }
+
+    @Test
+    @DisplayName("Extract params - preserves the order in which variables appear")
+    void testExtractVariablesOrder() throws Exception {
+        Map<String, Object> body = Map.of(
+                "template", "{{zeta}} {{alpha}} {{mike}} {{bravo}}"
+        );
+
+        mockMvc.perform(post("/v1/template/extract")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(body)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.variables[0]").value("zeta"))
+                .andExpect(jsonPath("$.variables[1]").value("alpha"))
+                .andExpect(jsonPath("$.variables[2]").value("mike"))
+                .andExpect(jsonPath("$.variables[3]").value("bravo"));
     }
 
     @Test

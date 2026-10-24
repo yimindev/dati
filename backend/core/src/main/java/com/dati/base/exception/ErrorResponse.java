@@ -2,8 +2,6 @@ package com.dati.base.exception;
 
 import lombok.Getter;
 
-import java.text.MessageFormat;
-
 @Getter
 public class ErrorResponse {
 
@@ -18,11 +16,11 @@ public class ErrorResponse {
     }
 
     public static ErrorResponse of(ErrorCode errorCode) {
-        return new ErrorResponse(errorCode.getCode(), MessageFormat.format(errorCode.getTemplate(), new Object[0]));
+        return new ErrorResponse(errorCode.getCode(), ErrorMessages.format(errorCode.getTemplate()));
     }
 
     public static ErrorResponse of(ErrorCode errorCode, Object... args) {
-        return new ErrorResponse(errorCode.getCode(), MessageFormat.format(errorCode.getTemplate(), args));
+        return new ErrorResponse(errorCode.getCode(), ErrorMessages.format(errorCode.getTemplate(), args));
     }
 
     public static ErrorResponse ofResolved(ErrorCode errorCode, String resolvedMessage) {

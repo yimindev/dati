@@ -126,9 +126,9 @@
 1. 创建 PostgreSQL 数据源（使用 postgres_local），记下 datasourceId
 2. **批量添加表**：将 `chinook.e2e.datasource.table_mgmt.add_tables` 中列出的表批量添加到数据源
    - body 是数组，每项包含 `name`（表名）和 `schema`（填 `chinook.e2e.default_schema`）
-3. 验证批量添加返回 200
-4. **查询已添加表名列表**（GET added-names）
-5. 验证返回的表中包含 `table_mgmt.add_tables` 中的所有表名
+3. 验证批量添加返回 200，响应包含 `added_count`（等于添加数量）和 `table_ids`（每个新增表的 ID）
+4. **查询已添加表列表**（GET added-names）
+5. 验证返回的列表中包含 `table_mgmt.add_tables` 中的所有表：每项包含 `schema` 和 `name`
 6. **ES 验证 - TABLE 已同步**：查询 ES，filter `entity.datasourceId` = datasourceId AND `type` = `TABLE`
 7. 验证 ES 中有与 `add_tables` 数量相等的 TABLE 文档，每条 `entity.tableName` 对应一个表名
    - 每条 `keywords` 数组至少包含表名本身
@@ -154,7 +154,7 @@
     - `createdTime` 与步骤 7 记录的值一致（不得被重置为更新时刻）
 16. **删除一张表**：删除 `table_mgmt.delete_target` 表
 17. 验证删除返回 200
-18. 查询已添加表名列表，确认 `delete_target` 已不在，其余表仍存在
+18. 查询已添加表列表，确认 `delete_target` 已不在（按 `schema`+`name` 匹配），其余表仍存在
 19. **ES 验证 - 已删表的 TABLE 已清理**：查询 ES 中 `entity.tableName` = `delete_target` AND `entity.datasourceId` = datasourceId 的 TABLE 文档
     - 应返回 0 条（已物理删除）
 20. **ES 验证 - 其余表的 TABLE 仍存在**：确认未删除表的 TABLE 文档不受影响
@@ -225,8 +225,14 @@
     - **预期**：ES 中该列 FIELD_VALUE 文档数仍为 `value_count`（同步不应删除已抽取的维度值）
     - **预期**：ES 中该列 FIELD 文档的 `createdTime` 仍为步骤 7 记录的值（同步重建不得重置创建时间）
     - **注**：当前实现（2026-08-20 前）会静默重置 `extract_value_enabled=false` 并删除全部 FIELD_VALUE 文档，本步骤为回归验证锚点
-22. 删除数据源（清理）
-23. **ES 验证 - 全部清理**：查询 ES 中 `entity.datasourceId` = datasourceId 的所有文档，应返回 0 条
+22. **跨数据源路径校验**：创建第二个空数据源，记下 secondDatasourceId
+    - 用 secondDatasourceId + 当前 tableId 调用 POST columns/sync → 预期 404 `DS007`
+    - 用 secondDatasourceId + 当前 tableId + 当前 columnId 调用 PUT columns/{columnId} → 预期 404 `DS008`
+    - 用同样的错误路径调用 POST values/extract → 预期 404 `DS008`
+    - 再查当前列列表，确认 aliases/description/extract_value_enabled 均未被修改
+23. 删除第二个数据源（清理）
+24. 删除数据源（清理）
+25. **ES 验证 - 全部清理**：查询 ES 中 `entity.datasourceId` = datasourceId 的所有文档，应返回 0 条
 
 ---
 

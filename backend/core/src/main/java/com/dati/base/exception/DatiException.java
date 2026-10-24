@@ -2,8 +2,6 @@ package com.dati.base.exception;
 
 import lombok.Getter;
 
-import java.text.MessageFormat;
-
 public class DatiException extends RuntimeException {
 
     private final ErrorCode errorCode;
@@ -12,7 +10,7 @@ public class DatiException extends RuntimeException {
     private final Object[] args;
 
     public DatiException(ErrorCode errorCode, Object... args) {
-        super(MessageFormat.format(errorCode.getTemplate(), args));
+        super(ErrorMessages.format(errorCode.getTemplate(), args));
         this.errorCode = errorCode;
         this.args = args;
     }

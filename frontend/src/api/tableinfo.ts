@@ -19,16 +19,26 @@ export interface AddTableRequest {
   schema: string;
 }
 
-export function getAddedTableNames(datasourceId: string, signal?: AbortSignal): Promise<string[]> {
-  return get<string[]>(
+export interface AddedTable {
+  schema: string;
+  name: string;
+}
+
+export function getAddedTables(datasourceId: string, signal?: AbortSignal): Promise<AddedTable[]> {
+  return get<AddedTable[]>(
     `/v1/data-sources/${encodeURIComponent(datasourceId)}/tables/added-names`,
     undefined,
     signal
   );
 }
 
-export function batchAddTables(datasourceId: string, tables: AddTableRequest[], signal?: AbortSignal): Promise<IdResponse> {
-  return post<IdResponse, AddTableRequest[]>(
+export interface BatchAddTablesResponse {
+  added_count: number;
+  table_ids: string[];
+}
+
+export function batchAddTables(datasourceId: string, tables: AddTableRequest[], signal?: AbortSignal): Promise<BatchAddTablesResponse> {
+  return post<BatchAddTablesResponse, AddTableRequest[]>(
     `/v1/data-sources/${encodeURIComponent(datasourceId)}/tables/batch`,
     tables,
     signal

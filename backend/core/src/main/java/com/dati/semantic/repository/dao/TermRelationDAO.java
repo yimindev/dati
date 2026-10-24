@@ -20,5 +20,9 @@ public interface TermRelationDAO extends JpaRepository<TermRelationPO, String> {
 
     void deleteByTermId(String termId);
 
+    void deleteByTermIdIn(java.util.Collection<String> termIds);
+
+    void deleteByTableIdIn(java.util.Collection<String> tableIds);
+
     int deleteByTermIdInAndTableId(java.util.Collection<String> termIds, String tableId);
 }

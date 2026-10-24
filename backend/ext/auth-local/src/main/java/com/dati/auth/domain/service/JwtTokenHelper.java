@@ -50,9 +50,21 @@ public class JwtTokenHelper {
                     .parseSignedClaims(token)
                     .getPayload();
 
+            String subject = claims.getSubject();
+            String name = claims.get("name", String.class);
+            if (claims.getExpiration() == null
+                    || subject == null || subject.isBlank()
+                    || name == null || name.isBlank()) {
+                throw new JwtException("Token is missing required claims");
+            }
+            Date issuedAt = claims.getIssuedAt();
+            if (issuedAt != null && issuedAt.after(new Date(System.currentTimeMillis() + 60_000))) {
+                throw new JwtException("Token was issued in the future");
+            }
+
             User user = new User();
-            user.setId(claims.getSubject());
-            user.setName(claims.get("name", String.class));
+            user.setId(subject);
+            user.setName(name);
             user.setDisplayName(claims.get("display_name", String.class));
             return user;
         } catch (JwtException | IllegalArgumentException e) {

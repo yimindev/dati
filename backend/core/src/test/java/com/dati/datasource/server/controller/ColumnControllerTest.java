@@ -1,6 +1,8 @@
 package com.dati.datasource.server.controller;
 
 import com.dati.TestFixtures;
+import com.dati.base.exception.DatiException;
+import com.dati.base.exception.ErrorCode;
 import com.dati.base.pojo.PageReq;
 import com.dati.base.pojo.PageResponse;
 import com.dati.datasource.domain.model.ColumnInfo;
@@ -31,6 +33,8 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -145,6 +149,52 @@ class ColumnControllerTest {
             .andExpect(jsonPath("$.id").value(TestFixtures.TEST_COLUMN_ID));
 
         verify(columnService).updateColumn(eq(TestFixtures.TEST_COLUMN_ID), any());
+    }
+
+    @Test
+    @DisplayName("Get columns - rejects a table outside the path datasource")
+    void getColumns_whenTableOutsidePath_returns404() throws Exception {
+        doThrow(new DatiException(ErrorCode.DS_TABLE_NOT_FOUND, TestFixtures.TEST_TABLE_ID))
+            .when(columnService).requireTableInPath("ds-other", TestFixtures.TEST_TABLE_ID);
+
+        mockMvc.perform(get("/v1/data-sources/{datasourceId}/tables/{tableId}/columns",
+                    "ds-other", TestFixtures.TEST_TABLE_ID)
+                .param("page", "1")
+                .param("page_size", "10"))
+            .andExpect(status().isNotFound())
+            .andExpect(jsonPath("$.code").value("DS007"));
+
+        verify(columnService, never()).getColumns(any(), anyString(), any());
+    }
+
+    @Test
+    @DisplayName("Update column - rejects a column outside the path table")
+    void updateColumn_whenColumnOutsidePath_returns404() throws Exception {
+        ColumnInfoVO requestVo = new ColumnInfoVO();
+        requestVo.setName("updated_column");
+        doThrow(new DatiException(ErrorCode.DS_COLUMN_NOT_FOUND, TestFixtures.TEST_COLUMN_ID))
+            .when(columnService).requireColumnInPath("ds-other", TestFixtures.TEST_TABLE_ID, TestFixtures.TEST_COLUMN_ID);
+
+        mockMvc.perform(put("/v1/data-sources/{datasourceId}/tables/{tableId}/columns/{id}",
+                    "ds-other", TestFixtures.TEST_TABLE_ID, TestFixtures.TEST_COLUMN_ID)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(requestVo)))
+            .andExpect(status().isNotFound())
+            .andExpect(jsonPath("$.code").value("DS008"));
+
+        verify(columnService, never()).updateColumn(anyString(), any());
+    }
+
+    @Test
+    @DisplayName("Extract values - rejects a column outside the path table")
+    void extractValues_whenColumnOutsidePath_returns404() throws Exception {
+        doThrow(new DatiException(ErrorCode.DS_COLUMN_NOT_FOUND, TestFixtures.TEST_COLUMN_ID))
+            .when(columnService).requireColumnInPath("ds-other", TestFixtures.TEST_TABLE_ID, TestFixtures.TEST_COLUMN_ID);
+
+        mockMvc.perform(post("/v1/data-sources/{datasourceId}/tables/{tableId}/columns/{columnId}/values/extract",
+                    "ds-other", TestFixtures.TEST_TABLE_ID, TestFixtures.TEST_COLUMN_ID))
+            .andExpect(status().isNotFound())
+            .andExpect(jsonPath("$.code").value("DS008"));
     }
 
     @Test

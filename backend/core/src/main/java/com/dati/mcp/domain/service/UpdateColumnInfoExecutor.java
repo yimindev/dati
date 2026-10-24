@@ -1,6 +1,7 @@
 package com.dati.mcp.domain.service;
 
 import com.dati.common.JsonUtils;
+import com.dati.base.RequestContext;
 import com.dati.datasource.domain.model.ColumnInfo;
 import com.dati.datasource.domain.service.ColumnService;
 import com.dati.mcp.domain.model.McpToolType;
@@ -86,6 +87,7 @@ public class UpdateColumnInfoExecutor implements ToolExecutor {
             ColumnInfo update = new ColumnInfo();
             update.setDescription(item.description());
             update.setAliases(item.aliases());
+            update.setUpdatedBy(RequestContext.currentUserId());
             columnService.updateColumn(target.columnId(), update);
             Map<String, Object> neu = valueMap(
                 item.description() != null ? item.description() : target.description(),

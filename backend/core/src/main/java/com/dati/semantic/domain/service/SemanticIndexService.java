@@ -3,6 +3,7 @@ package com.dati.semantic.domain.service;
 import com.dati.semantic.domain.SemanticEntityType;
 import com.dati.semantic.repository.dao.SemanticSearchDAO;
 import com.dati.semantic.repository.po.SemanticSearchDocument;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -10,11 +11,24 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+/**
+ * Maintains the semantic search index.
+ *
+ * <p>The relational database is the source of truth; this index is derived data. Index
+ * writes and deletes are therefore best-effort: failures are logged and never propagated,
+ * because the business transaction has already succeeded and the index can be rebuilt by
+ * re-syncing metadata. Search queries still fail normally when Elasticsearch is unavailable.
+ *
+ * <p>Callers persist and flush business data before invoking the write methods, so database
+ * constraint violations surface before the index is touched.
+ */
+@Slf4j
 @Service
 public class SemanticIndexService {
 
@@ -25,35 +39,39 @@ public class SemanticIndexService {
     }
 
     public void save(SemanticSearchDocument doc) {
-        LocalDateTime now = LocalDateTime.now();
-        doc.setUpdatedTime(now);
-        if (doc.getCreatedTime() == null) {
-            doc.setCreatedTime(existingCreatedTime(doc.getId()).orElse(now));
-        }
-        semanticSearchDAO.save(doc);
+        runIndexUpdate("save " + doc.getId(), () -> {
+            LocalDateTime now = utcNow();
+            doc.setUpdatedTime(now);
+            if (doc.getCreatedTime() == null) {
+                doc.setCreatedTime(existingCreatedTime(doc.getId()).orElse(now));
+            }
+            semanticSearchDAO.save(doc);
+        });
     }
 
     public void saveBatch(List<SemanticSearchDocument> docs) {
-        LocalDateTime now = LocalDateTime.now();
-        List<String> idsToLookup = docs.stream()
-                .filter(doc -> doc.getCreatedTime() == null && doc.getId() != null)
-                .map(SemanticSearchDocument::getId)
-                .toList();
-        Map<String, LocalDateTime> existingCreatedTimes = new HashMap<>();
-        if (!idsToLookup.isEmpty()) {
-            semanticSearchDAO.findAllById(idsToLookup).forEach(existingDoc -> {
-                if (existingDoc.getCreatedTime() != null) {
-                    existingCreatedTimes.put(existingDoc.getId(), existingDoc.getCreatedTime());
+        runIndexUpdate("save batch of " + docs.size(), () -> {
+            LocalDateTime now = utcNow();
+            List<String> idsToLookup = docs.stream()
+                    .filter(doc -> doc.getCreatedTime() == null && doc.getId() != null)
+                    .map(SemanticSearchDocument::getId)
+                    .toList();
+            Map<String, LocalDateTime> existingCreatedTimes = new HashMap<>();
+            if (!idsToLookup.isEmpty()) {
+                semanticSearchDAO.findAllById(idsToLookup).forEach(existingDoc -> {
+                    if (existingDoc.getCreatedTime() != null) {
+                        existingCreatedTimes.put(existingDoc.getId(), existingDoc.getCreatedTime());
+                    }
+                });
+            }
+            docs.forEach(doc -> {
+                doc.setUpdatedTime(now);
+                if (doc.getCreatedTime() == null) {
+                    doc.setCreatedTime(existingCreatedTimes.getOrDefault(doc.getId(), now));
                 }
             });
-        }
-        docs.forEach(doc -> {
-            doc.setUpdatedTime(now);
-            if (doc.getCreatedTime() == null) {
-                doc.setCreatedTime(existingCreatedTimes.getOrDefault(doc.getId(), now));
-            }
+            semanticSearchDAO.saveAll(docs);
         });
-        semanticSearchDAO.saveAll(docs);
     }
 
     private Optional<LocalDateTime> existingCreatedTime(String id) {
@@ -66,7 +84,7 @@ public class SemanticIndexService {
     }
 
     public void deleteByEntityTableIds(List<String> tableIds) {
-        semanticSearchDAO.deleteByEntity_TableIdIn(tableIds);
+        runIndexUpdate("delete by table ids " + tableIds, () -> semanticSearchDAO.deleteByEntity_TableIdIn(tableIds));
     }
 
     public void deleteByEntityTableId(String tableId) {
@@ -74,19 +92,21 @@ public class SemanticIndexService {
     }
 
     public void deleteByEntity_SubjectId(String subjectId) {
-        semanticSearchDAO.deleteByEntity_SubjectId(subjectId);
+        runIndexUpdate("delete by subject " + subjectId, () -> semanticSearchDAO.deleteByEntity_SubjectId(subjectId));
     }
 
     public void deleteById(String id) {
-        semanticSearchDAO.deleteById(id);
+        runIndexUpdate("delete " + id, () -> semanticSearchDAO.deleteById(id));
     }
 
     public void deleteByTableFieldAndType(String tableId, String field, SemanticEntityType type) {
-        semanticSearchDAO.deleteByEntity_TableIdAndEntity_FieldAndType(tableId, field, type);
+        runIndexUpdate("delete field " + tableId + "." + field + " (" + type + ")",
+                () -> semanticSearchDAO.deleteByEntity_TableIdAndEntity_FieldAndType(tableId, field, type));
     }
 
     public void deleteByTableIdAndType(String tableId, SemanticEntityType type) {
-        semanticSearchDAO.deleteByEntity_TableIdAndType(tableId, type);
+        runIndexUpdate("delete table " + tableId + " (" + type + ")",
+                () -> semanticSearchDAO.deleteByEntity_TableIdAndType(tableId, type));
     }
 
     public List<SemanticSearchDocument> findByTableFieldAndType(String tableId, String field, SemanticEntityType type) {
@@ -96,7 +116,7 @@ public class SemanticIndexService {
     /** 查询某表下指定类型的文档，不区分字段，限制返回数量。 */
     public List<SemanticSearchDocument> findByTableIdAndType(String tableId, SemanticEntityType type, int maxSize) {
         return semanticSearchDAO.findByEntity_TableIdAndType(tableId, type.name(),
-                org.springframework.data.domain.PageRequest.of(0, maxSize)).getContent();
+                PageRequest.of(0, maxSize)).getContent();
     }
 
     public Page<SemanticSearchDocument> findByTableFieldAndTypePaginated(
@@ -139,4 +159,19 @@ public class SemanticIndexService {
         return new PageImpl<>(docs.subList(start, end), pageable, docs.size());
     }
 
+    /**
+     * Runs an index update without letting an Elasticsearch failure escape into the caller's
+     * business transaction. The error is logged with enough context to identify the entity.
+     */
+    private void runIndexUpdate(String operation, Runnable action) {
+        try {
+            action.run();
+        } catch (RuntimeException e) {
+            log.error("Semantic index update failed: {}", operation, e);
+        }
+    }
+
+    private static LocalDateTime utcNow() {
+        return LocalDateTime.now(ZoneOffset.UTC);
+    }
 }

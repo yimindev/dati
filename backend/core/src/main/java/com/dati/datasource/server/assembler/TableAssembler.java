@@ -3,6 +3,7 @@ package com.dati.datasource.server.assembler;
 import com.dati.base.BaseAssembler;
 import com.dati.base.pojo.PageResponse;
 import com.dati.datasource.domain.model.TableInfo;
+import com.dati.datasource.server.pojo.AddedTableVO;
 import com.dati.datasource.server.pojo.TableInfoVO;
 import com.dati.datasource.server.pojo.request.UpdateTableRequest;
 import org.springframework.data.domain.Page;
@@ -41,6 +42,12 @@ public class TableAssembler extends BaseAssembler {
         tableInfo.setAliases(request.getAliases());
         tableInfo.setDescription(request.getDescription());
         return tableInfo;
+    }
+
+    public List<AddedTableVO> toAddedTables(List<TableInfo> tables) {
+        return tables.stream()
+                .map(table -> new AddedTableVO(table.getSchema(), table.getName()))
+                .toList();
     }
 
 }

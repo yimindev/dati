@@ -91,7 +91,10 @@ public class TableAutoRegistrationService {
             registeredTableIds.add(saveTable(dsId, schema, physicalTable, actor, columns, docs));
         }
 
-        saveIndexDocs(dsId, docs);
+        if (!registeredTableIds.isEmpty()) {
+            tableInfoDAO.flush();
+        }
+        saveIndexDocs(docs);
         return registeredTableIds;
     }
 
@@ -181,16 +184,11 @@ public class TableAutoRegistrationService {
         return tableId;
     }
 
-    private void saveIndexDocs(String dsId, List<SemanticSearchDocument> docs) {
+    private void saveIndexDocs(List<SemanticSearchDocument> docs) {
         if (docs.isEmpty()) {
             return;
         }
-        try {
-            semanticIndexService.saveBatch(docs);
-        } catch (Exception e) {
-            log.warn("Failed to index auto-registered tables for data source {}: {}",
-                    dsId, e.getMessage());
-        }
+        semanticIndexService.saveBatch(docs);
     }
 
     private String currentActor(@Nullable String serviceId) {

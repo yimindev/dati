@@ -1,5 +1,7 @@
 package com.dati.mcp.domain.service;
 
+import com.dati.auth.authentication.User;
+import com.dati.base.RequestContext;
 import com.dati.datasource.domain.model.TableInfo;
 import com.dati.datasource.domain.service.TableService;
 import com.dati.mcp.domain.model.McpToolType;
@@ -10,6 +12,7 @@ import com.dati.mcp.repository.dao.McpMetadataAuditLogDAO;
 import com.dati.mcp.repository.po.McpMetadataAuditLogPO;
 import com.dati.mcp.server.pojo.MetadataUpdateData;
 import com.dati.mcp.server.pojo.MetadataUpdateResult;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -49,7 +52,16 @@ class UpdateTableInfoExecutorTest {
 
     @BeforeEach
     void setUp() {
+        User user = new User();
+        user.setId("user-1");
+        user.setName("qa-e2e-tester");
+        RequestContext.setUser(user);
         executor = new UpdateTableInfoExecutor(scopeValidator, resolver, tableService, auditLogDAO);
+    }
+
+    @AfterEach
+    void tearDown() {
+        RequestContext.clear();
     }
 
     private ToolExecutionContext ctx(UpdateTableInfoArgs args) {
@@ -76,6 +88,7 @@ class UpdateTableInfoExecutorTest {
         verify(tableService).updateTable(eq("ds-1"), eq("t1"), tableCaptor.capture());
         assertThat(tableCaptor.getValue().getDescription()).isEqualTo("new desc");
         assertThat(tableCaptor.getValue().getAliases()).containsExactly("a", "b");
+        assertThat(tableCaptor.getValue().getUpdatedBy()).isEqualTo("user-1");
 
         ArgumentCaptor<McpMetadataAuditLogPO> auditCaptor = ArgumentCaptor.forClass(McpMetadataAuditLogPO.class);
         verify(auditLogDAO).save(auditCaptor.capture());

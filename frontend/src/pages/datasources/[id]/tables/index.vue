@@ -11,7 +11,7 @@ import type { InputInstance } from "element-plus";
 import { Plus, Search, Refresh, MoreFilled, CopyDocument } from "@element-plus/icons-vue";
 import { useI18n } from "vue-i18n";
 import { copyToClipboard } from "~/utils/clipboard";
-import { listTableInfos, getAddedTableNames, batchAddTables, syncColumns, deleteTable, updateTable, type TableInfoVO } from "~/api/tableinfo.ts";
+import { listTableInfos, getAddedTables, batchAddTables, syncColumns, deleteTable, updateTable, type AddedTable, type TableInfoVO } from "~/api/tableinfo.ts";
 import { getSchemas, getTables, getDataSource, type TableVO } from "~/api/datasource.ts";
 import { formatDateTime } from "~/composables";
 
@@ -39,7 +39,7 @@ const selectedSchema = ref("");
 const defaultSchema = ref("");
 const availableTables = ref<TableVO[]>([]);
 const selectedTables = ref<string[]>([]);
-const addedTableNames = ref<string[]>([]);
+const addedTables = ref<AddedTable[]>([]);
 const schemaLoading = ref(false);
 const tablesLoading = ref(false);
 const addTableLoading = ref(false);
@@ -57,7 +57,7 @@ const transferData = computed<TransferItem[]>(() => {
     key: table.name,
     label: table.name,
     comment: table.comment,
-    disabled: addedTableNames.value.includes(table.name),
+    disabled: addedTables.value.some(added => added.schema === selectedSchema.value && added.name === table.name),
   }));
 });
 
@@ -116,7 +116,7 @@ const handleOpenAddTableDialog = async () => {
   try {
     schemaLoading.value = true;
     schemas.value = await getSchemas(datasourceId.value);
-    addedTableNames.value = await getAddedTableNames(datasourceId.value);
+    addedTables.value = await getAddedTables(datasourceId.value);
 
     // 自动选中数据源的默认 Schema
     if (defaultSchema.value && schemas.value.includes(defaultSchema.value)) {

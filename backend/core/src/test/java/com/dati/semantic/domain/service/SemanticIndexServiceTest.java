@@ -18,11 +18,16 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
+import java.util.TimeZone;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.anyList;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -38,6 +43,50 @@ class SemanticIndexServiceTest {
 
     @Captor
     ArgumentCaptor<List<SemanticSearchDocument>> captor;
+
+    @Test
+    @DisplayName("Save document - timestamps are written in UTC")
+    void save_shouldUseUtcTimestamps() {
+        TimeZone original = TimeZone.getDefault();
+        TimeZone.setDefault(TimeZone.getTimeZone("Asia/Shanghai"));
+        try {
+            SemanticSearchDocument doc = SemanticSearchDocument.builder()
+                    .id("field:utc-test")
+                    .type(SemanticEntityType.FIELD)
+                    .keywords(List.of("utc"))
+                    .build();
+
+            semanticIndexService.save(doc);
+
+            LocalDateTime utcNow = LocalDateTime.now(ZoneOffset.UTC);
+            assertThat(doc.getCreatedTime()).isBetween(utcNow.minusSeconds(5), utcNow.plusSeconds(5));
+            assertThat(doc.getUpdatedTime()).isEqualTo(doc.getCreatedTime());
+        } finally {
+            TimeZone.setDefault(original);
+        }
+    }
+
+    @Test
+    @DisplayName("Save document - index failure is logged and does not escape")
+    void save_shouldNotFailWhenIndexIsUnavailable() {
+        doThrow(new RuntimeException("ES down")).when(semanticSearchDAO).save(any());
+        SemanticSearchDocument doc = SemanticSearchDocument.builder()
+                .id("field:down")
+                .type(SemanticEntityType.FIELD)
+                .build();
+
+        assertThatCode(() -> semanticIndexService.save(doc)).doesNotThrowAnyException();
+    }
+
+    @Test
+    @DisplayName("Delete by subject - index failure is logged and does not escape")
+    void deleteByEntity_SubjectId_shouldNotFailWhenIndexIsUnavailable() {
+        doThrow(new RuntimeException("conflict"))
+                .when(semanticSearchDAO).deleteByEntity_SubjectId("subject-001");
+
+        assertThatCode(() -> semanticIndexService.deleteByEntity_SubjectId("subject-001"))
+                .doesNotThrowAnyException();
+    }
 
     @Test
     @DisplayName("Save document - sets createdTime and updatedTime on first save")

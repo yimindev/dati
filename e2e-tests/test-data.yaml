@@ -6,10 +6,10 @@ users:
     name: "qa-e2e-tester"
     password: "QaTest123456"
     type: "local"
-  # 全局管理员（对应后端 auth.admin-users 配置，默认 admin）
-  # 注意：密码与测试标准密码不同，为环境预置账户
+  # 全局管理员（对应后端 auth.admin-users 配置）
+  # E2E 启动命令会把该用户名加入 ADMIN_USERS；首次运行时按 qa_user 相同规则注册。
   qa_admin:
-    name: "admin"
+    name: "qa-e2e-admin"
     password: "admin123"
     type: "local"
 

@@ -11,6 +11,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -22,6 +23,8 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.emptyString;
+import static org.hamcrest.Matchers.not;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -29,6 +32,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(controllers = GlobalExceptionHandlerTest.TestController.class)
 @ContextConfiguration(classes = {GlobalExceptionHandlerTest.TestController.class, GlobalExceptionHandler.class})
+@ActiveProfiles("test")
 @AutoConfigureMockMvc(addFilters = false)
 @DisplayName("GlobalExceptionHandler Tests")
 class GlobalExceptionHandlerTest {
@@ -106,6 +110,50 @@ class GlobalExceptionHandlerTest {
             .andExpect(jsonPath("$.code").value(ErrorCode.INVALID_PARAMETER.getCode()));
     }
 
+    @Test
+    @DisplayName("Should report the invalid enum value and accepted constants")
+    void invalidEnumValue_shouldReportAcceptedValues() throws Exception {
+        mockMvc.perform(post("/test/deserialize")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"type\":\"H2\"}"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.code").value(ErrorCode.INVALID_PARAMETER.getCode()))
+            .andExpect(jsonPath("$.message").value(containsString("type: must be one of [MYSQL, POSTGRESQL]")));
+    }
+
+    @Test
+    @DisplayName("Should report malformed JSON instead of the generic read failure")
+    void malformedJson_shouldReportParseError() throws Exception {
+        mockMvc.perform(post("/test/deserialize")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"type\":"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.code").value(ErrorCode.INVALID_PARAMETER.getCode()))
+            .andExpect(jsonPath("$.message").value(not("Request parameter error: Failed to read request")))
+            .andExpect(jsonPath("$.message").value(not(emptyString())));
+    }
+
+    @Test
+    @DisplayName("Should report the field whose value has the wrong type")
+    void wrongValueType_shouldReportField() throws Exception {
+        mockMvc.perform(post("/test/deserialize")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":{\"a\":1}}"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.code").value(ErrorCode.INVALID_PARAMETER.getCode()))
+            .andExpect(jsonPath("$.message").value(containsString("name")));
+    }
+
+    @Test
+    @DisplayName("Should use the JSON field name in validation messages")
+    void fieldValidation_shouldUseJsonPropertyName() throws Exception {
+        mockMvc.perform(post("/test/validate")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{}"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.message").value(containsString("jdbc_url: ")));
+    }
+
     @RestController
     @RequestMapping("/test")
     static class TestController {
@@ -123,6 +171,34 @@ class GlobalExceptionHandlerTest {
         @PostMapping("/validate-elements")
         public String validateElements(@Valid @RequestBody List<@Valid ValidateItem> items) {
             return "ok";
+        }
+
+        @PostMapping("/deserialize")
+        public String deserialize(@RequestBody DeserializeRequest request) {
+            return "ok";
+        }
+
+        @PostMapping("/validate")
+        public String validate(@Valid @RequestBody ValidateRequest request) {
+            return "ok";
+        }
+
+        @Setter
+        @Getter
+        static class DeserializeRequest {
+            private TestEnum type;
+            private String name;
+        }
+
+        enum TestEnum {
+            MYSQL, POSTGRESQL
+        }
+
+        @Setter
+        @Getter
+        static class ValidateRequest {
+            @NotBlank
+            private String jdbcUrl;
         }
 
         @Setter

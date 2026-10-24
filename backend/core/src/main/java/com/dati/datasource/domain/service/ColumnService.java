@@ -32,6 +32,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -67,9 +68,10 @@ public class ColumnService {
         return columnInfoDAO.findByTableIdAndKeyword(tableId, keyword, pageReq.toPageRequest().withSort(sortBy)).map(ColumnMapper::toColumnInfo);
     }
 
+    @Transactional
     public void updateColumn(String id, ColumnInfo columnInfo) {
         ColumnInfoPO columnInfoPO = columnInfoDAO.findById(id)
-                .orElseThrow(() -> new DatiException(ErrorCode.DS_NOT_FOUND, "Column not found: " + id));
+                .orElseThrow(() -> new DatiException(ErrorCode.DS_COLUMN_NOT_FOUND, id));
         TableInfoPO tablePO = tableInfoDAO.findById(columnInfoPO.getTableId())
                 .orElseThrow(() -> new DatiException(ErrorCode.DS_TABLE_NOT_FOUND, columnInfoPO.getTableId()));
         permissionService.requireDataSource(tablePO.getDataSourceId(), Permission.EDIT);
@@ -91,8 +93,11 @@ public class ColumnService {
         if (columnInfo.getExtractValueEnabled() != null) {
             columnInfoPO.setExtractValueEnabled(columnInfo.getExtractValueEnabled());
         }
+        if (columnInfo.getUpdatedBy() != null) {
+            columnInfoPO.setUpdatedBy(columnInfo.getUpdatedBy());
+        }
         boolean nowEnabled = columnInfoPO.isExtractValueEnabled();
-        columnInfoDAO.save(columnInfoPO);
+        columnInfoDAO.saveAndFlush(columnInfoPO);
 
         // 从开启变为禁用，清理该列的值数据
         if (wasEnabled && !nowEnabled) {
@@ -129,6 +134,7 @@ public class ColumnService {
     public void syncColumns(String datasourceId, String tableId, boolean overwriteExisting) throws SQLException {
         permissionService.requireDataSource(datasourceId, Permission.EDIT);
         TableInfo tableInfo = TableMapper.toTableInfo(tableInfoDAO.findById(tableId)
+                .filter(table -> Objects.equals(table.getDataSourceId(), datasourceId))
                 .orElseThrow(() -> new DatiException(ErrorCode.DS_TABLE_NOT_FOUND, tableId)));
         
         Map<String, ColumnInfoPO> existingColumns = columnInfoDAO.findByTableId(tableId)
@@ -180,6 +186,7 @@ public class ColumnService {
         }).toList();
         
         List<ColumnInfoPO> savedList = columnInfoDAO.saveAll(columnInfoPOList);
+        columnInfoDAO.flush();
         
         // FIELD 结构索引整表重建；重建前保留既有文档的 createdTime（删除后无法再从索引读回）
         Map<String, LocalDateTime> existingCreatedTimes = semanticIndexService
@@ -219,6 +226,30 @@ public class ColumnService {
                     .build();
         }).toList();
         semanticIndexService.saveBatch(docs);
+    }
+
+    /**
+     * Verifies that the table exists under the data source in the request path. A mismatch is
+     * reported as "table not found" so a path from another data source never operates on it.
+     */
+    public void requireTableInPath(String datasourceId, String tableId) {
+        TableInfoPO table = tableInfoDAO.findById(tableId)
+                .orElseThrow(() -> new DatiException(ErrorCode.DS_TABLE_NOT_FOUND, tableId));
+        if (!Objects.equals(table.getDataSourceId(), datasourceId)) {
+            throw new DatiException(ErrorCode.DS_TABLE_NOT_FOUND, tableId);
+        }
+    }
+
+    /**
+     * Verifies the full (data source, table, column) ownership chain of a column sub-resource.
+     */
+    public void requireColumnInPath(String datasourceId, String tableId, String columnId) {
+        ColumnInfoPO column = columnInfoDAO.findById(columnId)
+                .orElseThrow(() -> new DatiException(ErrorCode.DS_COLUMN_NOT_FOUND, columnId));
+        if (!Objects.equals(column.getTableId(), tableId)) {
+            throw new DatiException(ErrorCode.DS_COLUMN_NOT_FOUND, columnId);
+        }
+        requireTableInPath(datasourceId, tableId);
     }
 
 }

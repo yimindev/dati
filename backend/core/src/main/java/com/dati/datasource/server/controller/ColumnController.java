@@ -46,15 +46,23 @@ public class ColumnController {
 
     @GetMapping
     public PageResponse<ColumnInfoVO> getColumns(
+            @PathVariable String datasourceId,
             @PathVariable String tableId,
             @Valid PageReq pageReq,
             @RequestParam(name = "keyword", required = false) String keyword) {
+        columnService.requireTableInPath(datasourceId, tableId);
         return columnAssembler.toPageResponse(columnService.getColumns(pageReq, tableId, keyword));
     }
 
     @PutMapping("/{id}")
-    public IdResponse updateColumn(@PathVariable String id, @Valid @RequestBody UpdateColumnRequest request) {
+    public IdResponse updateColumn(
+            @PathVariable String datasourceId,
+            @PathVariable String tableId,
+            @PathVariable String id,
+            @Valid @RequestBody UpdateColumnRequest request) {
+        columnService.requireColumnInPath(datasourceId, tableId, id);
         ColumnInfo columnInfo = columnAssembler.toColumnInfo(request);
+        columnAssembler.fillUpdateUserFromRequest(columnInfo);
         columnService.updateColumn(id, columnInfo);
         return new IdResponse(id);
     }
@@ -76,8 +84,10 @@ public class ColumnController {
     @PostMapping("/{columnId}/values/extract")
     public IdResponse extractValues(
             @PathVariable String datasourceId,
+            @PathVariable String tableId,
             @PathVariable String columnId,
             @RequestParam(defaultValue = "false") boolean overwrite) {
+        columnService.requireColumnInPath(datasourceId, tableId, columnId);
         try {
             columnValueService.extractValues(datasourceId, columnId, overwrite);
             return new IdResponse(columnId);
@@ -89,9 +99,12 @@ public class ColumnController {
 
     @GetMapping("/{columnId}/values")
     public PageResponse<ColumnValueVO> getValues(
+            @PathVariable String datasourceId,
+            @PathVariable String tableId,
             @PathVariable String columnId,
             @Valid PageReq pageReq,
             @RequestParam(required = false) String keyword) {
+        columnService.requireColumnInPath(datasourceId, tableId, columnId);
         return PageResponse.of(
                 columnValueService.getValues(columnId, pageReq, keyword)
                         .map(item -> {
@@ -107,8 +120,10 @@ public class ColumnController {
     @PutMapping("/{columnId}/values")
     public IdResponse saveValues(
             @PathVariable String datasourceId,
+            @PathVariable String tableId,
             @PathVariable String columnId,
             @RequestBody ColumnValueListRequest request) {
+        columnService.requireColumnInPath(datasourceId, tableId, columnId);
         List<ColumnValueService.ValueItem> items = request.getValues().stream().map(vo -> {
             ColumnValueService.ValueItem item = new ColumnValueService.ValueItem();
             item.setId(vo.getId());

@@ -25,6 +25,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 
 import static org.hamcrest.Matchers.containsString;
@@ -225,6 +226,27 @@ class DataSourceControllerTest {
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.code").value("CM001"))
             .andExpect(jsonPath("$.message", containsString("name")));
+    }
+
+    @Test
+    @DisplayName("Update data source - blank name message follows the request locale")
+    void updateDataSource_blankName_shouldUseLocalizedMessage() throws Exception {
+        UpdateDataSourceRequest request = new UpdateDataSourceRequest();
+        request.setName("   ");
+
+        mockMvc.perform(put("/v1/data-sources/{id}", TestFixtures.TEST_DATASOURCE_ID)
+                .locale(Locale.SIMPLIFIED_CHINESE)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.message", containsString("name: 不得为空白")));
+
+        mockMvc.perform(put("/v1/data-sources/{id}", TestFixtures.TEST_DATASOURCE_ID)
+                .locale(Locale.ENGLISH)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.message", containsString("name: must not be blank")));
     }
 
     @Test

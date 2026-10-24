@@ -7,7 +7,8 @@ server:
   # 从仓库根 pom 启动 install：根 pom 是 dati-parent + backend 聚合，能同时安装父 POM 与全部模块。
   # 注意：只用 -f backend/pom.xml 不会安装根 POM（dati-parent），版本号变更后 spring-boot:run 会因
   # "Could not find artifact com.dati:dati-parent:pom:x.y.z" 启动失败。
-  start_command: "mvn -f pom.xml -q -DskipTests install && mvn -f backend/app/pom.xml spring-boot:run -Dspring-boot.run.workingDirectory=/Users/zhangyimin/IdeaProjects/dati"
+  # E2E 管理员账号：test-data.yaml users.qa_admin 必须在 ADMIN_USERS 中，首次运行注册后即拥有管理员权限。
+  start_command: "export ADMIN_USERS=admin,qa-e2e-admin; mvn -f pom.xml -q -DskipTests install && mvn -f backend/app/pom.xml spring-boot:run -Dspring-boot.run.workingDirectory=/Users/zhangyimin/IdeaProjects/dati"
   ready_signal: "Started DatIApplication"
 
 runner:

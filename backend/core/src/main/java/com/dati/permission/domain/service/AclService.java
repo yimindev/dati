@@ -50,6 +50,14 @@ public class AclService {
                         String principalId, Permission permission) {
         String ownerId = resolveOwnerId(type, resourceId);
         permissionService.requireCurrentUser(type, resourceId, Permission.EDIT, ownerId);
+        if (principalType == PrincipalType.USER) {
+            if (principalId.equals(RequestContext.getUser().getId())) {
+                throw new DatiException(ErrorCode.ACL_SELF_GRANT);
+            }
+            if (principalId.equals(ownerId)) {
+                throw new DatiException(ErrorCode.ACL_OWNER_GRANT);
+            }
+        }
         if (principalType == PrincipalType.GROUP) {
             // V1 仅支持全公开主体：只读、对所有人可见
             if (!PrincipalType.ALL_USERS.equals(principalId)) {

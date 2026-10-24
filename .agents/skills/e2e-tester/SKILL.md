@@ -52,6 +52,8 @@ e2e-tests/
 用例前置包含「已登录」时：
 - 使用 test-data.yaml 中的固定用户 `qa_user` 直接登录
 - 若用户不存在则注册，若注册返回「already exists」则直接登录，均不视为失败
+- 其他 `users.*`（如 `qa_admin`）按同样规则处理：先登录，401 且可注册则注册；注册返回 409 说明环境已有同名账号但密码不一致，应报告环境问题
+- `qa_admin` 依赖启动命令导出的 `ADMIN_USERS`（默认 `admin,qa-e2e-admin`），不依赖库中预置的 `admin` 账号
 
 ### 3. 执行步骤
 

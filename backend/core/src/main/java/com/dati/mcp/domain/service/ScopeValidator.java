@@ -42,7 +42,7 @@ public class ScopeValidator {
         validateReferencedTables(scopeItems, dsId, referencedTables, defaultSchema);
     }
 
-    private void validateScopeCoverage(List<McpServiceDataScope> scopeItems, String dsId) {
+    public void validateScopeCoverage(List<McpServiceDataScope> scopeItems, String dsId) {
         if (scopeItems == null || scopeItems.isEmpty()) {
             throw new ToolExecuteException(ToolError.SCOPE_VIOLATION, "No data scope configured");
         }

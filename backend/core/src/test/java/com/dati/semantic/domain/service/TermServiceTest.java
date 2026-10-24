@@ -88,7 +88,7 @@ class TermServiceTest {
         String name = "客户";
         String description = "客户相关信息";
 
-        when(termDAO.save(any(TermPO.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(termDAO.saveAndFlush(any(TermPO.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         com.dati.semantic.domain.model.Term model = new com.dati.semantic.domain.model.Term();
         model.setSubjectId(subjectId);
@@ -97,7 +97,7 @@ class TermServiceTest {
         termService.createTerm(model);
 
         ArgumentCaptor<TermPO> termCaptor = ArgumentCaptor.forClass(TermPO.class);
-        verify(termDAO).save(termCaptor.capture());
+        verify(termDAO).saveAndFlush(termCaptor.capture());
         TermPO savedTerm = termCaptor.getValue();
         assertThat(savedTerm.getSubjectId()).isEqualTo(subjectId);
         assertThat(savedTerm.getName()).isEqualTo(name);
@@ -404,6 +404,40 @@ class TermServiceTest {
         assertThat(rel.getTableName()).isEqualTo("orders");
         assertThat(rel.getSchema()).isEqualTo("sales");
         assertThat(rel.getFieldName()).isEqualTo("amount");
+    }
+
+    @Test
+    @DisplayName("getTermRelationsByTermIds - drops relations whose table no longer exists")
+    void getTermRelationsByTermIds_shouldDropDanglingRelations() {
+        TermRelationPO dangling = new TermRelationPO();
+        dangling.setId("rel-dangling");
+        dangling.setTermId("term-001");
+        dangling.setEntityType(TermRelationType.FIELD);
+        dangling.setTableId("table-deleted");
+        dangling.setFieldName("amount");
+
+        when(termRelationDAO.findByTermIdIn(Set.of("term-001"))).thenReturn(List.of(dangling));
+        when(tableInfoDAO.findAllById(Set.of("table-deleted"))).thenReturn(List.of());
+
+        Map<String, List<TermRelation>> result =
+                termService.getTermRelationsByTermIds(Set.of("term-001"));
+
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    @DisplayName("getTermById - dangling term reports SM002 instead of leaking the subject id")
+    void getTermById_shouldReportTermNotFoundWhenSubjectIsMissing() {
+        TermPO term = new TermPO();
+        term.setId("term-001");
+        term.setSubjectId("subject-deleted");
+        when(termDAO.findById("term-001")).thenReturn(Optional.of(term));
+        when(subjectDAO.findById("subject-deleted")).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> termService.getTermById("term-001"))
+                .isInstanceOf(DatiException.class)
+                .satisfies(e -> assertThat(((DatiException) e).getCode())
+                        .isEqualTo(ErrorCode.SM_TERM_NOT_FOUND));
     }
 
     @Test

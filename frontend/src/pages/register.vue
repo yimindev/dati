@@ -78,8 +78,6 @@ async function handleRegister() {
             type="password"
             :placeholder="t('auth.passwordPlaceholder')"
             :prefix-icon="Lock"
-            :minlength="PASSWORD_MIN_LENGTH"
-            :maxlength="PASSWORD_MAX_LENGTH"
             show-password
           />
         </el-form-item>

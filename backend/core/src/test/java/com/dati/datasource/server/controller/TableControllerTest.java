@@ -3,6 +3,7 @@ package com.dati.datasource.server.controller;
 import com.dati.TestFixtures;
 import com.dati.base.pojo.PageResponse;
 import com.dati.datasource.domain.model.TableInfo;
+import com.dati.datasource.server.pojo.AddedTableVO;
 import com.dati.datasource.domain.service.TableService;
 import com.dati.datasource.server.assembler.TableAssembler;
 import com.dati.datasource.server.pojo.AddTableRequest;
@@ -105,23 +106,26 @@ class TableControllerTest {
     }
 
     @Test
-    @DisplayName("Get added table name list - success")
-    void getAddedTableNames_shouldReturnTableNames() throws Exception {
+    @DisplayName("Get added tables - returns schema and name")
+    void getAddedTables_shouldReturnSchemaAndName() throws Exception {
         // given
-        when(tableService.getAddedTableNames(TestFixtures.TEST_DATASOURCE_ID))
-            .thenReturn(List.of("users", "orders", "products"));
+        TableInfo table = TestFixtures.createTestTableInfo();
+        when(tableService.getAddedTables(TestFixtures.TEST_DATASOURCE_ID))
+            .thenReturn(List.of(table));
+        when(tableAssembler.toAddedTables(List.of(table)))
+            .thenReturn(List.of(new AddedTableVO("public", "users")));
 
         // when & then
         mockMvc.perform(get("/v1/data-sources/{datasourceId}/tables/added-names", TestFixtures.TEST_DATASOURCE_ID))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$").isArray())
-            .andExpect(jsonPath("$", hasSize(3)))
-            .andExpect(jsonPath("$[0]").value("users"));
+            .andExpect(jsonPath("$", hasSize(1)))
+            .andExpect(jsonPath("$[0].schema").value("public"))
+            .andExpect(jsonPath("$[0].name").value("users"));
     }
 
     @Test
-    @DisplayName("Batch add tables - success")
-    void batchAddTables_shouldReturnCount() throws Exception {
+    @DisplayName("Batch add tables - returns added count and table ids")
+    void batchAddTables_shouldReturnAddedCountAndIds() throws Exception {
         // given
         List<AddTableRequest> requests = List.of(
             createAddTableRequest("users"),
@@ -136,7 +140,9 @@ class TableControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(requests)))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.id").value("2"));
+            .andExpect(jsonPath("$.added_count").value(2))
+            .andExpect(jsonPath("$.table_ids[0]").value("table-1"))
+            .andExpect(jsonPath("$.table_ids[1]").value("table-2"));
     }
 
     @Test
@@ -151,7 +157,8 @@ class TableControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("[]"))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.id").value("0"));
+            .andExpect(jsonPath("$.added_count").value(0))
+            .andExpect(jsonPath("$.table_ids").isEmpty());
     }
 
     @Test

@@ -16,6 +16,7 @@ import com.dati.db.Column;
 import com.dati.db.Table;
 import com.dati.permission.domain.service.PermissionService;
 import com.dati.semantic.domain.service.SemanticIndexService;
+import com.dati.semantic.repository.dao.TermRelationDAO;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -64,6 +65,9 @@ class TableServiceTest {
 
     @Mock
     private PermissionService permissionService;
+
+    @Mock
+    private TermRelationDAO termRelationDAO;
 
     @InjectMocks
     private TableService tableService;
@@ -116,17 +120,19 @@ class TableServiceTest {
     }
 
     @Test
-    @DisplayName("Get added table name list")
-    void getAddedTableNames_shouldReturnTableNames() {
+    @DisplayName("Get added tables - returns schema and name")
+    void getAddedTables_shouldReturnSchemaAndName() {
         // given
         when(tableInfoDAO.findByDataSourceId(TestFixtures.TEST_DATASOURCE_ID))
             .thenReturn(List.of(testTableInfoPO));
 
         // when
-        List<String> result = tableService.getAddedTableNames(TestFixtures.TEST_DATASOURCE_ID);
+        List<TableInfo> result = tableService.getAddedTables(TestFixtures.TEST_DATASOURCE_ID);
 
         // then
-        assertThat(result).containsExactly("test_table");
+        assertThat(result).hasSize(1);
+        assertThat(result.getFirst().getSchema()).isEqualTo("public");
+        assertThat(result.getFirst().getName()).isEqualTo("test_table");
     }
 
     @Test
@@ -408,10 +414,10 @@ class TableServiceTest {
     void updateTable_shouldUpdateWhenDatasourceMatches() {
         // given
         when(tableInfoDAO.findById(TestFixtures.TEST_TABLE_ID)).thenReturn(Optional.of(testTableInfoPO));
-        when(tableInfoDAO.save(any(TableInfoPO.class))).thenReturn(testTableInfoPO);
         TableInfo update = new TableInfo();
         update.setAliases(List.of("orders"));
         update.setDescription("Order facts");
+        update.setUpdatedBy("user-2");
 
         // when
         tableService.updateTable(TestFixtures.TEST_DATASOURCE_ID, TestFixtures.TEST_TABLE_ID, update);
@@ -419,7 +425,8 @@ class TableServiceTest {
         // then
         assertThat(testTableInfoPO.getAliases()).containsExactly("orders");
         assertThat(testTableInfoPO.getDescription()).isEqualTo("Order facts");
-        verify(tableInfoDAO).save(testTableInfoPO);
+        assertThat(testTableInfoPO.getUpdatedBy()).isEqualTo("user-2");
+        verify(tableInfoDAO).saveAndFlush(testTableInfoPO);
         verify(semanticIndexService).save(any());
     }
 
@@ -433,21 +440,24 @@ class TableServiceTest {
         tableService.deleteTables(tableIds);
 
         // then
+        verify(termRelationDAO).deleteByTableIdIn(tableIds);
         verify(columnInfoDAO).deleteByTableIdIn(tableIds);
         verify(tableInfoDAO).deleteAllById(tableIds);
+        verify(tableInfoDAO).flush();
         verify(semanticIndexService).deleteByEntityTableIds(tableIds);
     }
 
     @Test
-    @DisplayName("Batch delete tables - empty list")
+    @DisplayName("Batch delete tables - empty list does nothing")
     void deleteTables_withEmptyList_shouldNotCallDAO() {
         // when
         tableService.deleteTables(Collections.emptyList());
 
         // then
-        verify(columnInfoDAO).deleteByTableIdIn(Collections.emptyList());
-        verify(tableInfoDAO).deleteAllById(Collections.emptyList());
-        verify(semanticIndexService).deleteByEntityTableIds(Collections.emptyList());
+        verify(termRelationDAO, never()).deleteByTableIdIn(any());
+        verify(columnInfoDAO, never()).deleteByTableIdIn(any());
+        verify(tableInfoDAO, never()).deleteAllById(any());
+        verify(semanticIndexService, never()).deleteByEntityTableIds(any());
     }
 
     private static AddTableRequest addTableRequest(String name) {

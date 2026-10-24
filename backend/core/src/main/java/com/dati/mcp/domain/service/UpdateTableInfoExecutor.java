@@ -1,6 +1,7 @@
 package com.dati.mcp.domain.service;
 
 import com.dati.common.JsonUtils;
+import com.dati.base.RequestContext;
 import com.dati.datasource.domain.model.TableInfo;
 import com.dati.datasource.domain.service.TableService;
 import com.dati.mcp.domain.model.McpToolType;
@@ -86,6 +87,7 @@ public class UpdateTableInfoExecutor implements ToolExecutor {
             TableInfo update = new TableInfo();
             update.setDescription(item.description() != null ? item.description() : target.description());
             update.setAliases(item.aliases() != null ? item.aliases() : target.aliases());
+            update.setUpdatedBy(RequestContext.currentUserId());
             tableService.updateTable(item.dataSourceId(), target.tableId(), update);
             Map<String, Object> neu = valueMap(update.getDescription(), update.getAliases());
 

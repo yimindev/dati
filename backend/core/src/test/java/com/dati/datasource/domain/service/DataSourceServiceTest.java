@@ -7,7 +7,6 @@ import com.dati.base.RequestContext;
 import com.dati.base.exception.DatiException;
 import com.dati.base.exception.ErrorCode;
 import com.dati.datasource.domain.model.DataSource;
-import com.dati.datasource.repository.dao.ColumnInfoDAO;
 import com.dati.datasource.repository.dao.DataSourceDAO;
 import com.dati.datasource.repository.dao.TableInfoDAO;
 import com.dati.datasource.repository.po.DataSourcePO;
@@ -18,7 +17,6 @@ import com.dati.db.JdbcConnector;
 import com.dati.permission.domain.model.PrincipalType;
 import com.dati.permission.domain.model.ResourceType;
 import com.dati.permission.domain.service.PermissionService;
-import com.dati.semantic.domain.service.SemanticIndexService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -65,10 +63,7 @@ class DataSourceServiceTest {
     private TableInfoDAO tableInfoDAO;
 
     @Mock
-    private ColumnInfoDAO columnInfoDAO;
-
-    @Mock
-    private SemanticIndexService semanticIndexService;
+    private TableService tableService;
 
     @Mock
     private JdbcMetaService jdbcMetaService;
@@ -272,9 +267,7 @@ class DataSourceServiceTest {
             dataSourceService.deleteDataSource(TestFixtures.TEST_DATASOURCE_ID);
 
             // then
-            verify(columnInfoDAO).deleteByTableIdIn(List.of(TestFixtures.TEST_TABLE_ID));
-            verify(tableInfoDAO).deleteAllById(List.of(TestFixtures.TEST_TABLE_ID));
-            verify(semanticIndexService).deleteByEntityTableIds(List.of(TestFixtures.TEST_TABLE_ID));
+            verify(tableService).deleteTables(List.of(TestFixtures.TEST_TABLE_ID));
             verify(dataSourceDAO).deleteById(TestFixtures.TEST_DATASOURCE_ID);
         }
     }

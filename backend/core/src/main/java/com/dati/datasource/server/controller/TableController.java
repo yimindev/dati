@@ -7,6 +7,8 @@ import jakarta.validation.Valid;
 import com.dati.datasource.domain.service.TableService;
 import com.dati.datasource.server.assembler.TableAssembler;
 import com.dati.datasource.server.pojo.AddTableRequest;
+import com.dati.datasource.server.pojo.AddedTableVO;
+import com.dati.datasource.server.pojo.BatchAddTablesResponse;
 import com.dati.datasource.server.pojo.TableInfoVO;
 import com.dati.datasource.server.pojo.request.UpdateTableRequest;
 import lombok.extern.slf4j.Slf4j;
@@ -34,15 +36,15 @@ public class TableController {
     }
 
     @GetMapping("/tables/added-names")
-    public List<String> getAddedTableNames(@PathVariable String datasourceId) {
-        return tableService.getAddedTableNames(datasourceId);
+    public List<AddedTableVO> getAddedTableNames(@PathVariable String datasourceId) {
+        return tableAssembler.toAddedTables(tableService.getAddedTables(datasourceId));
     }
 
     @PostMapping("/tables/batch")
-    public IdResponse batchAddTables(@PathVariable String datasourceId,
-                                     @Valid @RequestBody List<@Valid AddTableRequest> tables) {
+    public BatchAddTablesResponse batchAddTables(@PathVariable String datasourceId,
+                                                 @Valid @RequestBody List<@Valid AddTableRequest> tables) {
         List<String> ids = tableService.batchAddTables(datasourceId, tables);
-        return new IdResponse(String.valueOf(ids.size()));
+        return new BatchAddTablesResponse(ids.size(), ids);
     }
 
     @DeleteMapping("/tables/{tableId}")
@@ -56,7 +58,9 @@ public class TableController {
             @PathVariable String datasourceId,
             @PathVariable String tableId,
             @Valid @RequestBody UpdateTableRequest request) {
-        tableService.updateTable(datasourceId, tableId, tableAssembler.toTableInfo(request));
+        var tableInfo = tableAssembler.toTableInfo(request);
+        tableAssembler.fillUpdateUserFromRequest(tableInfo);
+        tableService.updateTable(datasourceId, tableId, tableInfo);
         return new IdResponse(tableId);
     }
 

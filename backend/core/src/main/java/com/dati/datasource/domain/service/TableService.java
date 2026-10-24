@@ -4,7 +4,6 @@ import com.dati.base.RequestContext;
 import com.dati.base.exception.DatiException;
 import com.dati.base.exception.ErrorCode;
 import com.dati.base.pojo.BasePO;
-import com.dati.base.pojo.BaseResourcePO;
 import com.dati.base.pojo.PageReq;
 import com.dati.common.StringUtils;
 import com.dati.datasource.domain.model.ColumnInfo;
@@ -22,6 +21,7 @@ import com.dati.permission.domain.model.Permission;
 import com.dati.permission.domain.service.PermissionService;
 import com.dati.semantic.domain.SemanticEntityType;
 import com.dati.semantic.domain.service.SemanticIndexService;
+import com.dati.semantic.repository.dao.TermRelationDAO;
 import com.dati.semantic.repository.po.EntityReference;
 import com.dati.semantic.repository.po.SemanticSearchDocument;
 import org.springframework.data.domain.Page;
@@ -49,15 +49,17 @@ public class TableService {
     private final JdbcMetaService jdbcMetaService;
     private final SemanticIndexService semanticIndexService;
     private final PermissionService permissionService;
+    private final TermRelationDAO termRelationDAO;
 
     public TableService(TableInfoDAO tableInfoDAO, ColumnInfoDAO columnInfoDAO,
                         JdbcMetaService jdbcMetaService, SemanticIndexService semanticIndexService,
-                        PermissionService permissionService) {
+                        PermissionService permissionService, TermRelationDAO termRelationDAO) {
         this.tableInfoDAO = tableInfoDAO;
         this.columnInfoDAO = columnInfoDAO;
         this.jdbcMetaService = jdbcMetaService;
         this.semanticIndexService = semanticIndexService;
         this.permissionService = permissionService;
+        this.termRelationDAO = termRelationDAO;
     }
 
     public Page<TableInfo> getTables(PageReq pageReq, String datasourceId, String keyword) {
@@ -69,10 +71,10 @@ public class TableService {
         return tableInfoDAO.findByDataSourceIdAndKeyword(datasourceId, keyword, pageReq.toPageRequest().withSort(sortBy)).map(TableMapper::toTableInfo);
     }
 
-    public List<String> getAddedTableNames(String datasourceId) {
+    public List<TableInfo> getAddedTables(String datasourceId) {
         permissionService.requireDataSource(datasourceId, Permission.VIEW);
         return tableInfoDAO.findByDataSourceId(datasourceId).stream()
-                .map(BaseResourcePO::getName)
+                .map(TableMapper::toTableInfo)
                 .collect(Collectors.toList());
     }
 
@@ -186,6 +188,7 @@ public class TableService {
             }
         }
 
+        tableInfoDAO.flush();
         semanticIndexService.saveBatch(docsToSave);
         return tableIds;
     }
@@ -219,8 +222,13 @@ public class TableService {
 
     @Transactional
     public void deleteTables(List<String> tableIds) {
+        if (tableIds.isEmpty()) {
+            return;
+        }
+        termRelationDAO.deleteByTableIdIn(tableIds);
         columnInfoDAO.deleteByTableIdIn(tableIds);
         tableInfoDAO.deleteAllById(tableIds);
+        tableInfoDAO.flush();
         semanticIndexService.deleteByEntityTableIds(tableIds);
     }
 
@@ -238,7 +246,10 @@ public class TableService {
 
         existingPO.setAliases(tableInfo.getAliases());
         existingPO.setDescription(tableInfo.getDescription());
-        tableInfoDAO.save(existingPO);
+        if (tableInfo.getUpdatedBy() != null) {
+            existingPO.setUpdatedBy(tableInfo.getUpdatedBy());
+        }
+        tableInfoDAO.saveAndFlush(existingPO);
 
         EntityReference entity = EntityReference.builder()
                 .datasourceId(existingPO.getDataSourceId())

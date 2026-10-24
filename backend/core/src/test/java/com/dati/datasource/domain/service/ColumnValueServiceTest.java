@@ -177,25 +177,26 @@ class ColumnValueServiceTest {
         }
 
         @Test
-        @DisplayName("throws DatiException when columnId not found")
-        void extractValues_columnNotFound() {
-            when(columnInfoDAO.findById("invalid")).thenReturn(Optional.empty());
-
-            assertThrows(DatiException.class, () ->
-                    columnValueService.extractValues("ds1", "invalid", false)
-            );
-        }
-
-        @Test
-        @DisplayName("throws INVALID_PARAMETER when datasourceId does not match column table datasource")
-        void extractValues_mismatchedDatasource_throwsInvalidParameter() {
+        @DisplayName("throws DS_TABLE_NOT_FOUND when datasourceId does not match the column's table")
+        void extractValues_mismatchedDatasource_throwsTableNotFound() {
             when(columnInfoDAO.findById("col1")).thenReturn(Optional.of(testColumnPO));
             when(tableInfoDAO.findById("table1")).thenReturn(Optional.of(testTablePO)); // testTablePO has datasourceId="ds1"
 
             DatiException ex = assertThrows(DatiException.class, () ->
                     columnValueService.extractValues("ds_wrong", "col1", false)
             );
-            assertThat(ex.getCode()).isEqualTo(com.dati.base.exception.ErrorCode.INVALID_PARAMETER);
+            assertThat(ex.getCode()).isEqualTo(com.dati.base.exception.ErrorCode.DS_TABLE_NOT_FOUND);
+        }
+
+        @Test
+        @DisplayName("throws DS_COLUMN_NOT_FOUND when the column does not exist")
+        void extractValues_columnNotFound_throwsColumnNotFound() {
+            when(columnInfoDAO.findById("invalid")).thenReturn(Optional.empty());
+
+            DatiException ex = assertThrows(DatiException.class, () ->
+                    columnValueService.extractValues("ds1", "invalid", false)
+            );
+            assertThat(ex.getCode()).isEqualTo(com.dati.base.exception.ErrorCode.DS_COLUMN_NOT_FOUND);
         }
     }
 
@@ -258,6 +259,17 @@ class ColumnValueServiceTest {
             verify(semanticIndexService, never()).saveBatch(anyList());
             verify(semanticIndexService, never()).deleteById(anyString());
         }
+
+        @Test
+        @DisplayName("throws DS_COLUMN_NOT_FOUND when columnId not found")
+        void saveValues_columnNotFound_throwsColumnNotFound() {
+            when(columnInfoDAO.findById("invalid")).thenReturn(Optional.empty());
+
+            DatiException ex = assertThrows(DatiException.class, () ->
+                    columnValueService.saveValues("invalid", null, null)
+            );
+            assertThat(ex.getCode()).isEqualTo(com.dati.base.exception.ErrorCode.DS_COLUMN_NOT_FOUND);
+        }
     }
 
     @Nested
@@ -292,13 +304,14 @@ class ColumnValueServiceTest {
         }
 
         @Test
-        @DisplayName("throws DatiException when columnId not found")
+        @DisplayName("throws DS_COLUMN_NOT_FOUND when columnId not found")
         void getValues_columnNotFound() {
             when(columnInfoDAO.findById("invalid")).thenReturn(Optional.empty());
 
-            assertThrows(DatiException.class, () ->
+            DatiException ex = assertThrows(DatiException.class, () ->
                     columnValueService.getValues("invalid", new PageReq(), null)
             );
+            assertThat(ex.getCode()).isEqualTo(com.dati.base.exception.ErrorCode.DS_COLUMN_NOT_FOUND);
         }
 
         @Test

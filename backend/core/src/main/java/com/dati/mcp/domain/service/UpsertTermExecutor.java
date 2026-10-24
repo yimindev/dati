@@ -1,6 +1,7 @@
 package com.dati.mcp.domain.service;
 
 import com.dati.common.JsonUtils;
+import com.dati.base.RequestContext;
 import com.dati.mcp.domain.model.McpToolType;
 import com.dati.mcp.domain.model.param.UpsertTermArgs;
 import com.dati.mcp.repository.dao.McpMetadataAuditLogDAO;
@@ -89,6 +90,7 @@ public class UpsertTermExecutor implements ToolExecutor {
         Term update = new Term();
         update.setDescription(item.description() != null ? item.description() : po.getDescription());
         update.setAliases(item.aliases() != null ? item.aliases() : po.getAliases());
+        update.setUpdatedBy(RequestContext.currentUserId());
         termService.updateTerm(po.getId(), update);
         Map<String, Object> neu = valueMap(update.getDescription(), update.getAliases());
 
@@ -103,6 +105,9 @@ public class UpsertTermExecutor implements ToolExecutor {
         create.setName(item.name());
         create.setDescription(item.description());
         create.setAliases(item.aliases() == null ? List.of() : item.aliases());
+        String userId = RequestContext.currentUserId();
+        create.setCreatedBy(userId);
+        create.setUpdatedBy(userId);
         Term created = termService.createTerm(create);
         Map<String, Object> neu = valueMap(created.getDescription(), created.getAliases());
 

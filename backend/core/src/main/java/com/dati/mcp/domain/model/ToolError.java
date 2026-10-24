@@ -1,19 +1,18 @@
 package com.dati.mcp.domain.model;
 
+import com.dati.base.exception.ErrorMessages;
 import lombok.Getter;
 
-import java.text.MessageFormat;
-
 public enum ToolError {
-    TOOL_NOT_FOUND        ("PARAM_ERROR",       "工具不存在"),
-    TOOL_DISABLED         ("PARAM_ERROR",       "工具已禁用"),
-    PARAM_MISSING         ("PARAM_ERROR",       "缺少必填参数：{0}"),
-    PARAM_INVALID         ("PARAM_ERROR",       "参数不合法：{0}"),
-    ENTITY_NOT_FOUND       ("PARAM_ERROR",       "表/列/术语不存在：{0}"),
-    DATA_SOURCE_NOT_FOUND ("PARAM_ERROR",       "数据源不存在"),
-    SCOPE_VIOLATION       ("SCOPE_ERROR",       "数据源或表不在服务范围内：{0}"),
-    SQL_POLICY_VIOLATION  ("PERMISSION_DENIED", "SQL 操作被策略禁止：{0}"),
-    SQL_EXECUTION_ERROR   ("SQL_ERROR",         "SQL 执行失败：{0}");
+    TOOL_NOT_FOUND        ("PARAM_ERROR",       "Tool not found"),
+    TOOL_DISABLED         ("PARAM_ERROR",       "Tool is disabled"),
+    PARAM_MISSING         ("PARAM_ERROR",       "Missing required parameter: {0}"),
+    PARAM_INVALID         ("PARAM_ERROR",       "Invalid parameter: {0}"),
+    ENTITY_NOT_FOUND       ("PARAM_ERROR",       "Table/column/term not found: {0}"),
+    DATA_SOURCE_NOT_FOUND ("PARAM_ERROR",       "Data source not found: {0}"),
+    SCOPE_VIOLATION       ("SCOPE_ERROR",       "Data source or table not in service scope: {0}"),
+    SQL_POLICY_VIOLATION  ("PERMISSION_DENIED", "SQL operation not allowed by policy: {0}"),
+    SQL_EXECUTION_ERROR   ("SQL_ERROR",         "SQL execution failed: {0}");
     // TIMEOUT 预留，待超时检测功能实现后加入
 
     @Getter
@@ -26,6 +25,6 @@ public enum ToolError {
     }
 
     public String format(Object... args) {
-        return MessageFormat.format(template, args);
+        return ErrorMessages.format(template, args);
     }
 }

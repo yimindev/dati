@@ -123,7 +123,7 @@ class ColumnServiceTest {
         // given
         ColumnInfoPO existingPO = TestFixtures.createTestColumnInfoPO();
         when(columnInfoDAO.findById(TestFixtures.TEST_COLUMN_ID)).thenReturn(Optional.of(existingPO));
-        when(columnInfoDAO.save(any(ColumnInfoPO.class))).thenReturn(existingPO);
+        when(columnInfoDAO.saveAndFlush(any(ColumnInfoPO.class))).thenReturn(existingPO);
         when(tableInfoDAO.findById(TestFixtures.TEST_TABLE_ID)).thenReturn(Optional.of(testTableInfoPO));
 
         ColumnInfo updateInfo = new ColumnInfo();
@@ -131,17 +131,19 @@ class ColumnServiceTest {
         updateInfo.setColumnType("INTEGER");
         updateInfo.setDescription("Updated description");
         updateInfo.setExtractValueEnabled(true);
+        updateInfo.setUpdatedBy("user-2");
 
         // when
         columnService.updateColumn(TestFixtures.TEST_COLUMN_ID, updateInfo);
 
         // then
         verify(columnInfoDAO).findById(TestFixtures.TEST_COLUMN_ID);
-        verify(columnInfoDAO).save(argThat(po -> 
+        verify(columnInfoDAO).saveAndFlush(argThat(po ->
             po.getName().equals("updated_column") &&
             po.getColumnType().equals("INTEGER") &&
             po.getDescription().equals("Updated description") &&
-            po.isExtractValueEnabled()
+            po.isExtractValueEnabled() &&
+            "user-2".equals(po.getUpdatedBy())
         ));
 
         ArgumentCaptor<SemanticSearchDocument> docCaptor = ArgumentCaptor.forClass(SemanticSearchDocument.class);
@@ -163,7 +165,7 @@ class ColumnServiceTest {
         ColumnInfoPO existingPO = TestFixtures.createTestColumnInfoPO();
         existingPO.setExtractValueEnabled(true);
         when(columnInfoDAO.findById(TestFixtures.TEST_COLUMN_ID)).thenReturn(Optional.of(existingPO));
-        when(columnInfoDAO.save(any())).thenReturn(existingPO);
+        when(columnInfoDAO.saveAndFlush(any())).thenReturn(existingPO);
         when(tableInfoDAO.findById(TestFixtures.TEST_TABLE_ID)).thenReturn(Optional.of(testTableInfoPO));
 
         ColumnInfo updateInfo = new ColumnInfo();
@@ -175,7 +177,7 @@ class ColumnServiceTest {
         columnService.updateColumn(TestFixtures.TEST_COLUMN_ID, updateInfo);
 
         // then
-        verify(columnInfoDAO).save(argThat(po -> !po.isExtractValueEnabled()));
+        verify(columnInfoDAO).saveAndFlush(argThat(po -> !po.isExtractValueEnabled()));
         verify(semanticIndexService).deleteByTableFieldAndType(TestFixtures.TEST_TABLE_ID, "test_column", SemanticEntityType.FIELD_VALUE);
     }
 
@@ -186,7 +188,7 @@ class ColumnServiceTest {
         ColumnInfoPO existingPO = TestFixtures.createTestColumnInfoPO();
         existingPO.setExtractValueEnabled(false);
         when(columnInfoDAO.findById(TestFixtures.TEST_COLUMN_ID)).thenReturn(Optional.of(existingPO));
-        when(columnInfoDAO.save(any())).thenReturn(existingPO);
+        when(columnInfoDAO.saveAndFlush(any())).thenReturn(existingPO);
         when(tableInfoDAO.findById(TestFixtures.TEST_TABLE_ID)).thenReturn(Optional.of(testTableInfoPO));
 
         ColumnInfo updateInfo = new ColumnInfo();
@@ -198,7 +200,7 @@ class ColumnServiceTest {
         columnService.updateColumn(TestFixtures.TEST_COLUMN_ID, updateInfo);
 
         // then
-        verify(columnInfoDAO).save(any());
+        verify(columnInfoDAO).saveAndFlush(any());
         verify(semanticIndexService, never()).deleteByTableFieldAndType(any(), any(), any());
     }
 
@@ -210,7 +212,7 @@ class ColumnServiceTest {
         existingPO.setExtractValueEnabled(true);
         existingPO.setDescription("Original description");
         when(columnInfoDAO.findById(TestFixtures.TEST_COLUMN_ID)).thenReturn(Optional.of(existingPO));
-        when(columnInfoDAO.save(any())).thenReturn(existingPO);
+        when(columnInfoDAO.saveAndFlush(any())).thenReturn(existingPO);
         when(tableInfoDAO.findById(TestFixtures.TEST_TABLE_ID)).thenReturn(Optional.of(testTableInfoPO));
 
         ColumnInfo updateInfo = new ColumnInfo();
@@ -221,7 +223,7 @@ class ColumnServiceTest {
         columnService.updateColumn(TestFixtures.TEST_COLUMN_ID, updateInfo);
 
         // then
-        verify(columnInfoDAO).save(argThat(ColumnInfoPO::isExtractValueEnabled));
+        verify(columnInfoDAO).saveAndFlush(argThat(ColumnInfoPO::isExtractValueEnabled));
         verify(semanticIndexService, never()).deleteByTableFieldAndType(any(), any(), any());
     }
 
@@ -232,7 +234,7 @@ class ColumnServiceTest {
         ColumnInfoPO existingPO = TestFixtures.createTestColumnInfoPO();
         existingPO.setDescription("Original description");
         when(columnInfoDAO.findById(TestFixtures.TEST_COLUMN_ID)).thenReturn(Optional.of(existingPO));
-        when(columnInfoDAO.save(any())).thenReturn(existingPO);
+        when(columnInfoDAO.saveAndFlush(any())).thenReturn(existingPO);
         when(tableInfoDAO.findById(TestFixtures.TEST_TABLE_ID)).thenReturn(Optional.of(testTableInfoPO));
 
         ColumnInfo updateInfo = new ColumnInfo();
@@ -256,7 +258,7 @@ class ColumnServiceTest {
         existingPO.setAliases(List.of("genre", "流派"));
         existingPO.setDescription("Original description");
         when(columnInfoDAO.findById(TestFixtures.TEST_COLUMN_ID)).thenReturn(Optional.of(existingPO));
-        when(columnInfoDAO.save(any())).thenReturn(existingPO);
+        when(columnInfoDAO.saveAndFlush(any())).thenReturn(existingPO);
         when(tableInfoDAO.findById(TestFixtures.TEST_TABLE_ID)).thenReturn(Optional.of(testTableInfoPO));
 
         ColumnInfo updateInfo = new ColumnInfo();
@@ -267,7 +269,7 @@ class ColumnServiceTest {
         columnService.updateColumn(TestFixtures.TEST_COLUMN_ID, updateInfo);
 
         // then
-        verify(columnInfoDAO).save(argThat(po -> po.getAliases() != null
+        verify(columnInfoDAO).saveAndFlush(argThat(po -> po.getAliases() != null
             && po.getAliases().equals(List.of("genre", "流派"))));
     }
 
@@ -285,28 +287,61 @@ class ColumnServiceTest {
     }
 
     @Test
+    @DisplayName("Path validation - rejects a table that does not belong to the path datasource")
+    void requireTableInPath_shouldRejectMismatchedDatasource() {
+        when(tableInfoDAO.findById(TestFixtures.TEST_TABLE_ID)).thenReturn(Optional.of(testTableInfoPO));
+
+        assertThatThrownBy(() -> columnService.requireTableInPath("ds-other", TestFixtures.TEST_TABLE_ID))
+            .isInstanceOf(DatiException.class)
+            .satisfies(e -> assertThat(((DatiException) e).getCode()).isEqualTo(ErrorCode.DS_TABLE_NOT_FOUND));
+    }
+
+    @Test
+    @DisplayName("Path validation - rejects a column that does not belong to the path table")
+    void requireColumnInPath_shouldRejectMismatchedTable() {
+        when(columnInfoDAO.findById(TestFixtures.TEST_COLUMN_ID)).thenReturn(Optional.of(testColumnInfoPO));
+
+        assertThatThrownBy(() -> columnService.requireColumnInPath(
+                TestFixtures.TEST_DATASOURCE_ID, "table-other", TestFixtures.TEST_COLUMN_ID))
+            .isInstanceOf(DatiException.class)
+            .satisfies(e -> assertThat(((DatiException) e).getCode()).isEqualTo(ErrorCode.DS_COLUMN_NOT_FOUND));
+    }
+
+    @Test
+    @DisplayName("Sync columns - rejects a table from another datasource")
+    void syncColumns_shouldRejectMismatchedDatasource() throws SQLException {
+        when(tableInfoDAO.findById(TestFixtures.TEST_TABLE_ID)).thenReturn(Optional.of(testTableInfoPO));
+
+        assertThatThrownBy(() -> columnService.syncColumns("ds-other", TestFixtures.TEST_TABLE_ID, false))
+            .isInstanceOf(DatiException.class)
+            .satisfies(e -> assertThat(((DatiException) e).getCode()).isEqualTo(ErrorCode.DS_TABLE_NOT_FOUND));
+
+        verify(jdbcMetaService, never()).getColumns(anyString(), anyString(), anyString());
+    }
+
+    @Test
     @DisplayName("Sync columns - success")
     void syncColumns_shouldSyncSuccessfully() throws SQLException {
         // given
         when(tableInfoDAO.findById(TestFixtures.TEST_TABLE_ID)).thenReturn(Optional.of(testTableInfoPO));
-        
+
         Column mockColumn = mock(Column.class);
         when(mockColumn.name()).thenReturn("new_col");
         when(mockColumn.type()).thenReturn("VARCHAR");
         when(mockColumn.comment()).thenReturn("New comment");
-        
+
         when(jdbcMetaService.getColumns(TestFixtures.TEST_DATASOURCE_ID, "public", "test_table"))
             .thenReturn(List.of(mockColumn));
-        
+
         User mockUser = mock(User.class);
         when(mockUser.getId()).thenReturn(TestFixtures.TEST_USER_ID);
-        
+
         ColumnInfoPO savedPO = TestFixtures.createTestColumnInfoPO();
         when(columnInfoDAO.saveAll(anyList())).thenReturn(List.of(savedPO));
-        
+
         try (MockedStatic<RequestContext> mocked = mockStatic(RequestContext.class)) {
             mocked.when(RequestContext::getUser).thenReturn(mockUser);
-            
+
             // when
             columnService.syncColumns(TestFixtures.TEST_DATASOURCE_ID, TestFixtures.TEST_TABLE_ID, true);
 
@@ -577,18 +612,18 @@ class ColumnServiceTest {
     void syncColumns_shouldHandleNullUser() throws SQLException {
         // given
         when(tableInfoDAO.findById(TestFixtures.TEST_TABLE_ID)).thenReturn(Optional.of(testTableInfoPO));
-        
+
         Column mockColumn = mock(Column.class);
         when(mockColumn.name()).thenReturn("col1");
         when(mockColumn.type()).thenReturn("INT");
         when(mockColumn.comment()).thenReturn(null);
-        
+
         when(jdbcMetaService.getColumns(TestFixtures.TEST_DATASOURCE_ID, "public", "test_table"))
             .thenReturn(List.of(mockColumn));
-        
+
         try (MockedStatic<RequestContext> mocked = mockStatic(RequestContext.class)) {
             mocked.when(RequestContext::getUser).thenReturn(null);
-            
+
             // when
             columnService.syncColumns(TestFixtures.TEST_DATASOURCE_ID, TestFixtures.TEST_TABLE_ID, true);
 
@@ -605,7 +640,7 @@ class ColumnServiceTest {
     void syncColumns_shouldPreserveOldDescriptionWhenDbCommentEmptyEvenIfFlagTrue() throws SQLException {
         // given
         when(tableInfoDAO.findById(TestFixtures.TEST_TABLE_ID)).thenReturn(Optional.of(testTableInfoPO));
-        
+
         ColumnInfoPO existingColumn = new ColumnInfoPO();
         existingColumn.setId("existing_col_id");
         existingColumn.setTableId(TestFixtures.TEST_TABLE_ID);
@@ -613,20 +648,20 @@ class ColumnServiceTest {
         existingColumn.setColumnType("VARCHAR");
         existingColumn.setAliases(List.of("order_no", "订单号"));
         existingColumn.setDescription("User maintained description");
-        
+
         when(columnInfoDAO.findByTableId(TestFixtures.TEST_TABLE_ID)).thenReturn(List.of(existingColumn));
-        
+
         Column mockColumn = mock(Column.class);
         when(mockColumn.name()).thenReturn("col1");
         when(mockColumn.type()).thenReturn("VARCHAR");
         when(mockColumn.comment()).thenReturn(null);
-        
+
         when(jdbcMetaService.getColumns(TestFixtures.TEST_DATASOURCE_ID, "public", "test_table"))
             .thenReturn(List.of(mockColumn));
-        
+
         try (MockedStatic<RequestContext> mocked = mockStatic(RequestContext.class)) {
             mocked.when(RequestContext::getUser).thenReturn(null);
-            
+
             // when - flag true but DB comment is empty, should preserve
             columnService.syncColumns(TestFixtures.TEST_DATASOURCE_ID, TestFixtures.TEST_TABLE_ID, true);
 
@@ -645,7 +680,7 @@ class ColumnServiceTest {
     void syncColumns_shouldOverwriteWhenFlagTrueAndDbCommentExists() throws SQLException {
         // given
         when(tableInfoDAO.findById(TestFixtures.TEST_TABLE_ID)).thenReturn(Optional.of(testTableInfoPO));
-        
+
         ColumnInfoPO existingColumn = new ColumnInfoPO();
         existingColumn.setId("existing_col_id");
         existingColumn.setTableId(TestFixtures.TEST_TABLE_ID);
@@ -653,20 +688,20 @@ class ColumnServiceTest {
         existingColumn.setColumnType("VARCHAR");
         existingColumn.setAliases(List.of("order_no", "订单号"));
         existingColumn.setDescription("Old user description");
-        
+
         when(columnInfoDAO.findByTableId(TestFixtures.TEST_TABLE_ID)).thenReturn(List.of(existingColumn));
-        
+
         Column mockColumn = mock(Column.class);
         when(mockColumn.name()).thenReturn("col1");
         when(mockColumn.type()).thenReturn("VARCHAR");
         when(mockColumn.comment()).thenReturn("New DB Comment");
-        
+
         when(jdbcMetaService.getColumns(TestFixtures.TEST_DATASOURCE_ID, "public", "test_table"))
             .thenReturn(List.of(mockColumn));
-        
+
         try (MockedStatic<RequestContext> mocked = mockStatic(RequestContext.class)) {
             mocked.when(RequestContext::getUser).thenReturn(null);
-            
+
             // when - flag true and DB comment exists, should overwrite
             columnService.syncColumns(TestFixtures.TEST_DATASOURCE_ID, TestFixtures.TEST_TABLE_ID, true);
 
@@ -685,7 +720,7 @@ class ColumnServiceTest {
     void syncColumns_shouldPreserveWhenFlagFalse() throws SQLException {
         // given
         when(tableInfoDAO.findById(TestFixtures.TEST_TABLE_ID)).thenReturn(Optional.of(testTableInfoPO));
-        
+
         ColumnInfoPO existingColumn = new ColumnInfoPO();
         existingColumn.setId("existing_col_id");
         existingColumn.setTableId(TestFixtures.TEST_TABLE_ID);
@@ -693,20 +728,20 @@ class ColumnServiceTest {
         existingColumn.setColumnType("VARCHAR");
         existingColumn.setAliases(List.of("order_no", "订单号"));
         existingColumn.setDescription("Old user description");
-        
+
         when(columnInfoDAO.findByTableId(TestFixtures.TEST_TABLE_ID)).thenReturn(List.of(existingColumn));
-        
+
         Column mockColumn = mock(Column.class);
         when(mockColumn.name()).thenReturn("col1");
         when(mockColumn.type()).thenReturn("VARCHAR");
         when(mockColumn.comment()).thenReturn("New DB Comment");
-        
+
         when(jdbcMetaService.getColumns(TestFixtures.TEST_DATASOURCE_ID, "public", "test_table"))
             .thenReturn(List.of(mockColumn));
-        
+
         try (MockedStatic<RequestContext> mocked = mockStatic(RequestContext.class)) {
             mocked.when(RequestContext::getUser).thenReturn(null);
-            
+
             // when - flag false, should preserve old
             columnService.syncColumns(TestFixtures.TEST_DATASOURCE_ID, TestFixtures.TEST_TABLE_ID, false);
 
@@ -725,20 +760,20 @@ class ColumnServiceTest {
     void syncColumns_newColumn_shouldUseDbCommentRegardlessOfFlag() throws SQLException {
         // given
         when(tableInfoDAO.findById(TestFixtures.TEST_TABLE_ID)).thenReturn(Optional.of(testTableInfoPO));
-        
+
         when(columnInfoDAO.findByTableId(TestFixtures.TEST_TABLE_ID)).thenReturn(List.of());
-        
+
         Column mockColumn = mock(Column.class);
         when(mockColumn.name()).thenReturn("new_col");
         when(mockColumn.type()).thenReturn("VARCHAR");
         when(mockColumn.comment()).thenReturn("New column comment");
-        
+
         when(jdbcMetaService.getColumns(TestFixtures.TEST_DATASOURCE_ID, "public", "test_table"))
             .thenReturn(List.of(mockColumn));
-        
+
         try (MockedStatic<RequestContext> mocked = mockStatic(RequestContext.class)) {
             mocked.when(RequestContext::getUser).thenReturn(null);
-            
+
             // when - new column, flag false, should use DB comment
             columnService.syncColumns(TestFixtures.TEST_DATASOURCE_ID, TestFixtures.TEST_TABLE_ID, false);
 
