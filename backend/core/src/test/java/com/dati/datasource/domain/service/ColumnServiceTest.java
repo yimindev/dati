@@ -122,8 +122,8 @@ class ColumnServiceTest {
     }
 
     @Test
-    @DisplayName("Update column - success")
-    void updateColumn_shouldUpdateSuccessfully() {
+    @DisplayName("Update column - updates editable fields and keeps the physical name")
+    void updateColumn_shouldUpdateEditableFieldsAndKeepName() {
         // given
         ColumnInfoPO existingPO = TestFixtures.createTestColumnInfoPO();
         when(columnInfoDAO.findById(TestFixtures.TEST_COLUMN_ID)).thenReturn(Optional.of(existingPO));
@@ -131,7 +131,7 @@ class ColumnServiceTest {
         when(tableInfoDAO.findById(TestFixtures.TEST_TABLE_ID)).thenReturn(Optional.of(testTableInfoPO));
 
         ColumnInfo updateInfo = new ColumnInfo();
-        updateInfo.setName("updated_column");
+        updateInfo.setName("renamed_column");
         updateInfo.setColumnType("INTEGER");
         updateInfo.setDescription("Updated description");
         updateInfo.setExtractValueEnabled(true);
@@ -143,7 +143,7 @@ class ColumnServiceTest {
         // then
         verify(columnInfoDAO).findById(TestFixtures.TEST_COLUMN_ID);
         verify(columnInfoDAO).saveAndFlush(argThat(po ->
-            po.getName().equals("updated_column") &&
+            po.getName().equals("test_column") &&
             po.getColumnType().equals("INTEGER") &&
             po.getDescription().equals("Updated description") &&
             po.isExtractValueEnabled() &&
@@ -155,11 +155,11 @@ class ColumnServiceTest {
         SemanticSearchDocument savedDoc = docCaptor.getValue();
         assertThat(savedDoc.getId()).isEqualTo("field:" + TestFixtures.TEST_COLUMN_ID);
         assertThat(savedDoc.getType()).isEqualTo(SemanticEntityType.FIELD);
-        assertThat(savedDoc.getKeywords()).containsExactly("updated_column");
+        assertThat(savedDoc.getKeywords()).containsExactly("test_column");
         assertThat(savedDoc.getDescription()).isEqualTo("Updated description");
         assertThat(savedDoc.getEntity().getTableId()).isEqualTo(TestFixtures.TEST_TABLE_ID);
         assertThat(savedDoc.getEntity().getTableName()).isEqualTo("test_table");
-        assertThat(savedDoc.getEntity().getField()).isEqualTo("updated_column");
+        assertThat(savedDoc.getEntity().getField()).isEqualTo("test_column");
     }
 
     @Test

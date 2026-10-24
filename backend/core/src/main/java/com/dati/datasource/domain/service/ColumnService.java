@@ -81,9 +81,6 @@ public class ColumnService {
 
         boolean wasEnabled = columnInfoPO.isExtractValueEnabled();
 
-        if (columnInfo.getName() != null) {
-            columnInfoPO.setName(columnInfo.getName());
-        }
         if (columnInfo.getColumnType() != null) {
             columnInfoPO.setColumnType(columnInfo.getColumnType());
         }

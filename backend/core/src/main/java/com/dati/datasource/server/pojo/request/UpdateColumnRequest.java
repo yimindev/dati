@@ -1,20 +1,17 @@
 package com.dati.datasource.server.pojo.request;
 
-import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 import java.util.List;
 
 /**
- * Partial update: every field is optional, omitted fields keep their stored value.
+ * Partial update of column metadata. The physical column name is not editable:
+ * it is owned by the database and changing it would break term relations and
+ * indexed sample values. Every field is optional; omitted fields keep their value.
  */
 @Data
 public class UpdateColumnRequest {
-
-    @Size(max = 64)
-    @Pattern(regexp = "(?s).*\\S.*", message = "{validation.notBlank}")
-    private String name;
 
     @Size(max = 1024)
     private String description;

@@ -40,7 +40,6 @@ public class ColumnAssembler extends BaseAssembler {
 
     public ColumnInfo toColumnInfo(UpdateColumnRequest request) {
         ColumnInfo columnInfo = new ColumnInfo();
-        columnInfo.setName(request.getName());
         columnInfo.setDescription(request.getDescription());
         columnInfo.setColumnType(request.getColumnType());
         columnInfo.setAliases(request.getAliases());

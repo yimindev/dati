@@ -42,7 +42,12 @@ export async function saveColumnMetadata(
 ) {
   return put(
     `/v1/data-sources/${datasourceId}/tables/${tableId}/columns/${column.id}`,
-    column,
+    {
+      description: column.description,
+      column_type: column.column_type,
+      aliases: column.aliases,
+      extract_value_enabled: column.extract_value_enabled,
+    },
   );
 }
 

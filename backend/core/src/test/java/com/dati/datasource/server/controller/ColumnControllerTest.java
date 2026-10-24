@@ -11,6 +11,7 @@ import com.dati.datasource.domain.service.ColumnValueService;
 import com.dati.datasource.server.assembler.ColumnAssembler;
 import com.dati.datasource.server.pojo.ColumnInfoVO;
 import com.dati.datasource.server.pojo.ColumnValueVO;
+import com.dati.datasource.server.pojo.request.UpdateColumnRequest;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -129,13 +130,10 @@ class ColumnControllerTest {
     @DisplayName("Update column - success")
     void updateColumn_shouldReturnId() throws Exception {
         // given
-        ColumnInfoVO requestVo = new ColumnInfoVO();
-        requestVo.setName("updated_column");
-        requestVo.setColumnType("INTEGER");
-        requestVo.setTableId(TestFixtures.TEST_TABLE_ID);
+        UpdateColumnRequest request = new UpdateColumnRequest();
+        request.setColumnType("INTEGER");
 
         ColumnInfo columnInfo = TestFixtures.createTestColumnInfo();
-        columnInfo.setName("updated_column");
 
         when(columnAssembler.toColumnInfo(any())).thenReturn(columnInfo);
         doNothing().when(columnService).updateColumn(eq(TestFixtures.TEST_COLUMN_ID), any());
@@ -144,7 +142,7 @@ class ColumnControllerTest {
         mockMvc.perform(put("/v1/data-sources/{datasourceId}/tables/{tableId}/columns/{id}",
                     TestFixtures.TEST_DATASOURCE_ID, TestFixtures.TEST_TABLE_ID, TestFixtures.TEST_COLUMN_ID)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(requestVo)))
+                .content(objectMapper.writeValueAsString(request)))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.id").value(TestFixtures.TEST_COLUMN_ID));
 
@@ -170,15 +168,14 @@ class ColumnControllerTest {
     @Test
     @DisplayName("Update column - rejects a column outside the path table")
     void updateColumn_whenColumnOutsidePath_returns404() throws Exception {
-        ColumnInfoVO requestVo = new ColumnInfoVO();
-        requestVo.setName("updated_column");
+        UpdateColumnRequest request = new UpdateColumnRequest();
         doThrow(new DatiException(ErrorCode.DS_COLUMN_NOT_FOUND, TestFixtures.TEST_COLUMN_ID))
             .when(columnService).requireColumnInPath("ds-other", TestFixtures.TEST_TABLE_ID, TestFixtures.TEST_COLUMN_ID);
 
         mockMvc.perform(put("/v1/data-sources/{datasourceId}/tables/{tableId}/columns/{id}",
                     "ds-other", TestFixtures.TEST_TABLE_ID, TestFixtures.TEST_COLUMN_ID)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(requestVo)))
+                .content(objectMapper.writeValueAsString(request)))
             .andExpect(status().isNotFound())
             .andExpect(jsonPath("$.code").value("DS008"));
 
@@ -232,8 +229,7 @@ class ColumnControllerTest {
     @DisplayName("Update column - verifies ID param is passed")
     void updateColumn_shouldPassCorrectId() throws Exception {
         // given
-        ColumnInfoVO requestVo = new ColumnInfoVO();
-        requestVo.setName("new_name");
+        UpdateColumnRequest request = new UpdateColumnRequest();
 
         when(columnAssembler.toColumnInfo(any())).thenReturn(testColumnInfo);
         doNothing().when(columnService).updateColumn(anyString(), any());
@@ -242,7 +238,7 @@ class ColumnControllerTest {
         mockMvc.perform(put("/v1/data-sources/{datasourceId}/tables/{tableId}/columns/{id}",
                     TestFixtures.TEST_DATASOURCE_ID, TestFixtures.TEST_TABLE_ID, "specific-column-id")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(requestVo)))
+                .content(objectMapper.writeValueAsString(request)))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.id").value("specific-column-id"));
 
