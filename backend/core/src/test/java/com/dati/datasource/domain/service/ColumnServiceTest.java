@@ -15,6 +15,7 @@ import com.dati.db.Column;
 import com.dati.permission.domain.service.PermissionService;
 import com.dati.semantic.domain.SemanticEntityType;
 import com.dati.semantic.domain.service.SemanticIndexService;
+import com.dati.semantic.repository.dao.TermRelationDAO;
 import com.dati.semantic.repository.po.EntityReference;
 import com.dati.semantic.repository.po.SemanticSearchDocument;
 import org.junit.jupiter.api.BeforeEach;
@@ -62,6 +63,9 @@ class ColumnServiceTest {
 
     @Mock
     private PermissionService permissionService;
+
+    @Mock
+    private TermRelationDAO termRelationDAO;
 
     @InjectMocks
     private ColumnService columnService;
@@ -437,6 +441,7 @@ class ColumnServiceTest {
         verify(semanticIndexService).saveBatch(docsCaptor.capture());
         assertThat(docsCaptor.getValue()).hasSize(1);
         assertThat(docsCaptor.getValue().getFirst().getCreatedTime()).isEqualTo(originalCreatedTime);
+        verify(termRelationDAO, never()).deleteByTableIdAndFieldNameIn(anyString(), anyList());
     }
 
     @Test
@@ -476,6 +481,8 @@ class ColumnServiceTest {
             columnService.syncColumns(TestFixtures.TEST_DATASOURCE_ID, TestFixtures.TEST_TABLE_ID, true);
 
             // then - only the dropped column is deleted, no full-table delete
+            verify(termRelationDAO).deleteByTableIdAndFieldNameIn(
+                    TestFixtures.TEST_TABLE_ID, List.of("dropped_col"));
             verify(columnInfoDAO).deleteAll(argThat(list -> {
                 List<ColumnInfoPO> columns = (List<ColumnInfoPO>) list;
                 return columns.size() == 1 && "dropped_col".equals(columns.getFirst().getName());

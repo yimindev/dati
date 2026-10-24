@@ -407,8 +407,8 @@ class TermServiceTest {
     }
 
     @Test
-    @DisplayName("getTermRelationsByTermIds - drops relations whose table no longer exists")
-    void getTermRelationsByTermIds_shouldDropDanglingRelations() {
+    @DisplayName("getTermRelationsByTermIds - missing table metadata keeps the relation with null table name")
+    void getTermRelationsByTermIds_shouldKeepRelationsWhenTableMetadataIsMissing() {
         TermRelationPO dangling = new TermRelationPO();
         dangling.setId("rel-dangling");
         dangling.setTermId("term-001");
@@ -422,7 +422,33 @@ class TermServiceTest {
         Map<String, List<TermRelation>> result =
                 termService.getTermRelationsByTermIds(Set.of("term-001"));
 
-        assertThat(result).isEmpty();
+        assertThat(result).containsOnlyKeys("term-001");
+        TermRelation relation = result.get("term-001").getFirst();
+        assertThat(relation.getTableName()).isNull();
+        assertThat(relation.getSchema()).isNull();
+        assertThat(relation.getFieldName()).isEqualTo("amount");
+    }
+
+    @Test
+    @DisplayName("getTermRelationsByTermIds - metadata lookup failure does not hide relations")
+    void getTermRelationsByTermIds_shouldNotHideRelationsWhenTableLookupFails() {
+        TermRelationPO relationPO = new TermRelationPO();
+        relationPO.setId("rel-001");
+        relationPO.setTermId("term-001");
+        relationPO.setEntityType(TermRelationType.FIELD);
+        relationPO.setTableId("table-001");
+        relationPO.setFieldName("amount");
+
+        when(termRelationDAO.findByTermIdIn(Set.of("term-001"))).thenReturn(List.of(relationPO));
+        when(tableInfoDAO.findAllById(Set.of("table-001")))
+                .thenThrow(new RuntimeException("metadata unavailable"));
+
+        Map<String, List<TermRelation>> result =
+                termService.getTermRelationsByTermIds(Set.of("term-001"));
+
+        assertThat(result).containsOnlyKeys("term-001");
+        assertThat(result.get("term-001")).hasSize(1);
+        assertThat(result.get("term-001").getFirst().getTableName()).isNull();
     }
 
     @Test

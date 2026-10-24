@@ -227,8 +227,6 @@ public class TermService {
         List<TermRelationPO> relationPOList = termRelationDAO.findByTermIdIn(termIds);
         Map<String, TableInfoPO> tableInfoMap = getTableInfoMap(relationPOList);
         return relationPOList.stream()
-                .filter(relation -> relation.getTableId() != null
-                        && tableInfoMap.containsKey(relation.getTableId()))
                 .map(relation -> toTermRelation(relation, tableInfoMap))
                 .collect(Collectors.groupingBy(TermRelation::getTermId));
     }
