@@ -640,3 +640,30 @@ bugs:
     description: |
       TC-MCP-004 步骤5（部分更新：仅改 description）复现：PUT /v1/mcp-services/{id}/tools/{toolId} 仅传 {"description":"..."} → 400 CM001 'toolType: 不得为 null'，部分更新不可用。同类静默数据丢失（改传 tool_type 后可复现）：① 自定义工具缺省 enabled：创建 enabled=false 的工具后 PUT {"tool_type":"PARAMETERIZED_SQL","description":"d2"} → 200，但 enabled 被静默改回 true；② 预置工具缺省 config：EXECUTE_SQL 配置自定义 config 后 PUT {"tool_type":"EXECUTE_SQL","enabled":false} → 200，但 config 被重置为代码默认值（timeout=30/max_rows=1000），缺省 enabled 同样被强制为 true。
       修复：更新请求拆为独立的 UpdateToolRequest（全部字段可选，部分更新生效），创建仍用 CreateCustomToolRequest（tool_type/description 必填）；PUT 以 path 的 toolId 判定目标（预置工具 id 即类型名，自定义工具为 UUID），请求携带 tool_type 时必须与 path 一致，否则 400 CM001；McpToolAssembler 新增 toUpdateModel（未提供字段保持 null）与 parsePrebuiltConfig（空 config 返回 null）；McpToolService.updateCustomTool(tool, Boolean enabled) / updatePrebuiltTool(serviceId, toolType, ToolConfig config, Boolean enabled) 仅在请求显式携带时覆盖 enabled/config，预置工具首次落库仍以类型默认开关兜底，发布回滚的全量恢复显式传 config+enabled。覆盖测试：McpToolServiceTest（缺省 config 保留、缺省 enabled 保留、description-only 保留 enabled/type/config）、McpToolControllerTest（无 tool_type 的预置/自定义部分更新 200、tool_type 与 path 冲突 400）、McpToolAssemblerTest。
+  - id: BUG-20261023-008
+    title: MCP 服务与术语的部分更新失效：PUT 仅传 description 返回 400（BaseResource.name @NotBlank 回归）
+    module: MCP 服务管理
+    severity: high
+    fixed_at: 2026-10-24
+    description: |
+      TC-MCP-001 步骤 6 / TC-MCP-010 步骤 2 探索：PUT /v1/mcp-services/{id} 仅传 {"description":"..."}（意图为部分更新）→ 400 CM001 "Request parameter error: name: 不得为空白"，description 未更新；2026-10-19 报告该步骤为 200，本次失败，属回归。同源问题：PUT /v1/terms/{id} 仅传 description → 同样 400 CM001（name 不得为空白）；PUT /v1/subjects/{id} 因使用独立 UpdateSubjectRequest 未受影响。
+      根因：cc3594c（修复 BUG-20261022-008 的 name 长度校验）给 BaseResource.name 加了 @NotBlank + @Size(max=64)。McpService 与 Term 的更新接口直接 @RequestBody 绑定领域模型（继承 BaseResource），@Valid 校验因此把「未传 name」当作非法；工具（McpTool）此前已通过 UpdateToolRequest 支持真正部分更新（BUG-20261022-014），服务/术语没有对应改造。
+      影响：①前端/API 客户端无法只改描述，必须回传完整 name，容易误覆盖；②TC-MCP-001/010 的 MVP 主链路（更新描述 → 发布/回滚）需传 name 才能通过，用例与实现契约不一致。
+      建议：为 MCP 服务与术语引入 UpdateMcpServiceRequest / UpdateTermRequest（name 可选，仅当出现时做 @Size/@NotBlank 校验），Service 层只合并请求中出现的字段；或在 Controller 绑定前把 name 从校验中排除（分组校验）。修复后需回归 TC-MCP-001、TC-MCP-010、TC-MCP-011，并补单测覆盖「仅传 description」「仅传 enabled 类字段」两类部分更新。
+  - id: BUG-20261023-009
+    title: 调用日志的工具名筛选被静默忽略：后端只认 toolName，前端与用例传 tool_name
+    module: MCP 服务管理
+    severity: medium
+    fixed_at: 2026-10-24
+    description: |
+      TC-MCP-025 步骤 4 探索：GET /v1/mcp-services/{id}/invocation-logs?tool_name=execute_sql 返回全部日志（total=2，含 list_tables_and_terms），筛选完全未生效；改用 ?toolName=execute_sql 才正确返回 1 条。success=true/false 筛选正常。
+      根因：McpServiceController.listInvocationLogs 使用 @RequestParam(required=false) String toolName 未显式指定 name，Spring 按 Java 参数名绑定 camelCase 的 toolName；而前端 frontend/src/api/mcp-usage.ts 的 listMcpInvocationLogs 发送的是 tool_name（snake_case），openapi.json 亦记录为 toolName。契约与调用方不一致，且未知查询参数被静默忽略（不会 400），所以 UI 的「工具名」筛选看起来能点但永远返回全量。
+      影响：前端用量统计页的工具名筛选失效（静默返回全量），排查慢查询/单工具失败率时结论错误；同时违反项目 body/query 统一 snake_case 的约定。
+      建议：改 Controller 为 @RequestParam(name="tool_name", required=false) String toolName（或全局开启 snake_case 查询参数解析），同步 openapi 与前端；对未知查询参数可考虑记录 WARN 日志便于排查。补 Controller 测试覆盖 tool_name 筛选。
+  - id: BUG-20261023-003
+    title: 主题/术语创建与更新缺少长度校验，超长 name(>64)/description(>1024) 返回 500 CM003
+    module: 语义层
+    severity: medium
+    fixed_at: 2026-10-24
+    description: |
+      TC-SEM-001/003/006/007 探索（站在调用方角度验证输入边界，用例未覆盖）：POST /v1/subjects、POST /v1/subjects/{id}/terms、PUT /v1/subjects/{id}、PUT /v1/terms/{id} 对 name/description 缺少长度校验，超长输入直接落库触发 DataIntegrityViolationException → GlobalExceptionHandler 兜底返回 HTTP 500 {code:CM003,message:'Internal server error'}，而非 400 CM001。复现（qa-e2e-tester）：①POST /v1/subjects name=65 字符 → 500 CM003（name=64 字符 → 200，边界正确）；②POST /v1/subjects description=1025 字符 → 500 CM003；③POST /v1/subjects/{id}/terms name=65 字符 → 500 CM003；④POST /v1/subjects/{id}/terms description=1025 字符 → 500 CM003；⑤PUT /v1/subjects/{id} description=1025 字符 → 500 CM003。根因：CreateSubjectRequest/CreateTermRequest/UpdateTermRequest/UpdateSubjectRequest 只有 @NotBlank/@Pattern，未加 @Size(max=64)/@Size(max=1024)，而 BaseResource.name/description 上的 @Size 只作用于实体、未在请求 DTO 上校验，故服务层校验通过后由 DB 列宽抛错。对比：数据源模块已在 BUG-20260805-002 修复中为 Create/UpdateDataSourceRequest 补 @Size 并验证 400 CM001；前端虽把 name 上限统一到 64，但直接调用 API 或未来 UI 放宽时会稳定 500，且错误信息不可自诊断。建议：为四个语义层请求 DTO 补 @Size(max=64)（name，含 TABLE 语义的空白 Pattern 保留）与 @Size(max=1024)（description），并补 SubjectControllerTest/TermControllerTest 边界单测（64/65、1024/1025）。

@@ -25,7 +25,8 @@ if command -v yq &>/dev/null && [ -f "$ENV_FILE" ]; then
 else
     BASE_URL="${BASE_URL:-http://localhost:8085}"
     WORK_DIR="${WORK_DIR:-$PROJECT_DIR}"
-    START_CMD="${START_CMD:-mvn -f backend/pom.xml -q -DskipTests install && mvn -f backend/app/pom.xml spring-boot:run -Dspring-boot.run.workingDirectory=${WORK_DIR}}"
+    # 用根 pom install：同时安装 dati-parent 与全部模块（仅 -f backend/pom.xml 会漏装父 POM）
+    START_CMD="${START_CMD:-mvn -f pom.xml -q -DskipTests install && mvn -f backend/app/pom.xml spring-boot:run -Dspring-boot.run.workingDirectory=${WORK_DIR}}"
 fi
 LOG_FILE="${LOG_FILE:-/tmp/dati-e2e-service.log}"
 
