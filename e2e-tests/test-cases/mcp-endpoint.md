@@ -94,7 +94,7 @@
 | PUBLISHED 服务 | POST `/<published-code>/mcp` | **200** |
 | 非 POST 方法 | GET `/<published-code>/mcp` | **405** |
 | 非 initialize 缺 `MCP-Protocol-Version` | 不带该头 | **400** |
-| `Accept` 任意值（含缺省） | 任意 Accept / 无 Accept | **200**（不校验） |
+| `Accept` 任意值（含缺省） | `text/event-stream` / `text/plain` / `application/xml` / `*/*` / 无 Accept | **200**，且 `Content-Type` **恒为** `application/json`（body 是 JSON，不做 SSE 分帧） |
 | Origin 非 localhost 且不在白名单 | `Origin: http://evil.example.com` | **403** |
 | Origin localhost | `Origin: http://localhost:8085` | **200** |
 | Origin 在白名单 | `Origin: https://trusted.example.com`（配置 `dati.mcp.allowed-origins`） | **200** |

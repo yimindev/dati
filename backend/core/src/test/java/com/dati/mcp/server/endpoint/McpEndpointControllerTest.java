@@ -14,6 +14,8 @@ import io.modelcontextprotocol.spec.McpSchema;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -37,6 +39,7 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -146,18 +149,21 @@ class McpEndpointControllerTest {
             .andExpect(header().string("WWW-Authenticate", "Bearer"));
     }
 
-    @Test
-    @DisplayName("Accept header is not validated (any Accept works)")
-    void acceptNotValidated() throws Exception {
+    @ParameterizedTest
+    @ValueSource(strings = {"application/json", "application/json, text/event-stream",
+        "text/event-stream", "text/plain", "application/xml", "*/*"})
+    @DisplayName("Any Accept is accepted and the response is always application/json")
+    void acceptNotValidated(String accept) throws Exception {
         when(protocolHandler.handle(any(), any(), any())).thenReturn(
             McpSchema.JSONRPCResponse.result(1, java.util.Map.of("tools", java.util.List.of())));
         mockMvc.perform(post("/test-mcp-service/mcp")
-                .header("Accept", "text/event-stream")
+                .header("Accept", accept)
                 .header("MCP-Protocol-Version", "2025-11-25")
                 .header("Authorization", "Bearer abc")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\"}"))
-            .andExpect(status().isOk());
+            .andExpect(status().isOk())
+            .andExpect(content().contentType(MediaType.APPLICATION_JSON));
     }
 
     @Test
@@ -170,7 +176,22 @@ class McpEndpointControllerTest {
                 .header("Authorization", "Bearer abc")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\"}"))
-            .andExpect(status().isOk());
+            .andExpect(status().isOk())
+            .andExpect(content().contentType(MediaType.APPLICATION_JSON));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"text/event-stream", "application/xml"})
+    @DisplayName("error responses also carry application/json regardless of Accept")
+    void errorResponsesKeepJsonContentType(String accept) throws Exception {
+        mockMvc.perform(post("/ghost/mcp")
+                .header("Accept", accept)
+                .header("MCP-Protocol-Version", "2025-11-25")
+                .header("Authorization", "Bearer abc")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\"}"))
+            .andExpect(status().isNotFound())
+            .andExpect(content().contentType(MediaType.APPLICATION_JSON));
     }
 
     @Test

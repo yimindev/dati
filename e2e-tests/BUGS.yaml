@@ -56,18 +56,6 @@ bugs:
       ④ PUT /v1/terms/{id} {"name":""} 同样英文；
       ⑤ PUT /v1/terms/{id} {"name":"   "} 同样英文。
       根因推测：无 Accept-Language 时 jakarta 内置约束走 Hibernate Validator 的 zh_CN 资源包，而自定义键 {validation.notBlank} 解析到 ValidationMessages.properties（英文默认包），两条解析链的默认 Locale 基准不一致。建议：为 MVC 显式配置默认 Locale（spring.web.locale / LocaleResolver），或让自定义消息与内置消息共用同一 Locale 解析入口，并补『无 Accept-Language 时各约束消息语言一致』的测试。
-  - id: BUG-20261025-002
-    title: "MCP endpoint 的 Content-Type 跟随请求 Accept 而非固定 application/json（Accept 为 text/event-stream 时返回 JSON 却标为 SSE）"
-    module: MCP Endpoint
-    severity: medium
-    found_at: 2026-10-25
-    description: |
-      TC-END-006 探索（站在 MCP Client / 浏览器与非浏览器客户端视角核对传输语义，用例只要求「Accept 任意值均 200」）：POST /{code}/mcp 的响应 Content-Type 由 Spring 内容协商按请求 Accept 决定，而不是固定 application/json。实测（qa-e2e-tester，服务 mcp-end-main-1792922922，tools/list 同一请求体，body 始终是同一段 JSON 文本）：
-      ① Accept: application/json → 200 Content-Type: application/json（正常）；
-      ② Accept: application/json, text/event-stream（官方 SDK/Inspector 的常规写法）→ 200 application/json（正常）；
-      ③ Accept: text/event-stream → 200 Content-Type: text/event-stream，但 body 是单个 JSON 对象、没有 SSE 的 data:/event: 分帧 —— 只接受 SSE 的客户端会把 body 当事件流解析而失败；
-      ④ Accept: text/plain → 200 text/plain；Accept: application/xml → 200 application/xml（JSON 被标成 XML/纯文本）。
-      根因：McpEndpointController 返回 ResponseEntity<Object>，未显式设置 Content-Type，Spring 按 Accept 协商出结果类型；MCP 2025-11-25 Streamable HTTP 要求非流式响应必须是 Content-Type: application/json。建议：在控制器或消息转换器上固定 application/json（如 ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(...)），并补 McpEndpointControllerTest 断言 Accept: text/event-stream / text/plain / application/xml 三种请求下 Content-Type 仍为 application/json。
   - id: BUG-20261025-004
     title: 参数化 SQL 工具传入空数组时渲染为 IN ()，以原始数据库语法错误返回而非参数错误
     module: MCP Endpoint

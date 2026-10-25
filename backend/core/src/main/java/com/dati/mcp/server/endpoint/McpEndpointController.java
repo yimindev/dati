@@ -1,6 +1,7 @@
 package com.dati.mcp.server.endpoint;
 
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -13,6 +14,10 @@ import org.springframework.web.bind.annotation.RestController;
  * handled by the global {@code AuthInterceptor} (registered for /{code}/mcp in
  * WebMvcConfig). Responses are MCP protocol types serialized by the SDK camelCase
  * mapper via {@code McpProtocolMessageConverter}.
+ * <p>
+ * Responses are always {@code application/json}: the endpoint never streams, and the
+ * request {@code Accept} header is not validated, so the response content type is
+ * preset instead of being negotiated from it.
  */
 @RestController
 public class McpEndpointController {
@@ -29,7 +34,9 @@ public class McpEndpointController {
         String clientIp = extractClientIp(request);
         McpEndpointService.McpEndpointResult result = endpointService.handle(
             code, body, request.getHeader("Origin"), request.getHeader("MCP-Protocol-Version"), clientIp);
-        return ResponseEntity.status(result.status()).body(result.body());
+        return ResponseEntity.status(result.status())
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(result.body());
     }
 
     private String extractClientIp(HttpServletRequest request) {
