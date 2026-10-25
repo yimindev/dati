@@ -51,7 +51,7 @@ MCP 服务共 **8 种工具类型**:7 种预置(平台内置,随发布生效)+ 1
 | `sql_template` | string | — | SQL 模板(语法见 [templates.md](templates.md)) |
 | `parameters` | ToolParameter[] | — | 参数声明(决定 LLM 调用时的入参 schema) |
 | `timeout` | int | 30 | 超时秒数 |
-| `max_rows` | int | 1000 | 最大返回行数 |
+| `max_rows` | int | 1000 | 最大返回行数,超出时结果被截断:响应 `truncated`=true、`returned_rows` 为实际返回行数,并附 `notice` 提示改用 LIMIT/OFFSET 或聚合取准确结果 |
 | `read_only` | bool | — | 声明只读(影响 LLM 决策与安全检查) |
 | `idempotent` | bool | — | 声明幂等(可安全重试) |
 | `destructive` | bool | — | 声明破坏性(高影响操作) |

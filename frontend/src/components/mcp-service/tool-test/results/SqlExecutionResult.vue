@@ -59,13 +59,29 @@ const { t } = useI18n();
             { n: i + 1 },
           )
         }}</span>
-        <span v-if="r.success && r.type === 'SELECT'" class="ml-auto font-normal">
+        <span
+          v-if="r.success && r.type === 'SELECT'"
+          class="ml-auto font-normal"
+        >
           {{
-            t("mcpService.toolTest.totalRows", {
-              total: (r as SelectResult).total_rows,
+            t("mcpService.toolTest.returnedRows", {
+              total: (r as SelectResult).returned_rows,
             })
           }}
         </span>
+        <el-tooltip
+          v-if="r.success && r.type === 'SELECT' && (r as SelectResult).truncated"
+          :content="
+            t('mcpService.toolTest.truncated', {
+              total: (r as SelectResult).returned_rows,
+            })
+          "
+          placement="top"
+        >
+          <el-tag size="small" type="warning" effect="light" class="ml-1.5">
+            {{ t("mcpService.toolTest.truncatedTag") }}
+          </el-tag>
+        </el-tooltip>
         <span v-if="r.success && r.type === 'WRITE'" class="ml-auto font-normal">
           {{
             t("mcpService.toolTest.affectedRows", {

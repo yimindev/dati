@@ -22,3 +22,87 @@ bugs:
       ② data_source_id=9d05fd88-3fde-458f-82e6-94a37e3260ac（存在，但未绑定到 e2e-end-main 服务） → 200 {isError:true, content[0].text:'数据源或表不在服务范围内：Data source 9d05fd88-… not in service scope'}（ToolError.SCOPE_VIOLATION）。
       两条文案可区分，等于给出「该 UUID 是平台内真实数据源」的存在性预言机（同一现象也影响自定义 PARAMETERIZED_SQL 工具，ParameterizedSqlExecutor 同结构）。根因：ExecuteSqlExecutor.execute()/ParameterizedSqlExecutor.execute() 先 dataSourceService.getDataSourceInternal(dsId) 再 scopeValidator.validate(...)，即先做全局存在性查询、后做 scope 校验；正确顺序应先 validateScopeCoverage 再加载数据源，或对外统一返回 SCOPE_VIOLATION 文案。附带：①'数据源不存在' 为纯中文且无 dsId/英文尾缀，与相邻 'not in service scope' 中英混排并存，与「面向 LLM 的协议消息应确定性可解析」的约定不一致；②该分支下 error_category 为 PARAM_ERROR，与 scope 违规的 SCOPE_ERROR 不同，LLM 可能据此判断为参数拼写错误而反复重试同一 uuid。建议：scope 校验前移，并让两条分支对外文案与 error_category 一致（或统一为 Data source not found or not in service scope）。
       2026-10-24 重新评估：存在性预言机属于低危信息最小化建议，接受风险，暂不修复。代码回退到原始加载顺序（先加载数据源，再校验 scope），仅保留 SCOPE_VIOLATION 去重前缀与英文文案修复。
+  - id: BUG-20261024-010
+    title: 数据源更新 PUT 的 name 校验消息硬编码英文（@Pattern message='must not be blank'），与创建接口中文提示不一致（回归）
+    module: 数据源管理-错误处理
+    severity: low
+    found_at: 2026-10-25
+    regression: true
+    description: |
+      TC-DS-003/007 延伸探针（qa-e2e-tester，2026-10-24）：
+      ①POST /v1/data-sources {"name":"   "} → 400 {code:CM001, message:'Request parameter error: name: 不得为空白'}（Hibernate Validator 中文本地化）；
+      ②PUT /v1/data-sources/{id} {"name":"   "} → 400 {code:CM001, message:'Request parameter error: name: must not be blank'}（硬编码英文）。
+      同一资源、同一语义（name 不能为空白），创建与更新两个接口语言不一致；en/zh 前端 i18n 无法翻译硬编码英文，服务部署在 en Locale 时反而全部变英文，行为随环境漂移。
+      根因：UpdateDataSourceRequest.name 使用 @Pattern(regexp="(?s).*\\S.*", message="must not be blank") 硬编码英文，而 CreateDataSourceRequest 用 @NotBlank 走资源包。
+      同类问题在语义层已登记为 BUG-20261024-004，数据源模块（UpdateDataSourceRequest）尚未覆盖，修 BUG-20261024-004 时请一并处理本 DTO（可改为 @NotBlank + @Pattern 不带 message，或引用 messages.properties 消息键），并补 DataSourceControllerTest 断言中英文一致。      曾标记为 FIXED，本次测试复现。
+  - id: BUG-20261024-004
+    title: 语义层校验消息语言不一致：@NotBlank 走中文本地化、@Pattern 为硬编码英文（回归）
+    module: 语义层-错误处理
+    severity: low
+    found_at: 2026-10-25
+    regression: true
+    description: |
+      TC-SEM-001/003/006/007 探索（用户可见的输入校验反馈）：jakarta 默认约束（@NotBlank/@Min/@Max）走 Hibernate Validator 中文资源包，而 UpdateSubjectRequest/UpdateTermRequest 的 @Pattern 使用硬编码英文 message='must not be blank'，同一语义错误在不同端点显示不同语言。实测（qa-e2e-tester）：①POST /v1/subjects {} → 400 'Request parameter error: datasourceId: 不得为空白; name: 不得为空白'；②PUT /v1/subjects/{id} {"name":""} → 400 'name: must not be blank'；③POST /v1/subjects/{id}/terms {} → 400 'name: 不得为空白'；④PUT /v1/terms/{id} {"name":""} 与 {"name":"  "} → 400 'name: must not be blank'。前端 i18n（zh/en）无法翻译硬编码英文；若服务部署在 en Locale 环境则默认约束反而输出英文，行为随环境漂移。建议：去掉 DTO 上的英文硬编码 message，统一为 @NotBlank+@Pattern(regexp="(?s).*\\S.*") 或引用 messages.properties 消息键（中英文各一份），由 Locale 统一解析。      曾标记为 FIXED，本次测试复现。
+  - id: BUG-20261025-001
+    title: 语义层校验消息在未发送 Accept-Language 时仍中英混排
+    module: 语义层-错误处理
+    severity: low
+    found_at: 2026-10-25
+    description: |
+      TC-SEM-001/006/007 探索（用户可见的输入校验反馈）：显式传 Accept-Language（zh-CN / en）时消息跟随语言且中英文自洽（BUG-20261024-004 的修复生效），但**不发送 Accept-Language 的请求**（curl 脚本、部分 LLM/自动化工具链）仍混用两种语言，同一错误面出现中英混排：
+      ① POST /v1/subjects {} → 400 'Request parameter error: name: 不得为空白; datasource_id: 不得为空白'（@NotBlank，中文）；
+      ② POST /v1/subjects name=65 字符 → 400 'name: 大小必须在 0 和 64 之间'（@Size，中文）；
+      ③ PUT /v1/subjects/{id} {"name":""} → 400 'name: must not be blank'（@Pattern + {validation.notBlank}，英文）；
+      ④ PUT /v1/terms/{id} {"name":""} 同样英文；
+      ⑤ PUT /v1/terms/{id} {"name":"   "} 同样英文。
+      根因推测：无 Accept-Language 时 jakarta 内置约束走 Hibernate Validator 的 zh_CN 资源包，而自定义键 {validation.notBlank} 解析到 ValidationMessages.properties（英文默认包），两条解析链的默认 Locale 基准不一致。建议：为 MVC 显式配置默认 Locale（spring.web.locale / LocaleResolver），或让自定义消息与内置消息共用同一 Locale 解析入口，并补『无 Accept-Language 时各约束消息语言一致』的测试。
+  - id: BUG-20261025-002
+    title: "MCP endpoint 的 Content-Type 跟随请求 Accept 而非固定 application/json（Accept 为 text/event-stream 时返回 JSON 却标为 SSE）"
+    module: MCP Endpoint
+    severity: medium
+    found_at: 2026-10-25
+    description: |
+      TC-END-006 探索（站在 MCP Client / 浏览器与非浏览器客户端视角核对传输语义，用例只要求「Accept 任意值均 200」）：POST /{code}/mcp 的响应 Content-Type 由 Spring 内容协商按请求 Accept 决定，而不是固定 application/json。实测（qa-e2e-tester，服务 mcp-end-main-1792922922，tools/list 同一请求体，body 始终是同一段 JSON 文本）：
+      ① Accept: application/json → 200 Content-Type: application/json（正常）；
+      ② Accept: application/json, text/event-stream（官方 SDK/Inspector 的常规写法）→ 200 application/json（正常）；
+      ③ Accept: text/event-stream → 200 Content-Type: text/event-stream，但 body 是单个 JSON 对象、没有 SSE 的 data:/event: 分帧 —— 只接受 SSE 的客户端会把 body 当事件流解析而失败；
+      ④ Accept: text/plain → 200 text/plain；Accept: application/xml → 200 application/xml（JSON 被标成 XML/纯文本）。
+      根因：McpEndpointController 返回 ResponseEntity<Object>，未显式设置 Content-Type，Spring 按 Accept 协商出结果类型；MCP 2025-11-25 Streamable HTTP 要求非流式响应必须是 Content-Type: application/json。建议：在控制器或消息转换器上固定 application/json（如 ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(...)），并补 McpEndpointControllerTest 断言 Accept: text/event-stream / text/plain / application/xml 三种请求下 Content-Type 仍为 application/json。
+  - id: BUG-20261025-004
+    title: 参数化 SQL 工具传入空数组时渲染为 IN ()，以原始数据库语法错误返回而非参数错误
+    module: MCP Endpoint
+    severity: low
+    found_at: 2026-10-25
+    description: |
+      2026-10-25 全量 E2E 后补充探针（qa-e2e-tester）：模板/工具链路对数组参数的展开只按元素逐个生成占位符，空数组展开为 0 个占位符，模板里的 IN ({{ids}}) 因此变成字面量 IN ()。
+      复现（管理端 /tools/{id}/test 与协议链路同源）：临时服务 + PARAMETERIZED_SQL 工具（sql_template='SELECT * FROM genre WHERE genreid IN ({{ids}})'，parameters=[{name:ids,type:Array,required:true}]）：
+      ① arguments {ids:[1,2]} → success=true、executed_sql='... IN (?, ?)'、bindings=[1,2]、2 行（正常）；
+      ② arguments {ids:[]} → success=false、error={error_category:SQL_ERROR, message:'SQL execution failed: ERROR: syntax error at or near ")"  Position: 39'}；
+      ③ arguments {} → success=false、PARAM_ERROR『Missing required parameter: ids』（正常）。
+      根因：SqlRenderer.renderVar 对 isArray(value) 分支只遍历元素（backend/core/src/main/java/com/dati/common/template/SqlRenderer.java:103-110），空集合不产生占位符也不报错；校验顺序上 required 只判存在性、不判空集合。
+      影响：LLM 常见调用形态（用户没选任何筛选项/子查询返回空 id 列表）会得到一条与参数无关的数据库语法错误，报错信息里既没有参数名也没有『集合不能为空』的提示，LLM 往往反复重试同一调用或误判 SQL 模板有问题；模板预览接口对同一输入返回 200 + rendered='... IN ()'（本次 template 模块 W6 已记录），预览阶段同样没有任何拦截。
+      建议：渲染阶段对空数组显式抛 PARAM_ERROR（如 'Parameter ids: array must not be empty'），或在 ToolParameterBinder 里把『required=true 且集合为空』按缺失参数处理；预览接口同步返回 400。
+  - id: BUG-20261025-005
+    title: PUT /v1/mcp-services/{id}/data-scope 请求体缺少 items 或 items=null 时返回 500 CM003（NPE），而非 400 参数校验错误
+    module: MCP 服务管理
+    severity: medium
+    found_at: 2026-10-25
+    description: |
+      TC-MCP-002 延伸探针（qa-e2e-tester，2026-10-25）：PUT /v1/mcp-services/{id}/data-scope 使用三种 body 实测：
+      ① {'items': [{'scope_type':'DATA_SOURCE','reference_id':<valid ds>}]} → 200，范围为替换后记录（正常）；
+      ② {} （缺 items 字段）→ 500 {'code':'CM003','message':'Internal server error'}；
+      ③ {'items': null} → 500 同上。
+      同一资源创建接口对 data_scopes 有 @NotEmpty（POST /v1/mcp-services 不带 data_scopes → 400 CM001「data_scopes: 不得为空」），更新接口却对缺失/为 null 的 items 直接 500，契约与错误语义不一致。事务已回滚（重查 data-scope 仍是原有范围），未产生脏数据，但客户端收到的是不可行动的 Internal server error，且会在服务端留下 ERROR 堆栈与 5xx 指标。
+      根因：DataScopeRequest.items 未加 @NotNull/@NotEmpty（openapi 中 DataScopeRequest.items 亦无 required），McpServiceController.saveDataScope 直接 request.getItems().stream()（backend/core/src/main/java/com/dati/mcp/server/controller/McpServiceController.java:136）→ NullPointerException → GlobalExceptionHandler 兜底为 CM003。
+      影响：前端/第三方集成方若发送不完整 body（如误传 {}、JSON 序列化丢字段）无法从响应判断问题所在；同一 DTO 被 PUT 与创建共用时校验强度不一致。
+      建议：DataScopeRequest.items 增加 @NotNull（必要时 @NotEmpty 与创建接口对齐），或 Controller 内对 null 做 400 CM001 显式处理，并补 McpServiceControllerTest 覆盖「缺 items / items=null」两种入参。另：PUT {'items': []} 目前返回 200 并把服务置为无范围草稿态（发布时被 400 MS019 拦住），若该中间态非有意设计，建议一并在消息或文档中说明。
+  - id: BUG-20261025-006
+    title: 调用日志 created_at 记录的是微批刷盘时间而非真实调用时间（最多偏差一个 flush 周期，默认 10s）
+    module: MCP 服务管理-用量统计
+    severity: low
+    found_at: 2026-10-25
+    description: |
+      TC-MCP-025 延伸探针（qa-e2e-tester，2026-10-25，服务 probe16）：同一服务间隔 4 秒连续发 3 次 /{code}/mcp tools/call execute_sql（实际调用时刻 13:33:03.721、13:33:07.731、13:33:11.754 UTC），flush 后查询 GET /v1/mcp-services/{id}/invocation-logs，3 条日志的 created_at 全部为 13:33:13.364~13:33:13.365（彼此相差不到 1ms，即微批落库时刻），而非各自真实调用时刻；duration_ms 正确（2/8/7ms），success/error_message 正确。
+      根因：McpUsageCollector.record 只把业务字段放入队列（McpInvocationLogPO 未设置调用时间），日志 PO 继承 BasePO，created_at 在 flushLogs() → logDAO.saveAll(batch) 时由持久化层统一填充（backend/core/src/main/java/com/dati/mcp/domain/service/McpUsageCollector.java:118-136、McpInvocationLogPO 无 createdAt 字段）。@Scheduled(fixedDelayString=dati.mcp.stats.flush-interval-seconds:10) 决定偏差上限。
+      影响（站在平台使用者视角）：①调用明细的时间列与真实发生时间最多相差 10 秒，排查『某次异常调用发生在几点几分』时不可信；②表上有 idx_mcp_log_svc_created(service_id, created_at)、idx_mcp_log_created(created_at)，列表默认按 created_at 排序，同一 flush 批内的多次调用时间戳几乎相同，跨批次边界时先后顺序可能错乱（本次 3 条按 created_at 倒序返回，与实际调用顺序相反）；③若将来按日/小时切片统计调用分布，刷盘跨越零点时会把前一天的调用记到后一天（stat_date 用的是 record() 时刻，但与 created_at 不一致，两个时间字段互相矛盾）。
+      建议：在 McpUsageCollector.record() 中显式记录 Instant invocationTime 并写入日志（如 PO 增加 called_at 字段或直接覆盖 created_at），保留 flush 时间作为独立字段；分页排序改用 called_at + id；补单测断言「写入的调用时间与 record() 调用时刻同基准」。

@@ -25,7 +25,7 @@ class ToolResultConverterTest {
     @DisplayName("sql execution becomes text content plus structuredContent")
     void convertsSqlExecution() {
         SqlExecution execution = new SqlExecution("SELECT 1",
-            List.of(StatementResult.select(List.of("a"), List.of(List.of(1)), 1)), null);
+            List.of(StatementResult.select(List.of("a"), List.of(List.of(1)), false)), null);
         McpSchema.CallToolResult result = converter.toResult(execution);
         assertFalse(result.isError());
         assertEquals(1, result.content().size());

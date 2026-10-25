@@ -276,10 +276,13 @@
    - `success`=true，`execution_time_ms` 非负
    - `data.type`=SQL_EXECUTION，`data.executed_sql` 与输入一致，`data.results` 非空
    - results[0]：`type`=SELECT、`success`=true、`columns` 与 `<mcp.tool.exec_sql.select_columns>` 一致、`rows` 非空（种子数据 25 条流派）
-3. **策略拦截（DML）**：args sql 改为 `<mcp.tool.exec_sql.update>`（默认 policy 仅允许 SELECT）→ HTTP 200，`success`=false，`error.error_category`=PERMISSION_DENIED（策略在 SQL 分析层拦截，未实际执行，数据未变）
-4. **多语句拦截**：sql = `<mcp.tool.exec_sql.multi>`（默认 allow_multi=false，type=MULTI）→ HTTP 200，`success`=false，`error.error_category`=PERMISSION_DENIED
-5. **缺参**：args 仅 `{"data_source_id": "<seedDsId>"}`（缺 sql）→ HTTP 200，`success`=false，`error.error_category`=PARAM_ERROR（PARAM_MISSING）
-6. 删除服务（清理）
+   - results[0]：`returned_rows` == `rows` 长度、`truncated`=false（未达 max_rows 上限，无 `notice` 字段）
+3. **截断标记**：把 EXECUTE_SQL 的 config `max_rows` 设为 3 后重新测试同一条 SQL（匹配 25 行）→ `rows` 长度为 3、`returned_rows`=3、`truncated`=true、`notice` 非空（提示用 LIMIT/OFFSET 或聚合取准确结果）
+   - 边界：SQL 恰好匹配 `max_rows` 行（如 `LIMIT 3`）→ `truncated`=false（不得误报截断）
+4. **策略拦截（DML）**：args sql 改为 `<mcp.tool.exec_sql.update>`（默认 policy 仅允许 SELECT）→ HTTP 200，`success`=false，`error.error_category`=PERMISSION_DENIED（策略在 SQL 分析层拦截，未实际执行，数据未变）
+5. **多语句拦截**：sql = `<mcp.tool.exec_sql.multi>`（默认 allow_multi=false，type=MULTI）→ HTTP 200，`success`=false，`error.error_category`=PERMISSION_DENIED
+6. **缺参**：args 仅 `{"data_source_id": "<seedDsId>"}`（缺 sql）→ HTTP 200，`success`=false，`error.error_category`=PARAM_ERROR（PARAM_MISSING）
+7. 删除服务（清理）
 
 ---
 

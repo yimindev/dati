@@ -83,7 +83,7 @@ public class ParameterizedSqlExecutor implements ToolExecutor {
         try (Connection conn = HikariPoolManager.getConnection(connector);
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setQueryTimeout(config.getTimeout());
-            stmt.setMaxRows(config.getMaxRows());
+            stmt.setMaxRows(SqlExecutorHelper.probeRowLimit(config.getMaxRows()));
             List<ParamBinding> bindings = prepared.bindings();
             var typeMap = config.getParameters().stream()
                 .collect(Collectors.toMap(ToolParameter::getName, ToolParameter::getType));
@@ -100,7 +100,7 @@ public class ParameterizedSqlExecutor implements ToolExecutor {
                 stmt.setObject(i + 1, value);
             }
             stmt.execute();
-            results = SqlExecutorHelper.collect(stmt);
+            results = SqlExecutorHelper.collect(stmt, config.getMaxRows());
         } catch (SQLException e) {
             throw new ToolExecuteException(ToolError.SQL_EXECUTION_ERROR, e.getMessage());
         }

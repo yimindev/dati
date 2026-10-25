@@ -92,7 +92,12 @@ export interface SelectResult {
   type: "SELECT";
   columns: string[];
   rows: any[][];
-  total_rows: number;
+  /** Rows returned in this response; equals the row limit when truncated. */
+  returned_rows: number;
+  truncated: boolean;
+  /** Present only when truncated: explains the limit to the caller. */
+  notice?: string;
+  error_message?: string;
 }
 
 export interface WriteResult {

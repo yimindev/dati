@@ -52,6 +52,7 @@
 
 1. **调用预置工具**：`tools/call`，params `{name: "execute_sql", arguments: {data_source_id: <种子数据源 id>, sql: "SELECT 1"}}`
    - 验证：状态码 200；`result.isError` == false；`result.content[0].type` == "text"；`result.structuredContent` 非空
+   - 截断契约：`results[0].returned_rows` == `rows` 长度，`results[0].truncated` 为布尔（未超服务配置的 `max_rows` 时为 false，不出现 `notice`）；超出时 `truncated`=true、`rows` 长度等于上限、`notice` 说明需用 LIMIT/OFFSET 或聚合取准确结果
 2. **调用自定义参数化工具**：`tools/call`，name=自定义工具名，arguments 传其必填参数
    - 验证：`result.isError` == false；`result.structuredContent.executed_sql` 含参数绑定占位符；结果行数/内容与参数匹配
 3. **未知工具**：name 填不存在的名字 → JSON-RPC error `-32602`

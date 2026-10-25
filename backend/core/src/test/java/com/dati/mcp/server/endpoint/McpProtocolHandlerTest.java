@@ -106,7 +106,7 @@ class McpProtocolHandlerTest {
     void toolsCallExecutes() {
         when(executor.execute(any())).thenReturn(
             new com.dati.mcp.server.pojo.SqlExecution("SELECT 1",
-                List.of(com.dati.mcp.server.pojo.StatementResult.select(List.of("a"), List.of(List.of(1)), 1)), null));
+                List.of(com.dati.mcp.server.pojo.StatementResult.select(List.of("a"), List.of(List.of(1)), false)), null));
         McpSchema.JSONRPCRequest req = new McpSchema.JSONRPCRequest("tools/call", 4,
             Map.of("name", "search_tables_and_terms", "arguments", Map.of("keywords", List.of("orders"))));
         McpSchema.JSONRPCResponse resp = handler.handle(service, content, req);

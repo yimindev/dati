@@ -10,6 +10,7 @@ import com.dati.mcp.domain.model.ToolConfig.ExecuteSqlConfig;
 import com.dati.mcp.domain.model.ToolError;
 import com.dati.mcp.domain.model.param.ExecuteSqlArgs;
 import com.dati.mcp.server.pojo.SqlExecution;
+import com.dati.mcp.server.pojo.StatementResult;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -19,6 +20,8 @@ import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.List;
@@ -239,9 +242,7 @@ class ExecuteSqlExecutorTest {
     void executesSelect() throws Exception {
         when(dataSourceService.getDataSourceInternal("ds-1"))
             .thenReturn(Optional.of(TestFixtures.createTestDataSource()));
-        Statement stmt = mock(Statement.class);
-        when(stmt.getUpdateCount()).thenReturn(-1);
-        when(stmt.getMoreResults()).thenReturn(false);
+        Statement stmt = mockSuccessfulStatement();
         Connection conn = mock(Connection.class);
         when(conn.createStatement()).thenReturn(stmt);
 
@@ -253,6 +254,72 @@ class ExecuteSqlExecutorTest {
 
             assertThat(exec.executedSql()).isEqualTo("SELECT 1");
             assertThat(exec.results()).isEmpty();
+        }
+    }
+
+    @Test
+    @DisplayName("SELECT honours max rows and reports truncation through the probe row")
+    void executesSelectAndReportsTruncation() throws Exception {
+        when(dataSourceService.getDataSourceInternal("ds-1"))
+            .thenReturn(Optional.of(TestFixtures.createTestDataSource()));
+
+        ResultSetMetaData meta = mock(ResultSetMetaData.class);
+        when(meta.getColumnCount()).thenReturn(1);
+        when(meta.getColumnLabel(1)).thenReturn("id");
+        ResultSet rs = mock(ResultSet.class);
+        when(rs.getMetaData()).thenReturn(meta);
+        // Two rows are kept, the third one is the probe that proves truncation.
+        when(rs.next()).thenReturn(true, true, true, false);
+        when(rs.getObject(1)).thenReturn(42);
+
+        Statement stmt = mock(Statement.class);
+        when(stmt.getResultSet()).thenReturn(rs);
+        when(stmt.getUpdateCount()).thenReturn(-1);
+        when(stmt.getMoreResults()).thenReturn(false);
+
+        Connection conn = mock(Connection.class);
+        when(conn.createStatement()).thenReturn(stmt);
+
+        ExecuteSqlConfig config = new ExecuteSqlConfig();
+        config.setMaxRows(2);
+        ToolExecutionContext ctx = new ToolExecutionContext("svc-1", McpToolType.EXECUTE_SQL, config,
+            new ExecuteSqlArgs("ds-1", "SELECT id FROM orders"), List.of());
+
+        try (MockedStatic<HikariPoolManager> hpm = mockStatic(HikariPoolManager.class)) {
+            hpm.when(() -> HikariPoolManager.getConnection(any(JdbcConnector.class))).thenReturn(conn);
+
+            SqlExecution exec = (SqlExecution) executor.execute(ctx);
+
+            // One row beyond the limit is requested from the driver to detect truncation.
+            verify(stmt).setMaxRows(3);
+            StatementResult.SelectResult select = (StatementResult.SelectResult) exec.results().getFirst();
+            assertThat(select.rows()).hasSize(2);
+            assertThat(select.returnedRows()).isEqualTo(2);
+            assertThat(select.truncated()).isTrue();
+            assertThat(select.notice()).isNotBlank();
+        }
+    }
+
+    @Test
+    @DisplayName("unlimited max rows passes zero to the driver")
+    void unlimitedMaxRowsPassesZero() throws Exception {
+        when(dataSourceService.getDataSourceInternal("ds-1"))
+            .thenReturn(Optional.of(TestFixtures.createTestDataSource()));
+        Statement stmt = mockSuccessfulStatement();
+        Connection conn = mock(Connection.class);
+        when(conn.createStatement()).thenReturn(stmt);
+
+        ExecuteSqlConfig config = new ExecuteSqlConfig();
+        config.setMaxRows(0);
+        ToolExecutionContext ctx = new ToolExecutionContext("svc-1", McpToolType.EXECUTE_SQL, config,
+            new ExecuteSqlArgs("ds-1", "SELECT 1"), List.of());
+
+        try (MockedStatic<HikariPoolManager> hpm = mockStatic(HikariPoolManager.class)) {
+            hpm.when(() -> HikariPoolManager.getConnection(any(JdbcConnector.class))).thenReturn(conn);
+
+            executor.execute(ctx);
+
+            verify(stmt).setMaxRows(0);
         }
     }
 }

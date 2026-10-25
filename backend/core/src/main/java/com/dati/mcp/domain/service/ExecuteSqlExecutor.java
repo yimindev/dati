@@ -69,9 +69,9 @@ public class ExecuteSqlExecutor implements ToolExecutor {
         try (Connection conn = HikariPoolManager.getConnection(connector);
              Statement stmt = conn.createStatement()) {
             stmt.setQueryTimeout(config.getTimeout());
-            stmt.setMaxRows(config.getMaxRows());
+            stmt.setMaxRows(SqlExecutorHelper.probeRowLimit(config.getMaxRows()));
             stmt.execute(sql);
-            results = SqlExecutorHelper.collect(stmt);
+            results = SqlExecutorHelper.collect(stmt, config.getMaxRows());
         } catch (SQLException e) {
             throw new ToolExecuteException(ToolError.SQL_EXECUTION_ERROR, e.getMessage());
         }

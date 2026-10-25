@@ -771,13 +771,6 @@ bugs:
     fixed_at: 2026-10-24
     description: |
       TC-SEM-005 步骤 3-5 扩展探索（站在运维/存储角度核对数据库）：删除主题只删除 SUBJECT 行，TERM、SUBJECT_TABLE（以及残留术语的 TERM_RELATION）均未清理。SubjectService.deleteSubject 仅 subjectDAO.deleteById + ES deleteByEntity_SubjectId + ACL 清理，无 TERM/SUBJECT_TABLE 级联。DB 快照佐证（2026-10-24 10:00 的 h2 db/dati.mv.db 副本）：SUBJECT=5，TERM=39 其中 31 条 subject_id 指向已删除主题；SUBJECT_TABLE=71 其中 57 条 subject_id 已不存在、6 条 table_id 已不存在。用户可见影响有限但不自洽：GET /v1/terms/{残留术语id} → 404 但错误信息为 'SM001 Subject not found: {subjectId}'（term 接口报主题不存在，误导排查），主题表列表/术语列表因 JOIN 过滤不可见。随测试轮次累积残留持续增长。建议：deleteSubject 事务内级联删除该主题的 TERM_RELATION、TERM、SUBJECT_TABLE；GET /v1/terms/{id} 对『术语存在但主题缺失』的脏数据返回 SM002 Term not found，避免暴露内部 subjectId。
-  - id: BUG-20261024-004
-    title: 语义层校验消息语言不一致：@NotBlank 走中文本地化、@Pattern 为硬编码英文
-    module: 语义层-错误处理
-    severity: low
-    fixed_at: 2026-10-24
-    description: |
-      TC-SEM-001/003/006/007 探索（用户可见的输入校验反馈）：jakarta 默认约束（@NotBlank/@Min/@Max）走 Hibernate Validator 中文资源包，而 UpdateSubjectRequest/UpdateTermRequest 的 @Pattern 使用硬编码英文 message='must not be blank'，同一语义错误在不同端点显示不同语言。实测（qa-e2e-tester）：①POST /v1/subjects {} → 400 'Request parameter error: datasourceId: 不得为空白; name: 不得为空白'；②PUT /v1/subjects/{id} {"name":""} → 400 'name: must not be blank'；③POST /v1/subjects/{id}/terms {} → 400 'name: 不得为空白'；④PUT /v1/terms/{id} {"name":""} 与 {"name":"  "} → 400 'name: must not be blank'。前端 i18n（zh/en）无法翻译硬编码英文；若服务部署在 en Locale 环境则默认约束反而输出英文，行为随环境漂移。建议：去掉 DTO 上的英文硬编码 message，统一为 @NotBlank+@Pattern(regexp="(?s).*\\S.*") 或引用 messages.properties 消息键（中英文各一份），由 Locale 统一解析。
   - id: BUG-20261024-005
     title: DELETE /v1/subjects/{id} 偶发 500 CM003：ES delete-by-query 无容错，重试即成功
     module: 语义层-主题管理
@@ -825,15 +818,14 @@ bugs:
       openapi 把该端点响应声明为 IdResponse，前端 frontend/src/api/tableinfo.ts:batchAddTables 也按 Promise<IdResponse> 解析，因此 id="3" 会被当作资源标识符使用，语义错误；调用方若要知道新增的表，必须再发一次 GET /tables 或 /tables/added-names 才能拿到 tableId。
       根因：TableController.batchAddTables 返回 new IdResponse(String.valueOf(ids.size()))。
       建议：改为返回 {added_count, table_ids[]} 并同步 openapi/前端类型（或换成专用 BatchAddResponse）；若坚持 IdResponse，至少返回首个 tableId 并在文档说明，避免用 id 承载数量。
-  - id: BUG-20261024-010
-    title: 数据源更新 PUT 的 name 校验消息硬编码英文（@Pattern message='must not be blank'），与创建接口中文提示不一致
-    module: 数据源管理-错误处理
-    severity: low
-    fixed_at: 2026-10-24
+  - id: BUG-20261025-003
+    title: execute_sql 静默截断结果行数（max_rows），total_rows 返回截断后的行数且无 truncated 标记
+    module: MCP Endpoint
+    severity: medium
+    fixed_at: 2026-10-25
     description: |
-      TC-DS-003/007 延伸探针（qa-e2e-tester，2026-10-24）：
-      ①POST /v1/data-sources {"name":"   "} → 400 {code:CM001, message:'Request parameter error: name: 不得为空白'}（Hibernate Validator 中文本地化）；
-      ②PUT /v1/data-sources/{id} {"name":"   "} → 400 {code:CM001, message:'Request parameter error: name: must not be blank'}（硬编码英文）。
-      同一资源、同一语义（name 不能为空白），创建与更新两个接口语言不一致；en/zh 前端 i18n 无法翻译硬编码英文，服务部署在 en Locale 时反而全部变英文，行为随环境漂移。
-      根因：UpdateDataSourceRequest.name 使用 @Pattern(regexp="(?s).*\\S.*", message="must not be blank") 硬编码英文，而 CreateDataSourceRequest 用 @NotBlank 走资源包。
-      同类问题在语义层已登记为 BUG-20261024-004，数据源模块（UpdateDataSourceRequest）尚未覆盖，修 BUG-20261024-004 时请一并处理本 DTO（可改为 @NotBlank + @Pattern 不带 message，或引用 messages.properties 消息键），并补 DataSourceControllerTest 断言中英文一致。
+      2026-10-25 全量 E2E 后补充探针（qa-e2e-tester，服务 e2e-end-main v10，数据源 e2e-chinook-seed（bb7906dd…），track 表 3485 行）：
+      tools/call execute_sql {data_source_id, sql:'SELECT trackid, name FROM track'} → 200 isError=false，rows 恰好 1000 行，structuredContent.results[0].total_rows = 1000。实际匹配 3485 行（SELECT count(*) 为 3485），响应里既没有 truncated/exhausted 之类标记，也没有「已截断」文本提示（content[0].text 与 structuredContent 均为纯 JSON，无附加说明）。
+      根因：ExecuteSqlExecutor 用 stmt.setMaxRows(config.getMaxRows())（默认 1000）截断，SqlExecutorHelper.collectSelect 又用 rows.size() 回填 totalRows（backend/core/.../mcp/domain/service/SqlExecutorHelper.java:68、StatementResult.java:15），因此 total_rows 恒等于「本次返回行数」而非「查询命中行数」，字段名与语义相反。
+      影响（对 LLM 使用效果）：NL2SQL 场景下 LLM 常用「查全部再看行数/求和」的方式回答『有多少首歌』这类问题，截断后 total_rows=1000 会被当作真实总量，直接给出错误结论（真实 3485）；即使 LLM 注意到工具描述里的 'Max rows: 1000'，也无法知道本次是否真的被截断（1000 行恰好是上限时同样如此）。同类问题也存在于 PARAMETERIZED_SQL 自定义工具（共用 SqlExecutorHelper）。
+      建议：①结果中增加 truncated:boolean（在 rows.size() == maxRows 时置位，或先探测再 LIMIT maxRows+1）；②total_rows 改名为 returned_rows，或真正返回命中总数（另跑一次 count）；③工具描述与 content[0].text 显式提示『结果已被截断为 N 行，请加 LIMIT/COUNT 细化查询』。
