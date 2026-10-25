@@ -829,3 +829,17 @@ bugs:
       根因：ExecuteSqlExecutor 用 stmt.setMaxRows(config.getMaxRows())（默认 1000）截断，SqlExecutorHelper.collectSelect 又用 rows.size() 回填 totalRows（backend/core/.../mcp/domain/service/SqlExecutorHelper.java:68、StatementResult.java:15），因此 total_rows 恒等于「本次返回行数」而非「查询命中行数」，字段名与语义相反。
       影响（对 LLM 使用效果）：NL2SQL 场景下 LLM 常用「查全部再看行数/求和」的方式回答『有多少首歌』这类问题，截断后 total_rows=1000 会被当作真实总量，直接给出错误结论（真实 3485）；即使 LLM 注意到工具描述里的 'Max rows: 1000'，也无法知道本次是否真的被截断（1000 行恰好是上限时同样如此）。同类问题也存在于 PARAMETERIZED_SQL 自定义工具（共用 SqlExecutorHelper）。
       建议：①结果中增加 truncated:boolean（在 rows.size() == maxRows 时置位，或先探测再 LIMIT maxRows+1）；②total_rows 改名为 returned_rows，或真正返回命中总数（另跑一次 count）；③工具描述与 content[0].text 显式提示『结果已被截断为 N 行，请加 LIMIT/COUNT 细化查询』。
+  - id: BUG-20261025-005
+    title: PUT /v1/mcp-services/{id}/data-scope 请求体缺少 items 或 items=null 时返回 500 CM003（NPE），而非 400 参数校验错误
+    module: MCP 服务管理
+    severity: medium
+    fixed_at: 2026-10-25
+    description: |
+      TC-MCP-002 延伸探针（qa-e2e-tester，2026-10-25）：PUT /v1/mcp-services/{id}/data-scope 使用三种 body 实测：
+      ① {'items': [{'scope_type':'DATA_SOURCE','reference_id':<valid ds>}]} → 200，范围为替换后记录（正常）；
+      ② {} （缺 items 字段）→ 500 {'code':'CM003','message':'Internal server error'}；
+      ③ {'items': null} → 500 同上。
+      同一资源创建接口对 data_scopes 有 @NotEmpty（POST /v1/mcp-services 不带 data_scopes → 400 CM001「data_scopes: 不得为空」），更新接口却对缺失/为 null 的 items 直接 500，契约与错误语义不一致。事务已回滚（重查 data-scope 仍是原有范围），未产生脏数据，但客户端收到的是不可行动的 Internal server error，且会在服务端留下 ERROR 堆栈与 5xx 指标。
+      根因：DataScopeRequest.items 未加 @NotNull/@NotEmpty（openapi 中 DataScopeRequest.items 亦无 required），McpServiceController.saveDataScope 直接 request.getItems().stream()（backend/core/src/main/java/com/dati/mcp/server/controller/McpServiceController.java:136）→ NullPointerException → GlobalExceptionHandler 兜底为 CM003。
+      影响：前端/第三方集成方若发送不完整 body（如误传 {}、JSON 序列化丢字段）无法从响应判断问题所在；同一 DTO 被 PUT 与创建共用时校验强度不一致。
+      建议：DataScopeRequest.items 增加 @NotNull（必要时 @NotEmpty 与创建接口对齐），或 Controller 内对 null 做 400 CM001 显式处理，并补 McpServiceControllerTest 覆盖「缺 items / items=null」两种入参。另：PUT {'items': []} 目前返回 200 并把服务置为无范围草稿态（发布时被 400 MS019 拦住），若该中间态非有意设计，建议一并在消息或文档中说明。

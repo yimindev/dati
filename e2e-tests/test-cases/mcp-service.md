@@ -42,7 +42,10 @@
 3. **更新数据范围（PUT 全量替换）**：使用 `mcp.data_scope_type` 类型，reference_id 填另一数据源或同一数据源
    - 注意：请求 body 字段使用 snake_case（`scope_type`、`reference_id`）
 4. 验证返回 200，再次查数据范围：items 为替换后的记录
-5. 删除服务（清理）
+5. **请求体校验（不得 500）**：PUT 分别传 `{}`、`{"items": null}`、`{"items": [null]}` → 均 **400 CM001**，message 点出字段（`items` / `items[0]`，文案含 `不得为 null`）
+   - 失败后再次查数据范围：仍为步骤 4 的结果（未被清空）
+6. **显式清空**：PUT `{"items": []}` → 200，查数据范围 items 为空；此时 `POST /publish` → 400 MS019（空范围不可发布），再 PUT 回一条 → 200 恢复
+7. 删除服务（清理）
 
 ---
 

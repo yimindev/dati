@@ -45,6 +45,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -459,6 +460,64 @@ class McpServiceControllerTest {
             scopes.size() == 1
                 && scopes.getFirst().getAccessMode() == McpDataScopeAccessMode.SCHEMA_SCOPE
                 && scopes.getFirst().getAllowedSchemas().equals(List.of("sandbox"))));
+    }
+
+    @Test
+    @DisplayName("Save data scope - missing items is rejected")
+    void saveDataScope_missingItems_shouldReturn400() throws Exception {
+        mockMvc.perform(put("/v1/mcp-services/{id}/data-scope", TestFixtures.TEST_MCP_SERVICE_ID)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("CM001"));
+
+        verifyNoInteractions(dataScopeService);
+    }
+
+    @Test
+    @DisplayName("Save data scope - null item element is rejected")
+    void saveDataScope_nullItemElement_shouldReturn400() throws Exception {
+        mockMvc.perform(put("/v1/mcp-services/{id}/data-scope", TestFixtures.TEST_MCP_SERVICE_ID)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                { "items": [null] }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("CM001"));
+
+        verifyNoInteractions(dataScopeService);
+    }
+
+    @Test
+    @DisplayName("Save data scope - empty items clears the scope")
+    void saveDataScope_emptyItems_shouldClearScope() throws Exception {
+        mockMvc.perform(put("/v1/mcp-services/{id}/data-scope", TestFixtures.TEST_MCP_SERVICE_ID)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                { "items": [] }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(TestFixtures.TEST_MCP_SERVICE_ID));
+
+        verify(dataScopeService).saveDataScope(eq(TestFixtures.TEST_MCP_SERVICE_ID), argThat(List::isEmpty));
+    }
+
+    @Test
+    @DisplayName("Create MCP service - null data scope element is rejected")
+    void createMcpService_nullDataScopeElement_shouldReturn400() throws Exception {
+        mockMvc.perform(post("/v1/mcp-services")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "code": "mcp-probe",
+                                  "name": "MCP Probe",
+                                  "data_scopes": [null]
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("CM001"));
+
+        verifyNoInteractions(mcpServiceService);
     }
 
     @Test
