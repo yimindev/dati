@@ -42,12 +42,15 @@ const visible = computed({
 
 const isEdit = computed(() => !!props.subject)
 
-const rules: FormRules = {
+const rules = computed<FormRules>(() => ({
   name: [
     { required: true, message: t('common.required', { name: t('common.name') }), trigger: 'blur' },
     { min: 1, max: 64, message: t('common.nameLengthError'), trigger: 'blur' }
+  ],
+  datasource_id: [
+    { required: true, message: t('common.selectRequired', { name: t('subject.datasource') }), trigger: 'change' }
   ]
-}
+}))
 
 watch(() => props.subject, (newVal) => {
   if (newVal) {
@@ -64,6 +67,12 @@ watch(() => props.subject, (newVal) => {
 
 watch(() => props.modelValue, async (newVal) => {
   if (newVal) {
+    if (!props.subject) {
+      resetForm()
+    }
+    nextTick(() => {
+      formRef.value?.clearValidate()
+    })
     await loadDatasources()
   }
 })
