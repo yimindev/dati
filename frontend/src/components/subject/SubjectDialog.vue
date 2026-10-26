@@ -7,6 +7,7 @@ import type { SubjectVO, CreateSubjectRequest, UpdateSubjectRequest } from '~/ap
 import type { DatasourceVO } from '~/api/datasource'
 import { createSubject, updateSubject } from '~/api/subject'
 import { listDataSources } from '~/api/datasource'
+import { notifyError } from '~/api/http'
 
 const { t } = useI18n()
 
@@ -103,7 +104,7 @@ async function loadDatasources(keyword?: string) {
     datasources.value = list
   } catch (error) {
     console.error('Failed to load datasources:', error)
-    ElMessage.error(t('common.loadFailed'))
+    notifyError(error, t('common.loadFailed'))
   } finally {
     datasourceLoading.value = false
   }
@@ -177,7 +178,7 @@ const handleSubmit = async () => {
     visible.value = false
   } catch (error) {
     console.error('Submit failed:', error)
-    ElMessage.error(t('common.operationFailed'))
+    notifyError(error, t('common.operationFailed'))
   } finally {
     submitting.value = false
   }

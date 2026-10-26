@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.util.Locale;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.emptyString;
@@ -63,6 +64,57 @@ class GlobalExceptionHandlerTest {
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.code").value("DS003"))
             .andExpect(jsonPath("$.message").value("SQL execution error: Table users not found"));
+    }
+
+    @Test
+    @DisplayName("Should localize DatiException messages from the request locale")
+    void datiException_shouldUseRequestLocale() throws Exception {
+        mockMvc.perform(get("/test/sql-error").locale(Locale.SIMPLIFIED_CHINESE))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.code").value("DS003"))
+            .andExpect(jsonPath("$.message").value("SQL 执行错误：Table users not found"));
+
+        mockMvc.perform(get("/test/sql-error").locale(Locale.ENGLISH))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.message").value("SQL execution error: Table users not found"));
+    }
+
+    @Test
+    @DisplayName("Should localize messages from the Accept-Language header")
+    void datiException_shouldUseAcceptLanguageHeader() throws Exception {
+        mockMvc.perform(get("/test/sql-error").header("Accept-Language", "zh-CN"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.message").value("SQL 执行错误：Table users not found"));
+
+        mockMvc.perform(get("/test/sql-error").header("Accept-Language", "en"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.message").value("SQL execution error: Table users not found"));
+    }
+
+    @Test
+    @DisplayName("Should localize validation prefixes from the request locale")
+    void validationMessage_shouldUseRequestLocale() throws Exception {
+        mockMvc.perform(post("/test/validate")
+                .locale(Locale.SIMPLIFIED_CHINESE)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{}"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.code").value(ErrorCode.INVALID_PARAMETER.getCode()))
+            .andExpect(jsonPath("$.message").value(containsString("请求参数错误：")))
+            .andExpect(jsonPath("$.message").value(containsString("jdbc_url: ")));
+    }
+
+    @Test
+    @DisplayName("Should localize internal errors but keep custom DatiException messages untouched")
+    void internalAndCustomMessages_shouldUseRequestLocale() throws Exception {
+        mockMvc.perform(get("/test/unexpected").locale(Locale.SIMPLIFIED_CHINESE))
+            .andExpect(status().isInternalServerError())
+            .andExpect(jsonPath("$.code").value(ErrorCode.INTERNAL_ERROR.getCode()))
+            .andExpect(jsonPath("$.message").value("服务器内部错误"));
+
+        mockMvc.perform(get("/test/legacy").locale(Locale.SIMPLIFIED_CHINESE))
+            .andExpect(status().isInternalServerError())
+            .andExpect(jsonPath("$.message").value("Legacy error message"));
     }
 
     @Test

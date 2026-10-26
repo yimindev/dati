@@ -14,6 +14,7 @@ import { copyToClipboard } from "~/utils/clipboard";
 import { listTableInfos, getAddedTables, batchAddTables, syncColumns, deleteTable, updateTable, type AddedTable, type TableInfoVO } from "~/api/tableinfo.ts";
 import { getSchemas, getTables, getDataSource, type TableVO } from "~/api/datasource.ts";
 import { formatDateTime } from "~/composables";
+import { notifyError } from "~/api/http";
 
 const { t } = useI18n();
 
@@ -84,7 +85,7 @@ const loadTables = async () => {
     total.value = response.total ?? 0;
   } catch (error) {
     console.error("Failed to load table list:", error);
-    ElMessage.error(t("common.loadFailed"));
+    notifyError(error, t("common.loadFailed"));
   } finally {
     loading.value = false;
   }
@@ -125,7 +126,7 @@ const handleOpenAddTableDialog = async () => {
     }
   } catch (error) {
     console.error("Failed to load schema list:", error);
-    ElMessage.error(t("common.loadFailed"));
+    notifyError(error, t("common.loadFailed"));
   } finally {
     schemaLoading.value = false;
   }
@@ -143,7 +144,7 @@ const handleSchemaChange = async (schema: string) => {
     selectedTables.value = [];
   } catch (error) {
     console.error("Failed to load table list:", error);
-    ElMessage.error(t("common.loadFailed"));
+    notifyError(error, t("common.loadFailed"));
   } finally {
     tablesLoading.value = false;
   }
@@ -164,7 +165,7 @@ const handleBatchAdd = async () => {
     await loadTables();
   } catch (error) {
     console.error("Failed to add tables in batch:", error);
-    ElMessage.error(t("tableInfo.addFailed"));
+    notifyError(error, t("tableInfo.addFailed"));
   } finally {
     addTableLoading.value = false;
   }
@@ -187,7 +188,7 @@ const confirmSyncColumns = async () => {
     syncDialogVisible.value = false;
   } catch (error) {
     console.error("Failed to sync column info:", error);
-    ElMessage.error(t("tableInfo.syncFailed"));
+    notifyError(error, t("tableInfo.syncFailed"));
   }
 };
 
@@ -206,10 +207,8 @@ const handleRemoveTable = async (table: TableInfoVO) => {
     ElMessage.success(t("tableInfo.removeSuccess"));
     await loadTables();
   } catch (error) {
-    if (error !== "cancel") {
-      console.error("Failed to delete table:", error);
-      ElMessage.error(t("tableInfo.removeFailed"));
-    }
+    console.error("Failed to delete table:", error);
+    notifyError(error, t("tableInfo.removeFailed"));
   }
 };
 
@@ -272,7 +271,7 @@ const handleSaveMetadata = async () => {
     await loadTables();
   } catch (error) {
     console.error("Failed to save metadata:", error);
-    ElMessage.error(t("common.operationFailed"));
+    notifyError(error, t("common.operationFailed"));
   }
 };
 

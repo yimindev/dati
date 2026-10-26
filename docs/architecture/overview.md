@@ -27,7 +27,7 @@ This directory contains architecture documentation for DatI modules, maintained 
 
 ## Key Conventions
 
-- Exceptions follow `DatiException` + `ErrorCode` enum (prefixes: `CM` Common, `DS` DataSource, `SM` Semantic, `MS` MCP, `AUTH` Auth, `PM` Permission).
+- Exceptions follow `DatiException` + `ErrorCode` enum (prefixes: `CM` Common, `DS` DataSource, `SM` Semantic, `MS` MCP, `AUTH` Auth, `PM` Permission). Messages are resolved from the request `Accept-Language` with English fallback.
 - JSON naming strategy (dev profile): `SNAKE_CASE`, adapted via frontend API layer.
 - MCP Endpoint: `POST /{code}/mcp` (Streamable HTTP JSON-RPC, 2025-11-25 spec). See section 2.2 of [mcp-service-management.md](mcp-service-management.md) for details.
 

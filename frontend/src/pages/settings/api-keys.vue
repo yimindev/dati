@@ -45,7 +45,7 @@ async function loadKeys() {
     keys.value = await listApiKeys();
   } catch (error) {
     console.error("Failed to load API keys:", error);
-    ElMessage.error(t("common.loadFailed"));
+    notifyError(error, t("common.loadFailed"));
   } finally {
     loading.value = false;
   }

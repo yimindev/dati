@@ -33,6 +33,7 @@ const loadSnapshots = async () => {
     snapshots.value = await getMcpServiceSnapshots(props.serviceId);
   } catch (error) {
     console.error("Failed to load version history:", error);
+    notifyError(error, t("common.loadFailed"));
   } finally {
     loading.value = false;
   }

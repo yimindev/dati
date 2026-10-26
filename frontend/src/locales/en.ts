@@ -133,6 +133,19 @@ export default {
     skipToContent: "Skip to main content",
   },
 
+  error: {
+    network: "Network connection failed. Check your network and try again.",
+    timeout: "Request timed out. Please try again.",
+    unknown: "Operation failed. Please try again.",
+    http400: "Invalid request parameters.",
+    http401: "Your session has expired. Please sign in again.",
+    http403: "You do not have permission to perform this action.",
+    http404: "The requested resource does not exist.",
+    http409: "The data has changed. Refresh and try again.",
+    http429: "Too many requests. Please try again later.",
+    http5xx: "The service is temporarily unavailable. Please try again later.",
+  },
+
   layout: {
     header: {
       brand: "DatI",

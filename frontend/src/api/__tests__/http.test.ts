@@ -1,63 +1,84 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("element-plus", () => ({
-  ElMessage: { error: vi.fn(), success: vi.fn(), info: vi.fn(), warning: vi.fn() },
-}));
-
-import { ElMessage } from "element-plus";
-import { isHandledError, normalizeError, notifyError, type ApiError } from "../http";
-
-const errorSpy = vi.mocked(ElMessage.error);
-
-beforeEach(() => {
-  errorSpy.mockClear();
+vi.mock("element-plus", () => {
+  const message = vi.fn();
+  return {
+    ElMessage: Object.assign(message, {
+      error: vi.fn(),
+      success: vi.fn(),
+      info: vi.fn(),
+      warning: vi.fn(),
+    }),
+  };
 });
 
-describe("http API error handling", () => {
-  it("isHandledError should correctly check if error has handled flag", () => {
+import { i18n } from "~/plugins/i18n";
+import en from "~/locales/en";
+import { ApiError } from "../error";
+import {
+  acceptLanguageHeader,
+  http,
+  isAuthEntryUrl,
+  isHandledError,
+} from "../http";
+
+beforeEach(() => {
+  i18n.global.setLocaleMessage("en", en);
+  i18n.global.locale.value = "en";
+  vi.stubGlobal("localStorage", {
+    getItem: vi.fn(() => "token-123"),
+    removeItem: vi.fn(),
+  });
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
+
+describe("http helpers", () => {
+  it("maps the console locale to a standard Accept-Language value", () => {
+    expect(acceptLanguageHeader("zh")).toBe("zh-CN");
+    expect(acceptLanguageHeader("en")).toBe("en");
+  });
+
+  it("detects auth endpoints", () => {
+    expect(isAuthEntryUrl("/v1/auth/login")).toBe(true);
+    expect(isAuthEntryUrl("/v1/auth/register")).toBe(true);
+    expect(isAuthEntryUrl("/v1/auth/guest")).toBe(true);
+    expect(isAuthEntryUrl("/v1/auth/api-keys")).toBe(false);
+    expect(isAuthEntryUrl("/v1/auth/me")).toBe(false);
+    expect(isAuthEntryUrl("/v1/data-sources")).toBe(false);
+    expect(isAuthEntryUrl(undefined)).toBe(false);
+  });
+
+  it("checks the handled flag on ApiError", () => {
+    const error = new ApiError("http", 403, "No permission");
+    expect(isHandledError(error)).toBe(false);
+    error.handled = true;
+    expect(isHandledError(error)).toBe(true);
     expect(isHandledError(null)).toBe(false);
-    expect(isHandledError(undefined)).toBe(false);
-    expect(isHandledError({})).toBe(false);
-    expect(isHandledError({ handled: false })).toBe(false);
-    expect(isHandledError({ handled: true })).toBe(true);
+  });
+});
 
-    const handledError: ApiError = {
-      status: 403,
-      message: "No permission to access this resource",
-      handled: true,
+describe("http interceptors", () => {
+  it("adds the bearer token, Accept-Language, and unwraps response data", async () => {
+    let captured: any;
+    const adapter = async (config: any) => {
+      captured = config;
+      return {
+        data: { ok: true },
+        status: 200,
+        statusText: "OK",
+        headers: {},
+        config,
+      };
     };
-    expect(isHandledError(handledError)).toBe(true);
-  });
 
-  it("normalizeError should extract error details properly", () => {
-    const customError = new Error("Custom failure");
-    const normalized = normalizeError(customError);
-    expect(normalized.status).toBe(0);
-    expect(normalized.message).toBe("Custom failure");
-  });
+    i18n.global.locale.value = "zh";
+    const result = await http.get("/ping", { adapter });
 
-  it("notifyError should ignore ElMessageBox cancel/close signals", () => {
-    notifyError("cancel", "fallback");
-    notifyError("close", "fallback");
-    expect(errorSpy).not.toHaveBeenCalled();
-  });
-
-  it("notifyError should skip errors already handled by the interceptor", () => {
-    notifyError({ status: 403, message: "No permission", handled: true }, "fallback");
-    expect(errorSpy).not.toHaveBeenCalled();
-  });
-
-  it("notifyError should prefer the error message over the fallback", () => {
-    notifyError({ status: 500, message: "boom" }, "fallback");
-    expect(errorSpy).toHaveBeenCalledTimes(1);
-    expect(errorSpy).toHaveBeenCalledWith("boom");
-  });
-
-  it("notifyError should use the fallback when no message is present", () => {
-    notifyError({ status: 500 } as ApiError, "fallback");
-    notifyError(new Error("custom failure"), "other fallback");
-    expect(errorSpy).toHaveBeenCalledTimes(2);
-    expect(errorSpy).toHaveBeenCalledWith("fallback");
-    expect(errorSpy).toHaveBeenCalledWith("custom failure");
+    expect(result).toEqual({ ok: true });
+    expect(captured.headers.get("Authorization")).toBe("Bearer token-123");
+    expect(captured.headers.get("Accept-Language")).toBe("zh-CN");
   });
 });

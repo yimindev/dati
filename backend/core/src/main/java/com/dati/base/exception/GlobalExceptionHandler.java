@@ -43,9 +43,9 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
     @ExceptionHandler(DatiException.class)
     public ResponseEntity<ErrorResponse> handleDatiException(DatiException e) {
-        ErrorResponse response = e.getArgs().length > 0
-                ? ErrorResponse.of(e.getCode(), e.getArgs())
-                : ErrorResponse.ofResolved(e.getCode(), e.getMessage());
+        ErrorResponse response = e.isCustomMessage()
+                ? ErrorResponse.ofResolved(e.getCode(), e.getMessage())
+                : ErrorResponse.of(e.getCode(), e.getArgs());
         return ResponseEntity.status(e.getStatus())
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(response);

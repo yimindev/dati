@@ -5,6 +5,7 @@ import { useI18n } from "vue-i18n";
 import { Plus, Delete, Menu as IconMenu } from "@element-plus/icons-vue";
 import type { McpServicePayload, DataScopeItem } from "~/api/mcp-service";
 import { createMcpService } from "~/api/mcp-service";
+import { notifyError } from "~/api/http";
 
 const { t } = useI18n();
 
@@ -78,7 +79,7 @@ const handleSubmit = async () => {
     emit("success", res.id);
   } catch (error) {
     console.error("Failed to submit:", error);
-    ElMessage.error(t("common.operationFailed"));
+    notifyError(error, t("common.operationFailed"));
   } finally {
     submitting.value = false;
   }

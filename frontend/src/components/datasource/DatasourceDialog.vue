@@ -97,10 +97,6 @@ const handleTestConnection = async () => {
     if (result) {
       testPassed.value = true
       ElMessage.success(t('datasource.testSuccess'))
-
-    } else {
-      testPassed.value = false
-      ElMessage.error(t('datasource.testFailed'))
     }
   } catch (error) {
     console.error('Failed to test connection:', error)

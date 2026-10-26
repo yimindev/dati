@@ -40,7 +40,18 @@ import { get, post, put, del } from './http'
 **Key behaviors**:
 - Response interceptor returns `resp.data` directly
 - `Authorization: Bearer <token>` injected from localStorage
-- 401 on non-auth URLs → redirect `/login`
+- `Accept-Language` follows the active console locale (`zh` → `zh-CN`, otherwise `en`)
+- 401 on login/register/guest requests is surfaced by the page; any other 401 shows a session-expired notice and redirects to `/login`
+- 403 and other API failures are rejected unhandled so the caller can show the backend message
+
+**API error handling**:
+- Every API call must be wrapped in `try/catch`; in `catch`, call `notifyError(error, t('...'))`
+- Never call `ElMessage.error(t('...'))` for an API failure; it discards the backend code/message
+- Never display `err.message` directly — use `notifyError`, which localizes network/timeout/status fallbacks
+- `notifyError` prefers the backend `message`, appends the backend `code` only for 5xx, and groups identical toasts
+- Silent catches are allowed only for non-critical background/type-ahead loads; state the reason in a comment
+- `ElMessage.error` remains appropriate for non-API failures such as clipboard errors
+- Detail/list pages must still reset loading in `finally` and keep dialogs open on submit failure
 
 **Domain API conventions**:
 - VO types extend `BaseResourceVO`; field names `snake_case`

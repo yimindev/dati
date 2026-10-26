@@ -6,6 +6,7 @@ import { useDebounceFn } from '@vueuse/core'
 import { UserFilled, View, EditPen, Delete } from '@element-plus/icons-vue'
 import { grantAcl, listAcl, revokeAcl } from '~/api/permission'
 import { searchUsers } from '~/api/user'
+import { notifyError } from '~/api/http'
 import type { AclEntry, UserBrief } from '~/api/types'
 
 const { t } = useI18n()
@@ -34,6 +35,9 @@ async function load() {
     )
     // 列表仅展示针对用户个体的授权 (USER)
     entries.value = allEntries.filter((e) => e.principal_type === 'USER')
+  } catch (error) {
+    console.error('Failed to load ACL entries:', error)
+    notifyError(error, t('common.loadFailed'))
   } finally {
     loading.value = false
   }
@@ -63,6 +67,8 @@ const remoteSearch = useDebounceFn(async (keyword: string) => {
   searching.value = true
   try {
     userOptions.value = await searchUsers(keyword.trim())
+  } catch (error) {
+    console.error('Failed to search users:', error)
   } finally {
     searching.value = false
   }
@@ -100,9 +106,9 @@ async function handlePublicToggle(val: boolean | string | number) {
     }
     ElMessage.success(t(active ? 'permission.publicOn' : 'permission.revokeSuccess'))
     await load()
-  } catch {
-    // 失败还原
+  } catch (error) {
     isPublic.value = !active
+    notifyError(error, t('common.operationFailed'))
   } finally {
     togglingPublic.value = false
   }
@@ -120,8 +126,8 @@ async function add() {
     ElMessage.success(t('permission.grantSuccess'))
     resetForm()
     await load()
-  } catch {
-    // 403/400 已由 http.ts 统一提示
+  } catch (error) {
+    notifyError(error, t('common.operationFailed'))
   } finally {
     granting.value = false
   }
@@ -133,8 +139,8 @@ async function revoke(entry: AclEntry) {
     await revokeAcl(props.resourceType, props.resourceId, entry.principal_id, entry.principal_type)
     ElMessage.success(t('permission.revokeSuccess'))
     await load()
-  } catch {
-    // 403 已由 http.ts 统一提示
+  } catch (error) {
+    notifyError(error, t('common.operationFailed'))
   } finally {
     revokingId.value = null
   }

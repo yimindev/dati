@@ -122,8 +122,6 @@ const handleTestConnection = async (datasource: DatasourceVO) => {
 
     if (result) {
       ElMessage.success(t("datasource.testSuccess"));
-    } else {
-      ElMessage.error(t("datasource.testFailed"));
     }
   } catch (error) {
     console.error("Failed to test connection:", error);
@@ -150,10 +148,8 @@ const handleDelete = async (datasource: DatasourceVO) => {
     ElMessage.success(t("common.deleteSuccess"));
     await loadDatasources();
   } catch (error) {
-    if (error !== "cancel") {
-      console.error("Failed to delete:", error);
-      notifyError(error, t("common.operationFailed"));
-    }
+    console.error("Failed to delete:", error);
+    notifyError(error, t("common.operationFailed"));
   }
 };
 

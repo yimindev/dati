@@ -127,7 +127,7 @@ const loadTerms = async () => {
     total.value = response.total ?? 0;
   } catch (error) {
     console.error("Failed to load terms:", error);
-    ElMessage.error(t("common.loadFailed"));
+    notifyError(error, t("common.loadFailed"));
   } finally {
     loading.value = false;
   }
@@ -444,7 +444,7 @@ const loadTablesForRelation = async (append: boolean) => {
     tableTotal.value = res.total ?? 0;
   } catch (error) {
     console.error("Failed to load subject tables:", error);
-    ElMessage.error(t("common.loadFailed"));
+    notifyError(error, t("common.loadFailed"));
   } finally {
     tableLoadingMore.value = false;
   }
@@ -464,7 +464,7 @@ const handleTableSearch = async () => {
     await syncTableSelectionVisual();
   } catch (error) {
     console.error("Failed to search tables:", error);
-    ElMessage.error(t("common.loadFailed"));
+    notifyError(error, t("common.loadFailed"));
   } finally {
     isSyncingSelection.value = false;
     relationDialogLoading.value = false;
@@ -496,7 +496,7 @@ const handleOpenAddRelationDialog = async (term: TermVO) => {
     relationDialogVisible.value = true;
   } catch (error) {
     console.error("Failed to load subject tables:", error);
-    ElMessage.error(t("common.loadFailed"));
+    notifyError(error, t("common.loadFailed"));
   } finally {
     relationDialogLoading.value = false;
   }
@@ -519,6 +519,7 @@ const loadColumnsForTable = async (tableId: string) => {
     tableColumnsData.value.set(tableId, response.data || []);
   } catch (error) {
     console.error("Failed to load columns:", error);
+    notifyError(error, t("common.loadFailed"));
   } finally {
     loadingTableColumns.value.delete(tableId);
   }

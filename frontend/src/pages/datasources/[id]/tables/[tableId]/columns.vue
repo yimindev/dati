@@ -21,6 +21,7 @@ import {
 } from "~/api/column";
 import { useSystemStore } from "~/stores/system";
 import { formatDateTime } from "~/composables";
+import { notifyError } from "~/api/http";
 
 const { t } = useI18n();
 const systemStore = useSystemStore();
@@ -175,7 +176,7 @@ const loadValues = async () => {
     valuesDialogVisible.value = true;
   } catch (error) {
     console.error("Failed to load column values:", error);
-    ElMessage.error(t("common.loadFailed"));
+    notifyError(error, t("common.loadFailed"));
   } finally {
     if (queryId === valuesQuerySeq.value) {
       valuesLoading.value = false;
@@ -224,7 +225,7 @@ const handleToggleValueMatching = async (row: TableColumnVO, newValue: string | 
   } catch (error) {
     row.extract_value_enabled = !newValue;
     console.error('Failed to save value matching status:', error);
-    ElMessage.error(t('common.operationFailed'));
+    notifyError(error, t('common.operationFailed'));
   } finally {
     togglingColumnIds.value.delete(row.id);
   }
@@ -251,7 +252,7 @@ const loadColumns = async () => {
     total.value = resp.total ?? 0;
   } catch (error) {
     console.error("Failed to load column info:", error);
-    ElMessage.error(t("common.loadFailed"));
+    notifyError(error, t("common.loadFailed"));
   } finally {
     loading.value = false;
   }
@@ -327,7 +328,7 @@ const handleSaveMetadata = async () => {
     await loadColumns();
   } catch (error) {
     console.error("Failed to save column metadata:", error);
-    ElMessage.error(t("common.operationFailed"));
+    notifyError(error, t("common.operationFailed"));
   }
 };
 
@@ -374,7 +375,7 @@ const handleConfirmExtract = async (overwrite: boolean) => {
     await loadValues();
   } catch (error) {
     console.error("Failed to extract column values:", error);
-    ElMessage.error(t("column.extractFailed"));
+    notifyError(error, t("column.extractFailed"));
   } finally {
     extractingValues.value = false;
   }
@@ -552,7 +553,7 @@ const handleSaveValues = async () => {
     resetValueDialogState();
   } catch (error) {
     console.error("Failed to save column values:", error);
-    ElMessage.error(t("common.operationFailed"));
+    notifyError(error, t("common.operationFailed"));
   } finally {
     savingValues.value = false;
   }

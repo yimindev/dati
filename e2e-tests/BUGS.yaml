@@ -22,40 +22,6 @@ bugs:
       ② data_source_id=9d05fd88-3fde-458f-82e6-94a37e3260ac（存在，但未绑定到 e2e-end-main 服务） → 200 {isError:true, content[0].text:'数据源或表不在服务范围内：Data source 9d05fd88-… not in service scope'}（ToolError.SCOPE_VIOLATION）。
       两条文案可区分，等于给出「该 UUID 是平台内真实数据源」的存在性预言机（同一现象也影响自定义 PARAMETERIZED_SQL 工具，ParameterizedSqlExecutor 同结构）。根因：ExecuteSqlExecutor.execute()/ParameterizedSqlExecutor.execute() 先 dataSourceService.getDataSourceInternal(dsId) 再 scopeValidator.validate(...)，即先做全局存在性查询、后做 scope 校验；正确顺序应先 validateScopeCoverage 再加载数据源，或对外统一返回 SCOPE_VIOLATION 文案。附带：①'数据源不存在' 为纯中文且无 dsId/英文尾缀，与相邻 'not in service scope' 中英混排并存，与「面向 LLM 的协议消息应确定性可解析」的约定不一致；②该分支下 error_category 为 PARAM_ERROR，与 scope 违规的 SCOPE_ERROR 不同，LLM 可能据此判断为参数拼写错误而反复重试同一 uuid。建议：scope 校验前移，并让两条分支对外文案与 error_category 一致（或统一为 Data source not found or not in service scope）。
       2026-10-24 重新评估：存在性预言机属于低危信息最小化建议，接受风险，暂不修复。代码回退到原始加载顺序（先加载数据源，再校验 scope），仅保留 SCOPE_VIOLATION 去重前缀与英文文案修复。
-  - id: BUG-20261024-010
-    title: 数据源更新 PUT 的 name 校验消息硬编码英文（@Pattern message='must not be blank'），与创建接口中文提示不一致（回归）
-    module: 数据源管理-错误处理
-    severity: low
-    found_at: 2026-10-25
-    regression: true
-    description: |
-      TC-DS-003/007 延伸探针（qa-e2e-tester，2026-10-24）：
-      ①POST /v1/data-sources {"name":"   "} → 400 {code:CM001, message:'Request parameter error: name: 不得为空白'}（Hibernate Validator 中文本地化）；
-      ②PUT /v1/data-sources/{id} {"name":"   "} → 400 {code:CM001, message:'Request parameter error: name: must not be blank'}（硬编码英文）。
-      同一资源、同一语义（name 不能为空白），创建与更新两个接口语言不一致；en/zh 前端 i18n 无法翻译硬编码英文，服务部署在 en Locale 时反而全部变英文，行为随环境漂移。
-      根因：UpdateDataSourceRequest.name 使用 @Pattern(regexp="(?s).*\\S.*", message="must not be blank") 硬编码英文，而 CreateDataSourceRequest 用 @NotBlank 走资源包。
-      同类问题在语义层已登记为 BUG-20261024-004，数据源模块（UpdateDataSourceRequest）尚未覆盖，修 BUG-20261024-004 时请一并处理本 DTO（可改为 @NotBlank + @Pattern 不带 message，或引用 messages.properties 消息键），并补 DataSourceControllerTest 断言中英文一致。      曾标记为 FIXED，本次测试复现。
-  - id: BUG-20261024-004
-    title: 语义层校验消息语言不一致：@NotBlank 走中文本地化、@Pattern 为硬编码英文（回归）
-    module: 语义层-错误处理
-    severity: low
-    found_at: 2026-10-25
-    regression: true
-    description: |
-      TC-SEM-001/003/006/007 探索（用户可见的输入校验反馈）：jakarta 默认约束（@NotBlank/@Min/@Max）走 Hibernate Validator 中文资源包，而 UpdateSubjectRequest/UpdateTermRequest 的 @Pattern 使用硬编码英文 message='must not be blank'，同一语义错误在不同端点显示不同语言。实测（qa-e2e-tester）：①POST /v1/subjects {} → 400 'Request parameter error: datasourceId: 不得为空白; name: 不得为空白'；②PUT /v1/subjects/{id} {"name":""} → 400 'name: must not be blank'；③POST /v1/subjects/{id}/terms {} → 400 'name: 不得为空白'；④PUT /v1/terms/{id} {"name":""} 与 {"name":"  "} → 400 'name: must not be blank'。前端 i18n（zh/en）无法翻译硬编码英文；若服务部署在 en Locale 环境则默认约束反而输出英文，行为随环境漂移。建议：去掉 DTO 上的英文硬编码 message，统一为 @NotBlank+@Pattern(regexp="(?s).*\\S.*") 或引用 messages.properties 消息键（中英文各一份），由 Locale 统一解析。      曾标记为 FIXED，本次测试复现。
-  - id: BUG-20261025-001
-    title: 语义层校验消息在未发送 Accept-Language 时仍中英混排
-    module: 语义层-错误处理
-    severity: low
-    found_at: 2026-10-25
-    description: |
-      TC-SEM-001/006/007 探索（用户可见的输入校验反馈）：显式传 Accept-Language（zh-CN / en）时消息跟随语言且中英文自洽（BUG-20261024-004 的修复生效），但**不发送 Accept-Language 的请求**（curl 脚本、部分 LLM/自动化工具链）仍混用两种语言，同一错误面出现中英混排：
-      ① POST /v1/subjects {} → 400 'Request parameter error: name: 不得为空白; datasource_id: 不得为空白'（@NotBlank，中文）；
-      ② POST /v1/subjects name=65 字符 → 400 'name: 大小必须在 0 和 64 之间'（@Size，中文）；
-      ③ PUT /v1/subjects/{id} {"name":""} → 400 'name: must not be blank'（@Pattern + {validation.notBlank}，英文）；
-      ④ PUT /v1/terms/{id} {"name":""} 同样英文；
-      ⑤ PUT /v1/terms/{id} {"name":"   "} 同样英文。
-      根因推测：无 Accept-Language 时 jakarta 内置约束走 Hibernate Validator 的 zh_CN 资源包，而自定义键 {validation.notBlank} 解析到 ValidationMessages.properties（英文默认包），两条解析链的默认 Locale 基准不一致。建议：为 MVC 显式配置默认 Locale（spring.web.locale / LocaleResolver），或让自定义消息与内置消息共用同一 Locale 解析入口，并补『无 Accept-Language 时各约束消息语言一致』的测试。
   - id: BUG-20261025-004
     title: 参数化 SQL 工具传入空数组时渲染为 IN ()，以原始数据库语法错误返回而非参数错误
     module: MCP Endpoint

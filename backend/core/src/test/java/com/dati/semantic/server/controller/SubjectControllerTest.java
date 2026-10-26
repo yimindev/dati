@@ -77,6 +77,28 @@ class SubjectControllerTest {
     }
 
     @Test
+    @DisplayName("Create Subject - blank name message follows the request locale")
+    void createSubject_withBlankName_shouldUseLocalizedMessage() throws Exception {
+        CreateSubjectRequest request = new CreateSubjectRequest();
+        request.setName("   ");
+        request.setDatasourceId("datasource-001");
+
+        mockMvc.perform(post("/v1/subjects")
+                .locale(Locale.SIMPLIFIED_CHINESE)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.message").value("请求参数错误：name: 不得为空白"));
+
+        mockMvc.perform(post("/v1/subjects")
+                .locale(Locale.ENGLISH)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.message").value("Request parameter error: name: must not be blank"));
+    }
+
+    @Test
     @DisplayName("Create Subject - returns 201")
     void createSubject_shouldReturn201() throws Exception {
         CreateSubjectRequest request = new CreateSubjectRequest();
@@ -187,7 +209,7 @@ class SubjectControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
             .andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.message").value("Request parameter error: name: 不得为空白"));
+            .andExpect(jsonPath("$.message").value("请求参数错误：name: 不得为空白"));
 
         mockMvc.perform(put("/v1/subjects/subject-001")
                 .locale(Locale.ENGLISH)

@@ -1,113 +1,116 @@
-import axios, { AxiosError, type AxiosInstance } from 'axios'
-import { ElMessage } from 'element-plus'
-import { i18n } from '~/plugins/i18n'
+import axios, { type AxiosInstance } from "axios";
+import { ElMessage } from "element-plus";
+import { i18n } from "~/plugins/i18n";
+import {
+  ApiError,
+  isHandledError,
+  normalizeError,
+  notifyError,
+  resolveErrorMessage,
+} from "./error";
+
+export { ApiError, isHandledError, normalizeError, notifyError };
+export type { ApiErrorKind } from "./error";
 
 // 可从 import.meta.env 加载
-const BASE_URL = import.meta.env.VITE_API_BASE_URL as string | undefined
-
-export interface ApiError {
-  status: number
-  code?: string
-  message: string
-  details?: unknown
-  raw?: unknown
-  handled?: boolean
-}
-
-function normalizeError(err: unknown): ApiError {
-  if (axios.isAxiosError(err)) {
-    const e = err as AxiosError<any>
-    return {
-      status: e.response?.status ?? 0,
-      code: e.response?.data?.code,
-      message: e.response?.data?.message || e.message || 'Network Error',
-      details: e.response?.data?.details,
-      raw: e.toJSON?.() ?? e,
-    }
-  }
-  return { status: 0, message: (err as Error)?.message ?? 'Unknown error', raw: err }
-}
+const BASE_URL = import.meta.env.VITE_API_BASE_URL as string | undefined;
 
 export const http: AxiosInstance = axios.create({
-  baseURL: BASE_URL ?? '',
+  baseURL: BASE_URL ?? "",
   timeout: 15000,
   withCredentials: true,
-})
+});
 
-// 读取/写入 token 的辅助，你可以替换为你项目的实际存储方式
 function getAccessToken(): string | null {
-  return localStorage.getItem('access_token')
+  return localStorage.getItem("access_token");
+}
+
+/** Reports the language of the console UI to the backend for error messages. */
+export function acceptLanguageHeader(locale = i18n.global.locale.value): string {
+  return locale === "zh" ? "zh-CN" : "en";
+}
+
+/** Login/register/guest requests handle their own 401 errors; every other request redirects. */
+export function isAuthEntryUrl(url: string | undefined): boolean {
+  return Boolean(url && /\/auth\/(login|register|guest)(?:$|[?])/.test(url));
 }
 
 http.interceptors.request.use((config) => {
-  const token = getAccessToken()
+  const token = getAccessToken();
   if (token && config.headers) {
-    config.headers.Authorization = `Bearer ${token}`
+    config.headers.Authorization = `Bearer ${token}`;
   }
-  // 支持 AbortController 取消
-  // 调用端传入 { signal } 即可
-  return config
-})
+  if (config.headers) {
+    config.headers["Accept-Language"] = acceptLanguageHeader();
+  }
+  return config;
+});
+
+let redirectingToLogin = false;
+
+function handleUnauthorized(apiError: ApiError): void {
+  localStorage.removeItem("access_token");
+  if (typeof window === "undefined" || window.location.pathname === "/login") {
+    return;
+  }
+  if (!redirectingToLogin) {
+    redirectingToLogin = true;
+    ElMessage({
+      type: "error",
+      message: resolveErrorMessage(apiError, i18n.global.t("error.http401")),
+      grouping: true,
+      showClose: true,
+      duration: 4500,
+    });
+    window.setTimeout(() => {
+      window.location.href = "/login";
+    }, 1200);
+    window.setTimeout(() => {
+      redirectingToLogin = false;
+    }, 5000);
+  }
+}
 
 http.interceptors.response.use(
   (resp) => {
-    // 统一“数据解包”：后端若统一返回 { code, data, message }
-    // 可在这里直接返回 resp.data.data；示例保守返回 resp.data
+    // 后端统一返回数据结构时在这里解包；当前直接返回响应体
     return resp.data;
   },
-  async (error) => {
-    const err = normalizeError(error);
-    if (err.status === 401) {
-      const url = error.config?.url || '';
-      const isAuthApi = url.includes('/auth/');
-      const currentPath = window.location.pathname;
-      
-      if (!isAuthApi && currentPath !== '/login') {
-        localStorage.removeItem("access_token");
-        window.location.href = "/login";
+  (error) => {
+    const apiError = normalizeError(error);
+
+    if (apiError.kind === "canceled") {
+      return Promise.reject(apiError);
+    }
+
+    if (apiError.status === 401) {
+      const url = error?.config?.url as string | undefined;
+      if (!isAuthEntryUrl(url)) {
+        apiError.handled = true;
+        handleUnauthorized(apiError);
       }
-      return Promise.reject(err);
+      return Promise.reject(apiError);
     }
-    if (err.status === 403) {
-      // 权限不足：提示但不登出、不清 token（后端是唯一权威，列表已静默过滤）
-      ElMessage.error(i18n.global.t("common.noPermission"));
-      err.handled = true;
-      return Promise.reject(err);
-    }
-    return Promise.reject(err);
+
+    // 403 and other errors are shown by the caller through notifyError() so the
+    // precise backend code/message is preserved.
+    return Promise.reject(apiError);
   },
 );
 
 // 统一导出带类型的方法
 export async function get<T>(url: string, params?: Record<string, any>, signal?: AbortSignal): Promise<T> {
-  return http.get(url, { params, signal })
+  return http.get(url, { params, signal });
 }
 
 export async function post<T, B = any>(url: string, body?: B, signal?: AbortSignal): Promise<T> {
-  return http.post(url, body, { signal })
+  return http.post(url, body, { signal });
 }
 
 export async function put<T, B = any>(url: string, body?: B, signal?: AbortSignal): Promise<T> {
-  return http.put(url, body, { signal })
+  return http.put(url, body, { signal });
 }
 
 export async function del<T>(url: string, params?: Record<string, any>, signal?: AbortSignal): Promise<T> {
-  return http.delete(url, { params, signal })
+  return http.delete(url, { params, signal });
 }
-
-export function isHandledError(err: unknown): boolean {
-  return Boolean((err as ApiError)?.handled)
-}
-
-/**
- * Show an operation error toast unless the error was already notified
- * globally (e.g. 403 handled by the response interceptor) or it is an
- * ElMessageBox cancel/close signal. Call this in every API catch block.
- */
-export function notifyError(err: unknown, fallback: string): void {
-  if (err === "cancel" || err === "close") return
-  if (isHandledError(err)) return
-  ElMessage.error((err as ApiError)?.message || fallback)
-}
-
-export { normalizeError }

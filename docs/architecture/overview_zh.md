@@ -27,7 +27,7 @@
 
 ## 关键约定
 
-- 异常统一走 `DatiException` + `ErrorCode` 枚举（前缀：`CM` 通用、`DS` 数据源、`SM` 语义、`MS` MCP、`AUTH` 认证、`PM` 权限）。
+- 异常统一走 `DatiException` + `ErrorCode` 枚举（前缀：`CM` 通用、`DS` 数据源、`SM` 语义、`MS` MCP、`AUTH` 认证、`PM` 权限）；错误消息按请求 `Accept-Language` 本地化，缺省回退英文。
 - JSON 命名策略（dev）：`SNAKE_CASE`，前端 API 层适配。
 - MCP Endpoint：`POST /{code}/mcp`（JSON-RPC over HTTP，2025-11-25 协议），详细语义见 [mcp-service-management.md](mcp-service-management.md) 2.2 节。
 

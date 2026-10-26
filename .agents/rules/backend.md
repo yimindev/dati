@@ -166,7 +166,7 @@ customToolDAO.delete(po);
 - **`BaseAssembler`**: Base class for assemblers. Provides `copyBaseInfo()`, `fillUsersFromRequest()`, `fillUpdateUserFromRequest()`, `fillUserInfo()`
 - **`RequestContext`**: Thread-local context holder for current user. Use `RequestContext.getUser()`
 - **`EncryptionUtils`**: Password encryption/decryption (currently pass-through, TODO for actual encryption)
-- **`DatiException`**: Business exception with structured error codes. Supports parameterized messages via `MessageFormat` templates.
+- **`DatiException`**: Business exception with structured error codes. Supports parameterized `{0}`-style templates.
 
 **`ErrorCode`**: Enum defining all error codes with fixed prefixes:
   - `CM` (Common): Generic errors — e.g. `CM001` (400), `CM002` (404), `CM003` (500), `CM004` (405)
@@ -176,7 +176,9 @@ customToolDAO.delete(po);
   - `AUTH` (Authentication): Auth & API key errors — e.g. `AUTH001` (login failed), `AUTH002` (token invalid)
   - `PM` (Permission): Access control errors — e.g. `PM001` (permission denied)
   - `VAL` (Validation): Input validation — e.g. `VAL002` (field required)
-  - Template messages use `{0}`, `{1}` placeholders (Java `MessageFormat`)
+  - Template messages use `{0}`, `{1}` placeholders (rendered by `ErrorMessages.format`)
+  - Chinese messages live in `ErrorCodeMessages_zh_CN.properties`; every new code needs an entry with the same placeholders as the English template
+  - `ErrorResponse` resolves messages from the request `Accept-Language`; `DatiException.getMessage()` stays English for logs
 
 **`ErrorResponse`**: Standard error response body `{ code, message, timestamp }`
 
@@ -223,6 +225,7 @@ permissionService.requireMcpService(servicePO, Permission.EDIT); // PO overload 
 - **Response**: Return `IdResponse` for mutations. Return `PageResponse<T>` for paginated lists; raw `List<T>` is acceptable for metadata queries (schemas, tables, columns) where pagination is unnecessary.
 - **Exception**: Use `DatiException` for business errors, log with `@Slf4j`.
   - Add new `ErrorCode` entries for new business scenarios (follow existing prefix conventions)
+  - Add the matching `error.<CODE>` entry to `ErrorCodeMessages_zh_CN.properties`
   - All exceptions return unified `ErrorResponse` with proper HTTP status codes
 - **JSON**: Dev profile uses `SNAKE_CASE` naming strategy.
 - **Security**: Passwords encrypted via `EncryptionUtils` in mapper layer.

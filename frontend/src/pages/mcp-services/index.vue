@@ -46,7 +46,7 @@ const loadServices = async () => {
     total.value = response.total ?? 0;
   } catch (error) {
     console.error("Failed to load MCP services:", error);
-    ElMessage.error(t("common.loadFailed"));
+    notifyError(error, t("common.loadFailed"));
   } finally {
     loading.value = false;
   }

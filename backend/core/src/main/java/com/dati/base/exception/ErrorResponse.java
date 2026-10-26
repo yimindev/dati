@@ -1,6 +1,9 @@
 package com.dati.base.exception;
 
 import lombok.Getter;
+import org.springframework.context.i18n.LocaleContextHolder;
+
+import java.util.Locale;
 
 @Getter
 public class ErrorResponse {
@@ -16,11 +19,12 @@ public class ErrorResponse {
     }
 
     public static ErrorResponse of(ErrorCode errorCode) {
-        return new ErrorResponse(errorCode.getCode(), ErrorMessages.format(errorCode.getTemplate()));
+        return of(errorCode, new Object[0]);
     }
 
     public static ErrorResponse of(ErrorCode errorCode, Object... args) {
-        return new ErrorResponse(errorCode.getCode(), ErrorMessages.format(errorCode.getTemplate(), args));
+        Locale locale = LocaleContextHolder.getLocale();
+        return new ErrorResponse(errorCode.getCode(), ErrorMessages.formatLocalized(errorCode, args, locale));
     }
 
     public static ErrorResponse ofResolved(ErrorCode errorCode, String resolvedMessage) {

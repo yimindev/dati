@@ -10,6 +10,7 @@ import { ElMessage } from "element-plus";
 import { useI18n } from "vue-i18n";
 import type { SubjectVO, UpdateSubjectRequest } from "~/api/subject";
 import { getSubject, updateSubject } from "~/api/subject";
+import { notifyError } from "~/api/http";
 import { formatDateTime } from "~/composables";
 import AuthDialog from "~/components/common/AuthDialog.vue";
 
@@ -58,7 +59,7 @@ const loadSubject = async () => {
     };
   } catch (error) {
     console.error("Failed to load subject:", error);
-    ElMessage.error(t("common.loadFailed"));
+    notifyError(error, t("common.loadFailed"));
   } finally {
     loading.value = false;
   }
@@ -95,7 +96,7 @@ const handleSave = async () => {
     await loadSubject();
   } catch (error) {
     console.error("Failed to update subject:", error);
-    ElMessage.error(t("common.operationFailed"));
+    notifyError(error, t("common.operationFailed"));
   } finally {
     saving.value = false;
   }

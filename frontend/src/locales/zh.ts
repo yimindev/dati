@@ -133,6 +133,19 @@ export default {
     skipToContent: "跳到主内容",
   },
 
+  error: {
+    network: "网络连接失败，请检查网络后重试",
+    timeout: "请求超时，请稍后重试",
+    unknown: "操作失败，请稍后重试",
+    http400: "请求参数有误",
+    http401: "登录已过期，请重新登录",
+    http403: "没有权限执行此操作",
+    http404: "请求的资源不存在",
+    http409: "数据冲突，请刷新后重试",
+    http429: "操作过于频繁，请稍后重试",
+    http5xx: "服务暂时不可用，请稍后重试",
+  },
+
   layout: {
     header: {
       brand: "DatI",

@@ -855,3 +855,45 @@ bugs:
       ③ Accept: text/event-stream → 200 Content-Type: text/event-stream，但 body 是单个 JSON 对象、没有 SSE 的 data:/event: 分帧 —— 只接受 SSE 的客户端会把 body 当事件流解析而失败；
       ④ Accept: text/plain → 200 text/plain；Accept: application/xml → 200 application/xml（JSON 被标成 XML/纯文本）。
       根因：McpEndpointController 返回 ResponseEntity<Object>，未显式设置 Content-Type，Spring 按 Accept 协商出结果类型；MCP 2025-11-25 Streamable HTTP 要求非流式响应必须是 Content-Type: application/json。建议：在控制器或消息转换器上固定 application/json（如 ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(...)），并补 McpEndpointControllerTest 断言 Accept: text/event-stream / text/plain / application/xml 三种请求下 Content-Type 仍为 application/json。
+  - id: BUG-20261025-001
+    title: 语义层校验消息在未发送 Accept-Language 时仍中英混排
+    module: 语义层-错误处理
+    severity: low
+    fixed_at: 2026-10-26
+    description: |
+      TC-SEM-001/006/007 探索（用户可见的输入校验反馈）：显式传 Accept-Language（zh-CN / en）时消息跟随语言且中英文自洽（BUG-20261024-004 的修复生效），但**不发送 Accept-Language 的请求**（curl 脚本、部分 LLM/自动化工具链）仍混用两种语言，同一错误面出现中英混排：
+      ① POST /v1/subjects {} → 400 'Request parameter error: name: 不得为空白; datasource_id: 不得为空白'（@NotBlank，中文）；
+      ② POST /v1/subjects name=65 字符 → 400 'name: 大小必须在 0 和 64 之间'（@Size，中文）；
+      ③ PUT /v1/subjects/{id} {"name":""} → 400 'name: must not be blank'（@Pattern + {validation.notBlank}，英文）；
+      ④ PUT /v1/terms/{id} {"name":""} 同样英文；
+      ⑤ PUT /v1/terms/{id} {"name":"   "} 同样英文。
+      根因推测：无 Accept-Language 时 jakarta 内置约束走 Hibernate Validator 的 zh_CN 资源包，而自定义键 {validation.notBlank} 解析到 ValidationMessages.properties（英文默认包），两条解析链的默认 Locale 基准不一致。建议：为 MVC 显式配置默认 Locale（spring.web.locale / LocaleResolver），或让自定义消息与内置消息共用同一 Locale 解析入口，并补『无 Accept-Language 时各约束消息语言一致』的测试。
+  - id: BUG-20261024-004
+    title: 语义层校验消息语言不一致：@NotBlank 走中文本地化、@Pattern 为硬编码英文（回归）
+    module: 语义层-错误处理
+    severity: low
+    fixed_at: 2026-10-26
+    description: |
+      TC-SEM-001/003/006/007 探索（用户可见的输入校验反馈）：jakarta 默认约束（@NotBlank/@Min/@Max）走 Hibernate Validator 中文资源包，而 UpdateSubjectRequest/UpdateTermRequest 的 @Pattern 使用硬编码英文 message='must not be blank'，同一语义错误在不同端点显示不同语言。实测（qa-e2e-tester）：①POST /v1/subjects {} → 400 'Request parameter error: datasourceId: 不得为空白; name: 不得为空白'；②PUT /v1/subjects/{id} {"name":""} → 400 'name: must not be blank'；③POST /v1/subjects/{id}/terms {} → 400 'name: 不得为空白'；④PUT /v1/terms/{id} {"name":""} 与 {"name":"  "} → 400 'name: must not be blank'。前端 i18n（zh/en）无法翻译硬编码英文；若服务部署在 en Locale 环境则默认约束反而输出英文，行为随环境漂移。建议：去掉 DTO 上的英文硬编码 message，统一为 @NotBlank+@Pattern(regexp="(?s).*\\S.*") 或引用 messages.properties 消息键（中英文各一份），由 Locale 统一解析。      曾标记为 FIXED，本次测试复现。
+  - id: BUG-20261024-010
+    title: 数据源更新 PUT 的 name 校验消息硬编码英文（@Pattern message='must not be blank'），与创建接口中文提示不一致（回归）
+    module: 数据源管理-错误处理
+    severity: low
+    fixed_at: 2026-10-26
+    description: |
+      TC-DS-003/007 延伸探针（qa-e2e-tester，2026-10-24）：
+      ①POST /v1/data-sources {"name":"   "} → 400 {code:CM001, message:'Request parameter error: name: 不得为空白'}（Hibernate Validator 中文本地化）；
+      ②PUT /v1/data-sources/{id} {"name":"   "} → 400 {code:CM001, message:'Request parameter error: name: must not be blank'}（硬编码英文）。
+      同一资源、同一语义（name 不能为空白），创建与更新两个接口语言不一致；en/zh 前端 i18n 无法翻译硬编码英文，服务部署在 en Locale 时反而全部变英文，行为随环境漂移。
+      根因：UpdateDataSourceRequest.name 使用 @Pattern(regexp="(?s).*\\S.*", message="must not be blank") 硬编码英文，而 CreateDataSourceRequest 用 @NotBlank 走资源包。
+      同类问题在语义层已登记为 BUG-20261024-004，数据源模块（UpdateDataSourceRequest）尚未覆盖，修 BUG-20261024-004 时请一并处理本 DTO（可改为 @NotBlank + @Pattern 不带 message，或引用 messages.properties 消息键），并补 DataSourceControllerTest 断言中英文一致。      曾标记为 FIXED，本次测试复现。
+  - id: BUG-20261026-001
+    title: 语义层创建/更新接口的空白校验中文文案不一致（不能为空 vs 不得为空白）
+    module: 语义层-错误处理
+    severity: low
+    fixed_at: 2026-10-26
+    description: |
+      TC-ERR-004/006 延伸探针（qa-e2e-tester，2026-10-26）：同一语义『name 不能为空白』在创建与更新接口返回不同中文文案：
+      ①POST /v1/subjects {name:'   ', datasource_id:<valid>} + Accept-Language: zh-CN → 400 CM001 '请求参数错误：name: 不能为空'（CreateSubjectRequest 使用 @NotBlank，走 Hibernate zh_CN 默认包）；
+      ②PUT /v1/subjects/{id} {name:''} + Accept-Language: zh-CN → 400 CM001 '请求参数错误：name: 不得为空白'（UpdateSubjectRequest 使用 @Pattern + {validation.notBlank}）。
+      英文均为 'must not be blank'，因此只在中文下可见。同类差异也影响 datasource_id 等 @NotBlank 字段与自定义键字段。建议统一约束与消息键（例如创建/更新都使用同一条消息键，或都使用 @NotBlank 并统一 ValidationMessages_zh_CN 文案），并补创建/更新的中英文一致性断言。字段顺序在多字段失败时也可能不同（见本轮 E2E W1），可作为同一处表单错误呈现优化。

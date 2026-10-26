@@ -83,7 +83,7 @@ const loadTables = async () => {
     total.value = response.total ?? 0;
   } catch (error) {
     console.error("Failed to load subject tables:", error);
-    ElMessage.error(t("common.loadFailed"));
+    notifyError(error, t("common.loadFailed"));
   } finally {
     loading.value = false;
   }
@@ -122,7 +122,7 @@ const handleOpenAddTableDialog = async () => {
     schemas.value = await getSchemas(props.datasourceId);
   } catch (error) {
     console.error("Failed to load schemas:", error);
-    ElMessage.error(t("common.loadFailed"));
+    notifyError(error, t("common.loadFailed"));
   } finally {
     schemaLoading.value = false;
   }
@@ -140,7 +140,7 @@ const handleSchemaChange = async (schema: string) => {
     selectedTableIds.value = [];
   } catch (error) {
     console.error("Failed to load tables:", error);
-    ElMessage.error(t("common.loadFailed"));
+    notifyError(error, t("common.loadFailed"));
   } finally {
     tablesLoading.value = false;
   }

@@ -3,6 +3,7 @@ import { ref } from "vue";
 import { useI18n } from "vue-i18n";
 import { User, UserFilled, Lock } from "@element-plus/icons-vue";
 import { ElMessage } from "element-plus";
+import { notifyError } from "~/api/http";
 import { useAuthStore } from "~/stores/auth";
 
 const { t } = useI18n();
@@ -43,7 +44,7 @@ async function handleRegister() {
     );
     ElMessage.success(t("auth.registerSuccess"));
   } catch (err: any) {
-    ElMessage.error(err.message || t("auth.registerFailed"));
+    notifyError(err, t("auth.registerFailed"));
   }
 }
 </script>

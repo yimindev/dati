@@ -19,6 +19,8 @@ spring:
         one-indexed-parameters: true
   jackson:
     property-naming-strategy: SNAKE_CASE
+  web:
+    locale: en
 
 springdoc:
   api-docs:

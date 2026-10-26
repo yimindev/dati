@@ -3,6 +3,7 @@ import { ref } from "vue";
 import { useI18n } from "vue-i18n";
 import { Lock, User } from "@element-plus/icons-vue";
 import { ElMessage } from "element-plus";
+import { notifyError } from "~/api/http";
 import { useAuthStore } from "~/stores/auth";
 
 const { t } = useI18n();
@@ -21,7 +22,7 @@ async function handleLogin() {
   try {
     await authStore.login(form.value.name, form.value.password);
   } catch (err: any) {
-    ElMessage.error(err.message || t("auth.loginFailed"));
+    notifyError(err, t("auth.loginFailed"));
   }
 }
 
@@ -29,7 +30,7 @@ async function handleGuestLogin() {
   try {
     await authStore.loginAsGuest();
   } catch (err: any) {
-    ElMessage.error(err.message || t("auth.guestLoginFailed"));
+    notifyError(err, t("auth.guestLoginFailed"));
   }
 }
 </script>

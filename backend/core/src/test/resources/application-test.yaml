@@ -20,6 +20,8 @@ spring:
         one-indexed-parameters: true
   jackson:
     property-naming-strategy: SNAKE_CASE
+  web:
+    locale: en
 
 system:
   column-value-sample-limit: 1000

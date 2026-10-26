@@ -129,7 +129,7 @@ const loadService = async () => {
     formData.value.description = data.description || "";
   } catch (error) {
     console.error("Failed to load service detail:", error);
-    ElMessage.error(t("common.loadFailed"));
+    notifyError(error, t("common.loadFailed"));
   } finally {
     loading.value = false;
   }
@@ -140,6 +140,7 @@ const loadDiff = async () => {
     diff.value = await getMcpServiceDiff(serviceId);
   } catch (error) {
     console.error("Failed to load service diff:", error);
+    notifyError(error, t("common.loadFailed"));
   }
 };
 
@@ -149,6 +150,7 @@ const loadPrompts = async () => {
     promptCount.value = list.length;
   } catch (error) {
     console.error("Failed to load prompts count:", error);
+    notifyError(error, t("common.loadFailed"));
   }
 };
 

@@ -222,7 +222,7 @@ class TermControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"name\":\"   \"}"))
             .andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.message").value("Request parameter error: name: 不得为空白"));
+            .andExpect(jsonPath("$.message").value("请求参数错误：name: 不得为空白"));
 
         mockMvc.perform(put("/v1/terms/term-001")
                 .locale(Locale.ENGLISH)

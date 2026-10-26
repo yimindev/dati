@@ -10,6 +10,7 @@ import { useI18n } from "vue-i18n";
 import { useRouter } from "vue-router";
 import type { SubjectVO } from "~/api/subject";
 import { deleteSubject, listSubjects } from "~/api/subject";
+import { notifyError } from "~/api/http";
 import { Plus, Search, Refresh } from "@element-plus/icons-vue";
 import AuthDialog from "~/components/common/AuthDialog.vue";
 
@@ -48,7 +49,7 @@ const loadSubjects = async () => {
     total.value = response.total ?? 0;
   } catch (error) {
     console.error("Failed to load subjects:", error);
-    ElMessage.error(t("common.loadFailed"));
+    notifyError(error, t("common.loadFailed"));
   } finally {
     loading.value = false;
   }
@@ -108,10 +109,8 @@ const handleDelete = async (subject: SubjectVO) => {
     ElMessage.success(t("common.deleteSuccess"));
     await loadSubjects();
   } catch (error) {
-    if (error !== "cancel") {
-      console.error("Failed to delete:", error);
-      ElMessage.error(t("common.operationFailed"));
-    }
+    console.error("Failed to delete:", error);
+    notifyError(error, t("common.operationFailed"));
   }
 };
 
