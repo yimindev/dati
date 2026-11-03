@@ -874,7 +874,7 @@ onMounted(() => {
     <el-dialog
       v-model="relationDialogVisible"
       :title="t('subject.addRelation')"
-      width="780px"
+      width="820px"
       :close-on-click-modal="false"
       destroy-on-close
     >
@@ -922,12 +922,30 @@ onMounted(() => {
                     prop="name"
                     :label="t('common.name')"
                     min-width="140"
-                  />
-                  <el-table-column :label="t('common.schema')" width="100">
+                    show-overflow-tooltip
+                  >
                     <template #default="{ row }">
-                      <el-tag v-if="row.schema" size="small" effect="plain">{{
-                        row.schema
-                      }}</el-tag>
+                      <span
+                        class="font-medium text-[var(--ep-text-color-primary)]"
+                      >
+                        {{ row.name }}
+                      </span>
+                    </template>
+                  </el-table-column>
+                  <el-table-column :label="t('common.schema')" width="125">
+                    <template #default="{ row }">
+                      <el-tooltip
+                        v-if="row.schema"
+                        :content="row.schema"
+                        placement="top"
+                        :show-after="300"
+                      >
+                        <span
+                          class="inline-block max-w-full truncate rounded border border-[var(--ep-border-color-lighter)] bg-[var(--ep-fill-color-light)] px-1.5 py-0.5 font-mono text-xs text-[var(--ep-text-color-secondary)] align-middle leading-tight"
+                        >
+                          {{ row.schema }}
+                        </span>
+                      </el-tooltip>
                       <span
                         v-else
                         class="text-[var(--ep-text-color-placeholder)]"
@@ -998,7 +1016,15 @@ onMounted(() => {
                   >
                     <template #label>
                       <div class="flex items-center gap-2">
-                        <span class="max-w-36 truncate">{{ table.name }}</span>
+                        <span
+                          class="max-w-36 truncate"
+                          :title="
+                            table.schema
+                              ? `${table.schema}.${table.name}`
+                              : table.name
+                          "
+                          >{{ table.name }}</span
+                        >
                         <el-tag size="small" type="warning">{{
                           getSelectedFieldList(table.id).length
                         }}</el-tag>
@@ -1050,7 +1076,7 @@ onMounted(() => {
                             :key="column.name"
                             :value="column.name"
                             border
-                            class="!mr-0 rounded-md border-[var(--ep-border-color-lighter)] bg-white px-3 py-2"
+                            class="!mr-0 rounded-md border-[var(--ep-border-color-lighter)] bg-[var(--ep-bg-color)] px-3 py-2"
                           >
                             {{ column.name }}
                           </el-checkbox>
