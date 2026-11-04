@@ -1,10 +1,12 @@
 spring:
   datasource:
+      driver-class-name: org.h2.Driver
 #    url: jdbc:h2:mem:dati;DATABASE_TO_UPPER=false;QUERY_TIMEOUT=30
     url: jdbc:h2:file:${user.dir}/db/dati;QUERY_TIMEOUT=30;mode=mysql
     username: sa
     password:
   jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
     hibernate:
       ddl-auto: update
   h2:

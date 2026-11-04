@@ -65,7 +65,7 @@
    - **默认行为**：密码默认为空，配合上述免密模式拉起的 ES 容器，**无需修改任何配置直接启动**。
 
 2. **切换外部数据库（可选）**
-   - 如需使用 MySQL 代替 H2，修改 `application-dev.yaml` 中的 `spring.datasource.*` 连接串及凭据即可。
+   - 如需使用 MySQL 代替 H2，修改 `application-dev.yaml` 中的 `spring.datasource.*` 与 `spring.jpa.database-platform`。
 
 3. **ES 交互调试日志（可选）**
    - 若需排查 ES 查询 DSL 或底层 HTTP 报文交互，可解开注释：

@@ -65,7 +65,7 @@ Before starting the backend, verify `backend/app/src/main/resources/application-
    - **Default Behavior**: Password is empty by default, pairing with the no-auth Docker command above. **No configuration changes needed to start.**
 
 2. **Switching to External Database (Optional)**
-   - To use MySQL instead of H2, adjust `spring.datasource.*` in `application-dev.yaml`.
+   - To use MySQL instead of H2, change `spring.datasource.*` and `spring.jpa.database-platform` in `application-dev.yaml`.
 
 3. **Elasticsearch Wire Logging (Optional)**
    - To inspect raw Elasticsearch DSL queries and HTTP wire traffic, uncomment:
