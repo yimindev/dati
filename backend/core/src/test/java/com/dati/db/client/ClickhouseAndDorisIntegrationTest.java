@@ -4,7 +4,6 @@ import com.dati.db.Column;
 import com.dati.db.DbType;
 import com.dati.db.HikariPoolManager;
 import com.dati.db.JdbcConnector;
-import com.dati.db.JdbcUtils;
 import com.dati.db.Table;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assumptions;
@@ -51,31 +50,27 @@ class ClickhouseAndDorisIntegrationTest {
                 "password123"
         );
 
-        // 1. Test connection
-        boolean connected = JdbcUtils.testConnection(ckConnector.jdbcUrl(), ckConnector.username(), ckConnector.password());
-        assertThat(connected).isTrue();
-
-        // 2. DbClient from Factory
+        // 1. DbClient from Factory
         DbClient dbClient = DbClientFactory.getDbClient(DbType.CLICKHOUSE);
         assertThat(dbClient).isInstanceOf(ClickhouseDbClient.class);
 
-        // 3. Current schema / database
+        // 2. Current schema / database
         String currentSchema = dbClient.getCurrentSchema(ckConnector);
         assertThat(currentSchema).isEqualTo("default");
 
-        // 4. Schema list
+        // 3. Schema list
         List<String> schemas = dbClient.getSchemas(ckConnector);
         assertThat(schemas).contains("default", "system");
 
-        // 5. Table list in default schema
+        // 4. Table list in default schema
         List<Table> tables = dbClient.getTables(ckConnector, "default");
         assertThat(tables.stream().map(Table::name)).contains("test_events");
 
-        // 6. Column list for test_events
+        // 5. Column list for test_events
         List<Column> columns = dbClient.getColumns(ckConnector, "default", "test_events");
         assertThat(columns.stream().map(Column::name)).contains("id", "title", "event_type", "created_at");
 
-        // 7. Execute query via Hikari pool & JdbcTemplate
+        // 6. Execute query via Hikari pool & JdbcTemplate
         JdbcTemplate jdbcTemplate = new JdbcTemplate(HikariPoolManager.getDataSource(ckConnector));
         List<Map<String, Object>> rows = jdbcTemplate.queryForList("SELECT id, title, event_type FROM default.test_events ORDER BY id");
         assertThat(rows).hasSize(3);
@@ -98,31 +93,27 @@ class ClickhouseAndDorisIntegrationTest {
                 ""
         );
 
-        // 1. Test connection
-        boolean connected = JdbcUtils.testConnection(dorisConnector.jdbcUrl(), dorisConnector.username(), dorisConnector.password());
-        assertThat(connected).isTrue();
-
-        // 2. DbClient from Factory
+        // 1. DbClient from Factory
         DbClient dbClient = DbClientFactory.getDbClient(DbType.DORIS);
         assertThat(dbClient).isInstanceOf(DorisDbClient.class);
 
-        // 3. Current schema / database
+        // 2. Current schema / database
         String currentSchema = dbClient.getCurrentSchema(dorisConnector);
         assertThat(currentSchema).isEqualTo("test_db");
 
-        // 4. Schema list
+        // 3. Schema list
         List<String> schemas = dbClient.getSchemas(dorisConnector);
         assertThat(schemas).contains("test_db", "information_schema");
 
-        // 5. Table list in test_db
+        // 4. Table list in test_db
         List<Table> tables = dbClient.getTables(dorisConnector, "test_db");
         assertThat(tables.stream().map(Table::name)).contains("users");
 
-        // 6. Column list for users table
+        // 5. Column list for users table
         List<Column> columns = dbClient.getColumns(dorisConnector, "test_db", "users");
         assertThat(columns.stream().map(Column::name)).contains("id", "name", "age", "user_role");
 
-        // 7. Execute query via Hikari pool & JdbcTemplate
+        // 6. Execute query via Hikari pool & JdbcTemplate
         JdbcTemplate jdbcTemplate = new JdbcTemplate(HikariPoolManager.getDataSource(dorisConnector));
         List<Map<String, Object>> rows = jdbcTemplate.queryForList("SELECT id, name, age, user_role FROM test_db.users ORDER BY id");
         assertThat(rows).hasSize(3);

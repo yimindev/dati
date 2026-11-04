@@ -13,6 +13,7 @@ import com.dati.datasource.server.pojo.DatasourceVO;
 import com.dati.datasource.server.pojo.request.CreateDataSourceRequest;
 import com.dati.datasource.server.pojo.request.TestConnectionRequest;
 import com.dati.datasource.server.pojo.request.UpdateDataSourceRequest;
+import com.dati.db.JdbcFailures;
 import com.dati.db.Table;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
@@ -44,8 +45,8 @@ public class DataSourceController {
     }
 
     @PostMapping("/test-connection")
-    public boolean testConnection(@RequestBody TestConnectionRequest request) {
-        return dataSourceService.testConnection(toDataSource(request));
+    public boolean testConnection(@Valid @RequestBody TestConnectionRequest request) {
+        return dataSourceService.testConnection(toDataSource(request), request.getId());
     }
 
     @PostMapping
@@ -61,7 +62,6 @@ public class DataSourceController {
         dataSource.setJdbcUrl(request.getJdbcUrl());
         dataSource.setUsername(request.getUsername());
         dataSource.setPassword(request.getPassword());
-        dataSource.setDefaultSchema(request.getDefaultSchema());
         return dataSource;
     }
 
@@ -73,7 +73,6 @@ public class DataSourceController {
         dataSource.setJdbcUrl(request.getJdbcUrl());
         dataSource.setUsername(request.getUsername());
         dataSource.setPassword(request.getPassword());
-        dataSource.setDefaultSchema(request.getDefaultSchema());
         return dataSource;
     }
 
@@ -86,7 +85,6 @@ public class DataSourceController {
         dataSource.setUsername(request.getUsername());
         dataSource.setPassword(request.getPassword());
         dataSource.setType(request.getType());
-        dataSource.setDefaultSchema(request.getDefaultSchema());
         dsAssembler.fillUpdateUserFromRequest(dataSource);
         dataSourceService.updateDataSource(id, dataSource);
         return new IdResponse(id);
@@ -118,7 +116,7 @@ public class DataSourceController {
             return dataSourceService.getSchemas(id);
         } catch (SQLException e) {
             log.error("Failed to get schemas for datasource {}", id, e);
-            throw new DatiException(ErrorCode.DS_SQL_ERROR, e.getMessage());
+            throw new DatiException(ErrorCode.DS_SQL_ERROR, JdbcFailures.conciseMessage(e));
         }
     }
 
@@ -128,7 +126,7 @@ public class DataSourceController {
             return dataSourceService.getTables(id, schema);
         } catch (SQLException e) {
             log.error("Failed to get tables for datasource {}", id, e);
-            throw new DatiException(ErrorCode.DS_SQL_ERROR, e.getMessage());
+            throw new DatiException(ErrorCode.DS_SQL_ERROR, JdbcFailures.conciseMessage(e));
         }
     }
 }

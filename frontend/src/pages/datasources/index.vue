@@ -4,11 +4,7 @@ import { ElMessage, ElMessageBox } from "element-plus";
 import { useI18n } from "vue-i18n";
 import { useRouter } from "vue-router";
 import type { DatasourceVO } from "~/api/datasource";
-import {
-  deleteDataSource,
-  listDataSources,
-  testConnection,
-} from "~/api/datasource";
+import { deleteDataSource, listDataSources } from "~/api/datasource";
 import { Plus, Search, Refresh } from "@element-plus/icons-vue";
 import AuthDialog from "~/components/common/AuthDialog.vue";
 import { notifyError } from "~/api/http";
@@ -107,30 +103,6 @@ const handleTableManage = (datasource: DatasourceVO) => {
   });
 };
 
-// 测试连接
-const handleTestConnection = async (datasource: DatasourceVO) => {
-  try {
-    const payload = {
-      jdbc_url: datasource.jdbc_url,
-      username: datasource.username,
-      type: datasource.type,
-      // 密码通常不在表格中保存/回显，如需测试完整连接可引导到“编辑”弹窗内测试
-    };
-
-    loading.value = true;
-    const result = await testConnection(payload);
-
-    if (result) {
-      ElMessage.success(t("datasource.testSuccess"));
-    }
-  } catch (error) {
-    console.error("Failed to test connection:", error);
-    notifyError(error, t("datasource.testFailed"));
-  } finally {
-    loading.value = false;
-  }
-};
-
 // 删除数据源
 const handleDelete = async (datasource: DatasourceVO) => {
   try {
@@ -214,7 +186,6 @@ onMounted(() => {
         :data="datasourceList"
         @edit="handleEdit"
         @delete="handleDelete"
-        @test-connection="handleTestConnection"
         @table-manage="handleTableManage"
         @authorize="handleAuthorize"
       />

@@ -32,7 +32,9 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasSize;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -71,7 +73,7 @@ class DataSourceControllerTest {
     @DisplayName("Test connection - success")
     void testConnection_shouldReturnTrue() throws Exception {
         // given
-        when(dataSourceService.testConnection(any())).thenReturn(true);
+        when(dataSourceService.testConnection(any(), any())).thenReturn(true);
 
         // when & then
         mockMvc.perform(post("/v1/data-sources/test-connection")
@@ -85,7 +87,7 @@ class DataSourceControllerTest {
     @DisplayName("Test connection - connection failure returns 400 DS001")
     void testConnection_shouldReturnConnectionError() throws Exception {
         // given
-        when(dataSourceService.testConnection(any()))
+        when(dataSourceService.testConnection(any(), any()))
             .thenThrow(new DatiException(ErrorCode.DS_CONNECTION_FAILED, "connection refused"));
 
         // when & then
@@ -101,7 +103,7 @@ class DataSourceControllerTest {
     @DisplayName("Test connection - unavailable default schema returns 400 DS006")
     void testConnection_shouldReturnSchemaError() throws Exception {
         // given
-        when(dataSourceService.testConnection(any()))
+        when(dataSourceService.testConnection(any(), any()))
             .thenThrow(new DatiException(ErrorCode.DS_SCHEMA_DETECTION_FAILED));
 
         // when & then
@@ -111,6 +113,54 @@ class DataSourceControllerTest {
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.code").value("DS006"))
             .andExpect(jsonPath("$.message", containsString("no usable default schema")));
+    }
+
+    @Test
+    @DisplayName("Test connection - missing type returns 400 with the field name")
+    void testConnection_missingType_shouldReturnBadRequest() throws Exception {
+        mockMvc.perform(post("/v1/data-sources/test-connection")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"jdbc_url\":\"jdbc:postgresql://localhost:5432/app\",\"username\":\"postgres\"}"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.code").value("CM001"))
+            .andExpect(jsonPath("$.message", containsString("type")));
+    }
+
+    @Test
+    @DisplayName("Test connection - blank JDBC URL returns 400 with the JSON field name")
+    void testConnection_blankJdbcUrl_shouldReturnBadRequest() throws Exception {
+        mockMvc.perform(post("/v1/data-sources/test-connection")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"type\":\"POSTGRESQL\",\"jdbc_url\":\" \",\"username\":\"postgres\"}"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.code").value("CM001"))
+            .andExpect(jsonPath("$.message", containsString("jdbc_url")));
+    }
+
+    @Test
+    @DisplayName("Test connection - existing data source id is forwarded to the service")
+    void testConnection_withId_shouldPassIdToService() throws Exception {
+        when(dataSourceService.testConnection(any(), eq(TestFixtures.TEST_DATASOURCE_ID))).thenReturn(true);
+
+        mockMvc.perform(post("/v1/data-sources/test-connection")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"id\":\"" + TestFixtures.TEST_DATASOURCE_ID
+                        + "\",\"type\":\"MYSQL\",\"jdbc_url\":\"jdbc:mysql://localhost:3306/db\","
+                        + "\"username\":\"root\",\"password\":\"\"}"))
+            .andExpect(status().isOk());
+
+        verify(dataSourceService).testConnection(any(), eq(TestFixtures.TEST_DATASOURCE_ID));
+    }
+
+    @Test
+    @DisplayName("Test connection - password may be empty")
+    void testConnection_emptyPassword_shouldReachService() throws Exception {
+        when(dataSourceService.testConnection(any(), any())).thenReturn(true);
+
+        mockMvc.perform(post("/v1/data-sources/test-connection")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"type\":\"CLICKHOUSE\",\"jdbc_url\":\"jdbc:clickhouse://localhost:8123/default\",\"username\":\"default\",\"password\":\"\"}"))
+            .andExpect(status().isOk());
     }
 
     @Test
@@ -324,6 +374,20 @@ class DataSourceControllerTest {
             .andExpect(jsonPath("$").isArray())
             .andExpect(jsonPath("$", hasSize(2)))
             .andExpect(jsonPath("$[0]").value("public"));
+    }
+
+    @Test
+    @DisplayName("Get schemas - driver failure text is cleaned and credentials are masked")
+    void getSchemas_shouldCleanAndMaskDriverMessage() throws Exception {
+        when(dataSourceService.getSchemas(TestFixtures.TEST_DATASOURCE_ID))
+            .thenThrow(new java.sql.SQLException(
+                "Failed to connect to jdbc:mysql://root:secret@db.internal:3306/shop\n  connection lost", "08001"));
+
+        mockMvc.perform(get("/v1/data-sources/{id}/schemas", TestFixtures.TEST_DATASOURCE_ID))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.code").value("DS003"))
+            .andExpect(jsonPath("$.message", containsString("connection lost")))
+            .andExpect(jsonPath("$.message", org.hamcrest.Matchers.not(containsString("secret"))));
     }
 
     @Test

@@ -2,6 +2,7 @@ package com.dati.db.client;
 
 import com.dati.db.Column;
 import com.dati.db.DbType;
+import com.dati.db.HikariPoolManager;
 import com.dati.db.JdbcConnector;
 import com.dati.db.Table;
 
@@ -21,5 +22,12 @@ public interface DbClient {
     /** 使用已有连接查询列信息，由调用方管理连接生命周期。 */
     List<Column> getColumns(Connection connection, String schema, String table) throws SQLException;
 
-    String getCurrentSchema(JdbcConnector jdbcConnector) throws SQLException;
+    String getCurrentSchema(Connection connection) throws SQLException;
+
+    /** Opens a pooled connection and resolves the current schema for callers that only hold a connector. */
+    default String getCurrentSchema(JdbcConnector jdbcConnector) throws SQLException {
+        try (Connection connection = HikariPoolManager.getConnection(jdbcConnector)) {
+            return getCurrentSchema(connection);
+        }
+    }
 }

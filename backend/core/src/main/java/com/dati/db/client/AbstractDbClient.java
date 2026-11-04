@@ -97,9 +97,8 @@ public abstract class AbstractDbClient implements DbClient {
     /**
      * Helper to execute a query returning a single String result (e.g. SELECT DATABASE(), SELECT current_schema()).
      */
-    protected String querySingleString(JdbcConnector jdbcConnector, String sql) throws SQLException {
-        try (Connection connection = HikariPoolManager.getConnection(jdbcConnector);
-             Statement stmt = connection.createStatement();
+    protected String querySingleString(Connection connection, String sql) throws SQLException {
+        try (Statement stmt = connection.createStatement();
              ResultSet rs = stmt.executeQuery(sql)) {
             if (rs.next()) {
                 return rs.getString(1);

@@ -14,6 +14,7 @@ import com.dati.datasource.repository.po.TableInfoPO;
 import com.dati.db.DbType;
 import com.dati.db.HikariPoolManager;
 import com.dati.db.JdbcConnector;
+import com.dati.permission.domain.model.Permission;
 import com.dati.permission.domain.model.PrincipalType;
 import com.dati.permission.domain.model.ResourceType;
 import com.dati.permission.domain.service.PermissionService;
@@ -45,12 +46,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.eq;
-import static org.mockito.Mockito.lenient;
-import static org.mockito.Mockito.mockStatic;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("DataSourceService unit tests")
@@ -154,7 +151,7 @@ class DataSourceServiceTest {
     }
 
     @Test
-    @DisplayName("Add data source - Hikari init failure path converts to DS_CONNECTION_FAILED, not saved")
+    @DisplayName("Add data source - driver load failure converts to DS_DRIVER_MISSING, not saved")
     void addDataSource_shouldThrowDatiException_whenConnectionInitializationFails() throws SQLException {
         // given：HikariPoolManager 将无法解析的 URL/驱动加载失败转换为 SQLException
         when(jdbcMetaService.resolveCurrentSchema(any(JdbcConnector.class), eq(DbType.MYSQL)))
@@ -163,7 +160,7 @@ class DataSourceServiceTest {
         // when & then
         assertThatThrownBy(() -> dataSourceService.addDataSource(testDataSource))
             .isInstanceOf(DatiException.class)
-            .satisfies(e -> assertThat(((DatiException) e).getCode()).isEqualTo(ErrorCode.DS_CONNECTION_FAILED));
+            .satisfies(e -> assertThat(((DatiException) e).getCode()).isEqualTo(ErrorCode.DS_DRIVER_MISSING));
         verify(dataSourceDAO, never()).save(any());
     }
 
@@ -415,7 +412,7 @@ class DataSourceServiceTest {
             .thenReturn("public");
 
         // when
-        boolean result = dataSourceService.testConnection(testDataSource);
+        boolean result = dataSourceService.testConnection(testDataSource, null);
 
         // then
         assertThat(result).isTrue();
@@ -423,16 +420,102 @@ class DataSourceServiceTest {
     }
 
     @Test
-    @DisplayName("Test connection - connection failure throws DS_CONNECTION_FAILED")
+    @DisplayName("Test connection - connection failure names the refused endpoint (DS012)")
     void testConnection_shouldThrowConnectionFailed_whenSQLException() throws SQLException {
         // given
         when(jdbcMetaService.resolveCurrentSchema(any(JdbcConnector.class), eq(DbType.MYSQL)))
-            .thenThrow(new SQLException("connection refused"));
+            .thenThrow(new SQLException("Connection refused", "08001"));
 
         // when & then
-        assertThatThrownBy(() -> dataSourceService.testConnection(testDataSource))
+        assertThatThrownBy(() -> dataSourceService.testConnection(testDataSource, null))
             .isInstanceOf(DatiException.class)
-            .satisfies(e -> assertThat(((DatiException) e).getCode()).isEqualTo(ErrorCode.DS_CONNECTION_FAILED));
+            .satisfies(e -> assertThat(((DatiException) e).getCode()).isEqualTo(ErrorCode.DS_CONNECT_REFUSED));
+    }
+
+    @Test
+    @DisplayName("Test connection - empty password with id probes the stored credentials")
+    void testConnection_shouldUseStoredPassword_whenIdGivenAndPasswordEmpty() throws SQLException {
+        ArgumentCaptor<JdbcConnector> captor = ArgumentCaptor.forClass(JdbcConnector.class);
+        when(dataSourceDAO.findById(TestFixtures.TEST_DATASOURCE_ID)).thenReturn(Optional.of(testDataSourcePO));
+        when(jdbcMetaService.resolveCurrentSchema(captor.capture(), eq(DbType.MYSQL))).thenReturn("test_db");
+        DataSource request = storedConnectionRequest();
+        request.setPassword("");
+
+        boolean result = dataSourceService.testConnection(request, TestFixtures.TEST_DATASOURCE_ID);
+
+        assertThat(result).isTrue();
+        assertThat(captor.getValue().jdbcUrl()).isEqualTo("jdbc:mysql://localhost:3306/test_db");
+        assertThat(captor.getValue().username()).isEqualTo("root");
+        assertThat(captor.getValue().password()).isEqualTo("password123");
+        verify(permissionService).requireDataSource(testDataSourcePO, Permission.VIEW);
+    }
+
+    @Test
+    @DisplayName("Test connection - changed URL without password is rejected before probing")
+    void testConnection_shouldRequirePassword_whenConnectionFieldsDiffer() throws SQLException {
+        when(dataSourceDAO.findById(TestFixtures.TEST_DATASOURCE_ID)).thenReturn(Optional.of(testDataSourcePO));
+        DataSource request = storedConnectionRequest();
+        request.setJdbcUrl("jdbc:mysql://attacker.internal:3306/evil");
+        request.setPassword("");
+
+        assertThatThrownBy(() -> dataSourceService.testConnection(request, TestFixtures.TEST_DATASOURCE_ID))
+            .isInstanceOf(DatiException.class)
+            .satisfies(e -> assertThat(((DatiException) e).getCode())
+                .isEqualTo(ErrorCode.DS_PASSWORD_REQUIRED_FOR_TEST));
+        verify(jdbcMetaService, never()).resolveCurrentSchema(any(), any());
+    }
+
+    @Test
+    @DisplayName("Test connection - unknown id with empty password returns DS_NOT_FOUND")
+    void testConnection_shouldReturnNotFound_whenStoredDataSourceMissing() throws SQLException {
+        when(dataSourceDAO.findById(TestFixtures.TEST_DATASOURCE_ID)).thenReturn(Optional.empty());
+        DataSource request = storedConnectionRequest();
+        request.setPassword("");
+
+        assertThatThrownBy(() -> dataSourceService.testConnection(request, TestFixtures.TEST_DATASOURCE_ID))
+            .isInstanceOf(DatiException.class)
+            .satisfies(e -> assertThat(((DatiException) e).getCode()).isEqualTo(ErrorCode.DS_NOT_FOUND));
+        verify(jdbcMetaService, never()).resolveCurrentSchema(any(), any());
+    }
+
+    @Test
+    @DisplayName("Test connection - typed password ignores the stored connection")
+    void testConnection_shouldProbeRequest_whenPasswordProvided() throws SQLException {
+        testDataSource.setJdbcUrl("jdbc:mysql://new-host:3306/new_db");
+        testDataSource.setPassword("typed-password");
+        when(jdbcMetaService.resolveCurrentSchema(any(JdbcConnector.class), eq(DbType.MYSQL)))
+            .thenReturn("new_db");
+
+        dataSourceService.testConnection(testDataSource, TestFixtures.TEST_DATASOURCE_ID);
+
+        verify(dataSourceDAO, never()).findById(anyString());
+        verify(jdbcMetaService).resolveCurrentSchema(
+            argThat(connector -> "typed-password".equals(connector.password())
+                && "jdbc:mysql://new-host:3306/new_db".equals(connector.jdbcUrl())),
+            eq(DbType.MYSQL));
+    }
+
+    @Test
+    @DisplayName("Test connection - stored connection requires VIEW permission")
+    void testConnection_shouldRequireViewPermission_whenUsingStoredConnection() throws SQLException {
+        when(dataSourceDAO.findById(TestFixtures.TEST_DATASOURCE_ID)).thenReturn(Optional.of(testDataSourcePO));
+        doThrow(new DatiException(ErrorCode.PERMISSION_DENIED))
+            .when(permissionService).requireDataSource(testDataSourcePO, Permission.VIEW);
+        DataSource request = storedConnectionRequest();
+        request.setPassword("");
+
+        assertThatThrownBy(() -> dataSourceService.testConnection(request, TestFixtures.TEST_DATASOURCE_ID))
+            .isInstanceOf(DatiException.class)
+            .satisfies(e -> assertThat(((DatiException) e).getCode()).isEqualTo(ErrorCode.PERMISSION_DENIED));
+        verify(jdbcMetaService, never()).resolveCurrentSchema(any(), any());
+    }
+
+    private DataSource storedConnectionRequest() {
+        DataSource request = new DataSource();
+        request.setType(testDataSourcePO.getType());
+        request.setJdbcUrl(testDataSourcePO.getJdbcUrl());
+        request.setUsername(testDataSourcePO.getUserName());
+        return request;
     }
 
     @Test
@@ -443,7 +526,7 @@ class DataSourceServiceTest {
             .thenReturn(null);
 
         // when & then
-        assertThatThrownBy(() -> dataSourceService.testConnection(testDataSource))
+        assertThatThrownBy(() -> dataSourceService.testConnection(testDataSource, null))
             .isInstanceOf(DatiException.class)
             .satisfies(e -> assertThat(((DatiException) e).getCode()).isEqualTo(ErrorCode.DS_SCHEMA_DETECTION_FAILED));
     }
@@ -537,6 +620,72 @@ class DataSourceServiceTest {
     }
 
     @Test
+    @DisplayName("Update data source - URL change without password is rejected before probing")
+    void updateDataSource_shouldRejectUrlChangeWithoutPassword() throws SQLException {
+        testDataSource.setJdbcUrl("jdbc:mysql://attacker.internal:3306/evil");
+        testDataSource.setPassword(null);
+        when(dataSourceDAO.findById(TestFixtures.TEST_DATASOURCE_ID)).thenReturn(Optional.of(testDataSourcePO));
+
+        assertThatThrownBy(() -> dataSourceService.updateDataSource(
+                TestFixtures.TEST_DATASOURCE_ID, testDataSource))
+            .isInstanceOf(DatiException.class)
+            .satisfies(e -> assertThat(((DatiException) e).getCode())
+                .isEqualTo(ErrorCode.DS_PASSWORD_REQUIRED_FOR_UPDATE));
+
+        verify(jdbcMetaService, never()).resolveCurrentSchema(any(), any());
+        verify(dataSourceDAO, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Update data source - username change without password is rejected")
+    void updateDataSource_shouldRejectUsernameChangeWithoutPassword() throws SQLException {
+        testDataSource.setUsername("someone-else");
+        testDataSource.setPassword(null);
+        when(dataSourceDAO.findById(TestFixtures.TEST_DATASOURCE_ID)).thenReturn(Optional.of(testDataSourcePO));
+
+        assertThatThrownBy(() -> dataSourceService.updateDataSource(
+                TestFixtures.TEST_DATASOURCE_ID, testDataSource))
+            .isInstanceOf(DatiException.class)
+            .satisfies(e -> assertThat(((DatiException) e).getCode())
+                .isEqualTo(ErrorCode.DS_PASSWORD_REQUIRED_FOR_UPDATE));
+        verify(jdbcMetaService, never()).resolveCurrentSchema(any(), any());
+    }
+
+    @Test
+    @DisplayName("Update data source - URL change with a new password probes the new secret")
+    void updateDataSource_shouldProbeProvidedPassword_whenUrlChanges() throws SQLException {
+        testDataSource.setJdbcUrl("jdbc:mysql://new-host:3306/db");
+        testDataSource.setPassword("new-secret");
+        when(dataSourceDAO.findById(TestFixtures.TEST_DATASOURCE_ID)).thenReturn(Optional.of(testDataSourcePO));
+        when(dataSourceDAO.save(any(DataSourcePO.class))).thenReturn(testDataSourcePO);
+        when(jdbcMetaService.resolveCurrentSchema(any(JdbcConnector.class), eq(DbType.MYSQL)))
+            .thenReturn("newdb");
+
+        try (MockedStatic<HikariPoolManager> ignored = mockStatic(HikariPoolManager.class)) {
+            dataSourceService.updateDataSource(TestFixtures.TEST_DATASOURCE_ID, testDataSource);
+            verify(jdbcMetaService).resolveCurrentSchema(
+                argThat(connector -> "new-secret".equals(connector.password())
+                    && "jdbc:mysql://new-host:3306/db".equals(connector.jdbcUrl())),
+                eq(DbType.MYSQL));
+        }
+    }
+
+    @Test
+    @DisplayName("Update data source - name-only change works without a password")
+    void updateDataSource_shouldAllowNameOnlyChangeWithoutPassword() throws SQLException {
+        testDataSource.setName("Renamed Source");
+        testDataSource.setPassword(null);
+        when(dataSourceDAO.findById(TestFixtures.TEST_DATASOURCE_ID)).thenReturn(Optional.of(testDataSourcePO));
+        when(dataSourceDAO.save(any(DataSourcePO.class))).thenReturn(testDataSourcePO);
+
+        try (MockedStatic<HikariPoolManager> ignored = mockStatic(HikariPoolManager.class)) {
+            dataSourceService.updateDataSource(TestFixtures.TEST_DATASOURCE_ID, testDataSource);
+            verify(dataSourceDAO).save(any(DataSourcePO.class));
+            verify(jdbcMetaService, never()).resolveCurrentSchema(any(), any());
+        }
+    }
+
+    @Test
     @DisplayName("Update data source - probe failure (SQLException): no modify, no save")
     void updateDataSource_shouldNotSave_whenDetectionThrowsSQLException() throws SQLException {
         testDataSource.setJdbcUrl("jdbc:mysql://new-host:3306/db");
@@ -548,7 +697,7 @@ class DataSourceServiceTest {
         assertThatThrownBy(() -> dataSourceService.updateDataSource(
                 TestFixtures.TEST_DATASOURCE_ID, testDataSource))
             .isInstanceOf(DatiException.class)
-            .satisfies(e -> assertThat(((DatiException) e).getCode()).isEqualTo(ErrorCode.DS_CONNECTION_FAILED));
+            .satisfies(e -> assertThat(((DatiException) e).getCode()).isEqualTo(ErrorCode.DS_CONNECT_REFUSED));
 
         assertThat(testDataSourcePO.getJdbcUrl()).isEqualTo(originalJdbcUrl);
         verify(dataSourceDAO, never()).save(any());

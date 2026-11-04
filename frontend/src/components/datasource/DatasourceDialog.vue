@@ -4,7 +4,8 @@ import { ElMessage } from 'element-plus'
 import { useI18n } from 'vue-i18n'
 import type { DatasourceVO, DataSourcePayload } from '~/api/datasource'
 import { addDataSource, updateDataSource, testConnection } from '~/api/datasource'
-import { notifyError } from '~/api/http'
+import { normalizeError, resolveErrorMessage } from '~/api/error'
+import { toDatasourcePayload } from './payload'
 
 // i18n
 const { t } = useI18n()
@@ -27,7 +28,8 @@ const emit = defineEmits<Emits>()
 const formRef = ref()
 const submitting = ref(false)
 const testing = ref(false)
-const testPassed = ref(false)
+/** 最近一次测试连接/保存失败的原因，常驻在弹窗内，避免 toast 一闪而过。 */
+const errorMessage = ref('')
 
 // 表单数据
 const formData = ref<DataSourcePayload>({
@@ -47,6 +49,16 @@ const visible = computed({
 
 const isEdit = computed(() => !!props.datasource)
 
+const showError = (error: unknown, fallback: string) => {
+  errorMessage.value = resolveErrorMessage(normalizeError(error), fallback)
+}
+
+// 测试连接：编辑态带上 id，密码留空时由后端使用已保存的密码
+const connectionPayload = (): DataSourcePayload => ({
+  ...formData.value,
+  ...(isEdit.value && props.datasource ? { id: props.datasource.id } : {}),
+})
+
 // 监听 datasource 变化，重置表单
 watch(() => props.datasource, (newVal) => {
   if (newVal) {
@@ -61,8 +73,14 @@ watch(() => props.datasource, (newVal) => {
   } else {
     resetForm()
   }
-  testPassed.value = false
+  errorMessage.value = ''
 }, { immediate: true })
+
+watch(visible, (open) => {
+  if (open) {
+    errorMessage.value = ''
+  }
+})
 
 // 重置表单
 function resetForm() {
@@ -75,33 +93,31 @@ function resetForm() {
     type: 'MYSQL',
   }
   formRef.value?.resetValidation()
-  testPassed.value = false
+  errorMessage.value = ''
 }
 
-// 连接相关字段变更后，需重新测试
+// 连接相关字段变更后，旧的失败原因已失效
 watch(
   () => ({ url: formData.value.jdbc_url, user: formData.value.username, pass: formData.value.password, type: formData.value.type }),
-  () => { testPassed.value = false }
+  () => { errorMessage.value = '' }
 )
 
 // 测试连接
 const handleTestConnection = async () => {
-  try {
-    const valid = await formRef.value?.validate?.()
-    if (!valid) return
+  const valid = await formRef.value?.validateConnectionFields?.()
+  if (!valid) return
 
+  try {
     testing.value = true
-    testPassed.value = false
-    const result = await testConnection(formData.value)
+    errorMessage.value = ''
+    const result = await testConnection(connectionPayload())
 
     if (result) {
-      testPassed.value = true
       ElMessage.success(t('datasource.testSuccess'))
     }
   } catch (error) {
     console.error('Failed to test connection:', error)
-    testPassed.value = false
-    notifyError(error, t('datasource.testFailed'))
+    showError(error, t('datasource.testFailed'))
   } finally {
     testing.value = false
   }
@@ -109,23 +125,25 @@ const handleTestConnection = async () => {
 
 // 提交表单
 const handleSubmit = async () => {
-  try {
-    if (!formRef.value?.validate()) return
+  const valid = await formRef.value?.validate?.()
+  if (!valid) return
 
+  try {
     submitting.value = true
+    errorMessage.value = ''
+    const payload = toDatasourcePayload(formData.value, isEdit.value)
 
     if (isEdit.value) {
-      await updateDataSource(props.datasource!.id, formData.value)
-      ElMessage.success(t('common.saveSuccess'))
+      await updateDataSource(props.datasource!.id, payload)
     } else {
-      await addDataSource(formData.value)
-      ElMessage.success(t('common.saveSuccess'))
+      await addDataSource(payload)
     }
 
+    ElMessage.success(t('common.saveSuccess'))
     emit('success')
   } catch (error) {
     console.error('Failed to submit:', error)
-    notifyError(error, t('common.operationFailed'))
+    showError(error, t('common.operationFailed'))
   } finally {
     submitting.value = false
   }
@@ -144,10 +162,19 @@ const handleCancel = () => {
     width="35%"
     :close-on-click-modal="false"
   >
+    <el-alert
+      v-if="errorMessage"
+      :title="errorMessage"
+      type="error"
+      show-icon
+      :closable="false"
+      class="mb-4"
+    />
+
     <DatasourceForm
       ref="formRef"
       v-model="formData"
-      @test-connection="handleTestConnection"
+      :is-edit="isEdit"
     />
 
     <template #footer>
@@ -159,7 +186,6 @@ const handleCancel = () => {
         <el-button
           type="primary"
           :loading="submitting"
-          :disabled="!testPassed"
           @click="handleSubmit"
         >
           {{ isEdit ? t('common.update') : t('common.create') }}

@@ -127,6 +127,7 @@ export default {
     // 校验规则
     required: "请输入{name}",
     selectRequired: "请选择{name}",
+    lengthExceeded: "最多 {max} 个字符",
     nameLengthError: "长度在 1 到 64 个字符",
 
     // 无障碍
@@ -178,6 +179,8 @@ export default {
 
     // 特有消息
     testSuccess: "连接测试成功",
+    passwordEditHint: "修改连接地址、用户名或类型时，需要重新填写密码",
+    passwordKeepHint: "不修改请留空",
     testFailed: "连接测试失败",
     deleteConfirmMessage: "确定要删除数据源「{name}」吗？",
 

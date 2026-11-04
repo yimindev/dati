@@ -127,6 +127,7 @@ export default {
     // Validation Rules
     required: "Please enter {name}",
     selectRequired: "Please select {name}",
+    lengthExceeded: "Maximum {max} characters",
     nameLengthError: "Length must be between 1 and 64 characters",
 
     // Accessibility
@@ -178,6 +179,8 @@ export default {
 
     // Specific Messages
     testSuccess: "Connection test succeeded",
+    passwordEditHint: "Re-enter the password when you change the URL, username or type",
+    passwordKeepHint: "Leave blank to keep the current password",
     testFailed: "Connection test failed",
     deleteConfirmMessage: 'Are you sure you want to delete data source "{name}"?',
 

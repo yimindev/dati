@@ -2,18 +2,19 @@ package com.dati.datasource.domain.service;
 
 import com.dati.base.exception.DatiException;
 import com.dati.base.exception.ErrorCode;
-import com.dati.db.Column;
-import com.dati.db.DbType;
-import com.dati.db.HikariPoolManager;
-import com.dati.db.JdbcConnector;
-import com.dati.db.Table;
-import com.dati.db.client.DbClient;
-import com.dati.db.client.DbClientFactory;
 import com.dati.datasource.domain.model.DataSource;
 import com.dati.datasource.repository.dao.DataSourceDAO;
 import com.dati.datasource.repository.mapper.DSMapper;
 import com.dati.datasource.repository.po.DataSourcePO;
-import jakarta.annotation.Nullable;
+import com.dati.db.Column;
+import com.dati.db.DbType;
+import com.dati.db.HikariPoolManager;
+import com.dati.db.JdbcConnections;
+import com.dati.db.JdbcConnector;
+import com.dati.db.JdbcUrl;
+import com.dati.db.Table;
+import com.dati.db.client.DbClient;
+import com.dati.db.client.DbClientFactory;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
@@ -58,12 +59,17 @@ public class JdbcMetaService {
         return jdbcTemplate.queryForList(sql);
     }
 
-    @Nullable
+    /**
+     * Connects to the database described by {@code connector} and returns its current schema.
+     * The URL is validated against {@code dbType} before any network call; failures surface as
+     * {@link DatiException} (validation) or {@link SQLException} (connection/query).
+     */
     public String resolveCurrentSchema(JdbcConnector connector, DbType dbType) throws SQLException {
         DbClient dbClient = DbClientFactory.getDbClient(dbType);
         if (dbClient == null) {
             throw new DatiException(ErrorCode.DS_UNSUPPORTED_TYPE, dbType);
         }
-        return dbClient.getCurrentSchema(connector);
+        JdbcUrl url = JdbcUrl.parse(connector.jdbcUrl(), dbType);
+        return JdbcConnections.withConnection(connector, url, dbClient::getCurrentSchema);
     }
 }

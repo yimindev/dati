@@ -1,8 +1,8 @@
 package com.dati.db.client;
 
 import com.dati.db.DbType;
-import com.dati.db.JdbcConnector;
 
+import java.sql.Connection;
 import java.sql.SQLException;
 
 public class ClickhouseDbClient extends AbstractDbClient {
@@ -13,7 +13,7 @@ public class ClickhouseDbClient extends AbstractDbClient {
     }
 
     @Override
-    public String getCurrentSchema(JdbcConnector jdbcConnector) throws SQLException {
-        return querySingleString(jdbcConnector, "SELECT currentDatabase()");
+    public String getCurrentSchema(Connection connection) throws SQLException {
+        return querySingleString(connection, "SELECT currentDatabase()");
     }
 }

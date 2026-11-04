@@ -33,7 +33,4 @@ public class CreateDataSourceRequest {
     @Size(max = 512)
     private String password;
 
-    @Size(max = 256)
-    private String defaultSchema;
-
 }

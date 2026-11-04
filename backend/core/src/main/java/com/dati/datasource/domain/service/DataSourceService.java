@@ -16,6 +16,7 @@ import com.dati.datasource.repository.po.TableInfoPO;
 import com.dati.db.DbType;
 import com.dati.db.HikariPoolManager;
 import com.dati.db.JdbcConnector;
+import com.dati.db.JdbcFailures;
 import com.dati.db.Table;
 import com.dati.permission.domain.model.Permission;
 import com.dati.permission.domain.model.ResourceType;
@@ -58,10 +59,34 @@ public class DataSourceService {
     /**
      * Runs the same validation used when saving: connect and detect a usable default schema.
      * A successful result means the data source can actually be created.
+     * <p>
+     * When {@code existingId} refers to a saved data source and the request carries no password,
+     * the stored connection is probed instead. The request's type/URL/username must then match the
+     * saved values: a stored password is never used against an endpoint chosen by the request.
      */
-    public boolean testConnection(DataSource dataSource) {
-        detectDefaultSchema(dataSource);
+    public boolean testConnection(DataSource dataSource, String existingId) {
+        detectDefaultSchema(resolveProbeTarget(dataSource, existingId));
         return true;
+    }
+
+    private DataSource resolveProbeTarget(DataSource request, String existingId) {
+        if (existingId == null || existingId.isBlank() || StringUtils.isNotEmpty(request.getPassword())) {
+            return request;
+        }
+        DataSourcePO po = dataSourceDAO.findById(existingId)
+                .orElseThrow(() -> new DatiException(ErrorCode.DS_NOT_FOUND, existingId));
+        permissionService.requireDataSource(po, Permission.VIEW);
+        DataSource stored = DSMapper.toDataSource(po);
+        if (!sameConnection(request, stored)) {
+            throw new DatiException(ErrorCode.DS_PASSWORD_REQUIRED_FOR_TEST);
+        }
+        return stored;
+    }
+
+    private static boolean sameConnection(DataSource request, DataSource stored) {
+        return (request.getType() == null || request.getType() == stored.getType())
+                && (request.getJdbcUrl() == null || request.getJdbcUrl().equals(stored.getJdbcUrl()))
+                && (request.getUsername() == null || request.getUsername().equals(stored.getUsername()));
     }
 
     /**
@@ -78,6 +103,7 @@ public class DataSourceService {
 
     /**
      * 更新数据源：仅当 jdbcUrl/username/password/type 任一实际变化时才重新探测 defaultSchema。
+     * jdbcUrl/username/type 变化时必须显式提供 password（否则 DS021）：已存密码只允许用于已存地址。
      * 探测失败时不修改、不保存任何数据；探测成功后与其它字段一并单次保存，保存成功后再用旧连接信息关闭旧连接池。
      * 不加 @Transactional：探测涉及外部网络 I/O，不应包裹在元数据库事务中。
      */
@@ -94,10 +120,16 @@ public class DataSourceService {
         String newPassword = dataSource.getPassword() != null ? dataSource.getPassword() : current.getPassword();
         DbType newType = dataSource.getType() != null ? dataSource.getType() : current.getType();
 
-        boolean connectionChanged = !newJdbcUrl.equals(current.getJdbcUrl())
+        boolean connectionIdentityChanged = !newJdbcUrl.equals(current.getJdbcUrl())
                 || !newUsername.equals(current.getUsername())
-                || !newPassword.equals(current.getPassword())
                 || newType != current.getType();
+        // A stored password may only be reused for the stored endpoint: moving the data source to
+        // another URL/user/type requires the caller to supply the secret explicitly.
+        if (connectionIdentityChanged && dataSource.getPassword() == null) {
+            throw new DatiException(ErrorCode.DS_PASSWORD_REQUIRED_FOR_UPDATE);
+        }
+        boolean connectionChanged = connectionIdentityChanged
+                || !newPassword.equals(current.getPassword());
 
         String schema = null;
         if (connectionChanged) {
@@ -145,12 +177,16 @@ public class DataSourceService {
 
     /** 探测数据源的真实 defaultSchema，失败（连接异常、不支持类型、结果为空）时抛出明确的业务异常。 */
     private String detectDefaultSchema(DataSource dataSource) {
+        DbType type = dataSource.getType();
+        if (type == null) {
+            throw new DatiException(ErrorCode.INVALID_PARAMETER, "type is required");
+        }
         JdbcConnector connector = new JdbcConnector(dataSource);
         String schema;
         try {
-            schema = jdbcMetaService.resolveCurrentSchema(connector, dataSource.getType());
+            schema = jdbcMetaService.resolveCurrentSchema(connector, type);
         } catch (SQLException e) {
-            throw new DatiException(ErrorCode.DS_CONNECTION_FAILED, e.getMessage());
+            throw JdbcFailures.translate(e, connector, type);
         }
         if (schema == null || schema.isBlank()) {
             throw new DatiException(ErrorCode.DS_SCHEMA_DETECTION_FAILED);

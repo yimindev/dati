@@ -13,7 +13,6 @@ interface Props {
 interface Emits {
   (e: 'edit', datasource: DatasourceVO): void
   (e: 'delete', datasource: DatasourceVO): void
-  (e: 'test-connection', datasource: DatasourceVO): void
   (e: 'table-manage', datasource: DatasourceVO): void
   (e: 'authorize', datasource: DatasourceVO): void
 }

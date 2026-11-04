@@ -36,7 +36,7 @@ public class HikariPoolManager {
         cfg.setPassword(jdbcConnector.password());
         cfg.setMaximumPoolSize(10);
         cfg.setMinimumIdle(0);
-        cfg.setConnectionTimeout(1000);
+        cfg.setConnectionTimeout(10_000);
         cfg.setIdleTimeout(60000);
         cfg.setMaxLifetime(1800000);
         return cfg;

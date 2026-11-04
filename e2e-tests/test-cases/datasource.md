@@ -30,11 +30,12 @@
 **级别：** P1
 **前置：** 已登录
 **数据：** test-data.yaml `datasources.bad_connection`
-
-1. 使用 bad_connection 测试数据源连接
+1. 使用 bad_connection（`jdbc:mysql://192.0.2.1:9999/nothing`）测试数据源连接
 2. 预期 HTTP 状态码为 400（测试连接失败是业务结果，通过统一错误响应返回）
-3. 预期响应 body 包含 `code=DS001`，`message` 非空且能说明连接失败原因（如超时、主机不可达、拒绝连接）
-4. 不应再返回 HTTP 200 + `false` 的旧契约
+3. 预期 `code` 为 `DS013`（连接超时）或 `DS012`（连接被拒绝）；`message` 必须包含实际尝试的端点 `192.0.2.1:9999`，并提示检查主机/端口/网络，不能出现 `Failed to initialize connection pool` 之类的内部包装文案
+4. 预期 15s 内返回（后端对整段探测有 10s 上限），不得让前端 axios 先超时
+5. 中文界面（`Accept-Language: zh-CN`）返回中文提示
+6. 不应再返回 HTTP 200 + `false` 的旧契约
 
 ---
 
@@ -278,3 +279,53 @@
 4. 使用同一 URL 调用 `POST /v1/data-sources`
 5. 预期同样返回 400 `DS006`，且数据源未落库
 6. 清理：按名称搜索确认没有创建成功
+
+
+---
+
+## TC-DS-015 测试连接 - 错误分类可自诊断
+**级别：** P1
+**前置：** 已登录
+**注意：** 需要真实 PostgreSQL 连接
+
+对每种错误分别调用 `POST /v1/data-sources/test-connection`，断言状态码、错误码与 message：
+
+1. 密码错误 → 400 `DS014`，message 含用户名与「认证失败/检查用户名和密码」
+2. 数据库不存在（`jdbc:postgresql://localhost:5432/no_such_db_<ts>`）→ 400 `DS015`，message 含库名与 `host:port`
+3. `type=MYSQL` + PostgreSQL URL → 400 `DS010`，message 说明期望前缀 `jdbc:mysql://`
+4. `jdbc_url=jdbc:postgresql://` → 400 `DS009`，message 含 URL 与期望格式
+5. 缺少 `type` → 400 `CM001`，message 指向字段 `type`
+6. `type=UNKNOWN` → 400 `DS005`
+7. URL 不含数据库名（`jdbc:postgresql://localhost:5432` 或结尾 `/`）→ 400 `DS019`，message 含期望的 URL 示例；不得出现驱动的 `Unable to parse URL` 原文
+7. 所有场景的 message 不得出现堆栈、换行或连接池内部前缀；不得回显密码
+8. 若 TCP 可达但驱动建会话失败（如本地代理导致 IP 字面量异常）→ 400 `DS022`，提示检查代理/SSL/驱动
+
+---
+
+## TC-DS-016 创建/编辑数据源 - 连接校验
+**级别：** P0
+**前置：** 已登录
+**数据：** test-data.yaml `datasources.postgres_local`
+**注意：** 需要真实 PostgreSQL 连接
+
+1. 不先调用测试连接，直接用 postgres_local 创建数据源 → 200，返回 id
+2. 用错误密码创建另一个数据源 → 400 `DS014`，且该名称未落库
+3. `PUT /v1/data-sources/{id}` 仅传 `{"name":"renamed"}`（不带 password/jdbc_url）→ 200
+4. 查询详情：name 已更新，jdbc_url/username/default_schema 未变
+5. 再次 `PUT` 只改 description 同样成功（证明编辑不需要重填密码）
+6. `POST /v1/data-sources/test-connection` 传 `{"id":"<id>","type":"POSTGRESQL","jdbc_url":"<与已存一致>","username":"<与已存一致>","password":""}` → 200 `true`（无需重输密码）
+7. 同一请求把 `jdbc_url` 改成另一个地址、`password` 留空 → 400 `DS020`，且**不得**用已存密码去连该地址
+8. 用不存在的 id + 空密码 → 404 `DS002`；用无 VIEW 权限的账号 → 403 `PM001`
+9. `PUT /v1/data-sources/{id}` 只改 `jdbc_url`（指向另一个地址）且不传 password → 400 `DS021`，且不得用已存密码去连新地址
+10. 同一请求补上 `password` → 200（以新密码探测新地址）
+11. 清理：删除数据源
+
+---
+
+## TC-DS-017 测试连接 - 不可达地址的时间上限
+**级别：** P1
+**前置：** 已登录
+
+1. 用黑洞地址（如 `jdbc:postgresql://192.0.2.1:5432/postgres`）调用测试连接
+2. 预期 15s 内返回 400，`code=DS013`
+3. 重复 3 次，确认耗时稳定（不会因连接池累积而变慢）

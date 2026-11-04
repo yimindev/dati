@@ -61,7 +61,7 @@ backend/src/main/java/com/dati/datasource/
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
-| POST | `/v1/data-sources/test-connection` | 测试连接（不存储） |
+| POST | `/v1/data-sources/test-connection` | 测试连接（不存储）；body 可带已存数据源 `id`，密码留空时复用其已保存密码 |
 | POST | `/v1/data-sources` | 创建数据源 |
 | PUT | `/v1/data-sources/{id}` | 更新数据源（null 字段不覆盖） |
 | DELETE | `/v1/data-sources/{id}` | 删除数据源（级联清理表/列/ES索引） |
@@ -96,7 +96,7 @@ backend/src/main/java/com/dati/datasource/
 - `id`, `name`, `description`: 基础信息（继承 BaseResource）
 - `type`: 数据库类型 (DbType enum：MYSQL / MARIADB / POSTGRESQL / CLICKHOUSE / DORIS / UNKNOWN)
 - `jdbcUrl`, `username`, `password`: 连接信息（Model 中为明文，PO 中 password 加密存储）
-- `defaultSchema`: 默认 Schema，由服务端在创建/连接信息变更时实际探测写入，**忽略客户端传入的值**（`DSMapper` 创建映射时不复制该字段）
+- `defaultSchema`: 默认 Schema，由服务端在创建/连接信息变更时实际探测写入；请求 DTO 不再接收该字段（传了也会被忽略）
 
 **TableInfo**
 - `id`, `name`, `description`: 基础信息
@@ -118,12 +118,12 @@ backend/src/main/java/com/dati/datasource/
 - 通过 `DbClientFactory.getDbClient(DbType)` 获取对应的 DbClient 实现
 - 调用 `HikariPoolManager` 管理 HikariCP 连接池
 - `executeSql()`: 使用 `JdbcTemplate` 执行 SQL 并返回 `List<Map<String, Object>>`
-- `resolveCurrentSchema(connector, dbType)`: 探测连接的默认 schema，委托 `DbClient.getCurrentSchema(JdbcConnector)` 执行（连接生命周期由各 DbClient 内部通过 `HikariPoolManager.getConnection()` 管理，`try-with-resources` 自动释放）；若 `dbType` 不受支持则抛出 `DatiException(DS_UNSUPPORTED_TYPE)`
+- `resolveCurrentSchema(connector, dbType)`: 探测连接的默认 schema。先由 `JdbcUrl.parse()` 校验 URL 前缀是否与所选类型匹配、host/port 是否合法，再由 `JdbcConnections.withConnection()` 依次做 DNS 解析、TCP 可达性检查、DriverManager 建连并执行 `DbClient.getCurrentSchema(Connection)`；整段探测有 10s 上限，虚线程执行，避免黑洞地址挂住 HTTP 请求。连接失败由 `JdbcFailures.translate()` 映射为可操作的错误码（见 2.5）
 
 **DataSourceService**: 数据源核心业务逻辑与双通道访问
-- `testConnection(JdbcConnector)`: 测试数据库连接
+- `testConnection(DataSource, existingId)`: 与创建/更新共用同一探测流程，成功返回 true；失败抛出与保存时完全一致的错误。请求带 `id` 且未填密码时，用**已存连接**探测：此时请求的 type/jdbc_url/username 必须与已存值一致，否则返回 `DS020` 要求填密码——已存密码绝不会被发往请求方指定的地址；该路径校验 `DATA_SOURCE (VIEW)` 权限
 - `addDataSource(DataSource)`: **持久化前**探测真实 `defaultSchema`（忽略客户端传入值），探测失败转换为明确业务异常不落库；保存成功密码加密存储
-- `updateDataSource(id, DataSource)`: 校验 `DATA_SOURCE (EDIT)`；非 null 覆盖；仅连接变更时重新探测并关闭旧连接池
+- `updateDataSource(id, DataSource)`: 校验 `DATA_SOURCE (EDIT)`；非 null 覆盖；仅连接变更时重新探测并关闭旧连接池。**url/username/type 任一变化时必须显式提供 password**（否则 `DS021`），避免把已存密码发往请求方指定的新地址
 - `deleteDataSource(id)`: 校验 `DATA_SOURCE (EDIT)`；关闭连接池 → 清理关联 Column → Table → ES 语义索引
 - `listDataSources(keyword, pageable)`: 分页查询（SQL 层按 owner / ACL 静默过滤）
 - `getDataSource(id)`: **用户通道** — 查询并强制执行当前用户针对数据源的 `VIEW` 鉴权，密码脱敏返回
@@ -147,6 +147,40 @@ backend/src/main/java/com/dati/datasource/
 - `extractValues(datasourceId, columnId, overwrite)`: 强校验 `columnId` 所属表与传入 `datasourceId` 一致性 → 校验所属数据源 `EDIT` 权限 → 执行 `SELECT DISTINCT {column} FROM {table} LIMIT N` → 写入 ES `FIELD_VALUE` 文档
 - `saveValues(columnId, values, deletedIds)`: 校验所属数据源 `EDIT` 权限 → 手动增/删/改列值同义词并更新 ES
 - `getValues(columnId, pageReq, keyword)`: 校验所属数据源 `VIEW` 权限 → 分页查询列值同义词
+
+### 2.5 连接探测与错误分类
+
+`POST /v1/data-sources/test-connection`、创建和更新（连接信息变更时）共用同一条探测链路：
+
+```
+JdbcUrl.parse()              前缀与所选类型是否匹配、host/port 是否合法        DS009 / DS010 / DS005
+   ↓
+JdbcConnections               DNS 解析 + TCP 可达性检查（5s）+ 建连 + 探测 schema（整段 10s 上限）
+   ↓
+JdbcFailures.translate()     按 SQLState / 厂商错误码 / cause 链归类
+```
+
+| 错误码 | 触发条件 | 用户看到的信息 |
+|--------|----------|----------------|
+| DS005 | 类型为空或 UNKNOWN | 不支持的数据库类型 |
+| DS009 | URL 缺 host / 端口非法 | 无效的 JDBC URL + 期望格式 |
+| DS010 | URL 前缀与所选类型不一致 | 类型不匹配 + 期望前缀 |
+| DS011 | DNS 无法解析 host | 主机无法解析 |
+| DS012 | 端口拒绝连接 | 连接被拒绝，检查服务是否启动/端口 |
+| DS013 | TCP 或整段探测超时 | 连接超时，检查主机/端口/网络 |
+| DS014 | 认证失败（28xxx / 1045） | 用户认证失败，检查用户名密码 |
+| DS015 | 数据库不存在（3D000 / 1049） | 数据库在 host:port 上不存在 |
+| DS016 | 库级权限不足（42501 / 1044） | 用户无权访问数据库 |
+| DS017 | TLS 握手失败 | TLS 失败，检查服务端 SSL 配置 |
+| DS018 | 无驱动接受该 URL | 选择与 URL 前缀匹配的类型 |
+| DS019 | URL 里没有数据库名 | 显式填写数据库名（驱动默认库名通常是登录用户，容易踩坑） |
+| DS020 | 带 id 测试连接但连接信息与已存值不一致 | 填入密码后再测试新连接（已存密码不会发往新地址） |
+| DS021 | 更新时改了 url/username/type 但未提供密码 | 重新填写密码后再保存（已存密码只会用于已存地址） |
+| DS022 | TCP 已连通但驱动层建会话失败（如代理/SSL/驱动问题） | 检查代理、SSL 与驱动配置 |
+| DS001 | 其它驱动异常 | 清洗后的驱动原始信息（去掉连接池包装前缀） |
+| DS006 | 连接成功但探测不到 schema | 检查 currentSchema/search_path 或库名 |
+
+探测使用独立的短连接（`DriverManager`）而不是 Hikari 池：失败消息不再被 `Failed to initialize connection pool` 包装，也不会因反复测试连接积累连接池。`JdbcConnector.toString()` 与所有错误消息中的 URL 都会脱敏密码。
 
 ## 3. 前端架构
 

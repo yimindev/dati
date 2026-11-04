@@ -23,6 +23,20 @@ public enum ErrorCode {
     DS_SCHEMA_DETECTION_FAILED("DS006", 400, "Database connected, but no usable default schema/database was found. Check the JDBC URL's currentSchema/search_path or database name, and ensure the target schema exists."),
     DS_TABLE_NOT_FOUND("DS007", 404, "Table not found: {0}"),
     DS_COLUMN_NOT_FOUND("DS008", 404, "Column not found: {0}"),
+    DS_INVALID_JDBC_URL("DS009", 400, "Invalid JDBC URL: {0}. Expected a URL like {1}."),
+    DS_JDBC_TYPE_MISMATCH("DS010", 400, "The JDBC URL does not match the selected database type {0}. Expected a URL starting with {1}, but got: {2}"),
+    DS_HOST_UNRESOLVED("DS011", 400, "Host {0} cannot be resolved. Check the database host name."),
+    DS_CONNECT_REFUSED("DS012", 400, "Connection to {0}:{1} was refused. Check that the database is running and the port is correct."),
+    DS_CONNECT_TIMEOUT("DS013", 400, "Connection to {0}:{1} timed out. Check the host, port and network."),
+    DS_AUTH_FAILED("DS014", 400, "Authentication failed for user {0}. Check the username and password."),
+    DS_DATABASE_NOT_FOUND("DS015", 400, "Database {0} does not exist on {1}:{2}."),
+    DS_ACCESS_DENIED("DS016", 400, "User {0} cannot access database {1}."),
+    DS_TLS_FAILED("DS017", 400, "TLS negotiation with {0}:{1} failed. Check the server's SSL configuration."),
+    DS_DRIVER_MISSING("DS018", 400, "No JDBC driver accepts this URL. Select the database type that matches the URL prefix."),
+    DS_DATABASE_NOT_SPECIFIED("DS019", 400, "The JDBC URL does not contain a database name. Add the database to the URL, e.g. {0}"),
+    DS_PASSWORD_REQUIRED_FOR_TEST("DS020", 400, "The connection details differ from the saved data source. Enter the password to test the new connection."),
+    DS_PASSWORD_REQUIRED_FOR_UPDATE("DS021", 400, "The connection details changed. Re-enter the password to save the new connection."),
+    DS_SESSION_FAILED("DS022", 400, "The server accepted the TCP connection but the JDBC session failed. Check the proxy, SSL and driver settings."),
 
     // ── Semantic module (SM) ─────────────────────────────
 
