@@ -54,18 +54,54 @@ code {
 }
 
 // 统一表格基础样式
+.ep-table,
 .el-table {
+  .ep-table__cell,
   .el-table__cell {
     padding: 12px 0;
   }
 
+  .ep-table__row,
   .el-table__row {
+    .ep-button--link,
     .el-button--link {
       opacity: 0.85;
     }
-    &:hover .el-button--link {
-      opacity: 1;
+    &:hover {
+      .ep-button--link,
+      .el-button--link {
+        opacity: 1;
+      }
     }
+  }
+}
+
+/* ============ Tooltip ============ */
+// Element Plus paints dark tooltips with --ep-text-color-primary, which turns
+// into a near-white surface under the dark theme. Pin a dark bubble instead.
+// `el-popover` shares the popper markup, so it is excluded from these rules.
+.ep-popper.is-dark:not(.ep-popover) {
+  max-width: min(280px, calc(100vw - 32px));
+  background: #303133;
+  border-color: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.16);
+
+  > .ep-popper__arrow::before {
+    background: #303133;
+    border-color: rgba(255, 255, 255, 0.08);
+  }
+}
+
+html.dark .ep-popper.is-dark:not(.ep-popover) {
+  background: var(--ep-bg-color-overlay);
+  border-color: var(--ep-border-color-light);
+  color: var(--ep-text-color-primary);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+
+  > .ep-popper__arrow::before {
+    background: var(--ep-bg-color-overlay);
+    border-color: var(--ep-border-color-light);
   }
 }
 
