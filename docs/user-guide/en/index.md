@@ -1,6 +1,6 @@
 # Introduction
 
-DatI (Data Intelligence) is a lightweight semantic gateway connecting **AI Agents with enterprise databases**. Simply connect a database, configure semantic metadata, and enable prebuilt or parameterized SQL tools to publish an MCP service that connects with your agents or any MCP host.
+DatI (Data Intelligence) publishes databases as **semantically enhanced, access-controlled** MCP services. Connect them to your agents or any MCP host, and query, analyze, or modify data within the authorized scope.
 
 ![DatI Architecture](/images/dati-visual-positioning.svg)
 

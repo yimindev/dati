@@ -1,8 +1,8 @@
-# DatI - Database Semantic Gateway for AI Agents
+# DatI - Connect AI Agents to Your Databases
 
 [English](README.md) | [简体中文](README_zh.md)
 
-DatI (Data Intelligence) is a lightweight semantic gateway connecting **AI Agents with enterprise databases**. Simply connect your database, enrich semantic metadata, and configure built-in or parameterized SQL tools to publish an MCP service — ready for your agents or any MCP host.
+DatI (Data Intelligence) publishes databases as semantically enhanced, access-controlled MCP services. Connect them to your agents or any MCP host, and query, analyze, or modify data within the authorized scope.
 
 ```text
 ┌────────────────────┐  ┌────────────────────┐  ┌────────────────────┐
@@ -18,6 +18,19 @@ DatI (Data Intelligence) is a lightweight semantic gateway connecting **AI Agent
 │     MySQL      │   PostgreSQL    │   ClickHouse   │     Doris      │
 └────────────────────────────────────────────────────────────────────┘
 ```
+
+## Why DatI?
+
+1. **Multi-Database Support**: Supports MySQL, PostgreSQL, ClickHouse, Doris, and other relational and analytical databases
+2. **Semantic Enhancement**: Supports business terms, column aliases, and automatic enum dictionary extraction. Combined with semantic search, it helps models understand business jargon and find the right tables
+3. **Flexible Integration**: Based on standard [MCP](https://modelcontextprotocol.io/) (Streamable HTTP), easily integrates into your existing agents or workflows
+4. **Effortless MCP Publishing**: Ready-to-use built-in tools (schema inspection, SQL execution) and parameterized SQL tools to publish MCP services with zero extra deployment
+5. **Security & Governance**: Centrally managed database credentials with user-level permission and data scope isolation
+
+## Use Cases
+
+- **Conversational Data Analysis (NL2SQL)**: Connect business databases and support NL2SQL analysis workflows with semantic metadata and built-in tools
+- **Lightweight App Development**: Wrap databases as MCP services so agents can query and update data through conversation to build lightweight applications
 
 ## Try It Online
 
@@ -84,20 +97,6 @@ docker compose up -d
 ```
 
 Open `http://localhost:8085`. Register with username `admin` to get super admin role. For production tuning and external DB setup, see [Deployment Guide](docs/deployment.md).
-
-
-## Why DatI?
-
-1. **Multi-Database Support**: Supports MySQL, PostgreSQL, ClickHouse, Doris, and other relational and analytical databases
-2. **Semantic Enhancement**: Supports business terms, column aliases, and automatic enum dictionary extraction. Combined with semantic search, it helps models understand business jargon and find the right tables
-3. **Flexible Integration**: Based on standard [MCP](https://modelcontextprotocol.io/) (Streamable HTTP), easily integrates into your existing agents or workflows
-4. **Effortless MCP Publishing**: Ready-to-use built-in tools (schema inspection, SQL execution) and parameterized SQL tools to publish MCP services with zero extra deployment
-5. **Security & Governance**: Centrally managed database credentials with user-level permission and data scope isolation
-
-## Use Cases
-
-- **Conversational Data Analysis (NL2SQL)**: Connect business databases and support NL2SQL analysis workflows with semantic metadata and built-in tools
-- **Lightweight App Development**: Wrap databases as MCP services so agents can query and update data through conversation to build lightweight applications
 
 ## Tech Stack
 
